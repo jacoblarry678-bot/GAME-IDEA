@@ -81,11 +81,11 @@ export const PROPS = {
   // ---------------------------------------------------------- chain hall
   chain_cluster: () => {
     const parts = [];
-    const n = 5;
+    const n = 3;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
       const rr = 0.25 + (i % 3) * 0.22;
-      const g = chainStrand(11 + (i % 5), 0.17);
+      const g = chainStrand(8 + (i % 3), 0.28);
       g.translate(Math.cos(a) * rr, 0, Math.sin(a) * rr);
       parts.push(g);
     }
@@ -122,7 +122,7 @@ export const PROPS = {
       // individual books, leaning and gappy
       let x = -0.83;
       while (x < 0.8) {
-        const w = 0.03 + Math.random() * 0.05;
+        const w = 0.05 + Math.random() * 0.07;
         if (Math.random() > 0.18) {
           const h = 0.24 + Math.random() * 0.18;
           const tilt = Math.random() < 0.12 ? (Math.random() - 0.5) * 0.5 : 0;
@@ -292,7 +292,7 @@ export const PROPS = {
 
   skull_pile: () => {
     const parts = [];
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 6; i++) {
       const a = Math.random() * Math.PI * 2;
       const r = Math.random() * 0.4;
       const y = 0.11 + Math.floor(i / 4) * 0.19;

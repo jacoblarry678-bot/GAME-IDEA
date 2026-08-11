@@ -21,6 +21,9 @@ import {
 import { PROPS, buildDoor, buildVault, chainStrand } from './props.js';
 import { Rand } from '../../../shared/rng.js';
 
+/** Grid cells per spatial chunk. 8 cells = 32m, roughly one room. */
+const CHUNK = 8;
+
 /** Accumulates quads into flat arrays, then bakes one BufferGeometry. */
 class QuadBuilder {
   constructor() {
@@ -152,14 +155,22 @@ export class Labyrinth {
   // ------------------------------------------------------------- structure
 
   buildStructure() {
-    // one builder per (surface kind, role) pair
+    // One builder per (surface kind, role, spatial chunk). Chunking matters:
+    // a single merged mesh spanning the whole 288m map can never be frustum
+    // culled, so every wall in the Labyrinth would be submitted every frame.
     const builders = new Map();
+    let curChunk = '0_0_0';
     const b = (kind, role) => {
-      const key = kind + ':' + role;
+      const key = kind + '|' + role + '|' + curChunk;
       if (!builders.has(key)) builders.set(key, new QuadBuilder());
       return builders.get(key);
     };
-    const trim = new QuadBuilder();
+    const trims = new Map();
+    const trimFor = () => {
+      if (!trims.has(curChunk)) trims.set(curChunk, new QuadBuilder());
+      return trims.get(curChunk);
+    };
+    const trim = { quad: (...a) => trimFor().quad(...a) };
 
     for (let f = 0; f < NUM_FLOORS; f++) {
       const fl = this.map.floors[f];
@@ -168,6 +179,7 @@ export class Labyrinth {
         for (let gx = 0; gx < GRID_W; gx++) {
           const i = gz * GRID_W + gx;
           if (fl.solid[i]) continue;
+          curChunk = `${f}_${(gx / CHUNK) | 0}_${(gz / CHUNK) | 0}`;
           const zone = ZONE_BY_ID[fl.zone[i]] || ZONES.corridor;
           const surf = SURFACES[zone.mat] || SURFACES.stone;
           const ceilH = zone.ceil;
@@ -233,7 +245,7 @@ export class Labyrinth {
     this.structureMeshes = [];
     for (const [key, qb] of builders) {
       if (qb.empty) continue;
-      const [kind, role] = key.split(':');
+      const [kind, role] = key.split('|');
       const mat = this.tex.material(kind, {
         repeat: 1,
         normalScale: role === 'wall' ? 1.4 : 1.0,
@@ -248,8 +260,10 @@ export class Labyrinth {
       this.root.add(mesh);
       this.structureMeshes.push(mesh);
     }
-    if (!trim.empty) {
-      const tm = new THREE.Mesh(trim.bake(), this.tex.material('rust', { repeat: 1, metalness: 0.7, color: 0x6b6259 }));
+    const trimMat = this.tex.material('rust', { repeat: 1, metalness: 0.7, color: 0x6b6259 });
+    for (const [, qb] of trims) {
+      if (qb.empty) continue;
+      const tm = new THREE.Mesh(qb.bake(), trimMat);
       tm.matrixAutoUpdate = false;
       tm.receiveShadow = true;
       this.root.add(tm);
@@ -304,14 +318,20 @@ export class Labyrinth {
       // thin out chain-heavy decoration on low presets
       if ((p.kind === 'chain_cluster' || p.kind === 'hook') && this.rand.next() > chainScale) continue;
       if (!PROPS[p.kind]) continue;
-      if (!byKind.has(p.kind)) byKind.set(p.kind, []);
-      byKind.get(p.kind).push(p);
+      // chunk key so each InstancedMesh has a tight bounding sphere and can
+      // actually be frustum culled
+      const key = `${p.kind}|${p.floor}_${(p.gx / CHUNK) | 0}_${(p.gz / CHUNK) | 0}`;
+      if (!byKind.has(key)) byKind.set(key, []);
+      byKind.get(key).push(p);
     }
 
     this.propMeshes = [];
     const dummy = new THREE.Object3D();
-    for (const [kind, list] of byKind) {
-      const built = PROPS[kind]();
+    const geoCache = new Map();
+    for (const [key, list] of byKind) {
+      const kind = key.split('|')[0];
+      if (!geoCache.has(kind)) geoCache.set(kind, PROPS[kind]());
+      const built = geoCache.get(kind);
       const mat = this.propMaterial(built.mat);
       const inst = new THREE.InstancedMesh(built.geo, mat, list.length);
       inst.castShadow = this.quality.shadows;
@@ -345,15 +365,15 @@ export class Labyrinth {
 
   /** Long chains from the Chain Hall ceiling — the room's whole identity. */
   buildHangingChains() {
-    const count = Math.floor(260 * this.quality.chains);
+    const count = Math.floor(150 * this.quality.chains);
     if (count <= 0) return;
-    const geo = chainStrand(26, 0.19, 0.085, 0.024);
+    const geo = chainStrand(15, 0.3, 0.085, 0.024);
     const mat = this.tex.material('rust', { repeat: 3, metalness: 0.9, color: 0x8e857c });
     this.applySway(mat, 1.6);
-    const inst = new THREE.InstancedMesh(geo, mat, count);
-    inst.castShadow = this.quality.shadows;
     const dummy = new THREE.Object3D();
     const chainZones = new Set([ZONES.chain_hall.id, ZONES.torture_gallery.id, ZONES.blood_corridor.id, ZONES.gallery.id, ZONES.inner_labyrinth.id]);
+    // gather placements first, then emit one InstancedMesh per chunk
+    const chunks = new Map();
     let placed = 0;
     let guard = 0;
     while (placed < count && guard++ < count * 40) {
@@ -373,13 +393,21 @@ export class Labyrinth {
       dummy.rotation.set(0, this.rand.float(0, 6.28), 0);
       dummy.scale.setScalar(this.rand.float(0.7, 1.5));
       dummy.updateMatrix();
-      inst.setMatrixAt(placed++, dummy.matrix);
+      const key = `${f}_${(gx / CHUNK) | 0}_${(gz / CHUNK) | 0}`;
+      if (!chunks.has(key)) chunks.set(key, []);
+      chunks.get(key).push(dummy.matrix.clone());
+      placed++;
     }
-    inst.count = placed;
-    inst.instanceMatrix.needsUpdate = true;
-    inst.computeBoundingSphere();
-    this.root.add(inst);
-    this.chainMesh = inst;
+    this.chainMeshes = [];
+    for (const [, mats] of chunks) {
+      const inst = new THREE.InstancedMesh(geo, mat, mats.length);
+      inst.castShadow = this.quality.shadows;
+      mats.forEach((m, i) => inst.setMatrixAt(i, m));
+      inst.instanceMatrix.needsUpdate = true;
+      inst.computeBoundingSphere();
+      this.root.add(inst);
+      this.chainMeshes.push(inst);
+    }
   }
 
   /** Vertex-shader sway so hundreds of chains move without CPU work. */

@@ -88,7 +88,7 @@ export class Character {
       this.materials.cloth = mk(b.cassock, 0.72, 0.06);
       this.materials.leather = mk(b.leather, 0.42, 0.12);
       this.materials.accent = mk(b.accent, 0.6, 0.3);
-      this.materials.pin = mk(b.pins ?? 0xbfc3c7, 0.28, 0.92);
+      this.materials.pin = mk(b.pins ?? 0x8f9499, 0.62, 0.55);
       this.materials.wound = mk(0x5e1414, 0.5, 0.0, { emissive: 0x1a0303, emissiveIntensity: 0.6 });
     } else {
       this.materials.skin = mk(b.skin, 0.78);
@@ -290,8 +290,8 @@ export class Character {
 
     // ---- the grid of pins ----
     const n = b.pinGrid || 6;
-    const pinGeo = new THREE.CylinderGeometry(0.0055 * S, 0.0045 * S, 0.052 * S, 5);
-    const headGeo = new THREE.SphereGeometry(0.0085 * S, 5, 4);
+    const pinGeo = new THREE.CylinderGeometry(0.0042 * S, 0.0034 * S, 0.044 * S, 4);
+    const headGeo = new THREE.SphereGeometry(0.0062 * S, 4, 3);
     const total = n * n * 2;
     const pins = new THREE.InstancedMesh(pinGeo, this.materials.pin, total);
     const heads = new THREE.InstancedMesh(headGeo, this.materials.pin, total);
