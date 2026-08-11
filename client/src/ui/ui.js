@@ -352,10 +352,12 @@ export class UI {
       tabS.addEventListener('click', () => {
         tabS.classList.add('active'); tabC.classList.remove('active');
         this.survGrid.style.display = ''; this.cenoGrid.style.display = 'none';
+        if (this.survivorDefs) this.showCharDetail(this.survivorDefs[0], false);
       });
       tabC.addEventListener('click', () => {
         tabC.classList.add('active'); tabS.classList.remove('active');
         this.cenoGrid.style.display = ''; this.survGrid.style.display = 'none';
+        if (this.cenobiteDefs) this.showCharDetail(this.cenobiteDefs[0], true);
       });
 
       const row = el('div', 'menu');

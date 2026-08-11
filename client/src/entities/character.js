@@ -303,7 +303,7 @@ export class Character {
         if (k >= total) break;
         // spread over the front and sides of the skull, not the jaw
         const theta = (ix / (n * 2)) * Math.PI * 2;
-        const phi = 0.32 + (iy / (n - 1)) * 1.15;
+        const phi = 0.28 + (iy / (n - 1)) * 2.05; // wrap the whole skull, not just the crown
         const px = Math.sin(phi) * Math.cos(theta) * R * 0.94;
         const py = Math.cos(phi) * R * 1.12 + 0.09 * S;
         const pz = Math.sin(phi) * Math.sin(theta) * R;

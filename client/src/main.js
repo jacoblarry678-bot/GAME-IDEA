@@ -261,14 +261,15 @@ function makePortrait(def, isCeno, engine) {
     quality: engine.quality,
   });
   scene.add(character.group);
-  cam.position.set(0.55, def.build.height * 0.88, 1.9);
-  cam.lookAt(0, def.build.height * 0.72, 0);
+  // frame the head and shoulders; the model faces -Z so sit in front of it
+  cam.position.set(0.5, def.build.height * 0.95, -2.15);
+  cam.lookAt(0, def.build.height * 0.84, 0);
 
-  const key = new THREE.PointLight(0xffd7a8, 26, 8);
-  key.position.set(1.4, 2.2, 1.8);
+  const key = new THREE.PointLight(0xffd7a8, 30, 8);
+  key.position.set(1.2, 2.3, -1.6);
   scene.add(key);
-  const rim = new THREE.PointLight(isCeno ? 0xd42a1c : 0x5a7cff, 18, 8);
-  rim.position.set(-1.5, 1.6, -1.2);
+  const rim = new THREE.PointLight(isCeno ? 0xd42a1c : 0x5a7cff, 22, 8);
+  rim.position.set(-1.4, 1.7, 1.3);
   scene.add(rim);
   scene.add(new THREE.AmbientLight(0x40465c, 8));
 
@@ -288,7 +289,7 @@ function makePortrait(def, isCeno, engine) {
     if (now - last < 66) return;           // ~15fps is plenty for a portrait
     last = now;
     t += 0.05;
-    character.group.rotation.y = Math.sin(t) * 0.55;
+    character.group.rotation.y = Math.sin(t) * 0.5;
     renderer.render(scene, cam);
   };
   raf = requestAnimationFrame(draw);

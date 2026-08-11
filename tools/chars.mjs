@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+const SP='/tmp/claude-0/-home-user-GAME-IDEA/ade7305e-0704-5862-9fd8-0bb8c5326d23/scratchpad';
+const b = await chromium.launch({ executablePath:'/opt/pw-browsers/chromium', args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox']});
+const p = await b.newPage({ viewport:{width:1280,height:900} });
+await p.goto('http://localhost:5173/',{waitUntil:'load',timeout:90000});
+await p.waitForTimeout(15000);
+await p.click('text=CHARACTERS'); await p.waitForTimeout(6000);
+await p.screenshot({path:`${SP}/chars_surv.png`, timeout:60000});
+await p.click('#screen-characters .tab:text-is("CENOBITES")'); await p.waitForTimeout(5000);
+await p.screenshot({path:`${SP}/chars_ceno.png`, timeout:60000});
+await p.click('#screen-characters .menu-btn:text-is("BACK")'); await p.waitForTimeout(600);
+await p.click('text=HOW TO PLAY'); await p.waitForTimeout(1200);
+await p.screenshot({path:`${SP}/howto.png`, timeout:60000});
+console.log('ok');
+await b.close();
