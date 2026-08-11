@@ -284,12 +284,13 @@ html, body {
 #debug {
   position: absolute; left: 1rem; top: 1rem; z-index: 60; background: rgba(0,0,0,0.86);
   border: 1px solid #2a2d33; padding: 0.8rem 1rem; font-family: var(--hud-font); font-size: 0.72rem;
-  line-height: 1.55; color: #9fd8a8; min-width: 290px; max-height: 92vh; overflow-y: auto;
+  line-height: 1.55; color: #9fd8a8; width: 330px; max-height: 92vh; overflow-y: auto;
 }
 #debug.hidden { display: none; }
 #debug h4 { margin: 0.7rem 0 0.3rem; color: var(--gold); font-size: 0.66rem; letter-spacing: 0.2em; text-transform: uppercase; }
 #debug .kv { display: flex; justify-content: space-between; gap: 1rem; }
 #debug .kv b { color: #d8cfc0; font-weight: normal; }
+#debug > div { display: flex; flex-wrap: wrap; }
 #debug button {
   background: #14171c; border: 1px solid #2a2d33; color: #9fd8a8; font-family: var(--hud-font);
   font-size: 0.66rem; padding: 0.25rem 0.5rem; cursor: pointer; margin: 0.12rem;
