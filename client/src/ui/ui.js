@@ -626,7 +626,9 @@ export class UI {
         <h3>Survivor controls</h3>
         <p class="muted">
           WASD move · Shift sprint · Ctrl crouch · <b>E</b> hold to interact · Space vault · F flashlight ·
-          Q active perk · 1 use medkit · G drop · Tab scoreboard · Esc menu · F3 debug
+          Q active perk · 1 use medkit · G drop · Tab scoreboard · Esc menu · F3 debug<br>
+          Look with the mouse. If the page cannot capture your mouse (some embeds block it),
+          hold the left mouse button and drag to look, or turn with the <b>arrow keys</b>.
         </p>
         <h3>Staying alive</h3>
         <p class="muted">

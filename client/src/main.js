@@ -79,6 +79,9 @@ async function main() {
   const input = new Input(canvas);
   input.enabled = false;
   const portraits = new PortraitStudio(engine);
+  input.onLockBlocked = () => {
+    ui.showToast('Mouse capture is blocked here — hold the left mouse button to look, or use the arrow keys.', '', 9);
+  };
 
   // ------------------------------------------------------------------- UI
   const ui = new UI(document.getElementById('ui'), {

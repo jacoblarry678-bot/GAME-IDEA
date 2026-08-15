@@ -221,7 +221,11 @@ export class Game {
     const rooted = st ? !!st.rt || !!st.sn : false;
 
     // ------ input ------
-    const canPlay = !this.boxOpen && !this.ui.modalOpen && this.input.locked;
+    // Movement must NOT depend on pointer lock. Sandboxed iframes (and some
+    // browser settings) refuse requestPointerLock outright, and gating input on
+    // it left the player frozen with no way to recover. Look falls back to
+    // drag-to-look and the arrow keys — see core/input.js.
+    const canPlay = !this.boxOpen && !this.ui.modalOpen;
     const move = canPlay && !dead ? this.input.move() : { x: 0, y: 0, magnitude: 0 };
     const look = canPlay ? this.input.look() : { x: 0, y: 0 };
 
