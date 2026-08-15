@@ -102,6 +102,28 @@ export class UI {
     });
   }
 
+  /** Offline (single-file) build: solo versus bots, no join-by-code. */
+  setOffline() {
+    this.offline = true;
+    const menu = document.querySelector('#screen-menu .menu');
+    if (menu) {
+      const btns = [...menu.children];
+      if (btns[0]) btns[0].textContent = 'PLAY — SOLO VS BOTS';
+      if (btns[1]) btns[1].style.display = 'none';
+    }
+    const hint = document.getElementById('lanHint');
+    if (hint) {
+      hint.innerHTML =
+        'This is the <b style="color:var(--gold)">offline build</b> — the whole game, including the ' +
+        'authoritative simulation and the bots, is running inside this page.<br>' +
+        'For multiplayer with join codes, run the project locally with <b>npm run dev</b>.';
+    }
+    if (this.lobbyHint) {
+      this.lobbyHint.textContent = 'Offline: you and the bots. Swap sides or change the roster below.';
+    }
+    if (this.hostName) this.hostName.value = this.hostName.value || 'You';
+  }
+
   setLanHint(urls) {
     const e = document.getElementById('lanHint');
     if (!e) return;

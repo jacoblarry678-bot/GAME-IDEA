@@ -11,7 +11,8 @@
     "build": "vite build",
     "start": "npm run build && cross-env NODE_ENV=production node server/index.js",
     "preview": "vite preview --host 0.0.0.0",
-    "test:server": "node server/smoketest.js 45"
+    "test:server": "node server/smoketest.js 45",
+    "build:single": "vite build && node tools/build-single.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",

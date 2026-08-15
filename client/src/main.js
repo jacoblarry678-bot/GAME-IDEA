@@ -15,9 +15,17 @@ import { MenuScene } from './ui/menuscene.js';
 import { UI } from './ui/ui.js';
 import { Game } from './gameplay/game.js';
 import { audio } from './audio/audio.js';
-import { net } from './net/client.js';
+import { net as onlineNet } from './net/client.js';
+import { LocalNet } from './net/localserver.js';
 import { Character } from './entities/character.js';
 import { ROLES } from '../../shared/constants.js';
+
+// Offline builds run the authoritative simulation in the browser (see
+// net/localserver.js) so the game can be a single shareable file.
+const OFFLINE =
+  window.__HELLRAISER_OFFLINE__ === true ||
+  new URLSearchParams(location.search).has('solo');
+const net = OFFLINE ? new LocalNet() : onlineNet;
 
 const TEX_SIZE = { low: 256, medium: 512, high: 1024 };
 const canvas = document.getElementById('scene');
@@ -57,6 +65,10 @@ async function main() {
     host: (name, mode) => {
       audio.init();
       net.host(name, mode);
+      if (OFFLINE) {
+        // solo: fill the other side so you can start immediately
+        for (let i = 0; i < 4; i++) net.addBot(ROLES.SURVIVOR);
+      }
     },
     join: (code, name) => {
       audio.init();
@@ -126,7 +138,8 @@ async function main() {
   // --------------------------------------------------------------- network
   net.on('welcome', (d) => {
     ui.populateCharacters(d.survivors, d.cenobites, (def, isCeno) => makePortrait(def, isCeno, engine));
-    ui.setLanHint(d.lan);
+    if (d.offline) ui.setOffline();
+    else ui.setLanHint(d.lan);
   });
   net.on('lobby', (d) => {
     ui.updateLobby(d, net.id);
@@ -158,7 +171,7 @@ async function main() {
     ui.show('menu');
   });
 
-  setBoot('reaching the server…');
+  setBoot(OFFLINE ? 'opening the configuration…' : 'reaching the server…');
   try {
     await net.connect();
   } catch (e) {
