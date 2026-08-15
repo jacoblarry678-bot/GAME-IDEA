@@ -36,8 +36,28 @@ const setBoot = (t) => {
 };
 const frame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
 
+function showFatal(title, html) {
+  if (!boot) return;
+  boot.classList.remove('gone');
+  boot.innerHTML =
+    `<div class="boot-mark">${title}</div>` +
+    `<div class="boot-sub" style="max-width:44rem;text-align:center;line-height:1.7;` +
+    `letter-spacing:0.08em;text-transform:none;font-size:0.9rem">${html}</div>`;
+}
+
 async function main() {
   // ---------------------------------------------------------------- engine
+  const caps = checkWebGL();
+  if (!caps.ok) {
+    showFatal(
+      'WebGL unavailable',
+      `${caps.reason}<br><br>` +
+        'Try enabling hardware acceleration in your browser settings, updating your ' +
+        'graphics drivers, or opening this in Chrome, Edge, Firefox or Safari on a desktop. ' +
+        'Some browsers also disable WebGL in private/incognito windows.'
+    );
+    return;
+  }
   const engine = new Engine(canvas, settings.get('graphics.preset', 'high'));
   engine.camera.fov = settings.get('graphics.fov', 72);
   engine.camera.updateProjectionMatrix();
@@ -58,6 +78,7 @@ async function main() {
 
   const input = new Input(canvas);
   input.enabled = false;
+  const portraits = new PortraitStudio(engine);
 
   // ------------------------------------------------------------------- UI
   const ui = new UI(document.getElementById('ui'), {
@@ -137,7 +158,7 @@ async function main() {
 
   // --------------------------------------------------------------- network
   net.on('welcome', (d) => {
-    ui.populateCharacters(d.survivors, d.cenobites, (def, isCeno) => makePortrait(def, isCeno, engine));
+    ui.populateCharacters(d.survivors, d.cenobites, (def, isCeno) => portraits.add(def, isCeno));
     if (d.offline) ui.setOffline();
     else ui.setLanHint(d.lan);
   });
@@ -237,6 +258,7 @@ async function main() {
       }
     }
     ui.puzzle?.update(dt);
+    if (ui.screen === 'characters') portraits.update(dt, performance.now());
     input.endFrame();
   });
 
@@ -248,70 +270,121 @@ async function main() {
 }
 
 /**
- * Render a small rotating portrait of a character into its own canvas for the
- * character-select grid.
+ * Character-select portraits.
+ *
+ * These used to get a WebGLRenderer each. With ten cards that meant twelve
+ * live contexts (ten portraits + the game + the box puzzle); browsers cap
+ * active contexts and evict the OLDEST, which is the main game renderer —
+ * producing "Error creating WebGL context" and a dead scene. One shared
+ * offscreen renderer draws every portrait and blits into a plain 2D canvas
+ * per card, so the whole grid costs a single context.
  */
-function makePortrait(def, isCeno, engine) {
-  const cv = document.createElement('canvas');
-  cv.width = 220;
-  cv.height = 220;
-  let renderer;
-  try {
-    renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
-  } catch {
-    return cv; // out of WebGL contexts — the card still works, just no portrait
-  }
-  renderer.setPixelRatio(1);
-  renderer.setSize(220, 220, false);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.3;
-
-  const scene = new THREE.Scene();
-  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 30);
-  const character = new Character({
-    build: def.build, role: isCeno ? ROLES.CENOBITE : ROLES.SURVIVOR, name: def.name,
-    quality: engine.quality,
-  });
-  scene.add(character.group);
-  // frame the head and shoulders; the model faces -Z so sit in front of it
-  cam.position.set(0.5, def.build.height * 0.95, -2.15);
-  cam.lookAt(0, def.build.height * 0.84, 0);
-
-  const key = new THREE.PointLight(0xffd7a8, 30, 8);
-  key.position.set(1.2, 2.3, -1.6);
-  scene.add(key);
-  const rim = new THREE.PointLight(isCeno ? 0xd42a1c : 0x5a7cff, 22, 8);
-  rim.position.set(-1.4, 1.7, 1.3);
-  scene.add(rim);
-  scene.add(new THREE.AmbientLight(0x40465c, 8));
-
-  // Ten portraits each running a full rAF render loop would cost more than the
-  // game does. Render only while the card is actually on screen, at ~15fps.
-  let t = Math.random() * 6;
-  let raf;
-  let last = 0;
-  const draw = (now) => {
-    if (!cv.isConnected) {
-      cancelAnimationFrame(raf);
-      renderer.dispose();
-      return;
+class PortraitStudio {
+  constructor(engine) {
+    this.engine = engine;
+    this.size = 220;
+    this.entries = [];
+    this.cursor = 0;
+    this.last = 0;
+    this.ok = false;
+    try {
+      this.surface = document.createElement('canvas');
+      this.surface.width = this.surface.height = this.size;
+      this.renderer = new THREE.WebGLRenderer({ canvas: this.surface, antialias: true, alpha: true });
+      this.renderer.setPixelRatio(1);
+      this.renderer.setSize(this.size, this.size, false);
+      this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 1.3;
+      this.ok = true;
+    } catch {
+      this.ok = false; // no spare context: cards simply show no portrait
     }
-    raf = requestAnimationFrame(draw);
-    if (!cv.offsetParent) return;          // hidden tab / hidden screen
-    if (now - last < 66) return;           // ~15fps is plenty for a portrait
-    last = now;
-    t += 0.05;
-    character.group.rotation.y = Math.sin(t) * 0.5;
-    renderer.render(scene, cam);
+  }
+
+  add(def, isCeno) {
+    const card = document.createElement('canvas');
+    card.width = card.height = this.size;
+    if (!this.ok) return card;
+
+    const scene = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 30);
+    const character = new Character({
+      build: def.build, role: isCeno ? ROLES.CENOBITE : ROLES.SURVIVOR, name: def.name,
+      quality: this.engine.quality,
+    });
+    scene.add(character.group);
+    cam.position.set(0.5, def.build.height * 0.95, -2.15);
+    cam.lookAt(0, def.build.height * 0.84, 0);
+
+    const key = new THREE.PointLight(0xffd7a8, 30, 8);
+    key.position.set(1.2, 2.3, -1.6);
+    scene.add(key);
+    const rim = new THREE.PointLight(isCeno ? 0xd42a1c : 0x5a7cff, 22, 8);
+    rim.position.set(-1.4, 1.7, 1.3);
+    scene.add(rim);
+    scene.add(new THREE.AmbientLight(0x40465c, 8));
+
+    this.entries.push({
+      card, ctx: card.getContext('2d'), scene, cam, character, t: Math.random() * 6,
+    });
+    return card;
+  }
+
+  /** Draw a couple of visible portraits per frame — 15fps is plenty. */
+  update(dt, now) {
+    if (!this.ok || !this.entries.length) return;
+    if (now - this.last < 66) return;
+    this.last = now;
+    for (let n = 0; n < 2; n++) {
+      const e = this.entries[this.cursor];
+      this.cursor = (this.cursor + 1) % this.entries.length;
+      if (!e || !e.card.isConnected || !e.card.offsetParent) continue;
+      e.t += 0.05;
+      e.character.group.rotation.y = Math.sin(e.t) * 0.5;
+      this.renderer.render(e.scene, e.cam);
+      e.ctx.clearRect(0, 0, this.size, this.size);
+      e.ctx.drawImage(this.surface, 0, 0);
+    }
+  }
+}
+
+/**
+ * three.js needs WebGL2. Fail with something a person can act on rather than
+ * a raw renderer exception.
+ */
+function checkWebGL() {
+  const probe = document.createElement('canvas');
+  let gl = null;
+  try {
+    gl = probe.getContext('webgl2');
+  } catch { /* ignore */ }
+  if (gl) {
+    const lose = gl.getExtension('WEBGL_lose_context');
+    if (lose) lose.loseContext();
+    return { ok: true };
+  }
+  let gl1 = null;
+  try {
+    gl1 = probe.getContext('webgl') || probe.getContext('experimental-webgl');
+  } catch { /* ignore */ }
+  return {
+    ok: false,
+    reason: gl1
+      ? 'This browser only supports WebGL 1, and the renderer needs WebGL 2.'
+      : 'This browser could not create a WebGL context at all.',
   };
-  raf = requestAnimationFrame(draw);
-  return cv;
 }
 
 main().catch((err) => {
   console.error(err);
-  if (boot) {
-    boot.innerHTML = `<div class="boot-mark">ERROR</div><div class="boot-sub">${err.message}</div>`;
+  const msg = String(err && err.message ? err.message : err);
+  if (/webgl/i.test(msg)) {
+    showFatal(
+      'WebGL unavailable',
+      `${msg}<br><br>Enable hardware acceleration in your browser settings, or try another browser.`
+    );
+  } else {
+    showFatal('Something broke', msg);
   }
 });

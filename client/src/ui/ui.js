@@ -914,19 +914,32 @@ export class UI {
   }
 
   initBoxPuzzle(audio) {
-    if (this.puzzle) return;
-    this.puzzle = new LamentPuzzle(this.boxCanvasHost, {
+    // Deferred: creating the puzzle's renderer up front burns a WebGL context
+    // for something most players never open. Built on first use instead.
+    this.puzzleAudio = audio;
+  }
+
+  ensureBoxPuzzle() {
+    if (this.puzzle) return this.puzzle;
+    const audio = this.puzzleAudio;
+    try {
+      this.puzzle = new LamentPuzzle(this.boxCanvasHost, {
       audio,
-      onRotate: (seg, dir) => this.h.boxRotate?.(seg, dir),
-      onSubmit: () => this.h.boxSubmit?.(),
-    });
-    // the puzzle canvas needs a real size before first render
-    this.boxCanvasHost.style.display = 'block';
+        onRotate: (seg, dir) => this.h.boxRotate?.(seg, dir),
+        onSubmit: () => this.h.boxSubmit?.(),
+      });
+      this.boxCanvasHost.style.display = 'block';
+    } catch (e) {
+      console.warn('[ui] could not create the box renderer', e);
+      this.puzzle = null;
+    }
+    return this.puzzle;
   }
 
   openBoxPuzzle(box, charDef) {
     this.boxOverlay.classList.remove('hidden');
     this.modalOpen = true;
+    this.ensureBoxPuzzle();
     if (this.puzzle) {
       this.puzzle.open();
       this.puzzle.resize();
