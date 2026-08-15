@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "HELLRAISER: THE GAME — asymmetrical multiplayer horror prototype (fan project, non-commercial).",
+  "description": "HELLRAISER: THE GAME \u2014 asymmetrical multiplayer horror prototype (fan project, non-commercial).",
   "scripts": {
     "dev": "concurrently -k -n SERVER,CLIENT -c magenta,cyan \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node server/index.js",
     "dev:client": "vite --host 0.0.0.0",
     "build": "vite build",
     "start": "npm run build && cross-env NODE_ENV=production node server/index.js",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test:server": "node server/smoketest.js 45"
   },
   "dependencies": {
     "express": "^4.19.2",
@@ -21,7 +22,6 @@
   "devDependencies": {
     "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
-    "playwright": "^1.62.1",
     "vite": "^5.4.8"
   },
   "engines": {

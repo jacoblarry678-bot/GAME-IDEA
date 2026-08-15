@@ -13,6 +13,15 @@ player is **The Hell Priest**, and is trying to make sure nobody finishes it.
 
 ## Running it
 
+> **This has to run on your own computer.** The repo is just source code — there
+> is no server running anywhere until you start one. Clone it first:
+>
+> ```bash
+> git clone https://github.com/jacoblarry678-bot/GAME-IDEA.git
+> cd GAME-IDEA
+> git checkout claude/hellraiser-game-prototype-w49uhz
+> ```
+
 ```bash
 npm install
 npm run dev
@@ -258,12 +267,44 @@ host-only so a guest cannot end everyone's match.
 
 ---
 
+## Troubleshooting
+
+**"localhost doesn't work" / the page won't load**
+
+1. Are you running it on *your* machine? The repo is only source code. `npm run
+   dev` has to be running in a terminal on the same computer as the browser.
+2. Did `npm install` finish without errors? Node 18+ is required
+   (`node -v`).
+3. Look at the terminal. `npm run dev` prints a banner with the exact URLs. If
+   you see `EADDRINUSE`, something else already has port 3000 or 5173 — close it,
+   or run `PORT=3001 npm run dev`.
+4. If Vite picked a different port (it says so in the banner), use that one.
+5. Open the browser console (F12). "No game server" in red means the page loaded
+   but the websocket did not — check the SERVER half of the terminal is alive.
+
+**Other devices on the WiFi can't reach it** — your OS firewall is probably
+blocking inbound connections to Node. Allow it, and make sure both devices are
+on the same network (not one on WiFi and one on a phone hotspot). Client
+isolation / "AP isolation" on some routers and most guest networks will also
+block it.
+
+**Nothing renders / black screen** — check `chrome://gpu`; the game needs
+working WebGL2. Try Settings → Graphics → Low.
+
 ## Testing
 
 ```bash
-node server/smoketest.js 60     # headless: host, join by code, anti-cheat, bots playing a match
+npm run test:server             # headless: host, join by code, anti-cheat, bots playing a match
+```
+
+The browser harnesses in `/tools` additionally need Playwright, which is not a
+project dependency because its postinstall downloads ~150 MB of browsers:
+
+```bash
+npm i -D playwright && npx playwright install chromium
 node tools/e2e.mjs              # two real browsers: host → code → join → start → move
 node tools/play.mjs             # solo match with bots, perf numbers, screenshot
+node tools/chars.mjs            # character select screenshots
 ```
 
 The smoke test drives the whole server without a renderer — it was how the
