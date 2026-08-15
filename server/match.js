@@ -393,6 +393,14 @@ export class Match {
     }
     if (this.state !== MATCH_STATE.ACTIVE && this.state !== MATCH_STATE.INTRO) return;
 
+    // After the server forcibly moves a player (gateway, Lament Teleport, chain
+    // drag, debug teleport) there are still position packets in flight that were
+    // sent from the OLD location. Because teleportGrace relaxes the speed check,
+    // those stale packets used to be accepted and would yank the player straight
+    // back. Ignore client movement briefly after any forced move and let the
+    // correction land first.
+    if (p.forcedUntil && this.time < p.forcedUntil) return;
+
     const now = this.time;
     const dt = clamp(now - (p.lastInputAt || now - 0.05), 0.001, 0.5);
     p.lastInputAt = now;
@@ -728,6 +736,7 @@ export class Match {
           p.x = spot.x;
           p.z = spot.z;
           p.teleportGrace = this.time + 0.6;
+          p.forcedUntil = this.time + 0.3;
         }
         this.emit(EV.HIDE_ENTER, { id: p.id, spot: it.targetId });
         break;
@@ -1055,6 +1064,7 @@ export class Match {
         p.floor = target.floor;
         p.y = groundAt(this.map, p.floor, p.x, p.z).y;
         p.teleportGrace = this.time + 1.5;
+      p.forcedUntil = this.time + 0.35;
         this.emit(EV.ABILITY_CAST, {
           by: p.id, ability: abilityId, x: p.x, y: p.y, z: p.z, floor: p.floor, teleport: true,
         });
@@ -1098,6 +1108,7 @@ export class Match {
       }
       p.y = groundAt(this.map, p.floor, p.x, p.z).y;
       p.teleportGrace = this.time + 1.5;
+      p.forcedUntil = this.time + 0.35;
       this.emit(EV.GATEWAY_USED, { eid: g.eid, by: p.id, x: p.x, y: p.y, z: p.z, floor: p.floor });
       return;
     }
@@ -1184,6 +1195,7 @@ export class Match {
             s.x = tx;
             s.z = tz;
             s.teleportGrace = this.time + 0.8;
+            s.forcedUntil = this.time + 0.3;
           }
         }
         this.emit(EV.CHAIN_HIT, { eid: c.eid, target: s.id, x: s.x, y: s.y, z: s.z });
@@ -1557,6 +1569,7 @@ export class Match {
         }
         p.y = groundAt(this.map, p.floor, p.x, p.z).y;
         p.teleportGrace = this.time + 2;
+        p.forcedUntil = this.time + 0.4;
         this.correct(p, 'debug_teleport');
         break;
       }

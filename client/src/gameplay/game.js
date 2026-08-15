@@ -77,6 +77,16 @@ export class Game {
     this.effects = new Effects(this.engine, this.tex, this.engine.quality);
     this.worldSeed = seed;
 
+    // Cenobite-only sight: faint pillars over unfinished objective sites.
+    // Playtesting showed a human Cenobite had no way at all to find survivors
+    // on a 288m map — the AI cheated by pathing straight to objective sites,
+    // while a player could only wander. This is the "Presence" fantasy made
+    // legible: you sense where the rite is being worked, not where people are.
+    this.markerGroup = new THREE.Group();
+    this.markerGroup.visible = false;
+    this.engine.scene.add(this.markerGroup);
+    this.markers = new Map();
+
     // the physical box on the altar
     const built = buildBoxMesh(0.55);
     this.altarBox = built.group;
@@ -133,6 +143,7 @@ export class Game {
     for (const d of this.map.doors) this.doorStates.set(d.id, { open: false, locked: !!d.locked });
 
     this.world.syncQuestItems(this.objectives);
+    this.syncMarkers();
     this.running = true;
     this.audio.startMusic();
     this.input.enabled = true;
@@ -195,6 +206,7 @@ export class Game {
     this.effects.update(dt, this.engine.camera);
     this.world.update(dt, this.controller.pos, this.controller.floor);
     this.updateAltarBox(dt);
+    this.updateMarkers(dt);
     this.updateAudio(dt);
     this.updatePost(dt);
     this.updateToasts(dt);
@@ -462,6 +474,58 @@ export class Game {
           }
         });
       }
+    }
+  }
+
+  /** Rebuild the Cenobite's objective pillars from the latest objective state. */
+  syncMarkers() {
+    if (!this.isCenobite || !this.objectives || !this.markerGroup) return;
+    const o = this.objectives;
+    const wanted = new Map();
+    const add = (s, colour) => wanted.set(s.id, { ...s, colour });
+
+    if (o.phase === 'seals') for (const s of o.seals.sites) if (!s.broken) add(s, 0xff2a18);
+    if (o.phase === 'relics') for (const s of o.relics.sites) if (!s.delivered) add(s, 0xd8a23a);
+    if (o.phase === 'pieces') for (const s of o.pieces.sites) if (!s.delivered) add(s, 0xc0402f);
+    if (o.phase === 'box' || o.phase === 'escape') {
+      add({ id: 'm_altar', x: this.map.altar.x, z: this.map.altar.z, floor: this.map.altar.floor }, 0x8b2fd6);
+      if (o.phase === 'escape') {
+        add({ id: 'm_gate', x: this.map.gate.x, z: this.map.gate.z, floor: this.map.gate.floor }, 0x6a3cff);
+      }
+    }
+
+    for (const [id, m] of this.markers) {
+      if (!wanted.has(id)) {
+        this.markerGroup.remove(m);
+        m.geometry.dispose();
+        m.material.dispose();
+        this.markers.delete(id);
+      }
+    }
+    for (const [id, s] of wanted) {
+      if (this.markers.has(id)) continue;
+      const mat = new THREE.MeshBasicMaterial({
+        color: s.colour, transparent: true, opacity: 0.16, depthWrite: false,
+        blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.9, 26, 8, 1, true), mat);
+      mesh.position.set(s.x, (FLOOR_Y[s.floor] || 0) + 13, s.z);
+      mesh.renderOrder = 2;
+      this.markerGroup.add(mesh);
+      this.markers.set(id, mesh);
+    }
+  }
+
+  updateMarkers(dt) {
+    if (!this.markerGroup) return;
+    this.markerGroup.visible = this.isCenobite;
+    if (!this.isCenobite) return;
+    for (const [, m] of this.markers) {
+      // fade with distance so the screen isn't a forest of pillars
+      const d = Math.hypot(m.position.x - this.controller.pos.x, m.position.z - this.controller.pos.z);
+      const near = 1 - Math.min(1, Math.max(0, (d - 12) / 90));
+      m.material.opacity = (0.06 + near * 0.16) * (0.8 + Math.sin(this.time * 1.6 + m.position.x) * 0.2);
+      m.rotation.y += dt * 0.2;
     }
   }
 
@@ -750,7 +814,8 @@ export class Game {
       case EV.OBJECTIVE_UPDATE:
         this.objectives = e;
         world.syncQuestItems(e);
-        world.setGateOpen(!!e.gate.open);
+        this.syncMarkers();
+        world.setGateState(e.gate);
         if (this.boxOpen) this.ui.updateBoxPuzzle(e.box, this.charDef);
         // the box view closes if we stop being the solver
         if (this.boxOpen && e.box.solver !== this.localId) this.closeBox();

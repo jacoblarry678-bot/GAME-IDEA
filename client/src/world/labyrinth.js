@@ -906,9 +906,18 @@ export class Labyrinth {
       }
     }
     if (this.gatePortalMat) {
+      // The Gate has three states and all three need to read on screen:
+      // sealed (near black), unbound but uncharged (a dim, breathing violet),
+      // and open (a lit doorway). Previously anything short of fully charged
+      // looked identical to sealed, which made the climax a black wall.
       const open = this.gateOpen ? 1 : 0;
-      this.gatePortalMat.color.lerp(new THREE.Color(open ? 0x6d3cff : 0x120620), Math.min(1, dt * 2));
-      this.gateLight.intensity += ((open ? 26 : 3) - this.gateLight.intensity) * Math.min(1, dt * 2);
+      const charge = this.gateCharge || 0;
+      const t = open ? 1 : this.gateUnlocked ? 0.25 + charge * 0.7 : 0;
+      const col = new THREE.Color(0x120620).lerp(new THREE.Color(0x7d46ff), t);
+      this.gatePortalMat.color.lerp(col, Math.min(1, dt * 2));
+      const breathe = 1 + Math.sin(this.time * 1.5) * 0.12 * (1 - open);
+      const target = (open ? 90 : this.gateUnlocked ? 12 + charge * 55 : 3) * breathe;
+      this.gateLight.intensity += (target - this.gateLight.intensity) * Math.min(1, dt * 2);
     }
     if (this.altarLight) {
       const t = this.altarHeat || 0;
@@ -935,6 +944,14 @@ export class Labyrinth {
 
   setGateOpen(open) {
     this.gateOpen = open;
+  }
+
+  /** @param {{unlocked:boolean, charge:number, open:boolean}} gate */
+  setGateState(gate) {
+    if (!gate) return;
+    this.gateUnlocked = !!gate.unlocked;
+    this.gateCharge = gate.charge || 0;
+    this.gateOpen = !!gate.open;
   }
 
   setAltarHeat(v) {
