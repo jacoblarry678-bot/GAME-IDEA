@@ -150,6 +150,18 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - Reboot vans on slopes work for players and bots.
   - A stale-grid double-placement bug is fixed.
 
+## Mini update: Supercharged XP and Supercharged rank
+
+- [x] **Supercharged XP:**
+  - A bonus pool of 2,500 XP refills every day at your local midnight. Unused days bank up to 7,500.
+  - While the pool lasts, the XP you earn in any match (casual or ranked) is doubled.
+  - The lobby shows what's left, or when it refills. The results screen shows the bonus.
+- [x] **Supercharged rank:**
+  - While your MMR is at least 90 ahead of your rank (about 1.5 divisions), your rank is ⚡ Supercharged.
+  - Rank-point gains are ×1.5 and matches never cost RP, until your rank catches up.
+  - It's off during placement matches and at Legend.
+  - The tag shows on the lobby rank card, the ranked HUD, the results screen and the Ranked screen (boosted matches get a ⚡ in the history).
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
@@ -173,6 +185,7 @@ node tools/island-playtest.mjs              # 33 checks
 node tools/island-features.mjs              # 10 checks
 node tools/island-milestone2.mjs            # 19 checks
 node tools/island-ranked.mjs                # 12 checks
+node tools/island-supercharged.mjs          # 13 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
@@ -191,6 +204,9 @@ node tools/island-mobile.mjs                # 17 checks: emulated phone with rea
   - Match end: squad wipe and placement, and squad victory.
 
 - **`island-ranked.mjs`:** placement matches and the Platinum cap, promotion on a winning streak, losses without demotion, MMR following the lobby rating, separate Build/Zero Build ranks and history, bot skill following MMR, a real ranked match (queue, HUD, result screen, lobby card, Ranked screen), and casual matches leaving the rank alone.
+- **`island-supercharged.mjs`:**
+  - Supercharged XP: the starting pool, daily refill and 3-day cap, XP doubling in a real match (saved and shown), running out, and the empty-pool refill timer.
+  - Supercharged rank: when it turns on and off, no RP loss, ×1.5 gains, and the lobby card, HUD, results and Ranked screen.
 - **`island-online.mjs`:**
   - Joining: open-games list, roster, and matching rosters and bots on both machines.
   - Movement: bus jump, landing position agreement, host teleports, and client movement.
@@ -220,6 +236,7 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/game.js` | Match flow, bus, damage routing, eliminations, XP |
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
-| `src/core/ranked.js` | Ranks, MMR, rank points, lobby bot skill |
+| `src/core/ranked.js` | Ranks, MMR, rank points, Supercharged rank, lobby bot skill |
+| `src/core/supercharge.js` | Daily Supercharged XP pool |
 | `src/gameplay/{combat,building,loot,storm,effects,items}.js` | Systems and data |
 | `src/ui/{hud,menus}.js` | HUD and menu screens |

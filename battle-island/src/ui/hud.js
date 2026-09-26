@@ -225,7 +225,7 @@ export class Hud {
     const T = game.teams;
     this.set('alive', this.el.alive, String(T.enabled ? T.teamsAlive().size : game.alive().length));
     this.set('aliveL', this.el.aliveLabel, T.enabled ? 'squads' : 'left');
-    this.set('rk', this.el.rankedPill, game.ranked ? `RANKED · ${lobbyLabel(game.lobbyRating)} lobby` : '', 'textContent');
+    this.set('rk', this.el.rankedPill, game.ranked ? `RANKED · ${lobbyLabel(game.lobbyRating)} lobby${game.rankSuper ? ' · ⚡ SUPERCHARGED' : ''}` : '', 'textContent');
     this.set('rkd', this.el.rankedPill.style, game.ranked ? '' : 'none', 'display');
     this.set('kills', this.el.kills, String(specA.kills));
     // compass

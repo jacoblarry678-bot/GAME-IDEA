@@ -376,3 +376,18 @@ body.touch .buildinfo { font-size: 11px; }
 .ladder-step { display: inline-flex; align-items: center; gap: 4px; }
 .ranked-pill { margin-top: 6px; background: rgba(179, 92, 255, 0.75); border-radius: 10px; padding: 1px 8px; font-size: 12px; text-align: center; }
 body.touch .ranked-pill { font-size: 10px; }
+
+/* Supercharged XP / rank */
+.super-xp { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; padding: 4px 8px; border-radius: 10px; background: var(--panel-2); opacity: 0.7; }
+.super-xp.on { opacity: 1; box-shadow: 0 0 0 2px rgba(255, 207, 63, 0.55) inset; }
+.super-xp .bolt { font-size: 20px; filter: drop-shadow(0 0 4px #ffcf3f); }
+.sx-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.sx-text small { color: var(--muted); font-size: 12px; }
+.sx-text small b { color: #ffcf3f; }
+.sx-bar { display: block; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.15); overflow: hidden; }
+.sx-bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffcf3f, #ff9d2e); }
+.sx-won { color: #ffcf3f; font-weight: 800; margin: 4px 0; }
+.sc-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 6px; border: 1px solid #ffcf3f; background: rgba(255, 207, 63, 0.16); color: #ffcf3f; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
+.rank-result .sc-tag { margin: 4px 0 0; align-self: flex-start; }
+.rank-card.super { box-shadow: 0 0 12px rgba(255, 207, 63, 0.55); }
+@media (max-height: 520px) { .super-xp { margin: 0 0 4px; padding: 2px 6px; } .super-xp .bolt { font-size: 16px; } .sx-text > small:first-child { display: none; } }

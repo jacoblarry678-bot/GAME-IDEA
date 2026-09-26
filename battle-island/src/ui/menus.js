@@ -6,7 +6,8 @@
 
 import { CHARACTERS, CHARACTER_IDS, SKIN_TONES } from '../entities/characters.js';
 import { save, levelInfo } from '../core/save.js';
-import { rankState, divName, divColor, divisionMMR, badgeHTML, TOP, PLACEMENT_MATCHES, lobbyLabel } from '../core/ranked.js';
+import { rankState, divName, divColor, divisionMMR, badgeHTML, TOP, PLACEMENT_MATCHES, lobbyLabel, isSupercharged, SUPER_LEAD, SUPER_MULT } from '../core/ranked.js';
+import { superXP, refillIn, CAP_XP, DAILY_XP } from '../core/supercharge.js';
 import { sfx } from '../core/audio.js';
 
 export const ROADMAP = {
@@ -27,6 +28,7 @@ export const ROADMAP = {
     'Milestone 3 — online multiplayer: up to 4 players per match (bots fill the rest), host-authoritative, via the claude.ai link or a self-hosted server; open-games list and join codes; bot takeover if someone disconnects',
     'Mobile: touch joystick, drag-to-look, on-screen buttons (drag FIRE to aim), tappable inventory/build bar/minimap, phone layouts and lighter graphics defaults',
     'Ranked: Bronze → Silver → Gold → Platinum → Diamond → Champion (3 divisions each) → Legend; MMR-based matchmaking (bot difficulty), rank points for placement and eliminations, placement matches, separate Build / Zero Build ranks, ranks shown online',
+    'Supercharged XP (daily bonus pool that doubles match XP, banks up to 3 days) and Supercharged rank (x1.5 rank gains and no RP loss while your MMR is well ahead of your rank)',
   ],
   next: [
     'Editing ramps and cones; carrying downed teammates',
@@ -149,7 +151,14 @@ export class Menus {
 
   _levelBar() {
     const L = levelInfo(save.data.progress.xp);
-    return `<div class="level"><div class="lvl-badge">${L.level}</div><div class="lvl-bar"><div style="width:${(L.into / L.need) * 100}%"></div></div><small>${L.into} / ${L.need} XP</small></div>`;
+    return `<div class="level"><div class="lvl-badge">${L.level}</div><div class="lvl-bar"><div style="width:${(L.into / L.need) * 100}%"></div></div><small>${L.into} / ${L.need} XP</small></div>${this._superXP()}`;
+  }
+
+  /** Daily Supercharged XP pool. */
+  _superXP() {
+    const s = superXP();
+    const text = s.pool > 0 ? `<b>${s.pool.toLocaleString()}</b> XP left: match XP is doubled` : `Used up · refills in ${refillIn()}`;
+    return `<div class="super-xp ${s.pool > 0 ? 'on' : ''}" title="+${DAILY_XP.toLocaleString()} every day, banks up to ${CAP_XP.toLocaleString()}"><span class="bolt">⚡</span><span class="sx-text"><small>Supercharged XP</small><span class="sx-bar"><i style="width:${(s.pool / CAP_XP) * 100}%"></i></span><small>${text}</small></span></div>`;
   }
 
   showMain() {
@@ -339,9 +348,10 @@ export class Menus {
     const s = rankState(mode);
     const label = mode === 'zerobuild' ? 'Zero Build rank' : 'Build rank';
     const sub = s.d < 0 ? `${Math.max(0, PLACEMENT_MATCHES - s.matches)} placement match${PLACEMENT_MATCHES - s.matches === 1 ? '' : 'es'} left` : s.d >= TOP ? `${s.rp} RP` : `${s.rp}% to next`;
-    return `<button class="rank-card" data-act="ranked" style="--rc:${divColor(s.d)}">
+    const sup = isSupercharged(s) ? '<span class="sc-tag">⚡ Supercharged</span>' : '';
+    return `<button class="rank-card ${sup ? 'super' : ''}" data-act="ranked" style="--rc:${divColor(s.d)}">
       ${badgeHTML(s.d, 42)}
-      <span class="rk-text"><small>${label}</small><b>${divName(s.d)}</b><span class="rk-bar"><i style="width:${s.d < 0 ? (s.matches / PLACEMENT_MATCHES) * 100 : s.d >= TOP ? 100 : s.rp}%"></i></span><small>${sub} · MMR ${s.mmr}</small></span>
+      <span class="rk-text"><small>${label}${sup}</small><b>${divName(s.d)}</b><span class="rk-bar"><i style="width:${s.d < 0 ? (s.matches / PLACEMENT_MATCHES) * 100 : s.d >= TOP ? 100 : s.rp}%"></i></span><small>${sub} · MMR ${s.mmr}</small></span>
     </button>`;
   }
 
@@ -354,11 +364,12 @@ export class Menus {
     else if (k.promoted) head = `<b class="promo">Promoted to ${divName(a.d)}!</b>`;
     else head = `<b>${divName(a.d)}</b>`;
     const rp = a.d < 0 ? '' : `<span class="${k.dRP >= 0 ? 'up' : 'down'}">${k.dRP >= 0 ? '+' : ''}${k.dRP} RP</span>`;
+    const sup = k.supercharged ? `<span class="sc-tag">⚡ Supercharged ×${SUPER_MULT}</span>` : k.stillSupercharged ? '<span class="sc-tag">⚡ Supercharged next match</span>' : '';
     const pct = a.d < 0 ? ((PLACEMENT_MATCHES - k.placementLeft) / PLACEMENT_MATCHES) * 100 : a.d >= TOP ? 100 : a.rp;
     return `<div class="rank-result" style="--rc:${divColor(a.d)}">
       ${badgeHTML(b.d, 34)}<span class="arrow">→</span>${badgeHTML(a.d, 46)}
       <div class="rk-text">${head}<span class="rk-bar"><i style="width:${pct}%"></i></span>
-      <small>${rp} <span class="${k.dMMR >= 0 ? 'up' : 'down'}">MMR ${k.dMMR >= 0 ? '+' : ''}${k.dMMR}</span> (now ${a.mmr})</small></div>
+      <small>${rp} <span class="${k.dMMR >= 0 ? 'up' : 'down'}">MMR ${k.dMMR >= 0 ? '+' : ''}${k.dMMR}</span> (now ${a.mmr})</small>${sup}</div>
     </div>`;
   }
 
@@ -366,9 +377,9 @@ export class Menus {
     this.current = 'ranked';
     const card = (mode, title) => {
       const s = rankState(mode);
-      const hist = s.history.length ? s.history.map((h) => `<tr><td>${h.won ? '#1' : `#${h.place}/${h.total}`}</td><td>${h.kills}</td><td class="${h.dRP >= 0 ? 'up' : 'down'}">${h.d < 0 && !h.dRP ? '—' : (h.dRP >= 0 ? '+' : '') + h.dRP}</td><td class="${h.dMMR >= 0 ? 'up' : 'down'}">${h.dMMR >= 0 ? '+' : ''}${h.dMMR}</td></tr>`).join('') : '<tr><td colspan="4">No ranked matches yet</td></tr>';
+      const hist = s.history.length ? s.history.map((h) => `<tr><td>${h.won ? '#1' : `#${h.place}/${h.total}`}</td><td>${h.kills}</td><td class="${h.dRP >= 0 ? 'up' : 'down'}">${h.d < 0 && !h.dRP ? '—' : (h.dRP >= 0 ? '+' : '') + h.dRP}${h.sup ? ' ⚡' : ''}</td><td class="${h.dMMR >= 0 ? 'up' : 'down'}">${h.dMMR >= 0 ? '+' : ''}${h.dMMR}</td></tr>`).join('') : '<tr><td colspan="4">No ranked matches yet</td></tr>';
       return `<div class="rank-panel" style="--rc:${divColor(s.d)}">
-        <div class="rank-head">${badgeHTML(s.d, 64)}<div><small>${title}</small><h3>${divName(s.d)}</h3><span class="rk-bar"><i style="width:${s.d < 0 ? (s.matches / PLACEMENT_MATCHES) * 100 : s.d >= TOP ? 100 : s.rp}%"></i></span>
+        <div class="rank-head">${badgeHTML(s.d, 64)}<div><small>${title}${isSupercharged(s) ? ' <span class="sc-tag">⚡ Supercharged</span>' : ''}</small><h3>${divName(s.d)}</h3><span class="rk-bar"><i style="width:${s.d < 0 ? (s.matches / PLACEMENT_MATCHES) * 100 : s.d >= TOP ? 100 : s.rp}%"></i></span>
         <small>${s.d < 0 ? `Placement: ${s.matches}/${PLACEMENT_MATCHES} matches` : s.d >= TOP ? `${s.rp} RP` : `${s.rp} / 100 RP`}</small></div></div>
         <div class="stats"><div><b>${s.mmr}</b>MMR</div><div><b>${s.matches}</b>matches</div><div><b>${divName(s.peak).replace(' ', '&nbsp;')}</b>peak</div><div><b>${lobbyLabel(s.mmr)}</b>lobbies</div></div>
         <table class="hist"><tr><th>Place</th><th>Elims</th><th>RP</th><th>MMR</th></tr>${hist}</table>
@@ -383,6 +394,7 @@ export class Menus {
         <ul class="howto">
           <li><b>MMR</b> (matchmaking rating) is your skill score. It goes up when you place better than expected and down when you place worse. In Ranked, the bots you face are tuned to your MMR. Online, they're tuned to the average MMR of the players in the lobby.</li>
           <li><b>Rank</b> is earned with rank points: 100 RP per division. Placement and eliminations earn RP. Each match costs a little entry RP, and the cost grows with rank. If your MMR is higher than your rank, you gain faster (and lose less) until your rank catches up.</li>
+          <li><b>⚡ Supercharged rank:</b> when your MMR is at least ${SUPER_LEAD} ahead of your rank (about 1.5 divisions), rank gains are ×${SUPER_MULT} and matches never cost RP. It switches off once your rank catches up.</li>
           <li>Your first ${PLACEMENT_MATCHES} matches are placement matches. You can lose progress, but you never drop a division. Leaving a match early counts as being eliminated.</li>
           <li>Build and Zero Build have separate ranks. Ranks are saved on this device.</li>
         </ul>
@@ -413,6 +425,7 @@ export class Menus {
       <div class="sheet panel result ${r.won ? 'win' : ''}">
         ${r.won ? `<div class="crown">#1</div><h1 class="big">${r.team ? 'BENTON SQUAD CHAMPIONS!' : 'BENTON CHAMPION!'}</h1>` : `<h1 class="big">#${r.place} <small>of ${r.total} ${r.team ? 'squads' : ''}</small></h1><p class="sub">${r.team ? 'Your squad was eliminated' : r.killer ? `Eliminated by ${escAttr(r.killer)}` : 'Eliminated'}</p>`}
         <div class="stats"><div><b>${r.kills}</b>elims</div><div><b>${r.damage}</b>damage</div><div><b>${Math.floor(r.time / 60)}:${String(r.time % 60).padStart(2, '0')}</b>survived</div><div><b>+${r.xp}</b>XP</div></div>
+        ${r.superXP ? `<p class="sx-won">⚡ +${r.superXP.toLocaleString()} Supercharged XP (included)</p>` : ''}
         ${r.levelUp ? `<p class="lvlup">Level up! You reached level ${r.levelUp}.</p>` : ''}
         ${r.ranked ? this._rankResult(r.ranked) : ''}
         <div class="level"><div class="lvl-badge">${L.level}</div><div class="lvl-bar"><div style="width:${(L.into / L.need) * 100}%"></div></div><small>${L.into} / ${L.need} XP</small></div>

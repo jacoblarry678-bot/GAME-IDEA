@@ -18,9 +18,10 @@ import { PlayerController } from './player.js';
 import { Teams } from './teams.js';
 import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
+import { superchargeXP } from '../core/supercharge.js';
 import { sfx } from '../core/audio.js';
 import { save, levelInfo } from '../core/save.js';
-import { applyRanked, botSkillRange } from '../core/ranked.js';
+import { applyRanked, botSkillRange, isSupercharged, rankState } from '../core/ranked.js';
 
 const BUS_H = 115, BUS_SPEED = 19, BUS_R = 215;
 
@@ -121,6 +122,7 @@ export class Game {
     this.role = opts.role || 'solo'; // solo | host | client
     this.ranked = !!opts.ranked;
     this.lobbyRating = opts.lobbyRating || 1000;
+    this.rankSuper = this.ranked && isSupercharged(rankState(opts.mode)); // this device's rank
     this.actions = this.role === 'client' ? new NetActions(this) : new LocalActions(this);
     this.mode = opts.mode;
     this.seed = opts.seed ?? Math.floor(Math.random() * 1e9);
@@ -503,14 +505,15 @@ export class Game {
     const xp = 60 + kills * 75 + Math.round(st.damage / 4) + Math.floor(survive / 3) + Math.max(0, (totalTeams - place) * 8 * this.teamSize) + (won ? 400 : 0);
     const before = levelInfo(save.data.progress.xp).level;
     const pr = save.data.progress;
-    pr.xp += xp;
+    const superXP = superchargeXP(xp); // daily Supercharged XP doubles it while the pool lasts
+    pr.xp += xp + superXP;
     pr.matches++;
     pr.kills += kills;
     if (won) pr.wins++;
     if (!pr.bestPlace || place < pr.bestPlace) pr.bestPlace = place;
     save.write();
     const after = levelInfo(pr.xp).level;
-    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp, levelUp: after > before ? after : 0, killer: st.killer };
+    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: xp + superXP, superXP, levelUp: after > before ? after : 0, killer: st.killer };
     if (this.ranked) this.result.ranked = applyRanked(this.mode, { won, place, total: totalTeams, kills }, this.lobbyRating);
     if (won) {
       sfx.play('win');

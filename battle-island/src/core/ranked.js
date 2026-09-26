@@ -10,6 +10,8 @@
  *   your real skill). You can lose progress but never drop a division.
  * - The first 3 ranked matches are placement matches that set your starting
  *   rank from your MMR (capped at Platinum I).
+ * - Supercharged: while your MMR is well ahead of your rank (1.5 divisions or
+ *   more), rank gains are x1.5 and matches never cost RP, until the rank catches up.
  * Build and Zero Build are ranked separately. Everything is stored on this
  * device (like the rest of the progression).
  */
@@ -55,6 +57,15 @@ export function rankState(mode) {
   return save.data.ranked[key];
 }
 
+/** MMR lead over the rank's worth that makes a rank Supercharged. */
+export const SUPER_LEAD = 90;
+export const SUPER_MULT = 1.5;
+
+/** Supercharged: MMR is well ahead of the rank (not during placement or at Legend). */
+export function isSupercharged(s) {
+  return s.d >= 0 && s.d < TOP && s.mmr - divisionMMR(s.d) >= SUPER_LEAD;
+}
+
 /** Bot skill range for a lobby rating (casual lobbies use 0.30–0.75). */
 export function botSkillRange(rating) {
   const t = Math.max(0, Math.min(1, (rating - 500) / 1300));
@@ -75,6 +86,7 @@ export function lobbyLabel(rating) {
 export function applyRanked(mode, st, lobbyRating) {
   const s = rankState(mode);
   const before = { d: s.d, rp: s.rp, mmr: s.mmr };
+  const wasSuper = isSupercharged(s); // what the lobby showed going into the match
   const n = Math.max(2, st.total);
   const pct = st.won ? 1 : Math.max(0, (n - st.place) / (n - 1)); // 1 = won, 0 = first out
   const kills = Math.min(10, st.kills | 0);
@@ -89,6 +101,7 @@ export function applyRanked(mode, st, lobbyRating) {
   // --- rank
   let dRP = 0;
   let placed = false;
+  let boosted = false;
   if (s.d < 0) {
     if (s.matches >= PLACEMENT_MATCHES) {
       s.d = Math.min(9, divisionFromMMR(s.mmr));
@@ -97,6 +110,7 @@ export function applyRanked(mode, st, lobbyRating) {
     }
   } else {
     const d = s.d;
+    boosted = wasSuper;
     const gain = Math.round(Math.pow(pct, 1.5) * 50) + (st.won ? 20 : 0) + kills * 5;
     const cost = Math.round(14 + d * 1.6);
     const raw = gain - cost;
@@ -105,6 +119,7 @@ export function applyRanked(mode, st, lobbyRating) {
     const up = Math.max(0.5, Math.min(1.8, 1 + diff / 400));
     const down = Math.max(0.5, Math.min(1.8, 1 - diff / 400));
     dRP = Math.round(raw >= 0 ? raw * up : raw * down);
+    if (boosted) dRP = Math.max(0, Math.round(dRP * SUPER_MULT));
     s.rp += dRP;
     while (s.rp >= 100 && s.d < TOP) {
       s.rp -= 100;
@@ -113,11 +128,12 @@ export function applyRanked(mode, st, lobbyRating) {
     if (s.rp < 0) s.rp = 0; // no demotion: progress bottoms out at 0%
   }
   s.peak = Math.max(s.peak, s.d);
-  s.history.unshift({ place: st.place, total: n, kills, won: !!st.won, dRP, dMMR, d: s.d, at: Date.now() });
+  s.history.unshift({ place: st.place, total: n, kills, won: !!st.won, dRP, dMMR, d: s.d, sup: boosted, at: Date.now() });
   s.history.length = Math.min(s.history.length, 10);
   save.write();
   return {
     mode, before, after: { d: s.d, rp: s.rp, mmr: s.mmr }, dRP, dMMR, placed,
+    supercharged: boosted, stillSupercharged: isSupercharged(s),
     placementLeft: s.d < 0 ? PLACEMENT_MATCHES - s.matches : 0,
     promoted: before.d >= 0 && s.d > before.d,
   };
