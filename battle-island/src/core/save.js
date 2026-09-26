@@ -15,6 +15,9 @@ const DEFAULTS = {
     shadows: true,
     botCount: 19,
     showFps: false,
+    touch: 'auto', // auto | on | off
+    touchLook: 1,
+    mobileTuned: false,
   },
   profile: {
     character: 'colton',

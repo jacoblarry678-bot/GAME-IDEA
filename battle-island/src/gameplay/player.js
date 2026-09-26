@@ -124,7 +124,7 @@ export class PlayerController {
     const down = (c) => input.down(c);
 
     if (p.state === 'bus') {
-      if (pressed('Space')) g.jumpFromBus(p);
+      if (pressed('Space')) g.actions.jumpBus();
       return;
     }
 
@@ -136,13 +136,22 @@ export class PlayerController {
     if (down('KeyS')) { fx -= f.x; fz -= f.z; }
     if (down('KeyD')) { fx += r.x; fz += r.z; }
     if (down('KeyA')) { fx -= r.x; fz -= r.z; }
+    const an = input.analog;
+    let stickSprint = false;
+    if (an && (an.x || an.y)) {
+      // touch joystick: analog speed, push to the rim to sprint
+      fx += r.x * an.x - f.x * an.y;
+      fz += r.z * an.x - f.z * an.y;
+      stickSprint = Math.hypot(an.x, an.y) > 0.95;
+    }
     const l = Math.hypot(fx, fz);
-    inp.mx = l > 0 ? fx / l : 0;
-    inp.mz = l > 0 ? fz / l : 0;
-    inp.sprint = down('ShiftLeft') || down('ShiftRight');
+    const norm = l > 1 ? l : 1;
+    inp.mx = l > 0 ? fx / norm : 0;
+    inp.mz = l > 0 ? fz / norm : 0;
+    inp.sprint = down('ShiftLeft') || down('ShiftRight') || stickSprint;
     inp.jump = pressed('Space');
     inp.glide = pressed('Space');
-    inp.dive = down('KeyW') ? 1 : 0;
+    inp.dive = down('KeyW') || (an && an.y < -0.6) ? 1 : 0;
     inp.slide = false;
     if (pressed('KeyC') || pressed('ControlLeft')) {
       if (p.sprinting && p.grounded) inp.slide = true;
@@ -166,10 +175,10 @@ export class PlayerController {
       if (this.building) this.piece = PIECES[Math.min(3, i)];
       else {
         this.exitEdit();
-        p.select(i);
+        g.actions.select(i);
       }
     }
-    if (pressed('KeyF')) { this.building = false; this.exitEdit(); p.select(-1); }
+    if (pressed('KeyF')) { this.building = false; this.exitEdit(); g.actions.select(-1); }
     if ((pressed('KeyB') || pressed('KeyQ')) && g.mode !== 'zerobuild') {
       if (this.editing) this.exitEdit();
       else this.building = !this.building;
@@ -180,7 +189,7 @@ export class PlayerController {
     if (input.mouse.wheel && !this.building) {
       const order = [-1, 0, 1, 2, 3, 4].filter((i) => i === -1 || p.slots[i]);
       const cur = order.indexOf(p.sel);
-      p.select(order[(cur + (input.mouse.wheel > 0 ? 1 : -1) + order.length) % order.length]);
+      g.actions.select(order[(cur + (input.mouse.wheel > 0 ? 1 : -1) + order.length) % order.length]);
     } else if (input.mouse.wheel && this.building) {
       this.piece = PIECES[(PIECES.indexOf(this.piece) + (input.mouse.wheel > 0 ? 1 : 3)) % 4];
     }
@@ -206,7 +215,7 @@ export class PlayerController {
     this.buildInfo = this.aimPiece && canAct && !this.editing ? g.building.repairInfo(p, this.aimPiece) : null;
     if (pressed('KeyV') && canAct) {
       if (this.editing) {
-        if (!g.building.applyEdit(this.editing.piece, this.editing.tiles)) g.hud.toast('Keep at least one tile!', '#ff8a8a', 1.5);
+        if (!g.actions.edit(this.editing.piece, this.editing.tiles)) g.hud.toast('Keep at least one tile!', '#ff8a8a', 1.5);
         this.exitEdit();
       } else if (this.aimPiece && g.mode !== 'zerobuild') {
         const pc = this.aimPiece;
@@ -215,8 +224,11 @@ export class PlayerController {
         else this.startEdit(pc);
       }
     }
-    if (pressed('KeyU') && canAct && this.aimPiece && !this.editing) g.hud.toast(g.building.repairOrUpgrade(p, this.aimPiece), '#ffe9b0', 1.5);
-    if ((pressed('KeyZ') || pressed('Mouse1')) && p.alive) g.teams.ping(p, this.aimPoint);
+    if (pressed('KeyU') && canAct && this.aimPiece && !this.editing) {
+      const msg = g.actions.repair(this.aimPiece);
+      if (msg) g.hud.toast(msg, '#ffe9b0', 1.5);
+    }
+    if ((pressed('KeyZ') || pressed('Mouse1')) && p.alive) g.actions.ping(this.aimPoint);
 
     // ADS
     p.ads = !this.building && !!p.weapon && down('Mouse2') && canAct;
@@ -253,7 +265,7 @@ export class PlayerController {
       this.placeCd -= dt;
       const place = pressed('Mouse0') || (down('Mouse0') && s.key !== this.lastKey && this.placeCd <= 0);
       if (place) {
-        if (g.building.place(p, s, this.material)) {
+        if (g.actions.build(s, this.material, { piece: this.piece, yaw: this.yaw, pitch: this.pitch, rot: this.rot })) {
           this.lastKey = s.key;
           this.placeCd = 0.08;
         } else if (pressed('Mouse0') && p.mats[this.material] < 10) {
@@ -267,28 +279,28 @@ export class PlayerController {
       if (canAct && !p.emote) {
         const it = p.item;
         if (!it) {
-          if (down('Mouse0')) g.combat.swing(p, shotDir);
+          if (down('Mouse0')) g.actions.swing(shotDir);
         } else if (it.kind === 'weapon') {
           const trig = p.weapon.auto ? down('Mouse0') : pressed('Mouse0');
           if (trig) {
-            const rec = g.combat.fire(p, shotDir);
+            const rec = g.actions.fire(shotDir);
             if (rec) {
               this.pitch += rec * (p.ads ? 0.55 : 0.8);
               this.yaw += (Math.random() - 0.5) * rec * 0.4;
               this.shake = Math.min(0.5, this.shake + rec * 2);
             }
           }
-          if (pressed('KeyR')) p.startReload();
+          if (pressed('KeyR')) g.actions.reload();
         } else if (it.kind === 'throwable') {
-          if (pressed('Mouse0')) g.combat.throwItem(p, shotDir);
+          if (pressed('Mouse0')) g.actions.throwItem(shotDir);
         } else if (it.kind === 'consumable') {
           if (pressed('Mouse0')) {
-            if (!p.startUse()) g.hud.toast("You don't need that right now.", '#ffffff', 1.2);
+            if (!g.actions.use()) g.hud.toast("You don't need that right now.", '#ffffff', 1.2);
           }
         }
       }
     }
-    if (pressed('KeyG') && canAct && p.item) g.loot.dropSelected(p);
+    if (pressed('KeyG') && canAct && p.item) g.actions.drop();
 
     // interact
     this.prompt = null;
@@ -311,18 +323,19 @@ export class PlayerController {
       const pk = g.loot.nearest(p, 2.4, (k) => k.it.kind !== 'ammo' && k.it.kind !== 'mat' && k.it.kind !== 'card');
       if (ch && (!pk || ch.pos.distanceTo(p.pos) < pk.pos.distanceTo(p.pos))) {
         this.prompt = { key: 'E', text: ch.supply ? 'Open Supply Drop' : 'Open Chest' };
-        if (pressed('KeyE')) g.loot.openChest(p, ch);
+        if (pressed('KeyE')) g.actions.openChest(ch);
       } else if (pk) {
         const it = pk.it;
         const full = !p.hasRoomFor(it);
         const rar = it.kind === 'weapon' ? RARITIES[it.rarity] : null;
         this.prompt = { key: 'E', text: `${full ? (p.sel >= 0 ? 'Swap for' : 'Inventory full —') : 'Pick up'} ${rar ? rar.name + ' ' : ''}${itemName(it)}${it.count > 1 ? ' x' + it.count : ''}`, color: rar ? rar.color : '#fff' };
         if (pressed('KeyE')) {
-          const r2 = g.loot.take(p, pk);
+          const r2 = g.actions.take(pk);
           if (r2 === 'full') g.hud.toast('Inventory full: select a slot (1-5) to swap it out.', '#ff8a8a', 2);
         }
       }
     }
+    p.reviveHold = hold;
     if (!hold) {
       p.reviveTarget = null;
       p.rebootVan = null;

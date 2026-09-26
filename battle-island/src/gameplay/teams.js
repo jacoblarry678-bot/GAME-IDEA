@@ -58,13 +58,13 @@ export class Teams {
     target.rebootVan = null;
     target.sel = -1;
     const g = this.game;
-    g.hud.killfeed({ a: by ? by.name : null, b: target.name, how: 'knock' }, g.player);
+    g.feed({ a: by ? by.name : null, b: target.name, how: 'knock' });
     sfx.play('hurt', target.pos);
     if (target === g.player) {
       g.controller.building = false;
       g.building.hideGhost();
-      g.hud.toast("You're knocked down! Crawl to cover — a teammate can revive you.", '#ff8a8a', 4);
     }
+    g.notify(target, "You're knocked down! Crawl to cover — a teammate can revive you.", '#ff8a8a', 4);
     return true;
   }
 
@@ -77,8 +77,8 @@ export class Teams {
     sfx.play('heal', target.pos);
     this.game.effects.burst(target.pos.clone().add(new THREE.Vector3(0, 1, 0)), '#7ed957', 14, 3, 0.12, 0.7);
     const g = this.game;
-    if (target === g.player) g.hud.toast(`${by.name} revived you!`, '#7ed957', 2.5);
-    else if (by === g.player) g.hud.toast(`You revived ${target.name}!`, '#7ed957', 2);
+    g.notify(target, `${by.name} revived you!`, '#7ed957', 2.5);
+    g.notify(by, `You revived ${target.name}!`, '#7ed957', 2);
   }
 
   /** Drops a reboot card where a team member was eliminated. */
@@ -111,19 +111,21 @@ export class Teams {
       a.state = 'skydive';
       a.canRedeploy = false;
       a.place = 0;
+      a.ep = (a.ep | 0) + 1;
+      a.resultSent = false;
       back.push(a);
       if (a === g.player) {
         g.controller.spectating = false;
         g.controller.spec = null;
         g.menus.hide();
-        g.hud.toast(`${by.name} rebooted you! Glide back into the fight.`, '#39f0ff', 4);
       }
+      g.notify(a, `${by.name} rebooted you! Glide back into the fight.`, '#39f0ff', 4);
     }
     by.cards = [];
     van.cd = VAN_COOLDOWN;
     g.effects.burst(van.pos.clone().add(new THREE.Vector3(0, 2, 0)), '#39f0ff', 30, 6, 0.2, 1.2);
     sfx.play('chest', van.pos);
-    if (back.length) g.hud.killfeed({ a: by.name, b: back.map((a) => a.name).join(', '), how: 'reboot' }, g.player);
+    if (back.length) g.feed({ a: by.name, b: back.map((a) => a.name).join(', '), how: 'reboot' });
   }
 
   nearestVan(pos, maxD = Infinity) {
@@ -152,6 +154,7 @@ export class Teams {
     }
     this.pings = this.pings.filter((p) => p.by !== by);
     this.pings.push({ pos: pos.clone(), t: 12, team: by.team, by, label, color, enemy });
+    g.net?.push?.(['pg', by.team, Math.round(pos.x * 10), Math.round(pos.y * 10), Math.round(pos.z * 10), label, color, by.id]);
     for (const a of g.actors) if (a.brain && a.team === by.team && a !== by) a.brain.onPing(pos, enemy);
     if (by === g.player) sfx.play('ui');
   }

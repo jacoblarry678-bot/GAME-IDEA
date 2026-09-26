@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { Collider } from '../world/physics.js';
 import { boxGeo, mat } from '../world/island.js';
 import { sfx } from '../core/audio.js';
+import { pieceRow, bitsToTiles } from '../net/sync.js';
 
 export const TILE = 4;
 export const LEVEL = 3.2;
@@ -140,7 +141,45 @@ export class Building {
       this.game.tweens.push({ t: 0, d: 0.12, fn: (k) => m.scale.setScalar(0.6 + 0.4 * k) });
     }
     sfx.play('build', p.meshes[0].position);
+    this._net(p);
     return p;
+  }
+
+  _net(p) {
+    this.game.net?.push?.(['pc+', pieceRow(p)]);
+  }
+
+  // ---- client side: pieces mirrored from the host
+  applyRow(r) {
+    const [key, type, dir, axisX, b, x0, y0, z0, x1, y1, z1, material, hp, maxHp, bits, team] = r;
+    let p = this.occupied.get(key);
+    const tiles = bitsToTiles(bits, type === 'wall' ? 9 : 4);
+    if (p && p.material === material && JSON.stringify(p.tiles) === JSON.stringify(tiles)) {
+      p.hp = hp;
+      p.maxHp = maxHp;
+      return p;
+    }
+    if (!p) {
+      p = { type, key, dir, axisX: !!axisX, b: b / 10, box: { minX: x0 / 10, minY: y0 / 10, minZ: z0 / 10, maxX: x1 / 10, maxY: y1 / 10, maxZ: z1 / 10 }, owner: null, team, colliders: [], meshes: [], alive: true };
+      p.maxY = p.box.maxY;
+      this.occupied.set(key, p);
+      this.pieces.add(p);
+      sfx.play('build', new THREE.Vector3(x0 / 10, y0 / 10, z0 / 10));
+    }
+    Object.assign(p, { material, hp, maxHp, tiles });
+    this._rebuild(p);
+    return p;
+  }
+
+  removeKey(key) {
+    const p = this.occupied.get(key);
+    if (p) this.destroy(p, true);
+  }
+
+  reconcile(rows) {
+    const keys = new Set(rows.map((r) => r[0]));
+    for (const p of [...this.pieces]) if (!keys.has(p.key)) this.destroy(p, true);
+    for (const r of rows) this.applyRow(r);
   }
 
   /** Grid tiles of an editable piece: walls 3x3 (row-major from the bottom), floors 2x2. */
@@ -224,6 +263,7 @@ export class Building {
     if (!p.alive || !tiles.some(Boolean)) return false;
     p.tiles = tiles.every(Boolean) ? null : [...tiles];
     this._rebuild(p);
+    this._net(p);
     sfx.play('build', p.meshes[0]?.position);
     return true;
   }
@@ -245,6 +285,7 @@ export class Building {
     for (const m of p.meshes) this.game.scene.remove(m);
     this.occupied.delete(p.key);
     this.pieces.delete(p);
+    this.game.net?.push?.(['pc-', p.key]);
     const b = p.box;
     const center = new THREE.Vector3((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, (b.minZ + b.maxZ) / 2);
     this.game.effects.burst(center, LOOK[p.material][0], collapse ? 10 : 16, collapse ? 3 : 5, 0.25, 0.9);
@@ -306,6 +347,7 @@ export class Building {
       p.maxHp = p.hp = BUILD_HP[info.mat];
       this._rebuild(p);
     }
+    this._net(p);
     sfx.play('build', p.meshes[0]?.position);
     return info.kind === 'repair' ? 'Repaired!' : `Upgraded to ${info.mat}!`;
   }

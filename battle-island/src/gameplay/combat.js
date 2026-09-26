@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { WEAPONS, THROWABLES, PICKAXE, RARITIES, MATS } from './items.js';
+import { THROWABLES, PICKAXE, RARITIES, MATS } from './items.js';
 import { sfx } from '../core/audio.js';
 import { WATER_Y } from '../world/physics.js';
 

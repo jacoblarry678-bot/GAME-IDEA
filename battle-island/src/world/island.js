@@ -164,6 +164,30 @@ export class World {
     for (const m of MINOR) this._rebootVan(m.x + 9, m.z + 1.5);
     this._scatterNature();
     this.mapCanvas = this._renderMap();
+    this.baseWid = this.physics.nextWid;
+    this.baseChests = this.chests.length;
+    this.destroyed = []; // world collider ids destroyed this match (for network sync)
+    this.onDestroyed = null;
+  }
+
+  /** Client side: remove a world collider the host destroyed. */
+  destroyWid(wid) {
+    if (wid >= this.baseWid) return;
+    for (const c of this.physics.colliders) {
+      if (c.wid === wid) {
+        this.destroyCollider(c);
+        return;
+      }
+    }
+  }
+
+  /** Client side: a chest the host created (supply drops). */
+  netChest(i, x, y, z, legendary, supply) {
+    if (this.chests[i]) return this.chests[i];
+    while (this.chests.length < i) this.chests.push(null);
+    const ch = this.chest(x, y, z, 0, legendary);
+    ch.supply = supply;
+    return ch;
   }
 
   height(x, z) {
@@ -918,6 +942,10 @@ export class World {
   /** Removes a destroyed collider's visuals. Returns the collider for chaining. */
   destroyCollider(c) {
     if (!c.alive) return c;
+    if (c.wid < this.baseWid) {
+      this.destroyed.push(c.wid);
+      this.onDestroyed?.(c.wid);
+    }
     this.physics.remove(c);
     if (c.linked) for (const l of c.linked) this.physics.remove(l);
     if (c.inst) {
@@ -936,7 +964,7 @@ export class World {
   update(dt, t) {
     for (const fn of this.animated) fn(t);
     for (const ch of this.chests) {
-      if (ch.opened) continue;
+      if (!ch || ch.opened) continue;
       ch.lid.position.y = 0.66 + Math.sin(t * 4 + ch.t) * 0.03;
     }
   }

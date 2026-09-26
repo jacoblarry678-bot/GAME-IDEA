@@ -14,6 +14,41 @@ is generated in code, so there are no asset files and nothing to license.
   npm run island:build    # writes battle-island/build/battle-island.html (+ an artifact variant)
   ```
 
+### Online play (up to 4 players, bots fill the rest)
+
+**In the claude.ai link:** open the game link, choose **Play Online**, then **Host game**. Friends open the same link, choose **Play Online**, and either click your game in **Open games** or type its 5-character code.
+- Hosting needs contribute or edit access to the link. Anyone the link is shared with can join.
+- No server is needed. The game uses the link's built-in real-time room.
+
+**On your own network:** run the relay server from the repo, then open the address it prints on every device:
+
+```bash
+npm install
+npm run island:build
+npm run island:server    # prints http://<your-computer's-ip>:3100 for other devices on the same Wi-Fi
+```
+
+The double-clickable file (`play/battle-island.html`) is solo only, since it has no way to reach other players.
+
+### Phones and tablets
+
+Touch controls turn on automatically on touch screens. You can force them on or off in Settings. Play in landscape.
+
+| Touch | Action |
+| --- | --- |
+| Left thumb (anywhere on the left) | Joystick: walk; push to the rim to sprint; push up while skydiving to dive |
+| Right thumb (drag) | Look / aim |
+| FIRE | Shoot, swing, place a build piece or use an item. Hold it and drag to aim while firing |
+| AIM · JUMP · CROUCH · RELOAD | Aim down sights (toggle) · jump / glider · crouch/slide · reload |
+| USE | Open, pick up, or hold to revive/reboot. It lights up when something is in reach |
+| BUILD · ⛏ | Build mode · pickaxe |
+| EDIT · FIX · MAT | Edit, repair/upgrade, and material. These show up when you aim at a build or are in build mode |
+| Slots / build pieces | Tap to select |
+| Minimap or MAP | Full map (tap it to set a drop marker) |
+| PING · ♪ · II | Ping · emote · pause (full screen is in the pause menu) |
+
+On a touch screen the game starts with shadows off and a lower resolution, to keep phones smooth.
+
 Click the game once to capture the mouse. If the page is embedded somewhere that blocks mouse capture,
 hold a mouse button and drag to look, or turn with the arrow keys.
 
@@ -77,6 +112,19 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - Repair and upgrade: repairing costs materials in proportion to the damage; upgrading goes wood → brick → metal.
   - Structural integrity: pieces must connect to the ground or the world, and anything cut off collapses. Floating pieces can't be placed.
 
+## Milestone 3: what's in
+
+- [x] **Online multiplayer:** up to 4 human players per match. Bots fill the rest and are always labelled.
+  - Works in Solo, Duos, Trios and Squads, and humans fill squads in join order.
+  - Host a game or join from the **Open games** list or a code.
+  - After a match, **Play again** brings everyone back to the same room.
+  - If a player disconnects, a bot takes over their character. If the host leaves, everyone goes back to the room.
+- [x] **Two ways to connect, one protocol:** the claude.ai link's built-in `room` capability, or the included Socket.IO relay (`server/index.js`), which offers the same interface (`src/net/roomShim.js`).
+- [x] **Host-authoritative:** the host's browser runs the simulation (bots, storm, loot, damage, builds).
+  - Each player moves their own character on their own device (responsive controls) and sends their actions to the host.
+  - The host streams snapshots (about 12 per second), effect batches and periodic full resyncs, all within the room's 4 KiB limit. A 30-player match is about 2.2 KB.
+- [x] **Mobile:** touch joystick, drag-to-look, on-screen buttons (drag FIRE to aim) and tappable HUD. There are phone layouts for the lobby and HUD, a prompt to turn the device sideways, and lighter graphics defaults.
+
 ## Roadmap: not built yet
 
 - [ ] Building: editing ramps and cones
@@ -86,7 +134,7 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [ ] Weapon attachments and scopes as separate items
 - [ ] World: drivable vehicles (fuel, damage, passengers), doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards and vaults
 - [ ] Progression: challenges, achievements, more emotes and cosmetics
-- [ ] Online multiplayer. Not started, and it needs a real networking backend that has been tested before it ships.
+- [ ] Online: more than 4 players, host migration, joining a match in progress, and anti-cheat (the host is trusted)
 - [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization, hidden family collectibles, and rotating spooky/playground events
 
 ## Testing
@@ -98,6 +146,10 @@ npm run island:dev &                        # serve on :5174
 node tools/island-playtest.mjs              # 33 checks
 node tools/island-features.mjs              # 10 checks
 node tools/island-milestone2.mjs            # 19 checks
+npm run island:server &                     # relay on :3100 (the dev server proxies to it)
+node tools/island-online.mjs                # 20 checks: two browsers, host + client
+node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
+node tools/island-mobile.mjs                # 14 checks: emulated phone with real multi-touch
 ```
 
 - **`island-playtest.mjs`:** a full solo match. Bus jump, landing, chest opening, pickup/drop/stacking/slot limit, heal interruption, rifle damage and reload, all four build pieces, running up a ramp, destroying a structure, harvesting, storm damage, pause/resume, and a full bot-vs-bot match to the final two. It then covers victory, Play again, player elimination with spectating, returning to the lobby, and every lobby button.
@@ -110,6 +162,21 @@ node tools/island-milestone2.mjs            # 19 checks
   - Reboot: picking up a card, holding E at a van, and bots rebooting the player.
   - Building 2.0: supported placement, editing a door and resetting it, repair and upgrade, and collapse.
   - Match end: squad wipe and placement, and squad victory.
+
+- **`island-online.mjs`:**
+  - Joining: open-games list, roster, and matching rosters and bots on both machines.
+  - Movement: bus jump, landing position agreement, host teleports, and client movement.
+  - Actions: shooting, building, picking up loot and taking damage.
+  - End of match: elimination with the player's own result, match end, Play again, and a bot taking over when someone disconnects.
+  - Presence stays under the 4 KiB limit with 30 players.
+  - It also passes against the production build served by the relay server.
+- **`island-online-squad.mjs`:** a phone client and a desktop host on the same Duos squad revive each other over the network.
+- **`island-mobile.mjs`:** phone detection, the joystick, drag-look, firing while steering (multi-touch), tapping slots, build mode, the map, pause, and the portrait prompt.
+
+Online-play limits:
+- The claude.ai room path couldn't be tested from here, because it needs signed-in claude.ai viewers. It uses the same protocol, message sizes and rates as the relay path, which is fully tested.
+- Only the host checks the rules, so a modified host could cheat. That's fine for friends and family.
+- Joining a match that has already started isn't supported; you join the next one.
 
 Known limits: the tests use software rendering, so they check behaviour, not frame rate. The simulation costs about 0.2 ms per frame. Near the ground a frame is about 600–900 draw calls, which is fine for desktop GPUs, but it hasn't been profiled on low-end laptops. If frame rate drops, turn off Shadows in Settings.
 

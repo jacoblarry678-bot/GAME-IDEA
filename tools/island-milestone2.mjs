@@ -254,7 +254,7 @@ const ru = await ev(() => {
   return { hp0, wood0 };
 });
 await p.waitForTimeout(200);
-const hint = await ev(() => document.querySelector('.buildinfo span').textContent);
+const hint = await ev(() => { __bi.engine.step(1 / 60); __bi.engine.step(1 / 60); return document.querySelector('.buildinfo span').textContent; });
 await press('KeyU');
 const ru1 = await ev(() => { const P = __bi.game.player; const w = [...__bi.game.building.pieces].find((q) => q.type === 'wall' && q.box.minY < P.pos.y + 1); return { hp: w.hp, max: w.maxHp, wood: P.mats.wood, mat: w.material }; });
 await press('KeyU');

@@ -81,6 +81,12 @@ export class Actor {
     // temporary effects: buff id -> seconds left
     this.buffs = {};
     this.auraT = 0;
+    // networking
+    this.remote = o.remote || null; // peer label of the human controlling this actor (host side)
+    this.human = !!o.human;
+    this.ep = 0; // bumps whenever the host teleports this actor
+    this.netHeld = null; // client side: what a remote actor is holding
+    this.reviveHold = false;
     this.stepT = 0;
     this.game.scene.add(this.model.root);
   }
@@ -577,16 +583,9 @@ export class Actor {
     let d = target - m.root.rotation.y;
     d = Math.atan2(Math.sin(d), Math.cos(d));
     m.root.rotation.y += d * Math.min(1, dt * 14);
-    const it = this.item;
-    let pose = 'none';
-    let held = 'pickaxe', rar = 0;
-    if (this.building) { pose = 'build'; held = 'none'; }
-    else if (this.use) { pose = 'heal'; held = 'none'; }
-    else if (it && it.kind === 'weapon') { pose = 'gun'; held = it.id; rar = it.rarity; }
-    else if (it && it.kind === 'throwable') { pose = 'throw'; held = it.id; }
-    else if (it && it.kind === 'consumable') { pose = 'none'; held = 'none'; }
-    else pose = 'pickaxe';
-    if (this.state === 'skydive' || this.state === 'glide' || this.state === 'swim' || this.downed) held = 'none';
+    const h = this.netHeld || this.heldInfo();
+    const { pose, key: held } = h;
+    const rar = h.rarity;
     m.setHeld(held, rar);
     m.animate(dt, {
       t,
@@ -600,6 +599,20 @@ export class Actor {
       emote: this.emote,
       downed: this.downed,
     });
+  }
+
+  /** What the character model should hold and how it should pose. */
+  heldInfo() {
+    const it = this.item;
+    let pose = 'none', key = 'pickaxe', rarity = 0;
+    if (this.building) { pose = 'build'; key = 'none'; }
+    else if (this.use) { pose = 'heal'; key = 'none'; }
+    else if (it && it.kind === 'weapon') { pose = 'gun'; key = it.id; rarity = it.rarity; }
+    else if (it && it.kind === 'throwable') { pose = 'throw'; key = it.id; }
+    else if (it && it.kind === 'consumable') { key = 'none'; }
+    else pose = 'pickaxe';
+    if (this.state === 'skydive' || this.state === 'glide' || this.state === 'swim' || this.downed) key = 'none';
+    return { pose, key, rarity };
   }
 
   dispose() {

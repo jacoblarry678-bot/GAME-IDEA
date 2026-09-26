@@ -16,6 +16,7 @@ import { Effects } from './effects.js';
 import { BotBrain, BOT_NAMES } from './bots.js';
 import { PlayerController } from './player.js';
 import { Teams } from './teams.js';
+import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
 import { sfx } from '../core/audio.js';
 import { save, levelInfo } from '../core/save.js';
@@ -116,15 +117,17 @@ export class Game {
   startMatch(opts) {
     this.endMatch();
     this.opts = opts;
+    this.role = opts.role || 'solo'; // solo | host | client
+    this.actions = this.role === 'client' ? new NetActions(this) : new LocalActions(this);
     this.mode = opts.mode;
     this.seed = opts.seed ?? Math.floor(Math.random() * 1e9);
     const rng = (this.rng = mulberry32(this.seed));
     this.world = new World(7); // the island layout is fixed; loot and storm vary per match
-    this.world.onBarrel = (c) => this.combat.explode(new THREE.Vector3((c.minX + c.maxX) / 2, c.minY + 0.6, (c.minZ + c.maxZ) / 2), 4.5, 65, 250, c.lastDamager || null);
+    this.world.onBarrel = (c) => this.role !== 'client' && this.combat.explode(new THREE.Vector3((c.minX + c.maxX) / 2, c.minY + 0.6, (c.minZ + c.maxZ) / 2), 4.5, 65, 250, c.lastDamager || null);
     this.scene.add(this.world.root);
     this.combat = new Combat(this);
     this.loot = new Loot(this);
-    this.loot.spawnInitial(rng);
+    if (this.role !== 'client') this.loot.spawnInitial(rng);
     this.building = new Building(this);
     this.storm = new Storm(this, rng);
     this.teamSize = opts.teamSize || 1;
@@ -136,23 +139,37 @@ export class Game {
     this.playerKiller = null;
     this.actors = [];
     const k = this.teamSize;
-    const p = new Actor(this, { id: 0, team: 0, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin });
-    this.player = p;
-    this.actors.push(p);
-    const names = [...BOT_NAMES].sort(() => rng() - 0.5);
-    for (let i = 0; i < opts.botCount; i++) {
-      const id = i + 1;
-      const cid = CHARACTER_IDS[i % 3];
-      // actors are grouped into teams of k in id order; the player's squad is team 0
-      const b = new Actor(this, { id, team: Math.floor(id / k), name: `${names[i % names.length]} [BOT]`, isBot: true, charId: cid, outfit: Math.floor(rng() * 3), skin: Math.floor(rng() * 5) });
-      b.brain = new BotBrain(this, b, mulberry32(this.seed + i * 977));
-      if (b.team === 0) b.brain.leader = p;
-      b.brain.pickDrop(this.world);
-      this.actors.push(b);
+    const client = this.role === 'client';
+    // humans take the first ids (the host is 0), bots fill the rest; teams are k consecutive ids
+    const humans = opts.humans || [{ id: 0, local: true, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin }];
+    const rr = mulberry32(this.seed + 1); // roster rng: identical on host and clients
+    const names = [...BOT_NAMES].sort(() => rr() - 0.5);
+    const total = humans.length + opts.botCount;
+    for (let id = 0; id < total; id++) {
+      const h = humans.find((x) => x.id === id);
+      let a;
+      if (h) {
+        a = new Actor(this, { id, team: Math.floor(id / k), name: h.name || 'Player', charId: h.charId, outfit: h.outfit, skin: h.skin, human: true, remote: h.local ? null : h.peer || null });
+        if (h.local) this.player = a;
+      } else {
+        const bi = id - humans.length;
+        a = new Actor(this, { id, team: Math.floor(id / k), name: `${names[bi % names.length]} [BOT]`, isBot: true, charId: CHARACTER_IDS[bi % 3], outfit: Math.floor(rr() * 3), skin: Math.floor(rr() * 5) });
+        if (!client) {
+          a.brain = new BotBrain(this, a, mulberry32(this.seed + bi * 977));
+          a.brain.pickDrop(this.world);
+        }
+      }
+      this.actors.push(a);
+    }
+    const humanTeams = new Set(this.actors.filter((a) => a.human).map((a) => a.team));
+    for (const b of this.actors) {
+      if (!b.brain) continue;
+      const leader = this.actors.find((a) => a.human && a.team === b.team);
+      if (leader) b.brain.leader = leader;
     }
     // bot squads drop together at their captain's spot
     for (const b of this.actors) {
-      if (!b.brain || b.team === 0) continue;
+      if (!b.brain || humanTeams.has(b.team)) continue;
       const cap = this.actors.find((a) => a.team === b.team && a.brain);
       if (cap !== b) b.brain.dropTarget = cap.brain.dropTarget.clone().add(new THREE.Vector3((rng() - 0.5) * 10, 0, (rng() - 0.5) * 10));
     }
@@ -169,6 +186,10 @@ export class Game {
     const nx = -Math.sin(ang), nz = Math.cos(ang);
     this.busFrom = new THREE.Vector3(Math.cos(ang) * BUS_R + nx * off, BUS_H, Math.sin(ang) * BUS_R + nz * off);
     this.busTo = new THREE.Vector3(-Math.cos(ang) * BUS_R + nx * off, BUS_H, -Math.sin(ang) * BUS_R + nz * off);
+    if (opts.bus) {
+      this.busFrom.fromArray(opts.bus, 0);
+      this.busTo.fromArray(opts.bus, 3);
+    }
     this.busLen = this.busFrom.distanceTo(this.busTo);
     this.busT = 0;
     this.bus.visible = true;
@@ -181,11 +202,11 @@ export class Game {
       const dir = new THREE.Vector3().subVectors(this.busTo, this.busFrom).normalize();
       const along = new THREE.Vector3(d.x - this.busFrom.x, 0, d.z - this.busFrom.z).dot(dir);
       a.brain.jumpT = Math.max(2.5, Math.min(this.busLen / BUS_SPEED - 1, (along - 40) / BUS_SPEED + rng() * 4));
-      // the player's teammates wait for the player and jump with them
-      if (a.team === 0) a.brain.jumpT = Infinity;
+      // bots on a human's squad wait for their human and jump with them
+      if (humanTeams.has(a.team)) a.brain.jumpT = Infinity;
     }
     for (const a of this.actors) {
-      if (!a.brain || a.team === 0) continue;
+      if (!a.brain || humanTeams.has(a.team)) continue;
       const cap = this.actors.find((b) => b.team === a.team && b.brain);
       a.brain.jumpT = cap.brain.jumpT + (a === cap ? 0 : 0.2 + rng() * 0.6);
     }
@@ -196,10 +217,27 @@ export class Game {
     this.hud.show(true);
     this.hud.onMatchStart(this);
     this.hud.toast('Welcome aboard the Benton Bus! Press SPACE to jump.', '#ffd23f', 4);
+    // networking
+    this.net = null;
+    if (opts.room && this.role === 'host') {
+      this.net = new HostNet(this, opts.room);
+      this.effects.onFx = (e) => this.net && this.net.push(e);
+      sfx.onPlay = (name, pos) => this.net && this.net.push(['sd', name, Math.round(pos.x * 10), Math.round(pos.y * 10), Math.round(pos.z * 10)]);
+      this.world.onDestroyed = (wid) => this.net && this.net.push(['wd', wid]);
+    } else if (opts.room && this.role === 'client') {
+      this.net = new ClientNet(this, opts.room, opts.hostPeer);
+    }
   }
 
   endMatch() {
     if (!this.world) return;
+    if (this.net && this.net.dispose) this.net.dispose();
+    this.net = null;
+    this.effects.onFx = null;
+    sfx.onPlay = null;
+    if (this._pj) for (const m of this._pj) this.scene.remove(m);
+    this._pj = null;
+    this.netProjectiles = null;
     for (const a of this.actors) a.dispose();
     this.actors = [];
     this.combat.clear();
@@ -228,13 +266,16 @@ export class Game {
     a.vel.copy(dir).multiplyScalar(8);
     a.vel.y = -2;
     a.yaw = a.aimYaw = Math.atan2(-dir.x, -dir.z);
-    if (a === this.player) {
-      sfx.play('jump');
-      this.hud.toast('Skydiving! Steer with WASD, hold W to dive. SPACE opens the glider.', '#ffffff', 4);
-      // squadmates follow the player out of the bus and toward the drop marker
+    if (a.human) {
+      a.ep = (a.ep | 0) + 1; // clients adopt host-driven teleports by epoch
+      if (a === this.player) {
+        sfx.play('jump');
+        this.hud.toast('Skydiving! Steer with WASD, hold W to dive. SPACE opens the glider.', '#ffffff', 4);
+      }
+      // bot squadmates follow their human out of the bus and toward the drop marker
       let n = 0;
       for (const b of this.actors) {
-        if (!b.brain || b.team !== 0 || b.state !== 'bus') continue;
+        if (!b.brain || b.team !== a.team || b.state !== 'bus' || b.brain.leader !== a) continue;
         b.brain.jumpT = this.busT + 0.35 + n++ * 0.35;
         b.brain.followDrop = true;
       }
@@ -246,8 +287,42 @@ export class Game {
     return this.actors.filter((a) => a.alive);
   }
 
+  // ------------------------------------------------------------ messages
+  /** A toast for one actor: the local player sees it here, remote humans over the network. */
+  notify(a, text, color = '#ffffff', dur = 2) {
+    if (!text || !a) return;
+    if (a === this.player) this.hud.toast(text, color, dur);
+    else if (a.remote && this.net && this.net.push) this.net.push(['ms', a.id, text, color, dur]);
+  }
+
+  notifyAll(text, color = '#ffffff', dur = 2.5) {
+    this.hud.toast(text, color, dur);
+    if (this.net && this.net.push) this.net.push(['ms', -1, text, color, dur]);
+  }
+
+  feed(msg) {
+    this.hud.killfeed(msg, this.player);
+    if (this.net && this.net.push) this.net.push(['kf', msg.a, msg.b, msg.how]);
+  }
+
+  /** A human left mid-match: a bot takes over their character. */
+  botTakeover(a) {
+    a.remote = null;
+    a.human = false;
+    a.name = a.name.replace(/ \(left\)$/, '') + ' (left) [BOT]';
+    a.isBot = true;
+    a.brain = new BotBrain(this, a, mulberry32(this.seed + a.id * 31));
+    a.brain.dropTarget = a.pos.clone();
+    a.brain.jumpT = 0;
+    this.notifyAll(`${a.name.replace(' [BOT]', '')} disconnected — a bot took over.`, '#ffe9b0', 3);
+  }
+
   // ------------------------------------------------------------ damage
   applyDamage(target, amount, src, opts = {}) {
+    if (this.role === 'client') {
+      if (target === this.player && opts.fall && this.net) this.net.cmd('x', Math.round(amount));
+      return;
+    }
     if (!target.alive || target.state === 'bus' || amount <= 0 || this.state === 'over') return;
     const env = opts.storm || opts.fall;
     if (src && src !== target && src.team === target.team && !env) return; // no friendly fire
@@ -264,6 +339,7 @@ export class Game {
         sfx.play('hit');
       }
       if (target === this.player) this.hud.hurt(src ? src.pos : null, opts.storm);
+      if (this.net && this.net.push && ((src && src.remote) || target.remote)) this.net.push(['hm', src ? src.id : -1, target.id, d, 0, 0, Math.round(target.pos.x * 10), Math.round(target.pos.y * 10 + 5), Math.round(target.pos.z * 10)]);
       if (target.downHp <= 0) this.eliminate(target, src && src !== target ? src : target.downedBy, opts);
       return;
     }
@@ -279,6 +355,10 @@ export class Game {
     }
     const total = res.shield + res.hp;
     if (src && src !== target) src.damageDealt += total;
+    if (this.net && this.net.push && ((src && src.remote) || target.remote)) {
+      const hp = opts.pos || target.eye;
+      this.net.push(['hm', src ? src.id : -1, target.id, total, opts.head ? 1 : 0, res.shield > 0 && res.hp === 0 ? 1 : 0, Math.round(hp.x * 10), Math.round(hp.y * 10), Math.round(hp.z * 10)]);
+    }
     if (src === this.player && target !== this.player) {
       this.hud.hitmarker(!!opts.head, res.shield > 0 && res.hp === 0);
       this.hud.damageNumber(opts.pos || target.eye, total, !!opts.head, res.shield > 0);
@@ -347,11 +427,11 @@ export class Game {
     if (killer && killer !== target) {
       killer.kills++;
       msg = { a: killer.name, b: target.name, how: opts.head ? 'headshot' : opts.explosive ? 'boom' : 'elim' };
-      if (killer === this.player) this.hud.toast(`You eliminated ${target.name}!`, '#ffd23f', 2);
+      this.notify(killer, `You eliminated ${target.name}!`, '#ffd23f', 2);
     } else {
       msg = { a: null, b: target.name, how: opts.storm ? 'storm' : opts.fall ? 'fall' : 'out' };
     }
-    this.hud.killfeed(msg, this.player);
+    this.feed(msg);
     const teamOut = !this.teams.teamsAlive().has(target.team);
     if (teamOut) this.teams.place[target.team] = teamsBefore;
     if (target === this.player) {
@@ -359,17 +439,36 @@ export class Game {
       this.controller.spectate(mate || (killer && killer.alive ? killer : null));
       if (mate) this.hud.toast('Eliminated! Your squad can pick up your reboot card and bring you back.', '#39f0ff', 5);
       this.playerKiller = killer;
+    } else if (target.remote && this.actors.some((a) => a.alive && a.team === target.team)) {
+      this.notify(target, 'Eliminated! Your squad can pick up your reboot card and bring you back.', '#39f0ff', 5);
     }
     if (teamOut && target.team === this.player.team) this._finishPlayer(false, this.playerKiller);
+    if (target.remote) target.killerName = killer ? killer.name : null;
+    // remote humans whose squad is out get their result now
+    if (teamOut) for (const h of this.actors) if (h.remote && h.team === target.team) this._sendResult(h, false);
     const teams = this.teams.teamsAlive();
     if (teams.size <= 1) {
       const wt = [...teams][0];
       const w = wt === undefined ? null : this.actors.find((a) => a.alive && a.team === wt);
       for (const a of this.actors) if (a.team === wt) a.place = 1;
       this.state = 'over';
+      for (const h of this.actors) if (h.remote && h.team === wt) this._sendResult(h, true);
+      if (this.net && this.net.push) this.net.push(['ov', w ? w.name : '', wt ?? -1, this.teamSize > 1 ? 1 : 0]);
       if (wt === this.player.team) this._finishPlayer(true, null);
       else this.hud.matchOver(w, this.teamSize > 1);
     }
+  }
+
+  /** Stats for one human's result screen (XP is computed on their own device). */
+  _stats(a, won) {
+    const place = won ? 1 : this.teams.place[a.team] || a.place;
+    return { won, place, total: Math.ceil(this.actors.length / this.teamSize), team: this.teamSize > 1, kills: a.kills, damage: Math.round(a.damageDealt), time: Math.floor(this.time), killer: a.killerName || null };
+  }
+
+  _sendResult(h, won) {
+    if (h.resultSent || !this.net || !this.net.push) return;
+    h.resultSent = true;
+    this.net.push(['res', h.id, this._stats(h, won)]);
   }
 
   /** Leaving mid-match: record the result at the current standing. */
@@ -382,21 +481,28 @@ export class Game {
   /** Computes XP, saves progression and shows the right screen. */
   _finishPlayer(won, killer) {
     if (this.result) return;
+    const st = this._stats(this.player, won);
+    st.killer = killer ? killer.name : null;
+    this.showNetResult(st);
+  }
+
+  /** Shows a result (local, or sent by the host) and saves XP on this device. */
+  showNetResult(st) {
+    if (this.result) return;
     const p = this.player;
-    const place = won ? 1 : this.teams.place[p.team] || p.place;
-    const totalTeams = Math.ceil(this.actors.length / this.teamSize);
-    const survive = Math.floor(this.time);
-    const xp = 60 + p.kills * 75 + Math.round(p.damageDealt / 4) + Math.floor(survive / 3) + Math.max(0, (totalTeams - place) * 8 * this.teamSize) + (won ? 400 : 0);
+    const { won, place, total: totalTeams, kills } = st;
+    const survive = st.time;
+    const xp = 60 + kills * 75 + Math.round(st.damage / 4) + Math.floor(survive / 3) + Math.max(0, (totalTeams - place) * 8 * this.teamSize) + (won ? 400 : 0);
     const before = levelInfo(save.data.progress.xp).level;
     const pr = save.data.progress;
     pr.xp += xp;
     pr.matches++;
-    pr.kills += p.kills;
+    pr.kills += kills;
     if (won) pr.wins++;
     if (!pr.bestPlace || place < pr.bestPlace) pr.bestPlace = place;
     save.write();
     const after = levelInfo(pr.xp).level;
-    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills: p.kills, damage: Math.round(p.damageDealt), time: survive, xp, levelUp: after > before ? after : 0, killer: killer ? killer.name : null };
+    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp, levelUp: after > before ? after : 0, killer: st.killer };
     if (won) {
       sfx.play('win');
       p.emote = true;
@@ -409,6 +515,10 @@ export class Game {
     if (!this.world) return;
     if (this.paused) {
       this.controller.updateCamera(0);
+      return;
+    }
+    if (this.role === 'client') {
+      this._clientUpdate(dt, t);
       return;
     }
     this.time += dt;
@@ -440,6 +550,76 @@ export class Game {
     this.combat.update(dt);
     this.loot.update(dt, t);
     if (this.state !== 'over') this.storm.update(dt, t);
+    this._present(dt, t);
+    if (this.net) this.net.update(dt);
+  }
+
+  /** Client: the host simulates; we move ourselves, mirror the rest and render. */
+  _clientUpdate(dt, t) {
+    this.time += dt;
+    this.net.update(dt);
+    if (this.bus.visible) {
+      this.busT += dt;
+      const k = Math.min(1, (this.busT * BUS_SPEED) / this.busLen);
+      this.bus.position.lerpVectors(this.busFrom, this.busTo, k);
+      this.bus.position.y = BUS_H + Math.sin(this.busT * 1.3) * 0.6;
+      this.propeller.rotation.z += dt * 25;
+    }
+    for (const a of this.actors) if (a.state === 'bus') a.pos.copy(this.bus.position);
+    const p = this.player;
+    this.controller.update(dt);
+    p.fireCd = Math.max(0, p.fireCd - dt);
+    p.equipT = Math.max(0, p.equipT - dt);
+    this.net.smooth(dt);
+    for (const pg of this.teams.pings) pg.t -= dt;
+    this.teams.pings = this.teams.pings.filter((pg) => pg.t > 0);
+    this.loot.update(dt, t, true);
+    this.storm.render(t);
+    this._netProjectiles();
+    this._present(dt, t);
+  }
+
+  /** Client: simple visuals for rockets, grenades and sniper rounds in flight. */
+  _netProjectiles() {
+    const list = this.netProjectiles || [];
+    if (!this._pj) this._pj = [];
+    while (this._pj.length < list.length) {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: '#ff5ca8' }));
+      this.scene.add(m);
+      this._pj.push(m);
+    }
+    this._pj.forEach((m, i) => {
+      const r = list[i];
+      m.visible = !!r;
+      if (r) {
+        m.position.set(r[1] / 10, r[2] / 10, r[3] / 10);
+        m.material.color.set(r[0] === 0 ? '#bff3ff' : '#ff5ca8');
+      }
+    });
+  }
+
+  // ---- client callbacks from ClientNet
+  onLocalEliminated() {
+    const p = this.player;
+    const mate = this.actors.find((a) => a.alive && a.team === p.team && a !== p);
+    this.controller.spectate(mate || this.actors.find((a) => a.alive && a !== p) || null);
+    this.controller.exitEdit();
+    this.building.hideGhost();
+  }
+
+  onLocalRevived() {
+    this.controller.spectating = false;
+    this.controller.spec = null;
+    this.menus?.hide();
+    this.hud.toast("You're back in the match!", '#39f0ff', 3);
+  }
+
+  onNetOver(name, team, squads) {
+    this.state = 'over';
+    if (team !== this.player.team) this.hud.matchOver(name ? { name } : null, squads);
+  }
+
+  _present(dt, t) {
     this.world.update(dt, t);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const tw = this.tweens[i];
@@ -487,6 +667,7 @@ export class Game {
       const n = this.storm.next;
       const a = this.rng() * Math.PI * 2, r = this.rng() * n.r * 0.6;
       this.loot.supplyDrop(n.c.x + Math.cos(a) * r, n.c.y + Math.sin(a) * r);
+      this.notifyAll('A supply drop is floating down!', '#3f9bff');
     }
   }
 

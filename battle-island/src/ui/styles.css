@@ -245,3 +245,101 @@ h3.todo { color: var(--cyan); }
 .downed .bar { width: 260px; height: 12px; margin: 4px auto; }
 .downed .fill { background: #ff5c5c; height: 100%; }
 .downed small { display: block; font-size: 13px; color: #ffd6d6; }
+
+/* ---------- online ---------- */
+.online-btn { width: 100%; margin-top: 8px; background: #27b3a7; box-shadow: 0 4px 0 #147a71; }
+.games, .players { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.game-row, .player-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; background: var(--panel-2); border-radius: 10px; padding: 6px 10px; }
+.player-row { grid-template-columns: 12px auto 1fr; }
+.player-row i { width: 12px; height: 12px; border-radius: 50%; }
+.player-row.wait { opacity: 0.6; }
+.game-row span, .player-row span { color: var(--muted); font-size: 14px; }
+.code { background: var(--yellow); color: var(--ink); border-radius: 10px; padding: 0 10px; letter-spacing: 3px; }
+.row.left { justify-content: flex-start; }
+#join-code { font-family: var(--font); font-size: 18px; padding: 6px 10px; border-radius: 10px; border: 0; width: 120px; text-transform: lowercase; letter-spacing: 2px; }
+.err { color: #ff9a9a; font-weight: 700; }
+.howto { color: var(--muted); font-size: 14px; padding-left: 18px; }
+
+/* ---------- touch controls ---------- */
+#touch { position: absolute; inset: 0; pointer-events: none; display: none; user-select: none; -webkit-user-select: none; touch-action: none; }
+body.touch #scene { touch-action: none; }
+body.touch { overscroll-behavior: none; }
+body.touch .lobby, body.touch .sheet { touch-action: pan-y; }
+.t-stick { position: absolute; display: none; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; background: rgba(255,255,255,0.12); border: 3px solid rgba(255,255,255,0.35); }
+.t-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,0.55); transform: translate(-50%, -50%); }
+.t-btns { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; }
+.t-btn, .t-top { position: fixed; pointer-events: auto; border: 3px solid rgba(255,255,255,0.55); background: rgba(29, 21, 55, 0.55); color: #fff; font-family: var(--font); font-weight: 800; font-size: 12px; border-radius: 50%; width: 58px; height: 58px; padding: 0; touch-action: none; -webkit-tap-highlight-color: transparent; }
+.t-btn.on { background: rgba(255, 210, 63, 0.6); }
+.t-btn.lit { border-color: var(--cyan); background: rgba(57, 240, 255, 0.35); }
+.t-btn.hot { border-color: var(--yellow); background: rgba(255, 210, 63, 0.45); }
+.t-fire { width: 86px; height: 86px; font-size: 16px; right: 110px; bottom: 90px; background: rgba(232, 69, 60, 0.55); }
+.t-aim { right: 206px; bottom: 150px; }
+.t-jump { width: 70px; height: 70px; right: 22px; bottom: 26px; }
+.t-crouch { right: 110px; bottom: 16px; }
+.t-reload { right: 30px; bottom: 112px; }
+.t-use { right: 206px; bottom: 76px; }
+.t-build { right: 30px; bottom: 186px; }
+.t-pick { right: 110px; bottom: 190px; font-size: 20px; }
+.t-ping { top: 8px; right: 124px; width: 52px; height: 36px; border-radius: 12px; font-size: 12px; }
+.t-emote { top: 8px; right: 182px; width: 44px; height: 36px; border-radius: 12px; font-size: 16px; }
+.t-edit { right: 280px; bottom: 150px; width: 48px; height: 48px; }
+.t-repair { right: 280px; bottom: 206px; width: 48px; height: 48px; }
+.t-mat { right: 206px; bottom: 214px; width: 48px; height: 48px; }
+.t-top { border-radius: 12px; width: 52px; height: 36px; font-size: 13px; top: 8px; }
+.t-pause { right: 8px; }
+.t-mapbtn { right: 66px; }
+.t-rotate { display: none; }
+@media (orientation: portrait) {
+  body.touch .t-rotate { display: flex; position: fixed; inset: 0; align-items: center; justify-content: center; text-align: center; padding: 24px; background: rgba(20, 10, 40, 0.92); color: #fff; font-size: 22px; pointer-events: auto; }
+}
+/* HUD rearranged for phones: stats on top, inventory bottom-centre, buttons on the right */
+body.touch #hud .slot, body.touch #hud .piece, body.touch #hud .minimap { pointer-events: auto; }
+body.touch .minimap { width: 118px; height: 118px; border-width: 3px; }
+body.touch .hud-tl { width: 118px; top: 8px; left: 8px; }
+body.touch .storm-info { font-size: 12px; padding: 1px 6px; }
+body.touch .pill { font-size: 11px; }
+body.touch .pill b { font-size: 14px; }
+body.touch .mate { font-size: 11px; }
+body.touch .compass { width: 240px; margin-left: -120px; top: 6px; height: 24px; }
+body.touch .compass-strip span { line-height: 24px; }
+body.touch .hud-bl { left: 136px; top: 8px; bottom: auto; width: 190px; }
+body.touch .bar { height: 16px; }
+body.touch .bar span { font-size: 12px; line-height: 13px; }
+body.touch .hud-br { right: auto; left: 50%; transform: translateX(-50%); bottom: 6px; align-items: center; }
+body.touch .ammo-list, body.touch .ammo-big .reserve { display: none; }
+body.touch .ammo-big { font-size: 20px; }
+body.touch .mats { transform: scale(0.8); }
+body.touch .slot { width: 50px; height: 46px; font-size: 10px; }
+body.touch .slot b, body.touch .slot small { font-size: 10px; }
+body.touch .buildbar { bottom: auto; top: 34px; transform: translateX(-50%) scale(0.75); }
+body.touch .killfeed { top: 50px; right: 8px; font-size: 11px; }
+body.touch .toasts { top: 36px; }
+body.touch .toast { font-size: 14px; }
+body.touch .banner { font-size: 28px; }
+body.touch .prompt { top: 56%; font-size: 14px; }
+body.touch .bus-hint { font-size: 16px; bottom: 40%; }
+body.touch .fps { display: none; }
+body.touch .buildinfo { font-size: 11px; }
+
+/* short landscape screens (phones): two-column lobby, tighter panels */
+@media (max-height: 520px) {
+  .lobby { grid-template-columns: 1fr 1fr; overflow: auto; inset: 8px; gap: 8px; }
+  .lobby-center { display: none; }
+  .lobby > .panel { align-self: start; }
+  .logo { font-size: 28px; }
+  .logo span { font-size: 15px; }
+  .panel { padding: 10px 12px; border-radius: 14px; }
+  .level { margin: 6px 0 2px; }
+  .stats b { font-size: 16px; }
+  .field { margin: 4px 0; }
+  .nav { gap: 6px; margin-top: 6px; }
+  .nav .btn, .seg .btn { padding: 5px 8px; font-size: 14px; }
+  h3 { margin: 6px 0 4px; font-size: 15px; }
+  .btn.play { font-size: 22px; padding: 6px 18px; }
+  .note { font-size: 12px; margin: 4px 0; }
+  h2 { font-size: 22px; }
+  .screen { padding: 8px; }
+  .screen.right { justify-content: center; padding-right: 8px; }
+  .sheet { max-height: calc(100vh - 16px); }
+  .result .big { font-size: 34px; }
+}

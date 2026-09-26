@@ -16,6 +16,7 @@ export class Input {
     this.lockBlocked = false;
     this.dragging = false;
     this.enabled = false;
+    this.analog = null; // touch joystick {x, y} in -1..1 (y down = back)
     this._blockedUntil = 0;
     this._bind();
   }
@@ -39,7 +40,7 @@ export class Input {
       this.mouse.buttons.add(e.button);
       this.pressedSet.add('Mouse' + e.button);
       this.dragging = true;
-      if (!this.locked && !this.lockBlocked) this.requestLock();
+      if (!this.locked && !this.lockBlocked && !document.body.classList.contains('touch')) this.requestLock();
     });
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mouseup', (e) => {

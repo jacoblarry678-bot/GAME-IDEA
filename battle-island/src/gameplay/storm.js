@@ -73,7 +73,7 @@ export class Storm {
       if (this.game.world.isLand(cand.x, cand.y) || i === 39) c = cand;
     }
     this.next = { c, r: P.r };
-    if (this.phase > 0) this.game.hud?.toast(`Storm phase ${this.phase + 1}: the safe zone has been marked`, '#c79bff');
+    if (this.phase > 0) this.game.notifyAll?.(`Storm phase ${this.phase + 1}: the safe zone has been marked`, '#c79bff');
   }
 
   get label() {
@@ -93,7 +93,7 @@ export class Storm {
       if (this.timer <= 0) {
         this.stage = 'shrink';
         this.timer = PHASES[this.phase].shrink;
-        this.game.hud?.toast('The storm is closing in!', '#c79bff');
+        this.game.notifyAll?.('The storm is closing in!', '#c79bff');
         this.game.onStormShrink?.(this.phase);
       }
     } else if (this.stage === 'shrink') {
@@ -104,10 +104,7 @@ export class Storm {
       this.radius = this.from.r + (this.next.r - this.from.r) * k;
       if (this.timer <= 0) this._advance();
     }
-    this.mesh.position.x = this.center.x;
-    this.mesh.position.z = this.center.y;
-    const r = Math.max(0.5, this.radius);
-    this.mesh.scale.set(r, 1, r);
+    this.render(t);
     // storm damage ticks once per second
     for (const a of this.game.actors) {
       if (!a.alive || a.state === 'bus') continue;
@@ -119,6 +116,26 @@ export class Storm {
         }
       } else a.stormTick = 0;
     }
+  }
+
+  render(t) {
+    this.mat.uniforms.uTime.value = t;
+    this.mesh.position.x = this.center.x;
+    this.mesh.position.z = this.center.y;
+    const r = Math.max(0.5, this.radius);
+    this.mesh.scale.set(r, 1, r);
+  }
+
+  /** Client side: state from the host's snapshot. */
+  applyNet(s) {
+    if (!s) return;
+    this.center.set(s[0] / 10, s[1] / 10);
+    this.radius = s[2] / 10;
+    this.next = { c: new THREE.Vector2(s[3] / 10, s[4] / 10), r: s[5] / 10 };
+    this.stage = ['wait', 'shrink', 'done'][s[6]] || 'wait';
+    this.timer = s[7] / 10;
+    this.phase = s[8];
+    this.dmg = (PHASES[this.phase] || PHASES[PHASES.length - 1]).dmg;
   }
 
   dispose() {

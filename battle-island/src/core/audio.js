@@ -69,6 +69,7 @@ class Sfx {
   }
 
   play(name, pos = null) {
+    if (pos && this.onPlay) this.onPlay(name, pos);
     if (!this.ctx || this.ctx.state === 'closed') return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
     const G = (b) => this._gain(pos, b);

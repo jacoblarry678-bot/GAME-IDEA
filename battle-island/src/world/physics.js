@@ -99,9 +99,11 @@ export class Physics {
     this.colliders = new Set();
     this.stamp = 1;
     this._q = [];
+    this.nextWid = 0; // creation order: identical on every machine for the fixed island
   }
 
   add(c) {
+    if (c.wid === undefined) c.wid = this.nextWid++;
     const x0 = Math.floor(c.minX / CELL), x1 = Math.floor(c.maxX / CELL);
     const z0 = Math.floor(c.minZ / CELL), z1 = Math.floor(c.maxZ / CELL);
     for (let ix = x0; ix <= x1; ix++) {

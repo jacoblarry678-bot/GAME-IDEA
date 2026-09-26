@@ -14,7 +14,8 @@
     "test:server": "node server/smoketest.js 45",
     "build:single": "vite build && node tools/build-single.mjs",
     "island:dev": "vite --config battle-island/vite.config.js",
-    "island:build": "vite build --config battle-island/vite.config.js && node tools/island-single.mjs"
+    "island:build": "vite build --config battle-island/vite.config.js && node tools/island-single.mjs",
+    "island:server": "node battle-island/server/index.js"
   },
   "dependencies": {
     "express": "^4.19.2",

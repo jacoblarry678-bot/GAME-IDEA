@@ -12,6 +12,8 @@ import { Game } from './gameplay/game.js';
 import { Hud } from './ui/hud.js';
 import { Menus } from './ui/menus.js';
 import { CharacterModel } from './entities/characters.js';
+import { Online, MAX_HUMANS } from './net/online.js';
+import { TouchControls, isTouchDevice } from './ui/touch.js';
 
 const canvas = document.getElementById('scene');
 const engine = new Engine(canvas);
@@ -78,21 +80,167 @@ const menus = new Menus(document.getElementById('menus'), {
   toLobby,
   applySettings,
   matchRunning: () => game && game.world && game.state !== 'over',
+  online: openOnline,
+  onlineInfo: () => ({ kind: online.kind, games: online.openGames() }),
+  hostGame,
+  joinGame,
+  startOnline,
+  leaveSession,
   releaseLock: () => input.releaseLock(),
   lockIfPlaying: () => input.requestLock(),
 });
 const hud = new Hud(document.getElementById('hud'), menus);
+const touchRoot = document.createElement('div');
+touchRoot.id = 'touch';
+document.getElementById('app').appendChild(touchRoot);
+const touch = new TouchControls(touchRoot, input, { pause: () => pause(), map: () => hud.toggleMap() });
+// phones: lighter defaults the first time the game runs there
+if (isTouchDevice() && !save.data.settings.mobileTuned) {
+  save.data.settings.mobileTuned = true;
+  save.data.settings.shadows = false;
+  save.write();
+}
+if (isTouchDevice()) engine.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
 game = new Game(engine, input, hud);
 game.menus = menus;
 
 function applySettings() {
   const S = save.data.settings;
+  touch.refresh();
   sfx.setVolume(S.volume);
   if (game.sun.castShadow !== S.shadows) game.setShadows(S.shadows);
 }
 
+// ---------------------------------------------------------------- online
+const online = new Online();
+let session = null;
+let rerenderT = null;
+const rerender = () => {
+  if (rerenderT) return;
+  rerenderT = setTimeout(() => {
+    rerenderT = null;
+    if (document.activeElement && document.activeElement.id === 'join-code') return; // don't wipe typing
+    if (menus.current === 'online') menus.showOnline();
+    else if (menus.current === 'session' && session) menus.showSession(session);
+  }, 250);
+};
+online.onChange = rerender;
+
+function profileInfo() {
+  const P = save.data.profile;
+  return { name: P.name || 'Player', charId: P.character, outfit: P.outfits[P.character], skin: P.skin };
+}
+
+async function openOnline() {
+  sfx.init();
+  menus.showOnline({ status: 'connecting' });
+  await online.connect();
+  if (menus.current === 'online') menus.showOnline();
+}
+
+async function hostGame() {
+  const P = save.data.profile;
+  session = await online.host(profileInfo(), { mode: P.mode, team: P.teamSize || 1, bots: save.data.settings.botCount });
+  bindSession();
+  menus.showSession(session);
+}
+
+async function joinGame(code) {
+  try {
+    session = await online.join(code, profileInfo());
+    bindSession();
+    menus.showSession(session);
+  } catch (e) {
+    menus.showOnline({ error: e.message || 'Could not join that game.' });
+  }
+}
+
+async function leaveSession() {
+  if (game.world) {
+    game.forfeit();
+    game.endMatch();
+    hud.show(false);
+    input.enabled = false;
+  }
+  await online.leave();
+  session = null;
+  menus.showOnline();
+}
+
+function bindSession() {
+  const s = session;
+  s.onChange = () => {
+    if (s !== session) return;
+    rerender();
+    if (s.role !== 'client') return;
+    const hp = s.hostPresence();
+    if (hp && hp.st === 'play' && hp.start && hp.start.mid !== s.lastMid) {
+      const me = hp.start.humans.find((h) => h.p === s.myPeer);
+      if (me) {
+        s.lastMid = hp.start.mid;
+        startClient(hp.start);
+      }
+    }
+    if (hp && hp.st === 'lobby' && game.world && game.role === 'client') {
+      game.endMatch();
+      enterMenus();
+      menus.showSession(s);
+    }
+  };
+}
+
+function enterGame() {
+  touch.show(true);
+  menus.hide();
+  engine.view = { scene: engine.scene, camera: engine.camera };
+  engine.resize();
+  game.paused = false;
+  input.enabled = true;
+  input.requestLock();
+}
+
+function enterMenus() {
+  touch.show(false);
+  hud.show(false);
+  input.enabled = false;
+  input.releaseLock();
+}
+
+function startOnline() {
+  const s = session;
+  if (!s || s.role !== 'host') return;
+  const players = s.players().slice(0, MAX_HUMANS);
+  const humans = players.map((p, i) => ({ id: i, local: p.me, peer: p.peer, name: p.name, charId: p.charId, outfit: p.outfit, skin: p.skin }));
+  const cfg = { ...s.cfg, bots: Math.max(0, s.cfg.bots + 1 - humans.length) };
+  enterGame();
+  game.startMatch({ role: 'host', room: s.room, humans, mode: cfg.mode, teamSize: cfg.team, botCount: cfg.bots });
+  s.announceStart(game, humans, cfg);
+}
+
+function startClient(start) {
+  const s = session;
+  const humans = start.humans.map((h) => ({ id: h.id, local: h.p === s.myPeer, peer: h.p, name: h.n, charId: h.c, outfit: h.o, skin: h.s }));
+  enterGame();
+  game.startMatch({ role: 'client', room: s.room, hostPeer: s.hostPeer(), seed: start.seed, mode: start.cfg.mode, teamSize: start.cfg.team, botCount: start.cfg.bots, humans, bus: start.bus });
+}
+
+game.onHostLeft = () => {
+  if (!session || game.role !== 'client') return;
+  game.endMatch();
+  enterMenus();
+  menus.showSession(session, 'The host left the match.');
+};
+
 function play() {
   sfx.init();
+  if (session) {
+    // online "Play again": back to the game room; the host starts the next match
+    if (game.world) game.endMatch();
+    enterMenus();
+    if (session.role === 'host') session.backToLobby();
+    menus.showSession(session);
+    return;
+  }
   const P = save.data.profile;
   menus.hide();
   engine.view = { scene: engine.scene, camera: engine.camera };
@@ -100,12 +248,13 @@ function play() {
   game.paused = false;
   game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount });
   input.enabled = true;
+  touch.show(true);
   input.requestLock();
 }
 
 function pause() {
   if (!game.world || game.state === 'over' || !game.player.alive || !menus.overlayHidden) return;
-  game.paused = true;
+  game.paused = game.role === 'solo'; // online matches keep running
   menus.showPause();
   input.releaseLock();
 }
@@ -117,9 +266,14 @@ function resume() {
 }
 
 function toLobby() {
+  if (session) {
+    leaveSession().then(() => menus.showMain());
+    return;
+  }
   game.forfeit();
   game.endMatch();
   game.paused = false;
+  touch.show(false);
   hud.show(false);
   input.enabled = false;
   input.releaseLock();
@@ -155,6 +309,7 @@ engine.add((dt, t) => {
     return;
   }
   game.update(dt, t);
+  touch.update(game);
 });
 engine.afterStep = () => input.endFrame();
 
@@ -164,4 +319,4 @@ menus.showMain();
 engine.start();
 
 // test / debugging handle (used by the automated playtest)
-window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume };
+window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, get session() { return session; } };

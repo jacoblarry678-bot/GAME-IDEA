@@ -243,7 +243,7 @@ export class BotBrain {
     if (a.state === 'skydive' || a.state === 'glide') {
       if (this.followDrop && this.leader) {
         // glide down next to the player (or their drop marker)
-        const m = g.marker;
+        const m = this.leader === g.player ? g.marker : null;
         const off = (a.id % 4) * 1.6 - 2.4;
         this.dropTarget = m ? new THREE.Vector3(m.x + off, 0, m.y + off) : new THREE.Vector3(this.leader.pos.x + off, 0, this.leader.pos.z + off);
       }

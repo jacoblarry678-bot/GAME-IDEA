@@ -296,8 +296,10 @@ export class Hud {
     }
     // bus hint
     let hint = '';
-    if (p.state === 'bus') hint = game.busT < 1.5 ? 'The bus doors are opening…' : 'Press <kbd>SPACE</kbd> to jump · <kbd>M</kbd> map & drop marker';
-    else if (p.state === 'skydive') hint = p.canRedeploy ? '<kbd>SPACE</kbd> redeploy glider' : '<kbd>W</kbd> dive · <kbd>SPACE</kbd> open glider';
+    const tch = document.body.classList.contains('touch');
+    if (p.state === 'bus') hint = game.busT < 1.5 ? 'The bus doors are opening…' : tch ? 'Tap <kbd>JUMP</kbd> to leave the bus · tap the map to set a drop marker' : 'Press <kbd>SPACE</kbd> to jump · <kbd>M</kbd> map & drop marker';
+    else if (tch && p.state === 'skydive') hint = p.canRedeploy ? '<kbd>JUMP</kbd> redeploy glider' : 'Push the stick up to dive · <kbd>JUMP</kbd> opens the glider';
+    else if (!tch && p.state === 'skydive') hint = p.canRedeploy ? '<kbd>SPACE</kbd> redeploy glider' : '<kbd>W</kbd> dive · <kbd>SPACE</kbd> open glider';
     else if (p.state === 'glide' && p.canRedeploy) hint = '<kbd>SPACE</kbd> close glider';
     this.set('hint', this.el.busHint, hint, 'innerHTML');
     // tints

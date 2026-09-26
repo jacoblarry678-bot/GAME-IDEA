@@ -23,6 +23,8 @@ export const ROADMAP = {
     'Pings (Z / middle mouse): enemy, chest, loot or “going here”, shown in the world and on the map',
     'Buffs: Zoom Juice (speed), Bouncy Soda (jump + no fall damage), Spicy Pickle (+20% damage), Shield Snack (shield regen) with HUD timers and auras; bots use them too',
     'Building 2.0: edit walls (3×3) and floors (2×2) with confirm/reset, repair, upgrade wood → brick → metal, structural integrity (unsupported builds collapse), team ownership',
+    'Milestone 3 — online multiplayer: up to 4 players per match (bots fill the rest), host-authoritative, via the claude.ai link or a self-hosted server; open-games list and join codes; bot takeover if someone disconnects',
+    'Mobile: touch joystick, drag-to-look, on-screen buttons (drag FIRE to aim), tappable inventory/build bar/minimap, phone layouts and lighter graphics defaults',
   ],
   next: [
     'Editing ramps and cones; carrying downed teammates',
@@ -30,7 +32,7 @@ export const ROADMAP = {
     'Ziplines; weapon attachments and scopes as items',
     'World: drivable vehicles (fuel, damage, passengers), doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards & vaults',
     'Progression: challenges, achievements, more emotes and cosmetics',
-    'Online multiplayer (needs a real, tested networking backend — not started)',
+    'Online: more than 4 players, host migration, joining a match already in progress, anti-cheat (the host is trusted)',
     'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
   ],
 };
@@ -40,7 +42,7 @@ const CONTROLS = [
   ['Space', 'Jump · jump from bus · open glider'], ['Shift', 'Sprint (uses stamina)'], ['C / Ctrl', 'Crouch · slide while sprinting'], ['R', 'Reload · rotate ramp (build mode)'],
   ['E', 'Open chest / pick up · swap when full'], ['G', 'Drop held item'], ['1 – 5 / Wheel', 'Select slot · choose piece in build mode'], ['F', 'Pickaxe (harvest)'],
   ['B or Q', 'Toggle build mode'], ['T', 'Cycle build material'], ['V', 'Edit the build you aim at · V again confirms, R resets'], ['U', 'Repair / upgrade the build you aim at'],
-  ['Hold E', 'Revive a knocked teammate · reboot at a reboot van'], ['Z / middle click', 'Ping'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
+  ['Hold E', 'Revive a knocked teammate · reboot at a reboot van'], ['Touch screens', 'Left thumb: move · right thumb: look · on-screen buttons for everything else'], ['Z / middle click', 'Ping'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
 ];
 
 export class Menus {
@@ -65,6 +67,7 @@ export class Menus {
   }
 
   hide() {
+    this.current = null;
     this.root.innerHTML = '';
     this.root.className = '';
     this.overlayHidden = true;
@@ -100,6 +103,19 @@ export class Menus {
       case 'skin': P.skin = +d.id; save.write(); this.app.preview(); this.showLocker(); break;
       case 'emote': this.app.previewEmote(); break;
       case 'resume': this.app.resume(); break;
+      case 'fullscreen':
+        try {
+          const r = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+          if (r && r.catch) r.catch(() => {});
+        } catch {
+          /* not allowed here */
+        }
+        break;
+      case 'online': this.app.online(); break;
+      case 'host': this.app.hostGame(); break;
+      case 'join': this.app.joinGame(d.code || this.root.querySelector('#join-code')?.value); break;
+      case 'start-online': this.app.startOnline(); break;
+      case 'leave-online': this.app.leaveSession(); break;
       case 'pause-back': this.showPause(); break;
       case 'quit': this.app.toLobby(); break;
       case 'again': this.app.play(); break;
@@ -118,6 +134,7 @@ export class Menus {
     if (!k) return;
     const S = save.data.settings;
     if (el.type === 'checkbox') S[k] = el.checked;
+    else if (el.tagName === 'SELECT') S[k] = el.value;
     else if (el.type === 'range') S[k] = +el.value;
     else if (k === 'name') save.data.profile.name = el.value.slice(0, 14);
     const out = el.parentElement.querySelector('output');
@@ -132,6 +149,7 @@ export class Menus {
   }
 
   showMain() {
+    this.current = 'main';
     const P = this.profile;
     const S = save.data.settings;
     const pr = save.data.progress;
@@ -163,8 +181,9 @@ export class Menus {
           </div>
           <h3>Bots</h3>
           <div class="seg">${[9, 19, 29].map((n) => `<button class="btn ${S.botCount === n ? 'on' : ''}" data-act="bots" data-id="${n}">${n}</button>`).join('')}</div>
-          <p class="note">Teammates and opponents are computer-controlled bots, labelled [BOT]. Online multiplayer is on the roadmap.</p>
+          <p class="note">Bots are labelled [BOT]. Use Play Online to team up with (or battle) friends — up to 4 players per match.</p>
           <button class="btn play" data-act="play">PLAY</button>
+          <button class="btn online-btn" data-act="online">Play Online</button>
         </div>
       </div>`);
   }
@@ -223,6 +242,8 @@ export class Menus {
         ${check('invertY', 'Invert vertical look')}
         ${check('shadows', 'Shadows (turn off for more FPS)')}
         ${check('showFps', 'Show FPS counter')}
+        <label class="field">Touch controls <select data-set="touch">${[['auto', 'Automatic'], ['on', 'Always on'], ['off', 'Off']].map(([v, l]) => `<option value="${v}" ${(S.touch || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        ${range('touchLook', 'Touch look speed', 0.3, 3, 0.1)}
         <p class="note">Settings and progress save automatically in this browser.</p>
         <div class="row">
           ${confirmReset ? '<button class="btn danger" data-act="reset-progress" data-confirm="1">Really reset XP & stats?</button>' : `<button class="btn" data-act="reset-progress" data-back="${back}">Reset progress</button>`}
@@ -253,12 +274,63 @@ export class Menus {
       </div>`, 'screen right');
   }
 
+  /** Online hub: host, open games, join by code. */
+  showOnline(st = {}) {
+    this.current = 'online';
+    const on = this.app.onlineInfo();
+    let body;
+    if (st.status === 'connecting') body = '<p class="note">Connecting to online play…</p>';
+    else if (!on.kind) {
+      body = `<p class="note">Online play isn't available in this copy of the game.</p>
+        <ul class="howto">
+          <li><b>claude.ai link:</b> open the game from its shared claude.ai link. Everyone who opens that link can host or join.</li>
+          <li><b>Your own server:</b> run <kbd>npm run island:server</kbd> and open the address it prints on every device (same Wi-Fi works).</li>
+        </ul>`;
+    } else {
+      const games = on.games;
+      const S = save.data.settings;
+      const P = this.profile;
+      body = `
+        <p class="note">Connected via ${on.kind === 'claude' ? 'claude.ai: everyone viewing this game link can join. Hosting needs contribute or edit access to the link' : 'the Battle Island server'}. Up to 4 players per match; bots fill the rest.</p>
+        ${st.error ? `<p class="err">${escAttr(st.error)}</p>` : ''}
+        <h3>Host a game</h3>
+        <p class="note">Uses your lobby choices: ${['', 'Solo', 'Duos', 'Trios', 'Squads'][P.teamSize || 1]} · ${P.mode === 'zerobuild' ? 'Zero Build' : 'Build'} · ${S.botCount + 1} players total.</p>
+        <button class="btn play small" data-act="host">Host game</button>
+        <h3>Open games</h3>
+        <div class="games">${games.length ? games.map((g) => `<div class="game-row"><b>${escAttr(g.n)}</b><span>${['', 'Solo', 'Duos', 'Trios', 'Squads'][g.cfg?.team || 1]} · ${g.cfg?.mode === 'zerobuild' ? 'Zero Build' : 'Build'} · ${g.cnt} player${g.cnt === 1 ? '' : 's'}</span><button class="btn small" data-act="join" data-code="${escAttr(g.code)}">Join</button></div>`).join('') : '<p class="note">No open games yet. Host one, or ask a friend for their code.</p>'}</div>
+        <h3>Join with a code</h3>
+        <div class="row left"><input id="join-code" maxlength="5" placeholder="abc12" autocomplete="off"><button class="btn" data-act="join">Join</button></div>`;
+    }
+    this.screen(`<div class="sheet panel"><h2>Play Online</h2>${body}<div class="row"><button class="btn" data-act="main">Back</button></div></div>`, 'screen right');
+  }
+
+  /** Pre-match room: roster and start. */
+  showSession(s, note = '') {
+    this.current = 'session';
+    const players = s.players();
+    const hp = s.hostPresence();
+    const inPlay = hp && hp.st === 'play';
+    const rows = players.map((p, i) => `<div class="player-row ${i < 4 ? '' : 'wait'}"><i style="background:${['#ffd23f', '#39f0ff', '#ff7ac8', '#7ed957'][i % 4]}"></i><b>${escAttr(p.name)}</b><span>${CHARACTERS[p.charId]?.name || ''}${p.host ? ' · host' : ''}${p.me ? ' · you' : ''}${i >= 4 ? ' · waiting (match is full)' : ''}</span></div>`).join('');
+    const cfg = s.role === 'host' ? s.cfg : hp?.cfg;
+    const host = s.role === 'host';
+    this.screen(`
+      <div class="sheet panel">
+        <h2>Game <span class="code">${s.code.toUpperCase()}</span></h2>
+        <p class="note">${cfg ? `${['', 'Solo', 'Duos', 'Trios', 'Squads'][cfg.team || 1]} · ${cfg.mode === 'zerobuild' ? 'Zero Build' : 'Build'}. ` : ''}Friends join from Play Online with this code. ${cfg && cfg.team > 1 ? 'Players fill squads in this order.' : ''}</p>
+        ${note ? `<p class="err">${escAttr(note)}</p>` : ''}
+        <div class="players">${rows || '<p class="note">Connecting…</p>'}</div>
+        ${host ? '<button class="btn play" data-act="start-online">Start match</button>' : `<p class="note">${inPlay ? 'A match is in progress. You will join the next one.' : 'Waiting for the host to start…'}</p>`}
+        <div class="row"><button class="btn" data-act="leave-online">Leave</button></div>
+      </div>`, 'screen right');
+  }
+
   showPause() {
     this.screen(`
       <div class="sheet panel small-sheet">
         <h2>Paused</h2>
         <div class="stack">
           <button class="btn play" data-act="resume">Resume</button>
+          <button class="btn" data-act="fullscreen">Full screen</button>
           <button class="btn" data-act="settings" data-back="pause">Settings</button>
           <button class="btn" data-act="controls" data-back="pause">Controls</button>
           <button class="btn danger" data-act="quit">Leave match</button>

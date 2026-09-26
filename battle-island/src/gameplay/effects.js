@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 
 const MAX_P = 700;
+const R = (v) => Math.round(v * 10);
+
 
 export class Effects {
   constructor(scene) {
@@ -45,6 +47,7 @@ export class Effects {
   }
 
   burst(pos, color, n = 8, speed = 4, size = 0.12, life = 0.6) {
+    this.onFx?.(['bu', R(pos.x), R(pos.y), R(pos.z), color, n, R(speed), Math.round(size * 100), R(life)]);
     for (let i = 0; i < n; i++) {
       const v = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 1.5, (Math.random() - 0.5) * 2).multiplyScalar(speed);
       this.particle(pos, v, color, size * (0.6 + Math.random() * 0.8), life * (0.6 + Math.random() * 0.6));
@@ -52,6 +55,13 @@ export class Effects {
   }
 
   confetti(pos) {
+    this.onFx?.(['cf', R(pos.x), R(pos.y), R(pos.z)]);
+    const hold = this.onFx;
+    this.onFx = null; // the burst below is part of the same moment
+    try { this._confetti(pos); } finally { this.onFx = hold; }
+  }
+
+  _confetti(pos) {
     const cols = ['#ff5ca8', '#ffd23f', '#39f0ff', '#7ed957', '#b35cff', '#ff7a1a'];
     for (let i = 0; i < 40; i++) {
       const v = new THREE.Vector3((Math.random() - 0.5) * 8, 4 + Math.random() * 6, (Math.random() - 0.5) * 8);
@@ -61,6 +71,7 @@ export class Effects {
   }
 
   tracer(from, to, color = '#fff6a8') {
+    this.onFx?.(['tr', R(from.x), R(from.y), R(from.z), R(to.x), R(to.y), R(to.z), color]);
     const len = from.distanceTo(to);
     if (len < 0.5) return;
     const mat = this.tracerMat.clone();
@@ -74,6 +85,7 @@ export class Effects {
   }
 
   muzzle(pos) {
+    this.onFx?.(['mz', R(pos.x), R(pos.y), R(pos.z)]);
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.flashTex, color: '#ffe38a', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     s.position.copy(pos);
     s.scale.setScalar(0.7 + Math.random() * 0.3);
@@ -82,6 +94,13 @@ export class Effects {
   }
 
   explosion(pos, radius) {
+    this.onFx?.(['ex', R(pos.x), R(pos.y), R(pos.z), radius]);
+    const hold = this.onFx;
+    this.onFx = null;
+    try { this._explosion(pos, radius); } finally { this.onFx = hold; }
+  }
+
+  _explosion(pos, radius) {
     const m = new THREE.Mesh(this.boomGeo, new THREE.MeshBasicMaterial({ color: '#ffb23f', transparent: true, opacity: 0.9, depthWrite: false }));
     m.position.copy(pos);
     this.scene.add(m);
