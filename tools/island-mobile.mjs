@@ -68,6 +68,28 @@ const forward = start[2] - end[2]; // yaw 0 faces -z
 check('left-thumb joystick walks the character forward', moved > 1.5 && forward > 1 && mid.stick === 'block', JSON.stringify({ moved: +moved.toFixed(2), forward: +forward.toFixed(2), mid }));
 check('releasing the stick stops input', await ev(() => __bi.input.analog === null));
 
+// jump on the ground while the other thumb holds the stick (multi-touch)
+const jb = await center('.t-jump');
+const y0 = await ev(() => __bi.game.player.pos.y);
+await touch('touchStart', [[140, 260, 1]]);
+await touch('touchMove', [[140, 230, 1]]);
+await p.waitForTimeout(200);
+await touch('touchStart', [[140, 230, 1], [jb[0], jb[1], 4]]);
+let peak = y0;
+for (let i = 0; i < 12; i++) { peak = Math.max(peak, await ev(() => __bi.game.player.pos.y)); await p.waitForTimeout(60); }
+await touch('touchEnd', []);
+await p.waitForTimeout(600);
+check('JUMP button jumps on the ground, even while steering with the stick', peak - y0 > 0.6, `rose ${(peak - y0).toFixed(2)}m`);
+// a quick tap (finger up before the next frame) still jumps
+await ev(() => { const P = __bi.game.player; P.vel.set(0, 0, 0); });
+await p.waitForTimeout(300);
+const y1 = await ev(() => __bi.game.player.pos.y);
+await touch('touchStart', [[jb[0], jb[1], 5]]);
+await touch('touchEnd', []);
+let peak2 = y1;
+for (let i = 0; i < 12; i++) { peak2 = Math.max(peak2, await ev(() => __bi.game.player.pos.y)); await p.waitForTimeout(60); }
+check('a very quick JUMP tap still jumps', peak2 - y1 > 0.6, `rose ${(peak2 - y1).toFixed(2)}m`);
+
 // look: drag on the right half
 const yaw0 = await ev(() => __bi.game.controller.yaw);
 await touch('touchStart', [[560, 150, 2]]);
@@ -115,6 +137,32 @@ await p.tap('[data-act=resume]');
 await p.waitForTimeout(300);
 check('pause button opens the pause menu; Resume returns', paused && (await ev(() => !__bi.game.paused && !document.querySelector('[data-act=resume]'))));
 await p.screenshot({ path: `${shots}/mob-03-hud.png` });
+
+// layout: buttons clear of the bottom/right gesture edges and not overlapping anything
+const layout = async () => ev(() => {
+  const W = innerWidth, H = innerHeight;
+  const rects = [...document.querySelectorAll('.t-btn')].filter((b) => getComputedStyle(b).display !== 'none').map((b) => ({ id: b.dataset.id, r: b.getBoundingClientRect() }));
+  const slots = document.querySelector('.slots').getBoundingClientRect();
+  const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+  const bad = [];
+  for (const { id, r } of rects) {
+    if (H - r.bottom < 24 || W - r.right < 10 || r.top < 0) bad.push(`${id} too close to the edge`);
+    if (hit(r, slots)) bad.push(`${id} covers the inventory`);
+  }
+  for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) if (hit(rects[i].r, rects[j].r)) bad.push(`${rects[i].id} overlaps ${rects[j].id}`);
+  if (H - slots.bottom < 16) bad.push('inventory too close to the bottom edge');
+  return bad;
+});
+await ev(() => { __bi.game.controller.building = true; });
+await p.waitForTimeout(300);
+const bad1 = await layout();
+await p.setViewportSize({ width: 740, height: 360 });
+await p.waitForTimeout(400);
+const bad2 = await layout();
+await ev(() => { __bi.game.controller.building = false; });
+await p.screenshot({ path: `${shots}/mob-05-small.png` });
+await p.setViewportSize({ width: 844, height: 390 });
+check('buttons stay clear of screen edges and never overlap (844x390 and 740x360)', !bad1.length && !bad2.length, JSON.stringify({ bad1, bad2 }));
 
 // portrait asks to rotate
 await p.setViewportSize({ width: 390, height: 844 });

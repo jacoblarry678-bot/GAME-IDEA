@@ -272,22 +272,26 @@ body.touch .lobby, body.touch .sheet { touch-action: pan-y; }
 .t-btn.on { background: rgba(255, 210, 63, 0.6); }
 .t-btn.lit { border-color: var(--cyan); background: rgba(57, 240, 255, 0.35); }
 .t-btn.hot { border-color: var(--yellow); background: rgba(255, 210, 63, 0.45); }
-.t-fire { width: 86px; height: 86px; font-size: 16px; right: 110px; bottom: 90px; background: rgba(232, 69, 60, 0.55); }
-.t-aim { right: 206px; bottom: 150px; }
-.t-jump { width: 70px; height: 70px; right: 22px; bottom: 26px; }
-.t-crouch { right: 110px; bottom: 16px; }
-.t-reload { right: 30px; bottom: 112px; }
-.t-use { right: 206px; bottom: 76px; }
-.t-build { right: 30px; bottom: 186px; }
-.t-pick { right: 110px; bottom: 190px; font-size: 20px; }
-.t-ping { top: 8px; right: 124px; width: 52px; height: 36px; border-radius: 12px; font-size: 12px; }
-.t-emote { top: 8px; right: 182px; width: 44px; height: 36px; border-radius: 12px; font-size: 16px; }
-.t-edit { right: 280px; bottom: 150px; width: 48px; height: 48px; }
-.t-repair { right: 280px; bottom: 206px; width: 48px; height: 48px; }
-.t-mat { right: 206px; bottom: 214px; width: 48px; height: 48px; }
-.t-top { border-radius: 12px; width: 52px; height: 36px; font-size: 13px; top: 8px; }
-.t-pause { right: 8px; }
-.t-mapbtn { right: 66px; }
+/* Every button keeps clear of the screen edges: phones reserve the bottom edge for system
+   gestures (home bar, Safari's toolbar in landscape eats taps there) and the sides for the
+   notch / rounded corners, so the cluster is lifted and inset by the safe areas. */
+body.touch { --sb: calc(env(safe-area-inset-bottom, 0px) + 40px); --sr: calc(env(safe-area-inset-right, 0px) + 12px); --st: calc(env(safe-area-inset-top, 0px) + 8px); }
+.t-fire { width: 86px; height: 86px; font-size: 16px; right: calc(var(--sr) + 98px); bottom: calc(var(--sb) + 58px); background: rgba(232, 69, 60, 0.55); }
+.t-jump { width: 78px; height: 78px; font-size: 14px; right: var(--sr); bottom: var(--sb); background: rgba(57, 240, 255, 0.28); }
+.t-crouch { right: calc(var(--sr) + 96px); bottom: calc(var(--sb) - 12px); width: 54px; height: 54px; }
+.t-reload { right: calc(var(--sr) + 10px); bottom: calc(var(--sb) + 90px); }
+.t-aim { right: calc(var(--sr) + 196px); bottom: calc(var(--sb) + 112px); }
+.t-use { right: calc(var(--sr) + 196px); bottom: calc(var(--sb) + 44px); }
+.t-build { right: calc(var(--sr) + 10px); bottom: calc(var(--sb) + 160px); }
+.t-pick { right: calc(var(--sr) + 98px); bottom: calc(var(--sb) + 156px); font-size: 20px; }
+.t-edit { right: calc(var(--sr) + 268px); bottom: calc(var(--sb) + 104px); width: 48px; height: 48px; }
+.t-repair { right: calc(var(--sr) + 268px); bottom: calc(var(--sb) + 160px); width: 48px; height: 48px; }
+.t-mat { right: calc(var(--sr) + 196px); bottom: calc(var(--sb) + 176px); width: 48px; height: 48px; }
+.t-top { border-radius: 12px; width: 52px; height: 36px; font-size: 13px; top: var(--st); }
+.t-pause { right: var(--sr); }
+.t-mapbtn { right: calc(var(--sr) + 58px); }
+.t-ping { top: var(--st); right: calc(var(--sr) + 116px); width: 52px; height: 36px; border-radius: 12px; font-size: 12px; }
+.t-emote { top: var(--st); right: calc(var(--sr) + 174px); width: 44px; height: 36px; border-radius: 12px; font-size: 16px; }
 .t-rotate { display: none; }
 @media (orientation: portrait) {
   body.touch .t-rotate { display: flex; position: fixed; inset: 0; align-items: center; justify-content: center; text-align: center; padding: 24px; background: rgba(20, 10, 40, 0.92); color: #fff; font-size: 22px; pointer-events: auto; }
@@ -295,7 +299,7 @@ body.touch .lobby, body.touch .sheet { touch-action: pan-y; }
 /* HUD rearranged for phones: stats on top, inventory bottom-centre, buttons on the right */
 body.touch #hud .slot, body.touch #hud .piece, body.touch #hud .minimap { pointer-events: auto; }
 body.touch .minimap { width: 118px; height: 118px; border-width: 3px; }
-body.touch .hud-tl { width: 118px; top: 8px; left: 8px; }
+body.touch .hud-tl { width: 118px; top: var(--st); left: calc(env(safe-area-inset-left, 0px) + 8px); }
 body.touch .storm-info { font-size: 12px; padding: 1px 6px; }
 body.touch .pill { font-size: 11px; }
 body.touch .pill b { font-size: 14px; }
@@ -305,7 +309,7 @@ body.touch .compass-strip span { line-height: 24px; }
 body.touch .hud-bl { left: 136px; top: 8px; bottom: auto; width: 190px; }
 body.touch .bar { height: 16px; }
 body.touch .bar span { font-size: 12px; line-height: 13px; }
-body.touch .hud-br { right: auto; left: 50%; transform: translateX(-50%); bottom: 6px; align-items: center; }
+body.touch .hud-br { right: auto; left: 45%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); align-items: center; }
 body.touch .ammo-list, body.touch .ammo-big .reserve { display: none; }
 body.touch .ammo-big { font-size: 20px; }
 body.touch .mats { transform: scale(0.8); }

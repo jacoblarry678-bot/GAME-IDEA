@@ -16,7 +16,7 @@ const BTN = [
   // id, label, key, style ('hold' keeps it down while touched; 'toggle' flips)
   ['fire', 'FIRE', 'Mouse0', 'hold look'],
   ['aim', 'AIM', 'Mouse2', 'toggle'],
-  ['jump', 'JUMP', 'Space', ''],
+  ['jump', 'JUMP', 'Space', 'hold'],
   ['crouch', 'CROUCH', 'KeyC', ''],
   ['reload', 'RELOAD', 'KeyR', ''],
   ['use', 'USE', 'KeyE', 'hold'],
