@@ -19,6 +19,7 @@ const DEFAULTS = {
   profile: {
     character: 'colton',
     mode: 'build', // build | zerobuild
+    teamSize: 1, // 1 solo, 2 duos, 3 trios, 4 squads
     outfits: { colton: 0, emerson: 0, waylon: 0 },
     skin: 0,
   },

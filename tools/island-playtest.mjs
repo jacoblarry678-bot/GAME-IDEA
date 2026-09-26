@@ -205,7 +205,7 @@ const destroyed = await ev(() => {
   const g = __bi.game;
   const c = [...g.building.pieces][0];
   const n0 = g.building.pieces.size;
-  g.damageCollider(c, 9999, g.player);
+  g.building.damage(c, 9999, g.player);
   return { n0, n1: g.building.pieces.size, alive: c.alive };
 });
 check('structures take damage and are destroyed', destroyed.n1 === destroyed.n0 - 1 && !destroyed.alive, JSON.stringify(destroyed));

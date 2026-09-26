@@ -144,6 +144,7 @@ export class World {
     this.pois = POIS;
     this.minor = MINOR;
     this.chests = [];
+    this.vans = []; // reboot vans
     this.lootSpots = [];
     this.footprints = []; // for the map
     this.roads = [];
@@ -160,6 +161,7 @@ export class World {
     this._buildHollow();
     this._buildDepot();
     for (const m of MINOR) this._cabin(m);
+    for (const m of MINOR) this._rebootVan(m.x + 9, m.z + 1.5);
     this._scatterNature();
     this.mapCanvas = this._renderMap();
   }
@@ -714,6 +716,39 @@ export class World {
     this.house(p.x + 18, p.z + 16, 8, 6, 1, { y, wall: '#ffe066', tex: 'metal', material: 'metal', roof: '#ff5c7a' });
     for (let i = 0; i < 4; i++) this.lootSpots.push(new THREE.Vector3(p.x - 6 + i * 4, y + 0.15, p.z - 1));
     this.lootSpots.push(new THREE.Vector3(x0 + 2, cy + 0.05, p.z + 3));
+  }
+
+  /** Reboot van: bring back teammates whose reboot cards you carry. */
+  _rebootVan(x, z) {
+    const y = this.hm.get(x, z);
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(boxGeo(2.2, 2.2, 4.4), mat('#27b3a7', 'metal'));
+    body.position.y = 1.4;
+    const stripe = new THREE.Mesh(boxGeo(2.25, 0.35, 4.45), mat('#ffffff'));
+    stripe.position.y = 1.0;
+    const screen = new THREE.Mesh(boxGeo(0.06, 0.9, 1.6), new THREE.MeshLambertMaterial({ color: '#39f0ff', emissive: '#1a8a99' }));
+    screen.position.set(1.12, 1.7, 0.4);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.6, 6), mat('#dddddd'));
+    mast.position.set(0, 3.3, -1.2);
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat('#ffffff'));
+    dish.position.set(0, 4.1, -1.2);
+    dish.rotation.x = Math.PI * 0.8;
+    g.add(body, stripe, screen, mast, dish);
+    for (const [wx, wz] of [[-1.1, -1.4], [1.1, -1.4], [-1.1, 1.4], [1.1, 1.4]]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.3, 10), mat('#222222'));
+      w.rotation.z = Math.PI / 2;
+      w.position.set(wx, 0.4, wz);
+      g.add(w);
+    }
+    g.position.set(x, y, z);
+    g.traverse((o) => (o.castShadow = true));
+    this.root.add(g);
+    this.physics.add(new Collider({ minX: x - 1.1, maxX: x + 1.1, minZ: z - 2.2, maxZ: z + 2.2, minY: y, maxY: y + 2.5, mesh: g }));
+    const van = { pos: new THREE.Vector3(x + 1.9, y, z + 0.4), cd: 0, screen };
+    this.vans.push(van);
+    this.exclude.push({ x, z, r: 5 });
+    this.animated.push(() => screen.material.emissive.set(van.cd > 0 ? '#551111' : '#1a8a99'));
+    return van;
   }
 
   barrel(x, y, z) {

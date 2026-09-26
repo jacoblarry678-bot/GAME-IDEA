@@ -98,7 +98,7 @@ function play() {
   engine.view = { scene: engine.scene, camera: engine.camera };
   engine.resize();
   game.paused = false;
-  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, mode: P.mode, botCount: save.data.settings.botCount });
+  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount });
   input.enabled = true;
   input.requestLock();
 }
@@ -117,6 +117,7 @@ function resume() {
 }
 
 function toLobby() {
+  game.forfeit();
   game.endMatch();
   game.paused = false;
   hud.show(false);

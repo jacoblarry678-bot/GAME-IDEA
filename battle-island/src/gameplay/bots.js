@@ -41,6 +41,22 @@ export class BotBrain {
     this.lastHp = 200;
     this.hurtT = 99;
     this.emoteT = 0;
+    // squad play
+    this.leader = null; // set for the player's bot teammates
+    this.followDrop = false;
+    this.pingGoal = null;
+    this.pingT = 0;
+    this.buffCd = 0;
+  }
+
+  onPing(pos, enemy) {
+    this.pingGoal = pos.clone();
+    this.pingT = 20;
+    if (enemy && !this.enemy) this.lastSeen = enemy.pos.clone();
+  }
+
+  _teammates() {
+    return this.game.actors.filter((o) => o !== this.a && o.team === this.a.team);
   }
 
   pickDrop(world) {
@@ -225,6 +241,12 @@ export class BotBrain {
     if (!a.alive || a.state === 'bus') return inp;
 
     if (a.state === 'skydive' || a.state === 'glide') {
+      if (this.followDrop && this.leader) {
+        // glide down next to the player (or their drop marker)
+        const m = g.marker;
+        const off = (a.id % 4) * 1.6 - 2.4;
+        this.dropTarget = m ? new THREE.Vector3(m.x + off, 0, m.y + off) : new THREE.Vector3(this.leader.pos.x + off, 0, this.leader.pos.z + off);
+      }
       if (this.dropTarget) {
         const d = this._steer(this.dropTarget, dt);
         const agl = a.pos.y - g.world.height(a.pos.x, a.pos.z);
@@ -235,6 +257,21 @@ export class BotBrain {
       a.aimYaw = a.yaw;
       return inp;
     }
+
+    if (a.downed) {
+      // crawl toward the nearest standing teammate
+      let best = null, bd = 1e9;
+      for (const o of this._teammates()) {
+        if (!o.alive || o.downed) continue;
+        const d = o.pos.distanceTo(a.pos);
+        if (d < bd) { bd = d; best = o; }
+      }
+      if (best && bd > 1.8) this._steer(best.pos, dt);
+      a.yaw = a.aimYaw = Math.atan2(-inp.mx, -inp.mz) || a.yaw;
+      return inp;
+    }
+    this.pingT -= dt;
+    this.buffCd -= dt;
 
     // hurt tracking
     const tot = a.hp + a.shield;
@@ -265,8 +302,14 @@ export class BotBrain {
       case 'heal': this._heal(dt); break;
       case 'loot': this._loot(dt); break;
       case 'harvest': this._harvest(dt); break;
+      case 'revive': this._revive(dt); break;
+      case 'reboot': this._reboot(dt); break;
+      case 'card': this._card(dt); break;
+      case 'follow': this._follow(dt); break;
       default: this._roam(dt);
     }
+    if (this.mode !== 'revive') a.reviveTarget = null;
+    if (this.mode !== 'reboot') a.rebootVan = null;
     if (a.state === 'swim') inp.sprint = true;
     this._stuckCheck(dt);
     // facing when not aiming at something: movement direction
@@ -296,6 +339,7 @@ export class BotBrain {
       this.mode = 'fight'; // pickaxe it out
       return;
     }
+    if (this._squadDuty(outside)) return;
     if (needRotate) {
       if (this.mode !== 'rotate' || !this.goal || !this._inSafe(this.goal.x, this.goal.z)) this.goal = this._safePoint();
       this.mode = 'rotate';
@@ -329,6 +373,119 @@ export class BotBrain {
     this.mode = 'roam';
   }
 
+  /** Revive, grab cards, reboot, follow the leader, answer pings. Returns true if it picked a mode. */
+  _squadDuty(outside) {
+    const a = this.a;
+    const g = this.game;
+    if (!g.teams.enabled) return false;
+    const calm = !this.enemy || this.seenT > 2.5;
+    if (!calm) return false;
+    const mates = this._teammates();
+    let near = null, nd = 70;
+    for (const o of mates) {
+      if (!o.alive || !o.downed) continue;
+      const d = o.pos.distanceTo(a.pos);
+      if (d < nd) { nd = d; near = o; }
+    }
+    if (near) {
+      this.mode = 'revive';
+      this.goalObj = { kind: 'mate', obj: near };
+      return true;
+    }
+    const card = g.loot.pickups.find((k) => k.it.kind === 'card' && k.it.team === a.team && k.it.id !== a.id && k.pos.distanceTo(a.pos) < 90);
+    if (card) {
+      this.mode = 'card';
+      this.goalObj = { kind: 'card', obj: card };
+      return true;
+    }
+    if (a.cards.length && g.teams.vansOnline() && !outside) {
+      let best = null, bd = 1e9;
+      for (const v of g.world.vans) {
+        const d = v.pos.distanceTo(a.pos) + v.cd * 6;
+        if (d < bd) { bd = d; best = v; }
+      }
+      if (best) {
+        this.mode = 'reboot';
+        this.goalObj = { kind: 'van', obj: best };
+        return true;
+      }
+    }
+    if (this.pingT > 0 && this.pingGoal && Math.hypot(this.pingGoal.x - a.pos.x, this.pingGoal.z - a.pos.z) > 4) {
+      this.mode = 'follow';
+      this.goal = this.pingGoal;
+      return true;
+    }
+    const L = this.leader;
+    if (L && L.alive && !L.downed && L.state !== 'bus' && L.pos.distanceTo(a.pos) > 26) {
+      this.mode = 'follow';
+      this.goal = L.pos;
+      return true;
+    }
+    return false;
+  }
+
+  _revive(dt) {
+    const a = this.a;
+    const t = this.goalObj?.obj;
+    if (!t || !t.alive || !t.downed) {
+      a.reviveTarget = null;
+      this.mode = 'roam';
+      return;
+    }
+    const d = t.pos.distanceTo(a.pos);
+    if (d > 1.8) {
+      this._steer(t.pos, dt);
+      this.inp.sprint = d > 6;
+      a.reviveTarget = null;
+    } else {
+      a.reviveTarget = t;
+      this.inp.crouch = true;
+    }
+  }
+
+  _card(dt) {
+    const pk = this.goalObj?.obj;
+    if (!pk || !this.game.loot.pickups.includes(pk)) {
+      this.mode = 'roam';
+      return;
+    }
+    this._steer(pk.pos, dt);
+    this.inp.sprint = true;
+  }
+
+  _reboot(dt) {
+    const a = this.a;
+    const v = this.goalObj?.obj;
+    if (!v || !a.cards.length) {
+      this.mode = 'roam';
+      return;
+    }
+    const d = Math.hypot(v.pos.x - a.pos.x, v.pos.z - a.pos.z);
+    if (d > 2.4) {
+      this._steer(v.pos, dt);
+      this.inp.sprint = d > 8;
+      a.rebootVan = null;
+    } else if (v.cd <= 0) a.rebootVan = v;
+  }
+
+  _follow(dt) {
+    const d = this._steer(this.goal, dt);
+    this.inp.sprint = d > 10 && this.a.stamina > 20;
+    this._useBuff(['zoom']);
+  }
+
+  /** Drinks a buff from the inventory if it isn't already active. */
+  _useBuff(ids) {
+    const a = this.a;
+    if (this.buffCd > 0 || a.use || a.reloadT > 0) return false;
+    const i = a.slots.findIndex((s) => s && s.kind === 'consumable' && ids.includes(s.id) && !a.buffs[CONSUMABLES[s.id].buff]);
+    if (i < 0) return false;
+    a.select(i);
+    a.equipT = 0;
+    this.buffCd = 3;
+    return a.startUse();
+  }
+
   _goalValid() {
     const o = this.goalObj;
     if (!o) return false;
@@ -354,7 +511,10 @@ export class BotBrain {
     const d = this._steer(this.goal, dt);
     this.inp.sprint = d > 12 && this.a.stamina > 30;
     if (d < 3) this.goal = this._safePoint();
-    if (this.mode === 'rotate') this.inp.sprint = true;
+    if (this.mode === 'rotate') {
+      this.inp.sprint = true;
+      this._useBuff(['zoom']);
+    }
   }
 
   _loot(dt) {
@@ -467,6 +627,11 @@ export class BotBrain {
     }
     this.inp.crouch = false;
     const dist = e.pos.distanceTo(a.pos);
+    if (dist > 28 && this._useBuff(['spicy', 'snack', 'zoom'])) return;
+    if (a.use) {
+      this.inp.crouch = true;
+      return;
+    }
     // weapon choice
     const best = this._bestWeaponFor(dist);
     if (best >= 0 && best !== a.sel && a.reloadT <= 0) a.select(best);

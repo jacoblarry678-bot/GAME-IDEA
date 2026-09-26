@@ -10,29 +10,25 @@ import { sfx } from '../core/audio.js';
 
 export const ROADMAP = {
   done: [
-    'Solo battle royale vs labelled bots: lobby → Benton Bus → drop → loot → storm → victory/elimination → replay',
-    'Colton, Emerson & Waylon: distinct models, outfits, backpacks, animations and emotes; equal combat stats',
-    'Island with Benton Diesel Garage, Pickles Park, Haunt Hollow, Boom Co. Depot, Benton Kids Clubhouse, 4 cabins, roads, pond',
-    'Walk-in buildings with stairs and upper floors, roofs, destructible walls, secret legendary chests (pickle statue, Haunt Hollow crypt)',
-    'Skydiving, glider, map drop marker, bounce pads with glider redeploy',
-    'Third-person camera with collision, sensitivity/ADS sensitivity/FOV settings',
-    'Sprint + stamina, crouch, slide, jump, mantle/hurdle, swimming, fall damage',
-    '6 weapons (rifle, SMG, pump, pistol, sniper w/ scope + bullet drop, launcher) + Boom Ball grenades; rarities, mags, reloads, ammo types, recoil, bloom, ADS, headshots',
-    'Pickaxe harvesting (wood/brick/metal); build walls/floors/ramps/cones on a snapping grid with previews, rapid place, ramp rotation, costs, health, destruction, ownership',
-    'Zero Build mode with regenerating overshield',
-    '5 slots, stacking, swapping, dropping, separate ammo/material storage, chests, floor loot, supply drops, 5 healing/shield items with use times + interruption',
-    'Storm with 6 shrinking phases and rising damage; explosive Boom barrels',
-    'Bots that drop, loot, harvest, fight, wall up, heal, dance, break walls and rotate with the storm',
-    'HUD: health/shield, inventory, ammo, materials, minimap, full map, compass, storm timer, players left, elims, killfeed, damage numbers',
-    'XP, levels, outfit unlocks by level, saved settings and progression',
+    'Milestone 1 — solo battle royale vs labelled bots: lobby → Benton Bus → drop marker → skydive/glider → loot → 6-phase storm → victory/elimination → spectate → replay',
+    'Colton, Emerson & Waylon: distinct models, outfits, backpacks, animations and emotes; equal combat stats; skin tones',
+    'Island: Benton Diesel Garage, Pickles Park, Haunt Hollow, Boom Co. Depot, Benton Kids Clubhouse, 4 cabins, roads, pond, walk-in buildings, secret legendary chests',
+    'Movement: sprint + stamina, crouch, slide, mantle/hurdle, swimming, fall damage, bounce pads with glider redeploy, camera collision, sensitivity/FOV settings',
+    '6 weapons + Boom Balls: rarities, mags, reloads, ammo types, recoil, bloom, ADS, sniper scope and bullet drop, headshots, hit feedback',
+    'Loot: 5 slots, stacking, swapping, dropping, chests, floor loot, supply drops, healing/shields with use times and interruption; explosive barrels',
+    'Zero Build mode with regenerating overshield; XP, levels, outfit unlocks, saved settings and progression',
+    'Milestone 2 — Duos, Trios and Squads with labelled bot teammates who drop with you, follow you and answer pings',
+    'Knocked-down state with bleed-out, crawling and reviving; team wipes; squad placement',
+    'Reboot cards and reboot vans (bring eliminated teammates back; vans shut off in the endgame)',
+    'Pings (Z / middle mouse): enemy, chest, loot or “going here”, shown in the world and on the map',
+    'Buffs: Zoom Juice (speed), Bouncy Soda (jump + no fall damage), Spicy Pickle (+20% damage), Shield Snack (shield regen) with HUD timers and auras; bots use them too',
+    'Building 2.0: edit walls (3×3) and floors (2×2) with confirm/reset, repair, upgrade wood → brick → metal, structural integrity (unsupported builds collapse), team ownership',
   ],
   next: [
-    'Building: edit mode (window/door/arch cuts) with confirm/reset, repair, upgrade, structural integrity',
-    'Match flow: pre-match warm-up island, duo/trio/squad rules, replay recording',
-    'Teams: squadmates (bots), pings, downed/revive, carrying, reboot cards & vans',
-    'Movement: ziplines',
-    'Attachments/scopes as items',
-    'World: drivable vehicles (fuel, damage, passengers), opening doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards & vaults',
+    'Editing ramps and cones; carrying downed teammates',
+    'Pre-match warm-up island; match replays',
+    'Ziplines; weapon attachments and scopes as items',
+    'World: drivable vehicles (fuel, damage, passengers), doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards & vaults',
     'Progression: challenges, achievements, more emotes and cosmetics',
     'Online multiplayer (needs a real, tested networking backend — not started)',
     'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
@@ -43,7 +39,8 @@ const CONTROLS = [
   ['WASD', 'Move'], ['Mouse', 'Look (click the game to capture the mouse)'], ['Left click', 'Fire / swing / place / use item'], ['Right click (hold)', 'Aim down sights / scope'],
   ['Space', 'Jump · jump from bus · open glider'], ['Shift', 'Sprint (uses stamina)'], ['C / Ctrl', 'Crouch · slide while sprinting'], ['R', 'Reload · rotate ramp (build mode)'],
   ['E', 'Open chest / pick up · swap when full'], ['G', 'Drop held item'], ['1 – 5 / Wheel', 'Select slot · choose piece in build mode'], ['F', 'Pickaxe (harvest)'],
-  ['B or Q', 'Toggle build mode'], ['T', 'Cycle build material'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
+  ['B or Q', 'Toggle build mode'], ['T', 'Cycle build material'], ['V', 'Edit the build you aim at · V again confirms, R resets'], ['U', 'Repair / upgrade the build you aim at'],
+  ['Hold E', 'Revive a knocked teammate · reboot at a reboot van'], ['Z / middle click', 'Ping'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
 ];
 
 export class Menus {
@@ -92,6 +89,7 @@ export class Menus {
       case 'roadmap': this.showRoadmap(); break;
       case 'pick': P.character = d.id; save.write(); this.app.preview(); this.showChars(); break;
       case 'mode': P.mode = d.id; save.write(); this.showMain(); break;
+      case 'team': P.teamSize = +d.id; save.write(); this.showMain(); break;
       case 'bots': save.data.settings.botCount = +d.id; save.write(); this.showMain(); break;
       case 'outfit': {
         const lvl = levelInfo(save.data.progress.xp).level;
@@ -156,14 +154,16 @@ export class Menus {
         </div>
         <div class="lobby-center"><div class="hero-name">${ch.name}<small>${ch.title} · ${ch.outfits[P.outfits[P.character]].name}</small></div></div>
         <div class="lobby-right panel">
+          <h3>Squad</h3>
+          <div class="seg four">${[[1, 'Solo'], [2, 'Duos'], [3, 'Trios'], [4, 'Squads']].map(([n, l]) => `<button class="btn ${(P.teamSize || 1) === n ? 'on' : ''}" data-act="team" data-id="${n}">${l}</button>`).join('')}</div>
           <h3>Mode</h3>
-          <div class="seg">
-            <button class="btn ${P.mode === 'build' ? 'on' : ''}" data-act="mode" data-id="build">Solo · Build</button>
-            <button class="btn ${P.mode === 'zerobuild' ? 'on' : ''}" data-act="mode" data-id="zerobuild">Solo · Zero Build</button>
+          <div class="seg two">
+            <button class="btn ${P.mode === 'build' ? 'on' : ''}" data-act="mode" data-id="build">Build</button>
+            <button class="btn ${P.mode === 'zerobuild' ? 'on' : ''}" data-act="mode" data-id="zerobuild">Zero Build</button>
           </div>
           <h3>Bots</h3>
           <div class="seg">${[9, 19, 29].map((n) => `<button class="btn ${S.botCount === n ? 'on' : ''}" data-act="bots" data-id="${n}">${n}</button>`).join('')}</div>
-          <p class="note">All opponents are computer-controlled bots and are labelled [BOT]. Online multiplayer is on the roadmap.</p>
+          <p class="note">Teammates and opponents are computer-controlled bots, labelled [BOT]. Online multiplayer is on the roadmap.</p>
           <button class="btn play" data-act="play">PLAY</button>
         </div>
       </div>`);
@@ -272,7 +272,7 @@ export class Menus {
     const L = levelInfo(pr.xp);
     this.screen(`
       <div class="sheet panel result ${r.won ? 'win' : ''}">
-        ${r.won ? '<div class="crown">#1</div><h1 class="big">BENTON CHAMPION!</h1>' : `<h1 class="big">#${r.place} <small>of ${r.total}</small></h1><p class="sub">${r.killer ? `Eliminated by ${escAttr(r.killer)}` : 'Eliminated'}</p>`}
+        ${r.won ? `<div class="crown">#1</div><h1 class="big">${r.team ? 'BENTON SQUAD CHAMPIONS!' : 'BENTON CHAMPION!'}</h1>` : `<h1 class="big">#${r.place} <small>of ${r.total} ${r.team ? 'squads' : ''}</small></h1><p class="sub">${r.team ? 'Your squad was eliminated' : r.killer ? `Eliminated by ${escAttr(r.killer)}` : 'Eliminated'}</p>`}
         <div class="stats"><div><b>${r.kills}</b>elims</div><div><b>${r.damage}</b>damage</div><div><b>${Math.floor(r.time / 60)}:${String(r.time % 60).padStart(2, '0')}</b>survived</div><div><b>+${r.xp}</b>XP</div></div>
         ${r.levelUp ? `<p class="lvlup">Level up! You reached level ${r.levelUp}.</p>` : ''}
         <div class="level"><div class="lvl-badge">${L.level}</div><div class="lvl-bar"><div style="width:${(L.into / L.need) * 100}%"></div></div><small>${L.into} / ${L.need} XP</small></div>
@@ -289,11 +289,11 @@ export class Menus {
     if (this.lastResult) this.showResult(this.lastResult);
   }
 
-  showMatchOver(w) {
+  showMatchOver(w, team) {
     const r = this.lastResult;
     this.screen(`
       <div class="sheet panel result">
-        <h1 class="big">${w ? escAttr(w.name) : 'Nobody'} wins!</h1>
+        <h1 class="big">${w ? escAttr(w.name) + (team ? "'s squad" : '') : 'Nobody'} wins!</h1>
         ${r ? `<p class="sub">You placed #${r.place} with ${r.kills} elims (+${r.xp} XP)</p>` : ''}
         <div class="row"><button class="btn play small" data-act="again">Play again</button><button class="btn" data-act="quit">Lobby</button></div>
       </div>`, 'screen dim');

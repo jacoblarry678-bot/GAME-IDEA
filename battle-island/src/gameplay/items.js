@@ -71,6 +71,19 @@ export const CONSUMABLES = {
   minishield: { name: 'Shield Juice Box', time: 2, shield: 25, shieldCap: 50, max: 6, color: '#5ac8ff' },
   bigshield: { name: 'Big Shield Potion', time: 5, shield: 50, shieldCap: 100, max: 3, color: '#2f6bff' },
   pickle: { name: 'Pickle Fizz', time: 1.5, hp: 15, shield: 15, hpCap: 100, shieldCap: 100, over: 3, max: 4, color: '#7ed957' },
+  // buffs: temporary effects (see BUFFS)
+  zoom: { name: 'Zoom Juice', time: 1.2, buff: 'zoom', max: 3, color: '#ffb23f' },
+  bounce: { name: 'Bouncy Soda', time: 1.2, buff: 'bounce', max: 3, color: '#ff7ac8' },
+  spicy: { name: 'Spicy Pickle', time: 1.2, buff: 'spicy', max: 3, color: '#ff4b2b' },
+  snack: { name: 'Shield Snack', time: 1.2, buff: 'snack', max: 3, color: '#39f0ff' },
+};
+
+/** Temporary effects granted by buff consumables. */
+export const BUFFS = {
+  zoom: { name: 'Zoom', dur: 12, color: '#ffb23f', desc: '+30% move speed' },
+  bounce: { name: 'Bounce', dur: 20, color: '#ff7ac8', desc: 'Higher jumps, no fall damage' },
+  spicy: { name: 'Spicy', dur: 12, color: '#ff4b2b', desc: '+20% damage' },
+  snack: { name: 'Snack', dur: 15, color: '#39f0ff', desc: 'Regenerate 4 shield/s' },
 };
 
 export const PICKAXE = { name: 'Pickaxe', dmg: 20, structDmg: 50, rate: 1.9, range: 2.9 };
@@ -82,6 +95,7 @@ export function itemName(it) {
   if (it.kind === 'consumable') return CONSUMABLES[it.id].name;
   if (it.kind === 'ammo') return AMMO[it.id].name;
   if (it.kind === 'mat') return MATS[it.id].name;
+  if (it.kind === 'card') return `${it.name}'s Reboot Card`;
   return '?';
 }
 
@@ -107,7 +121,7 @@ const pick = (rng, table) => {
 const WEAPON_TABLE = [['ar', 30], ['smg', 22], ['shotgun', 24], ['pistol', 16], ['sniper', 6], ['launcher', 3]];
 const FLOOR_RARITY = [[0, 45], [1, 32], [2, 17], [3, 5], [4, 1]];
 const CHEST_RARITY = [[1, 35], [2, 38], [3, 20], [4, 7]];
-const CONSUMABLE_TABLE = [['bandage', 30], ['minishield', 30], ['bigshield', 14], ['medkit', 10], ['pickle', 16]];
+const CONSUMABLE_TABLE = [['bandage', 30], ['minishield', 30], ['bigshield', 14], ['medkit', 10], ['pickle', 16], ['zoom', 9], ['bounce', 8], ['spicy', 8], ['snack', 9]];
 
 export function rollWeapon(rng, chest) {
   const id = pick(rng, WEAPON_TABLE);

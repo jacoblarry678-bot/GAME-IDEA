@@ -92,9 +92,23 @@ export function consumableModel(id) {
       g.add(p);
       break;
     }
+    case 'zoom': case 'bounce': case 'spicy': case 'snack': {
+      // soda-can style buff drinks
+      const can = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.32, 12), m(c, '#222222'));
+      can.position.y = 0.16;
+      g.add(can, cyl(0.08, 0.03, '#dddddd', 0, 0.33, 0, false), cyl(0.112, 0.08, '#ffffff', 0, 0.16, 0, false));
+      break;
+    }
     default:
       g.add(bx(0.3, 0.3, 0.3, c));
   }
+  return g;
+}
+
+export function cardModel() {
+  const g = new THREE.Group();
+  const card = bx(0.5, 0.7, 0.04, '#3f9bff', 0, 0.45, 0, '#0b3a88');
+  g.add(card, bx(0.3, 0.12, 0.05, '#ffffff', 0, 0.62, 0, '#666666'));
   return g;
 }
 
@@ -116,5 +130,6 @@ export function itemModel(it) {
   if (it.kind === 'throwable') return weaponModel(it.id);
   if (it.kind === 'consumable') return consumableModel(it.id);
   if (it.kind === 'ammo') return ammoModel(it.id);
+  if (it.kind === 'card') return cardModel();
   return matModel(it.id);
 }

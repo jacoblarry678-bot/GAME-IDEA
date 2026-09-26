@@ -15,7 +15,8 @@ import { Storm } from './storm.js';
 import { Effects } from './effects.js';
 import { BotBrain, BOT_NAMES } from './bots.js';
 import { PlayerController } from './player.js';
-import { mulberry32, makeWeapon } from './items.js';
+import { Teams } from './teams.js';
+import { mulberry32, makeWeapon, BUFFS } from './items.js';
 import { sfx } from '../core/audio.js';
 import { save, levelInfo } from '../core/save.js';
 
@@ -126,21 +127,34 @@ export class Game {
     this.loot.spawnInitial(rng);
     this.building = new Building(this);
     this.storm = new Storm(this, rng);
+    this.teamSize = opts.teamSize || 1;
+    this.teams = new Teams(this, this.teamSize);
     this.time = 0;
     this.tweens = [];
     this.killfeed = [];
     this.result = null;
+    this.playerKiller = null;
     this.actors = [];
-    const p = new Actor(this, { id: 0, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin });
+    const k = this.teamSize;
+    const p = new Actor(this, { id: 0, team: 0, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin });
     this.player = p;
     this.actors.push(p);
     const names = [...BOT_NAMES].sort(() => rng() - 0.5);
     for (let i = 0; i < opts.botCount; i++) {
+      const id = i + 1;
       const cid = CHARACTER_IDS[i % 3];
-      const b = new Actor(this, { id: i + 1, name: `${names[i % names.length]} [BOT]`, isBot: true, charId: cid, outfit: Math.floor(rng() * 3), skin: Math.floor(rng() * 5) });
+      // actors are grouped into teams of k in id order; the player's squad is team 0
+      const b = new Actor(this, { id, team: Math.floor(id / k), name: `${names[i % names.length]} [BOT]`, isBot: true, charId: cid, outfit: Math.floor(rng() * 3), skin: Math.floor(rng() * 5) });
       b.brain = new BotBrain(this, b, mulberry32(this.seed + i * 977));
+      if (b.team === 0) b.brain.leader = p;
       b.brain.pickDrop(this.world);
       this.actors.push(b);
+    }
+    // bot squads drop together at their captain's spot
+    for (const b of this.actors) {
+      if (!b.brain || b.team === 0) continue;
+      const cap = this.actors.find((a) => a.team === b.team && a.brain);
+      if (cap !== b) b.brain.dropTarget = cap.brain.dropTarget.clone().add(new THREE.Vector3((rng() - 0.5) * 10, 0, (rng() - 0.5) * 10));
     }
     for (const a of this.actors) {
       if (this.mode === 'zerobuild') {
@@ -167,6 +181,13 @@ export class Game {
       const dir = new THREE.Vector3().subVectors(this.busTo, this.busFrom).normalize();
       const along = new THREE.Vector3(d.x - this.busFrom.x, 0, d.z - this.busFrom.z).dot(dir);
       a.brain.jumpT = Math.max(2.5, Math.min(this.busLen / BUS_SPEED - 1, (along - 40) / BUS_SPEED + rng() * 4));
+      // the player's teammates wait for the player and jump with them
+      if (a.team === 0) a.brain.jumpT = Infinity;
+    }
+    for (const a of this.actors) {
+      if (!a.brain || a.team === 0) continue;
+      const cap = this.actors.find((b) => b.team === a.team && b.brain);
+      a.brain.jumpT = cap.brain.jumpT + (a === cap ? 0 : 0.2 + rng() * 0.6);
     }
     this.state = 'bus';
     this.marker = null;
@@ -210,6 +231,13 @@ export class Game {
     if (a === this.player) {
       sfx.play('jump');
       this.hud.toast('Skydiving! Steer with WASD, hold W to dive. SPACE opens the glider.', '#ffffff', 4);
+      // squadmates follow the player out of the bus and toward the drop marker
+      let n = 0;
+      for (const b of this.actors) {
+        if (!b.brain || b.team !== 0 || b.state !== 'bus') continue;
+        b.brain.jumpT = this.busT + 0.35 + n++ * 0.35;
+        b.brain.followDrop = true;
+      }
     }
     return true;
   }
@@ -221,7 +249,24 @@ export class Game {
   // ------------------------------------------------------------ damage
   applyDamage(target, amount, src, opts = {}) {
     if (!target.alive || target.state === 'bus' || amount <= 0 || this.state === 'over') return;
+    const env = opts.storm || opts.fall;
+    if (src && src !== target && src.team === target.team && !env) return; // no friendly fire
+    if (src && src.buffs.spicy && !env) amount *= 1.2;
     amount = Math.round(amount);
+    if (target.downed) {
+      const d = Math.min(target.downHp, amount);
+      target.downHp -= d;
+      target.model.hit();
+      if (src && src !== target) src.damageDealt += d;
+      if (src === this.player) {
+        this.hud.hitmarker(!!opts.head, false);
+        this.hud.damageNumber(opts.pos || target.eye, d, !!opts.head, false);
+        sfx.play('hit');
+      }
+      if (target === this.player) this.hud.hurt(src ? src.pos : null, opts.storm);
+      if (target.downHp <= 0) this.eliminate(target, src && src !== target ? src : target.downedBy, opts);
+      return;
+    }
     let res;
     if (opts.storm || opts.fall) {
       const d = Math.min(target.hp, amount);
@@ -252,11 +297,19 @@ export class Game {
         b.react = Math.min(b.react || 0.6, 0.6);
       }
     }
-    if (target.hp <= 0) this.eliminate(target, src && src !== target ? src : opts.storm || opts.fall ? null : target.lastHitBy, opts);
+    if (target.hp <= 0) {
+      const killer = src && src !== target ? src : env ? null : target.lastHitBy;
+      if (!this.teams.tryDown(target, killer)) this.eliminate(target, killer, opts);
+    }
   }
 
   damageCollider(c, dmg, src) {
     if (!c.alive || c.hp === Infinity) return;
+    if (src && src.buffs && src.buffs.spicy) dmg *= 1.2;
+    if (c.piece) {
+      this.building.damage(c.piece, dmg, src);
+      return;
+    }
     c.hp -= dmg;
     c.lastDamager = src;
     if (c.mesh && !c.inst) {
@@ -276,12 +329,18 @@ export class Game {
 
   eliminate(target, killer, opts = {}) {
     if (!target.alive) return;
-    const aliveBefore = this.alive().length;
+    const teamsBefore = this.teams.teamsAlive().size;
     target.alive = false;
-    target.place = aliveBefore;
+    target.downed = false;
+    target.place = teamsBefore;
     target.use = null;
     target.emote = false;
+    target.reviveTarget = target.rebootVan = null;
+    // carried reboot cards fall to the ground with everything else
+    for (const id of target.cards) this.teams.dropCard(this.actors[id]);
+    target.cards = [];
     this.loot.dropAll(target);
+    this.teams.dropCard(target);
     this.effects.confetti(target.pos.clone().add(new THREE.Vector3(0, 1, 0)));
     sfx.play('elim', target.pos);
     let msg;
@@ -293,27 +352,41 @@ export class Game {
       msg = { a: null, b: target.name, how: opts.storm ? 'storm' : opts.fall ? 'fall' : 'out' };
     }
     this.hud.killfeed(msg, this.player);
+    const teamOut = !this.teams.teamsAlive().has(target.team);
+    if (teamOut) this.teams.place[target.team] = teamsBefore;
     if (target === this.player) {
-      this.controller.spectate(killer && killer.alive ? killer : null);
-      this._finishPlayer(false, killer);
+      const mate = this.actors.find((a) => a.alive && a.team === target.team);
+      this.controller.spectate(mate || (killer && killer.alive ? killer : null));
+      if (mate) this.hud.toast('Eliminated! Your squad can pick up your reboot card and bring you back.', '#39f0ff', 5);
+      this.playerKiller = killer;
     }
-    const left = this.alive();
-    if (left.length <= 1) {
-      const w = left[0] || null;
-      if (w) w.place = 1;
+    if (teamOut && target.team === this.player.team) this._finishPlayer(false, this.playerKiller);
+    const teams = this.teams.teamsAlive();
+    if (teams.size <= 1) {
+      const wt = [...teams][0];
+      const w = wt === undefined ? null : this.actors.find((a) => a.alive && a.team === wt);
+      for (const a of this.actors) if (a.team === wt) a.place = 1;
       this.state = 'over';
-      if (w === this.player) this._finishPlayer(true, null);
-      else this.hud.matchOver(w);
+      if (wt === this.player.team) this._finishPlayer(true, null);
+      else this.hud.matchOver(w, this.teamSize > 1);
     }
+  }
+
+  /** Leaving mid-match: record the result at the current standing. */
+  forfeit() {
+    if (!this.world || this.result || this.state === 'over') return;
+    this.teams.place[this.player.team] = this.teams.teamsAlive().size;
+    this._finishPlayer(false, this.playerKiller || null);
   }
 
   /** Computes XP, saves progression and shows the right screen. */
   _finishPlayer(won, killer) {
     if (this.result) return;
     const p = this.player;
-    const place = won ? 1 : p.place;
+    const place = won ? 1 : this.teams.place[p.team] || p.place;
+    const totalTeams = Math.ceil(this.actors.length / this.teamSize);
     const survive = Math.floor(this.time);
-    const xp = 60 + p.kills * 75 + Math.round(p.damageDealt / 4) + Math.floor(survive / 3) + Math.max(0, (this.actors.length - place) * 8) + (won ? 400 : 0);
+    const xp = 60 + p.kills * 75 + Math.round(p.damageDealt / 4) + Math.floor(survive / 3) + Math.max(0, (totalTeams - place) * 8 * this.teamSize) + (won ? 400 : 0);
     const before = levelInfo(save.data.progress.xp).level;
     const pr = save.data.progress;
     pr.xp += xp;
@@ -323,7 +396,7 @@ export class Game {
     if (!pr.bestPlace || place < pr.bestPlace) pr.bestPlace = place;
     save.write();
     const after = levelInfo(pr.xp).level;
-    this.result = { won, place, total: this.actors.length, kills: p.kills, damage: Math.round(p.damageDealt), time: survive, xp, levelUp: after > before ? after : 0, killer: killer ? killer.name : null };
+    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills: p.kills, damage: Math.round(p.damageDealt), time: survive, xp, levelUp: after > before ? after : 0, killer: killer ? killer.name : null };
     if (won) {
       sfx.play('win');
       p.emote = true;
@@ -363,6 +436,7 @@ export class Game {
       if (a.brain) a.move(dt, a.brain.update(dt));
       a.tickTimers(dt);
     }
+    this.teams.update(dt);
     this.combat.update(dt);
     this.loot.update(dt, t);
     if (this.state !== 'over') this.storm.update(dt, t);
@@ -377,7 +451,19 @@ export class Game {
     for (const a of this.actors) {
       const far = a.pos.distanceToSquared(cam) > 170 * 170;
       if (far) a.model.root.visible = false;
-      else a.syncModel(dt, t);
+      else {
+        a.syncModel(dt, t);
+        // buff aura sparkles
+        if (a.alive && a.state !== 'bus' && (a.auraT -= dt) <= 0) {
+          const ids = Object.keys(a.buffs);
+          if (ids.length) {
+            a.auraT = 0.12;
+            const id = ids[Math.floor(Math.random() * ids.length)];
+            const pp = a.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.9, 0.2 + Math.random() * 1.4, (Math.random() - 0.5) * 0.9));
+            this.effects.particle(pp, new THREE.Vector3(0, 1.2, 0), BUFFS[id].color, 0.09, 0.6, 0);
+          }
+        }
+      }
     }
     this.controller.updateCamera(dt);
     this.effects.update(dt, cam);

@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { GRAVITY, WATER_Y } from '../world/physics.js';
 import { CharacterModel } from './characters.js';
-import { WEAPONS, CONSUMABLES, THROWABLES, AMMO, MAT_MAX, RARITIES, stackMax } from '../gameplay/items.js';
+import { WEAPONS, CONSUMABLES, THROWABLES, AMMO, MAT_MAX, RARITIES, BUFFS, stackMax } from '../gameplay/items.js';
 import { sfx } from '../core/audio.js';
 
 export const RADIUS = 0.38;
@@ -69,11 +69,24 @@ export class Actor {
     this.stormTick = 0;
     this.place = 0;
     this.lastPoi = null;
+    // teams: downed state, revive/reboot interactions, carried reboot cards
+    this.downed = false;
+    this.downHp = 0;
+    this.downedBy = null;
+    this.reviveTarget = null;
+    this.reviveT = 0;
+    this.rebootVan = null;
+    this.rebootT = 0;
+    this.cards = [];
+    // temporary effects: buff id -> seconds left
+    this.buffs = {};
+    this.auraT = 0;
     this.stepT = 0;
     this.game.scene.add(this.model.root);
   }
 
   get height() {
+    if (this.downed) return 0.8;
     return this.crouch || this.slideT > 0 ? CROUCH_HEIGHT : HEIGHT;
   }
 
@@ -91,7 +104,7 @@ export class Actor {
   }
 
   canAct() {
-    return this.alive && (this.state === 'ground' || this.state === 'air');
+    return this.alive && !this.downed && (this.state === 'ground' || this.state === 'air');
   }
 
   // ------------------------------------------------------------------ health
@@ -212,6 +225,11 @@ export class Actor {
     const it = this.item;
     if (!it || it.kind !== 'consumable' || this.use) return false;
     const c = CONSUMABLES[it.id];
+    if (c.buff) {
+      this.use = { slot: this.sel, t: c.time, total: c.time };
+      this.reloadT = 0;
+      return true;
+    }
     // refuse when it would do nothing (like the real thing)
     const needHp = c.hp && this.hp < (c.hpCap || 100);
     const needSh = c.shield && this.shield < (c.shieldCap || 100);
@@ -226,9 +244,12 @@ export class Actor {
     this.use = null;
     if (!it || it.kind !== 'consumable') return;
     const c = CONSUMABLES[it.id];
-    if (c.over) this.overTime.push({ hp: c.hp || 0, sh: c.shield || 0, t: c.over, total: c.over });
+    if (c.buff) {
+      this.buffs[c.buff] = BUFFS[c.buff].dur;
+      if (!this.isBot) sfx.play('shield');
+    } else if (c.over) this.overTime.push({ hp: c.hp || 0, sh: c.shield || 0, t: c.over, total: c.over });
     else this.heal(c.hp, c.shield, c.hpCap, c.shieldCap);
-    if (!this.isBot) sfx.play(c.shield ? 'shield' : 'heal');
+    if (!this.isBot && !c.buff) sfx.play(c.shield ? 'shield' : 'heal');
     it.count--;
     if (it.count <= 0) {
       this.slots[this.sel] = null;
@@ -267,6 +288,10 @@ export class Actor {
       if ((o.t -= dt) <= 0) this.overTime.splice(i, 1);
     }
     if (this.overshieldMax > 0 && this.sinceDamage > 6) this.overshield = Math.min(this.overshieldMax, this.overshield + 12 * dt);
+    for (const k in this.buffs) {
+      if ((this.buffs[k] -= dt) <= 0) delete this.buffs[k];
+    }
+    if (this.buffs.snack && !this.downed) this.shield = Math.min(100, this.shield + 4 * dt);
     if (this.staminaDelay > 0) this.staminaDelay -= dt;
     else this.stamina = Math.min(100, this.stamina + 22 * dt);
   }
@@ -311,7 +336,7 @@ export class Actor {
         else if (gl && this.canRedeploy) this.state = 'skydive';
       }
     } else if (this.state === 'swim') {
-      const sp = inp.sprint ? 5.2 : 3.8;
+      const sp = (inp.sprint ? 5.2 : 3.8) * (this.buffs.zoom ? 1.3 : 1);
       this.vel.x = dirX * mag * sp;
       this.vel.z = dirZ * mag * sp;
       this.vel.y = 0;
@@ -337,6 +362,14 @@ export class Actor {
         if (this.crouch) speed = CROUCH;
         if (inp.ads) speed = Math.min(speed, ADS);
         if (this.use) speed = Math.min(speed, USE);
+        if (this.buffs.zoom) speed *= 1.3;
+        if (this.downed) {
+          // crawling: slow, no sprint, no jumps
+          speed = 1.7;
+          this.sprinting = false;
+          inp.jump = false;
+          inp.slide = false;
+        }
         const acc = this.grounded ? 60 : 14;
         const tx = dirX * mag * speed, tz = dirZ * mag * speed;
         const dx = tx - this.vel.x, dz = tz - this.vel.z;
@@ -354,7 +387,7 @@ export class Actor {
         }
       }
       if (inp.jump && this.grounded) {
-        this.vel.y = JUMP_V;
+        this.vel.y = JUMP_V * (this.buffs.bounce ? 1.4 : 1);
         this.grounded = false;
         this.crouch = false;
         this.slideT = 0;
@@ -410,7 +443,7 @@ export class Actor {
     }
 
     // landing: fall damage
-    if (!wasGrounded && this.grounded && impact < -17.5) {
+    if (!wasGrounded && this.grounded && impact < -17.5 && !this.buffs.bounce) {
       const dmg = Math.round((-impact - 17.5) * 5);
       this.game.applyDamage(this, dmg, null, { fall: true });
       sfx.play('land', this.pos);
@@ -553,7 +586,7 @@ export class Actor {
     else if (it && it.kind === 'throwable') { pose = 'throw'; held = it.id; }
     else if (it && it.kind === 'consumable') { pose = 'none'; held = 'none'; }
     else pose = 'pickaxe';
-    if (this.state === 'skydive' || this.state === 'glide' || this.state === 'swim') held = 'none';
+    if (this.state === 'skydive' || this.state === 'glide' || this.state === 'swim' || this.downed) held = 'none';
     m.setHeld(held, rar);
     m.animate(dt, {
       t,
@@ -563,8 +596,9 @@ export class Actor {
       slide: this.slideT > 0,
       sprint: this.sprinting,
       pitch: this.aimPitch,
-      pose,
+      pose: this.downed ? 'none' : pose,
       emote: this.emote,
+      downed: this.downed,
     });
   }
 

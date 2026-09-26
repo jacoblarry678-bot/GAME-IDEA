@@ -6,14 +6,16 @@
  */
 
 import * as THREE from 'three';
-import { WEAPONS, RARITIES, CONSUMABLES, THROWABLES, AMMO, itemName } from '../gameplay/items.js';
+import { WEAPONS, RARITIES, CONSUMABLES, THROWABLES, AMMO, BUFFS, itemName } from '../gameplay/items.js';
+import { REVIVE_TIME, REBOOT_TIME } from '../gameplay/teams.js';
 import { PIECE_NAMES, PIECES } from '../gameplay/building.js';
 import { ISLAND_SIZE } from '../world/island.js';
 import { save } from '../core/save.js';
 
-const SHORT = { ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'PISTOL', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE' };
+const SHORT = { ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'PISTOL', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const _v = new THREE.Vector3();
+export const TEAM_COLORS = ['#ffd23f', '#39f0ff', '#ff7ac8', '#7ed957'];
 
 export class Hud {
   constructor(root, menus) {
@@ -23,8 +25,10 @@ export class Hud {
       <div class="hud-tl">
         <canvas class="minimap" width="190" height="190"></canvas>
         <div class="storm-info"><span class="storm-label">Storm</span><b class="storm-time">0:00</b></div>
-        <div class="counts"><span class="pill"><i class="ico-alive"></i><b class="n-alive">0</b> left</span><span class="pill"><i class="ico-kill"></i><b class="n-kills">0</b> elims</span></div>
+        <div class="counts"><span class="pill"><i class="ico-alive"></i><b class="n-alive">0</b> <span class="alive-label">left</span></span><span class="pill"><i class="ico-kill"></i><b class="n-kills">0</b> elims</span></div>
+        <div class="team"></div>
       </div>
+      <div class="markers"></div>
       <div class="compass"><div class="compass-strip"></div><div class="compass-mark"></div></div>
       <div class="killfeed"></div>
       <div class="toasts"></div>
@@ -33,8 +37,11 @@ export class Hud {
       <div class="hitmarker"><i></i><i></i><i></i><i></i></div>
       <div class="hurtdir"></div>
       <div class="prompt"><kbd>E</kbd><span></span></div>
+      <div class="buildinfo"><div class="bhp"><div></div></div><span></span></div>
+      <div class="downed"><b>KNOCKED DOWN</b><div class="bar"><div class="fill"></div></div><small>Crawl to cover · your team can revive you · Z to ping</small></div>
       <div class="usebar"><div class="usefill"></div><span class="uselabel"></span></div>
       <div class="hud-bl">
+        <div class="buffs"></div>
         <div class="bars">
           <div class="bar over"><div class="fill"></div><span></span></div>
           <div class="bar shield"><div class="fill"></div><span></span></div>
@@ -55,7 +62,7 @@ export class Hud {
       <div class="hurt-tint"></div>
       <div class="scope"><div class="scope-ring"></div></div>
       <div class="bigmap hidden"><div class="bigmap-card"><div class="bigmap-title">Battle Island <small>Click to place your drop marker · M to close</small></div><canvas width="620" height="620"></canvas><button class="btn small clear-marker">Clear marker</button></div></div>
-      <div class="spectate-bar hidden"><span>Spectating <b class="spec-name"></b></span><button class="btn small spec-next">Next player <kbd>Space</kbd></button><button class="btn small spec-results">Results</button></div>
+      <div class="spectate-bar hidden"><span>Spectating <b class="spec-name"></b></span><button class="btn small spec-next">Next player <kbd>Space</kbd></button><button class="btn small spec-results">Results</button><button class="btn small spec-leave">Leave match</button></div>
       <div class="fps"></div>
     `;
     const q = (s) => root.querySelector(s);
@@ -65,6 +72,8 @@ export class Hud {
       hit: q('.hitmarker'), hurtdir: q('.hurtdir'), prompt: q('.prompt'), promptText: q('.prompt span'), use: q('.usebar'), useFill: q('.usefill'), useLabel: q('.uselabel'),
       over: q('.bar.over'), shield: q('.bar.shield'), health: q('.bar.health'), stamina: q('.bar.stamina'), mats: q('.mats'), mag: q('.mag'), reserve: q('.reserve'),
       slots: q('.slots'), ammoList: q('.ammo-list'), build: q('.buildbar'), busHint: q('.bus-hint'), dmg: q('.dmgnums'), stormTint: q('.storm-tint'), hurtTint: q('.hurt-tint'),
+      team: q('.team'), markers: q('.markers'), buffs: q('.buffs'), bi: q('.buildinfo'), biBar: q('.buildinfo .bhp div'), biText: q('.buildinfo span'),
+      downed: q('.downed'), downFill: q('.downed .fill'), aliveLabel: q('.alive-label'), specResults: q('.spec-results'),
       scope: q('.scope'), bigmap: q('.bigmap'), bigCanvas: q('.bigmap canvas'), spec: q('.spectate-bar'), specName: q('.spec-name'), fps: q('.fps'),
     };
     this.ctx = this.el.mini.getContext('2d');
@@ -92,6 +101,7 @@ export class Hud {
     });
     q('.spec-next').addEventListener('click', () => this.game?.controller.nextSpectate());
     q('.spec-results').addEventListener('click', () => this.menus.showResultAgain());
+    q('.spec-leave').addEventListener('click', () => this.menus.act('quit', {}));
     this.show(false);
   }
 
@@ -178,8 +188,10 @@ export class Hud {
     const d = document.createElement('div');
     d.className = 'kf';
     const mine = (n) => (player && n === player.name ? ' me' : '');
-    const icon = { headshot: '◎', boom: '✹', elim: '➤', storm: '☁', fall: '↓', out: '✖' }[m.how] || '➤';
-    d.innerHTML = m.a ? `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> <b class="${mine(m.b)}">${esc(m.b)}</b>` : `<b class="${mine(m.b)}">${esc(m.b)}</b> <i>${icon}</i> ${m.how === 'storm' ? 'lost to the storm' : m.how === 'fall' ? 'fell too far' : 'was eliminated'}`;
+    const icon = { headshot: '◎', boom: '✹', elim: '➤', storm: '☁', fall: '↓', out: '✖', knock: '▼', reboot: '↻' }[m.how] || '➤';
+    if (m.how === 'reboot') d.innerHTML = `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> rebooted <b>${esc(m.b)}</b>`;
+    else if (m.how === 'knock') d.innerHTML = m.a ? `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> knocked <b class="${mine(m.b)}">${esc(m.b)}</b>` : `<b class="${mine(m.b)}">${esc(m.b)}</b> <i>${icon}</i> was knocked down`;
+    else d.innerHTML = m.a ? `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> <b class="${mine(m.b)}">${esc(m.b)}</b>` : `<b class="${mine(m.b)}">${esc(m.b)}</b> <i>${icon}</i> ${m.how === 'storm' ? 'lost to the storm' : m.how === 'fall' ? 'fell too far' : 'was eliminated'}`;
     this.el.killfeed.prepend(d);
     while (this.el.killfeed.children.length > 6) this.el.killfeed.lastChild.remove();
     setTimeout(() => d.classList.add('out'), 6000);
@@ -189,8 +201,8 @@ export class Hud {
     this.menus.showResult(r);
   }
 
-  matchOver(winner) {
-    this.menus.showMatchOver(winner);
+  matchOver(winner, team) {
+    this.menus.showMatchOver(winner, team);
   }
 
   set(key, el, val, prop = 'textContent') {
@@ -207,7 +219,9 @@ export class Hud {
     const specA = c.spectating && c.spec ? c.spec : p;
     this.set('stormL', this.el.stormLabel, st.label);
     this.set('stormT', this.el.stormTime, st.stage === 'done' ? '--' : fmt(Math.max(0, st.timer)));
-    this.set('alive', this.el.alive, String(game.alive().length));
+    const T = game.teams;
+    this.set('alive', this.el.alive, String(T.enabled ? T.teamsAlive().size : game.alive().length));
+    this.set('aliveL', this.el.aliveLabel, T.enabled ? 'squads' : 'left');
     this.set('kills', this.el.kills, String(specA.kills));
     // compass
     const deg = ((-c.yaw * 180) / Math.PI + 360 * 4) % 360;
@@ -272,7 +286,9 @@ export class Hud {
       this.set('prc', this.el.promptText.style, pr.color || '#fff', 'color');
     }
     // use / reload bar
-    const use = specA.use ? { k: 1 - specA.use.t / specA.use.total, l: `Using ${CONSUMABLES[specA.slots[specA.use.slot]?.id]?.name || ''}` } : specA.reloadT > 0 ? { k: 1 - specA.reloadT / specA.reloadTotal, l: 'Reloading' } : null;
+    const use = specA.reviveTarget && specA.reviveT > 0 ? { k: specA.reviveT / REVIVE_TIME, l: `Reviving ${specA.reviveTarget.name}` }
+      : specA.rebootVan && specA.rebootT > 0 ? { k: specA.rebootT / REBOOT_TIME, l: 'Rebooting teammates…' }
+      : specA.use ? { k: 1 - specA.use.t / specA.use.total, l: `Using ${CONSUMABLES[specA.slots[specA.use.slot]?.id]?.name || ''}` } : specA.reloadT > 0 ? { k: 1 - specA.reloadT / specA.reloadTotal, l: 'Reloading' } : null;
     this.set('use', this.el.use.style, use ? '' : 'none', 'display');
     if (use) {
       this.el.useFill.style.width = `${use.k * 100}%`;
@@ -291,8 +307,29 @@ export class Hud {
     this.set('storm', this.el.stormTint.style, inStorm ? '1' : '0', 'opacity');
     // spectate bar
     this.el.spec.classList.toggle('hidden', !(c.spectating && this.menus.overlayHidden));
+    this.set('specR', this.el.specResults.style, game.result ? '' : 'none', 'display');
     if (c.spectating && c.spec) this.set('specn', this.el.specName, c.spec.name);
     this.set('fps', this.el.fps, save.data.settings.showFps ? `${Math.round(game.engine.fps)} fps` : '');
+    // buffs
+    const bl = Object.entries(specA.buffs).map(([k, v]) => `<span class="buff" style="--bc:${BUFFS[k].color}" title="${BUFFS[k].desc}">${BUFFS[k].name} <b>${Math.ceil(v)}s</b></span>`).join('') + (specA.cards.length ? `<span class="buff" style="--bc:#3f9bff">Reboot cards <b>${specA.cards.length}</b></span>` : '');
+    this.set('buffs', this.el.buffs, bl, 'innerHTML');
+    // downed
+    this.set('dn', this.el.downed.style, specA.alive && specA.downed ? '' : 'none', 'display');
+    if (specA.downed) this.el.downFill.style.width = `${Math.max(0, specA.downHp)}%`;
+    // aimed build piece: health + edit / repair / upgrade hint
+    const pc = c.aimPiece;
+    const editing = c.editing;
+    const showBi = !c.spectating && (editing || (pc && c.buildInfo));
+    this.set('bi', this.el.bi.style, showBi ? '' : 'none', 'display');
+    if (editing) {
+      this.el.biBar.style.width = `${(editing.piece.hp / editing.piece.maxHp) * 100}%`;
+      this.set('bit', this.el.biText, 'EDIT · click/drag tiles to cut · V confirm · R reset · B cancel', 'textContent');
+    } else if (showBi) {
+      this.el.biBar.style.width = `${Math.max(0, pc.hp / pc.maxHp) * 100}%`;
+      this.set('bit', this.el.biText, `${Math.ceil(pc.hp)}/${pc.maxHp} · ${game.building.editable(pc) ? 'V Edit · ' : ''}U ${c.buildInfo.text}`, 'textContent');
+    }
+    if (this.frame % 4 === 0) this._team(game);
+    this._markers(game);
     if (this.frame % 3 === 0) this._minimap(game);
     if (this.mapOpen && this.frame % 6 === 0) this._bigmap(game);
   }
@@ -314,6 +351,7 @@ export class Hud {
       g.fillStyle = '#ffd23f';
       g.beginPath(); g.arc(mx, my, 5, 0, 7); g.fill();
     }
+    this._mapIcons(g, game, tm, 1);
     // arrow
     g.save();
     g.translate(S / 2, S / 2);
@@ -323,6 +361,84 @@ export class Hud {
     g.lineWidth = 2;
     g.beginPath(); g.moveTo(0, -9); g.lineTo(6, 7); g.lineTo(0, 3); g.lineTo(-6, 7); g.closePath(); g.stroke(); g.fill();
     g.restore();
+  }
+
+  /** Reboot vans, squadmates and pings on a map canvas. */
+  _mapIcons(g, game, tm, k) {
+    const T = game.teams;
+    if (!T.enabled) return;
+    for (const v of game.world.vans) {
+      const [x, y] = tm(v.pos.x, v.pos.z);
+      g.fillStyle = v.cd > 0 || !T.vansOnline() ? '#777' : '#39f0ff';
+      g.strokeStyle = '#000';
+      g.lineWidth = 1.5;
+      g.fillRect(x - 5 * k, y - 3.5 * k, 10 * k, 7 * k);
+      g.strokeRect(x - 5 * k, y - 3.5 * k, 10 * k, 7 * k);
+    }
+    const p = game.player;
+    for (const a of game.actors) {
+      if (a === p || a.team !== p.team || !a.alive || a.state === 'bus') continue;
+      const [x, y] = tm(a.pos.x, a.pos.z);
+      g.fillStyle = a.downed ? '#ff5c5c' : TEAM_COLORS[a.id % TEAM_COLORS.length];
+      g.strokeStyle = '#000';
+      g.beginPath(); g.arc(x, y, 4.5 * k, 0, 7); g.fill(); g.stroke();
+    }
+    for (const pg of T.pings) {
+      if (pg.team !== p.team) continue;
+      const [x, y] = tm(pg.pos.x, pg.pos.z);
+      g.strokeStyle = pg.color;
+      g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(x, y - 7 * k); g.lineTo(x + 5 * k, y); g.lineTo(x, y + 7 * k); g.lineTo(x - 5 * k, y); g.closePath(); g.stroke();
+    }
+  }
+
+  _team(game) {
+    const T = game.teams;
+    if (!T.enabled) {
+      this.set('team', this.el.team, '', 'innerHTML');
+      return;
+    }
+    const p = game.player;
+    const rows = game.actors.filter((a) => a.team === p.team).map((a) => {
+      const st = !a.alive ? (game.loot.pickups.some((k) => k.it.kind === 'card' && k.it.id === a.id) ? 'CARD DROPPED' : game.actors.some((o) => o.cards.includes(a.id)) ? 'CARD PICKED UP' : 'OUT') : a.downed ? 'DOWNED' : a.state === 'bus' ? 'ON BUS' : '';
+      const col = a === p ? '#ffd23f' : TEAM_COLORS[a.id % TEAM_COLORS.length];
+      return `<div class="mate ${!a.alive ? 'out' : a.downed ? 'down' : ''}"><i style="background:${col}"></i><span>${esc(a.name)}</span>${st ? `<em>${st}</em>` : `<div class="mbar"><div class="mh" style="width:${a.hp}%"></div><div class="ms" style="width:${a.shield}%"></div></div>`}</div>`;
+    }).join('');
+    this.set('team', this.el.team, rows, 'innerHTML');
+  }
+
+  /** Screen-space markers above squadmates and on team pings (visible through walls). */
+  _markers(game) {
+    const T = game.teams;
+    const cam = game.camera;
+    const p = game.player;
+    const items = [];
+    if (T.enabled) {
+      for (const a of game.actors) {
+        if (a === p || a.team !== p.team || !a.alive || a.state === 'bus') continue;
+        items.push({ pos: _v.set(a.pos.x, a.pos.y + a.height + 0.6, a.pos.z).clone(), text: a.downed ? `${a.name} ▼ HELP` : a.name, color: a.downed ? '#ff5c5c' : TEAM_COLORS[a.id % TEAM_COLORS.length], cls: 'mk-mate' });
+      }
+    }
+    for (const pg of T.pings) {
+      if (pg.team !== p.team) continue;
+      const d = Math.round(pg.pos.distanceTo(cam.position));
+      items.push({ pos: pg.pos.clone().add(new THREE.Vector3(0, 0.5, 0)), text: `${pg.label} ${d}m`, color: pg.color, cls: 'mk-ping' });
+    }
+    const el = this.el.markers;
+    while (el.children.length < items.length) el.appendChild(document.createElement('div'));
+    for (let i = 0; i < el.children.length; i++) {
+      const d = el.children[i];
+      const it = items[i];
+      if (!it) { d.style.display = 'none'; continue; }
+      _v.copy(it.pos).project(cam);
+      if (_v.z > 1 || Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) { d.style.display = 'none'; continue; }
+      d.style.display = '';
+      d.className = 'marker ' + it.cls;
+      d.style.left = `${(_v.x * 0.5 + 0.5) * 100}%`;
+      d.style.top = `${(-_v.y * 0.5 + 0.5) * 100}%`;
+      d.style.setProperty('--mc', it.color);
+      if (d.textContent !== it.text) d.textContent = it.text;
+    }
   }
 
   _stormDraw(g, game, tm, scale) {
@@ -392,6 +508,7 @@ export class Hud {
       g.strokeStyle = '#000';
       g.beginPath(); g.arc(mx, my, 8, 0, 7); g.fill(); g.stroke();
     }
+    this._mapIcons(g, game, tm, 1.5);
     const f = game.controller.focus();
     const [px, py] = tm(f.x, f.z);
     g.save();

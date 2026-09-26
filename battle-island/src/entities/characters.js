@@ -306,6 +306,19 @@ export class CharacterModel {
       this.head.rotation.x = -0.9;
       return;
     }
+    if (st.downed) {
+      // knocked down: crawling on hands and knees
+      this.body.rotation.x = 1.15;
+      this.body.position.y = 0.3;
+      this.hips.position.y = 0.55;
+      const c = Math.sin(this.phase * 0.8);
+      armL.rotation.set(-2.2 + c * 0.5, 0, 0.3);
+      armR.rotation.set(-2.2 - c * 0.5, 0, -0.3);
+      legL.rotation.set(-0.4 + c * 0.4, 0, 0);
+      legR.rotation.set(-0.4 - c * 0.4, 0, 0);
+      this.head.rotation.x = -0.9;
+      return;
+    }
     if (st.state === 'air') {
       legL.rotation.x = -0.5;
       legR.rotation.x = 0.3;

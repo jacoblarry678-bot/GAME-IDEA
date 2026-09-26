@@ -38,6 +38,34 @@ export class PlayerController {
     this.aimPoint = new THREE.Vector3();
     this.prompt = null;
     this.shake = 0;
+    this.exitEdit();
+    this.aimPiece = null;
+    this.buildInfo = null;
+  }
+
+  /** Leaves edit mode without applying changes. */
+  exitEdit() {
+    if (this.editing) {
+      this.game.scene.remove(this.editing.overlay);
+      for (const m of this.editing.overlay.children) m.material.dispose();
+    }
+    this.editing = null;
+  }
+
+  startEdit(piece) {
+    const tiles = this.game.building.tileBoxes(piece);
+    const overlay = new THREE.Group();
+    for (const b of tiles) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(b.maxX - b.minX + 0.08, b.maxY - b.minY + 0.08, b.maxZ - b.minZ + 0.08), new THREE.MeshBasicMaterial({ color: '#4fc3ff', transparent: true, opacity: 0.3, depthWrite: false }));
+      m.position.set((b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2, (b.minZ + b.maxZ) / 2);
+      m.scale.setScalar(0.94);
+      m.renderOrder = 6;
+      overlay.add(m);
+    }
+    this.game.scene.add(overlay);
+    this.editing = { piece, tiles: piece.tiles ? [...piece.tiles] : tiles.map(() => true), boxes: tiles, overlay, hover: -1, paint: undefined };
+    this.building = false;
+    sfx.play('ui');
   }
 
   get player() {
@@ -136,11 +164,15 @@ export class PlayerController {
     for (let i = 0; i < 5; i++) {
       if (!pressed('Digit' + (i + 1))) continue;
       if (this.building) this.piece = PIECES[Math.min(3, i)];
-      else p.select(i);
+      else {
+        this.exitEdit();
+        p.select(i);
+      }
     }
-    if (pressed('KeyF')) { this.building = false; p.select(-1); }
+    if (pressed('KeyF')) { this.building = false; this.exitEdit(); p.select(-1); }
     if ((pressed('KeyB') || pressed('KeyQ')) && g.mode !== 'zerobuild') {
-      this.building = !this.building;
+      if (this.editing) this.exitEdit();
+      else this.building = !this.building;
       p.cancelActions();
       p.ads = false;
       if (this.building) sfx.play('ui');
@@ -168,10 +200,50 @@ export class PlayerController {
     this.aimPoint.copy(o).addScaledVector(cd, hit ? hit.t : 500);
     const shotDir = this.aimPoint.clone().sub(p.eye).normalize();
 
+    // the build piece under the crosshair (edit / repair / upgrade target)
+    const hc = hit && hit.world && hit.world.c;
+    this.aimPiece = hc && hc.piece && hc.piece.alive && hit.t < 8 ? hc.piece : null;
+    this.buildInfo = this.aimPiece && canAct && !this.editing ? g.building.repairInfo(p, this.aimPiece) : null;
+    if (pressed('KeyV') && canAct) {
+      if (this.editing) {
+        if (!g.building.applyEdit(this.editing.piece, this.editing.tiles)) g.hud.toast('Keep at least one tile!', '#ff8a8a', 1.5);
+        this.exitEdit();
+      } else if (this.aimPiece && g.mode !== 'zerobuild') {
+        const pc = this.aimPiece;
+        if (pc.team !== p.team) g.hud.toast("You can only edit your team's builds.", '#ff8a8a', 1.5);
+        else if (!g.building.editable(pc)) g.hud.toast('Only walls and floors can be edited (for now).', '#ffffff', 1.5);
+        else this.startEdit(pc);
+      }
+    }
+    if (pressed('KeyU') && canAct && this.aimPiece && !this.editing) g.hud.toast(g.building.repairOrUpgrade(p, this.aimPiece), '#ffe9b0', 1.5);
+    if ((pressed('KeyZ') || pressed('Mouse1')) && p.alive) g.teams.ping(p, this.aimPoint);
+
     // ADS
     p.ads = !this.building && !!p.weapon && down('Mouse2') && canAct;
 
-    if (this.building && canAct) {
+    if (this.editing) {
+      const e = this.editing;
+      const b = e.piece.box;
+      const far = Math.hypot((b.minX + b.maxX) / 2 - p.pos.x, (b.minZ + b.maxZ) / 2 - p.pos.z) > 9;
+      if (!e.piece.alive || far || !canAct) this.exitEdit();
+      else {
+        e.hover = -1;
+        let bt = Infinity;
+        e.boxes.forEach((bx, i) => {
+          const t = rayBox(o, cd, bx);
+          if (t !== null && t < bt) { bt = t; e.hover = i; }
+        });
+        if (pressed('Mouse0') && e.hover >= 0) e.paint = !e.tiles[e.hover];
+        if (down('Mouse0') && e.hover >= 0 && e.paint !== undefined) e.tiles[e.hover] = e.paint;
+        if (!down('Mouse0')) e.paint = undefined;
+        if (pressed('KeyR')) e.tiles.fill(true);
+        e.overlay.children.forEach((m, i) => {
+          m.material.color.set(e.tiles[i] ? (i === e.hover ? '#ffe066' : '#4fc3ff') : i === e.hover ? '#ff9a9a' : '#ff4f4f');
+          m.material.opacity = e.tiles[i] ? 0.3 : 0.12;
+        });
+      }
+      g.building.hideGhost();
+    } else if (this.building && canAct) {
       if (pressed('KeyR')) this.rot = (this.rot + 1) % 4;
       if (pressed('KeyT')) this.material = MATS[(MATS.indexOf(this.material) + 1) % 3];
       const s = g.building.spot(p, this.piece, this.yaw, this.pitch);
@@ -220,9 +292,23 @@ export class PlayerController {
 
     // interact
     this.prompt = null;
-    if (canAct) {
+    let hold = false;
+    const mate = canAct && g.actors.find((a) => a !== p && a.alive && a.downed && a.team === p.team && a.pos.distanceTo(p.pos) < 2.2);
+    const van = canAct && p.cards.length ? g.teams.nearestVan(p.pos, 3.2) : null;
+    if (mate) {
+      this.prompt = { key: 'Hold E', text: `Revive ${mate.name}`, color: '#7ed957' };
+      if (down('KeyE')) { p.reviveTarget = mate; hold = true; }
+    } else if (van) {
+      const n = p.cards.length;
+      if (!g.teams.vansOnline()) this.prompt = { key: '—', text: 'Reboot vans are offline for the endgame', color: '#ff8a8a' };
+      else if (van.cd > 0) this.prompt = { key: '—', text: `Reboot van recharging (${Math.ceil(van.cd)}s)`, color: '#ffe9b0' };
+      else {
+        this.prompt = { key: 'Hold E', text: `Reboot ${n} teammate${n > 1 ? 's' : ''}`, color: '#39f0ff' };
+        if (down('KeyE')) { p.rebootVan = van; hold = true; }
+      }
+    } else if (canAct) {
       const ch = g.loot.nearestChest(p);
-      const pk = g.loot.nearest(p, 2.4, (k) => k.it.kind !== 'ammo' && k.it.kind !== 'mat');
+      const pk = g.loot.nearest(p, 2.4, (k) => k.it.kind !== 'ammo' && k.it.kind !== 'mat' && k.it.kind !== 'card');
       if (ch && (!pk || ch.pos.distanceTo(p.pos) < pk.pos.distanceTo(p.pos))) {
         this.prompt = { key: 'E', text: ch.supply ? 'Open Supply Drop' : 'Open Chest' };
         if (pressed('KeyE')) g.loot.openChest(p, ch);
@@ -236,6 +322,12 @@ export class PlayerController {
           if (r2 === 'full') g.hud.toast('Inventory full: select a slot (1-5) to swap it out.', '#ff8a8a', 2);
         }
       }
+    }
+    if (!hold) {
+      p.reviveTarget = null;
+      p.rebootVan = null;
+    } else {
+      inp.mx = inp.mz = 0; // stay put while reviving / rebooting
     }
     p.move(dt, inp);
   }
@@ -296,4 +388,20 @@ export class PlayerController {
     // hide own model when scoped or camera is inside the head
     if (a === this.player) a.model.root.visible = a.alive && a.state !== 'bus' && this.dist > 0.8;
   }
+}
+
+function rayBox(o, d, b) {
+  let t0 = 0, t1 = Infinity;
+  for (const [oa, da, mn, mx] of [[o.x, d.x, b.minX, b.maxX], [o.y, d.y, b.minY, b.maxY], [o.z, d.z, b.minZ, b.maxZ]]) {
+    if (Math.abs(da) < 1e-9) {
+      if (oa < mn - 0.05 || oa > mx + 0.05) return null;
+      continue;
+    }
+    let a = (mn - 0.05 - oa) / da, c = (mx + 0.05 - oa) / da;
+    if (a > c) [a, c] = [c, a];
+    t0 = Math.max(t0, a);
+    t1 = Math.min(t1, c);
+    if (t0 > t1) return null;
+  }
+  return t0;
 }

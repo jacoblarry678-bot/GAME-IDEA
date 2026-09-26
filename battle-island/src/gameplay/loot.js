@@ -176,11 +176,27 @@ export class Loot {
       pk.model.rotation.y = t * 1.2 + pk.t;
       pk.model.position.y = 0.25 + Math.sin(t * 2.5 + pk.t) * 0.08;
     }
-    // auto-collect ammo and materials
+    // reboot cards expire if nobody grabs them
+    for (let i = this.pickups.length - 1; i >= 0; i--) {
+      const pk = this.pickups[i];
+      if (pk.it.kind === 'card' && this.game.time > pk.it.expires) this.remove(pk);
+    }
+    // auto-collect ammo, materials and teammates' reboot cards (also while swimming)
     for (const a of this.game.actors) {
-      if (!a.alive || !a.canAct()) continue;
+      if (!a.alive || !(a.canAct() || (a.state === 'swim' && !a.downed))) continue;
       for (let i = this.pickups.length - 1; i >= 0; i--) {
         const pk = this.pickups[i];
+        if (pk.it.kind === 'card') {
+          if (pk.it.team !== a.team || pk.it.id === a.id || pk.age < 0.5) continue;
+          if (Math.abs(pk.pos.x - a.pos.x) > 1.8 || Math.abs(pk.pos.z - a.pos.z) > 1.8 || Math.abs(pk.pos.y - a.pos.y) > 2.2) continue;
+          if (!a.cards.includes(pk.it.id)) a.cards.push(pk.it.id);
+          this.remove(pk);
+          if (a === this.game.player) {
+            sfx.play('pickup');
+            this.game.hud?.toast(`Got ${pk.it.name}'s reboot card! Take it to a reboot van (blue van icon on the map).`, '#39f0ff', 4);
+          }
+          continue;
+        }
         if ((pk.it.kind !== 'ammo' && pk.it.kind !== 'mat') || pk.age < 0.5) continue;
         if (Math.abs(pk.pos.x - a.pos.x) > 1.5 || Math.abs(pk.pos.z - a.pos.z) > 1.5 || Math.abs(pk.pos.y - a.pos.y) > 2) continue;
         if (pk.it.kind === 'mat' && this.game.mode === 'zerobuild') continue;

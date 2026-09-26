@@ -214,8 +214,14 @@ export class Combat {
     }
     const phys = this.game.world.physics;
     const list = [...phys.query(pos.x - radius, pos.z - radius, pos.x + radius, pos.z + radius)];
+    const hitPieces = new Set();
     for (const c of list) {
       if (!c.alive || c.hp === Infinity) continue;
+      if (c.piece) {
+        // an edited piece has several colliders but one health pool
+        if (hitPieces.has(c.piece)) continue;
+        hitPieces.add(c.piece);
+      }
       const cx = Math.max(c.minX, Math.min(pos.x, c.maxX));
       const cy = Math.max(c.minY, Math.min(pos.y, c.maxY));
       const cz = Math.max(c.minZ, Math.min(pos.z, c.maxZ));

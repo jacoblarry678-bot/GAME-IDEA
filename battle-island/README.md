@@ -35,6 +35,10 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 | F | Pickaxe |
 | B or Q | Toggle build mode (1 wall, 2 floor, 3 ramp, 4 cone) |
 | T | Cycle build material (wood / brick / metal) |
+| V | Edit the wall/floor you aim at: click or drag tiles to cut, V confirms, R resets, B cancels |
+| U | Repair the build you aim at, or upgrade it wood → brick → metal |
+| Hold E | Revive a knocked teammate · reboot teammates at a reboot van |
+| Z / middle click | Ping (enemy, chest, loot or "going here") |
 | M | Full map (click to place a drop marker) |
 | N | Emote |
 | Esc | Pause |
@@ -57,11 +61,27 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [x] **HUD:** health, shield and overshield, stamina, materials, inventory with ammo, minimap, full map, compass, storm timer, players left, eliminations, killfeed and interaction prompts.
 - [x] **Progression:** XP and levels, outfit unlocks, win/match/elimination stats, saved settings. Progress is saved in this browser only.
 
+## Milestone 2: what's in
+
+- [x] **Squad modes:** Solo, Duos, Trios and Squads. Your teammates are bots labelled [BOT]. They jump out of the bus with you, glide to your marker, follow you, head to your pings, and use buffs. Enemy squads drop together.
+- [x] **Downed and revive:** lethal damage knocks you down instead of eliminating you while a squadmate is still standing. Knocked players crawl and bleed out (1.5/s from 100). Teammates revive with a 4 s hold of E and come back at 30 HP. When nobody on a squad is standing, the squad is wiped. There's no friendly fire.
+- [x] **Reboot:** eliminated squadmates drop a reboot card that lasts 90 s. Teammates pick it up by touch, even while swimming. At one of the 4 reboot vans (blue vans next to the cabins), a 5 s hold of E respawns them in the air with a pistol. Each van then needs 60 s to recharge, and all vans go offline from storm phase 5.
+- [x] **Team HUD:** squadmate health/shield and status (downed / card dropped / card picked up / out), name markers over teammates that show through walls, and teammates, pings and vans on both maps. The HUD counts squads left instead of players. Squad victory and placement screens. When you're eliminated, you spectate a teammate while you wait for a reboot.
+- [x] **Buffs:** temporary-effect items with HUD timers and colored sparkle auras. Bots use them too.
+  - Zoom Juice: +30% move speed for 12 s
+  - Bouncy Soda: 40% higher jumps and no fall damage for 20 s
+  - Spicy Pickle: +20% damage to players and builds for 12 s
+  - Shield Snack: regenerate 4 shield per second for 15 s
+- [x] **Building 2.0:**
+  - Editing: walls on a 3×3 grid, floors on a 2×2 grid. Cut doors, windows and arches, confirm with V or reset with R. Only your squad can edit its builds.
+  - Repair and upgrade: repairing costs materials in proportion to the damage; upgrading goes wood → brick → metal.
+  - Structural integrity: pieces must connect to the ground or the world, and anything cut off collapses. Floating pieces can't be placed.
+
 ## Roadmap: not built yet
 
-- [ ] Building: edit mode (window/door/arch) with confirm/reset, repair, upgrade and structural integrity (currently a destroyed support does not collapse the pieces above it)
-- [ ] Match flow: pre-match warm-up area, duo/trio/squad rules, match replays
-- [ ] Teams: squadmate bots, pings, downed state and reviving, carrying, reboot cards and stations
+- [ ] Building: editing ramps and cones
+- [ ] Match flow: pre-match warm-up area, match replays
+- [ ] Teams: carrying knocked teammates
 - [ ] Movement: ziplines
 - [ ] Weapon attachments and scopes as separate items
 - [ ] World: drivable vehicles (fuel, damage, passengers), doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards and vaults
@@ -77,10 +97,19 @@ Two automated suites drive the real game in headless Chromium:
 npm run island:dev &                        # serve on :5174
 node tools/island-playtest.mjs              # 33 checks
 node tools/island-features.mjs              # 10 checks
+node tools/island-milestone2.mjs            # 19 checks
 ```
 
 - **`island-playtest.mjs`:** a full solo match. Bus jump, landing, chest opening, pickup/drop/stacking/slot limit, heal interruption, rifle damage and reload, all four build pieces, running up a ramp, destroying a structure, harvesting, storm damage, pause/resume, and a full bot-vs-bot match to the final two. It then covers victory, Play again, player elimination with spectating, returning to the lobby, and every lobby button.
 - **`island-features.mjs`:** Zero Build overshield, bounce pad and glider, fall damage, explosive barrels, mantling, swimming, supply drops and the sniper scope.
+
+- **`island-milestone2.mjs`:**
+  - Squads: squad setup, teammates dropping with you, no friendly fire, knock-down, the player reviving a teammate (held E), and bots reviving the player.
+  - Buffs: all four, measured.
+  - Pings: in the world and followed by the bots.
+  - Reboot: picking up a card, holding E at a van, and bots rebooting the player.
+  - Building 2.0: supported placement, editing a door and resetting it, repair and upgrade, and collapse.
+  - Match end: squad wipe and placement, and squad victory.
 
 Known limits: the tests use software rendering, so they check behaviour, not frame rate. The simulation costs about 0.2 ms per frame. Near the ground a frame is about 600–900 draw calls, which is fine for desktop GPUs, but it hasn't been profiled on low-end laptops. If frame rate drops, turn off Shadows in Settings.
 

@@ -69,7 +69,9 @@ h3 { margin: 12px 0 6px; font-size: 18px; color: var(--yellow); }
 .hero-name { font-size: 46px; font-weight: 800; text-shadow: 0 4px 0 rgba(0,0,0,0.3); text-align: center; line-height: 1; }
 .hero-name small { display: block; font-size: 18px; color: #fff; opacity: 0.9; }
 .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-.seg:first-of-type { grid-template-columns: 1fr; }
+.seg.two { grid-template-columns: 1fr 1fr; }
+.seg.four { grid-template-columns: repeat(4, 1fr); }
+.seg.four .btn { padding: 8px 4px; font-size: 14px; }
 .lobby-right .play { width: 100%; margin-top: 12px; }
 
 .sheet { width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; }
@@ -216,3 +218,30 @@ h3.todo { color: var(--cyan); }
   .cards, .outfits, .cols { grid-template-columns: 1fr; }
   .compass { display: none; }
 }
+
+/* ---------- milestone 2: teams, buffs, building info ---------- */
+.team { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.mate { display: grid; grid-template-columns: 10px 1fr; column-gap: 6px; align-items: center; background: rgba(29, 21, 55, 0.7); border-radius: 8px; padding: 2px 8px; font-size: 13px; }
+.mate i { width: 10px; height: 10px; border-radius: 50%; }
+.mate span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mate em { grid-column: 2; font-style: normal; font-size: 11px; color: var(--cyan); }
+.mate.down em { color: #ff8a8a; }
+.mate.out { opacity: 0.6; }
+.mbar { grid-column: 2; height: 5px; background: rgba(255,255,255,0.15); border-radius: 3px; position: relative; overflow: hidden; }
+.mbar .mh { position: absolute; left: 0; top: 0; bottom: 0; background: var(--health); }
+.mbar .ms { position: absolute; left: 0; top: 0; height: 2px; background: #8fd0ff; }
+.markers { position: absolute; inset: 0; overflow: hidden; }
+.marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; color: var(--mc); white-space: nowrap; background: rgba(29, 21, 55, 0.55); border-radius: 8px; padding: 0 6px; }
+.marker::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -5px; border: 5px solid transparent; border-top-color: var(--mc); }
+.mk-ping { font-size: 14px; border: 2px solid var(--mc); }
+.buffs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.buff { font-size: 13px; background: rgba(29, 21, 55, 0.8); border: 2px solid var(--bc); color: var(--bc); border-radius: 10px; padding: 0 8px; }
+.buff b { color: #fff; }
+.buildinfo { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); text-align: center; font-size: 13px; background: rgba(29, 21, 55, 0.6); border-radius: 8px; padding: 2px 8px; white-space: nowrap; }
+.bhp { width: 120px; height: 5px; margin: 2px auto; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+.bhp div { height: 100%; background: var(--yellow); }
+.downed { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); text-align: center; background: rgba(120, 20, 30, 0.75); padding: 8px 16px; border-radius: 14px; }
+.downed b { font-size: 26px; color: #fff; }
+.downed .bar { width: 260px; height: 12px; margin: 4px auto; }
+.downed .fill { background: #ff5c5c; height: 100%; }
+.downed small { display: block; font-size: 13px; color: #ffd6d6; }
