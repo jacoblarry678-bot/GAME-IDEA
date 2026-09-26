@@ -1,5 +1,8 @@
 # HELLRAISER: THE GAME
 
+> **New: [Benton Kids: Battle Island](battle-island/README.md)** — a separate cartoon battle royale
+> in `battle-island/`. Open `battle-island/play/battle-island.html` to play, or run `npm run island:dev`.
+
 A browser-based, asymmetrical multiplayer horror prototype. Four survivors are
 trapped in **The Labyrinth** performing a rite that will open the Gate. One
 player is **The Hell Priest**, and is trying to make sure nobody finishes it.

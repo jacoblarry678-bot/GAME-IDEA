@@ -12,7 +12,9 @@
     "start": "npm run build && cross-env NODE_ENV=production node server/index.js",
     "preview": "vite preview --host 0.0.0.0",
     "test:server": "node server/smoketest.js 45",
-    "build:single": "vite build && node tools/build-single.mjs"
+    "build:single": "vite build && node tools/build-single.mjs",
+    "island:dev": "vite --config battle-island/vite.config.js",
+    "island:build": "vite build --config battle-island/vite.config.js && node tools/island-single.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
