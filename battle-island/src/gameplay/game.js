@@ -20,6 +20,7 @@ import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
 import { sfx } from '../core/audio.js';
 import { save, levelInfo } from '../core/save.js';
+import { applyRanked, botSkillRange } from '../core/ranked.js';
 
 const BUS_H = 115, BUS_SPEED = 19, BUS_R = 215;
 
@@ -118,6 +119,8 @@ export class Game {
     this.endMatch();
     this.opts = opts;
     this.role = opts.role || 'solo'; // solo | host | client
+    this.ranked = !!opts.ranked;
+    this.lobbyRating = opts.lobbyRating || 1000;
     this.actions = this.role === 'client' ? new NetActions(this) : new LocalActions(this);
     this.mode = opts.mode;
     this.seed = opts.seed ?? Math.floor(Math.random() * 1e9);
@@ -160,6 +163,11 @@ export class Game {
         }
       }
       this.actors.push(a);
+    }
+    // ranked matchmaking: bot opponents are tuned to the lobby's MMR
+    if (this.ranked) {
+      const [lo, hi] = botSkillRange(this.lobbyRating);
+      for (const b of this.actors) if (b.brain) b.brain.skill = lo + b.brain.rng() * (hi - lo);
     }
     const humanTeams = new Set(this.actors.filter((a) => a.human).map((a) => a.team));
     for (const b of this.actors) {
@@ -503,6 +511,7 @@ export class Game {
     save.write();
     const after = levelInfo(pr.xp).level;
     this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp, levelUp: after > before ? after : 0, killer: st.killer };
+    if (this.ranked) this.result.ranked = applyRanked(this.mode, { won, place, total: totalTeams, kills }, this.lobbyRating);
     if (won) {
       sfx.play('win');
       p.emote = true;

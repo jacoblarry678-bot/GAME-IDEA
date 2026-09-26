@@ -6,6 +6,7 @@
 
 import { CHARACTERS, CHARACTER_IDS, SKIN_TONES } from '../entities/characters.js';
 import { save, levelInfo } from '../core/save.js';
+import { rankState, divName, divColor, divisionMMR, badgeHTML, TOP, PLACEMENT_MATCHES, lobbyLabel } from '../core/ranked.js';
 import { sfx } from '../core/audio.js';
 
 export const ROADMAP = {
@@ -25,13 +26,14 @@ export const ROADMAP = {
     'Building 2.0: edit walls (3×3) and floors (2×2) with confirm/reset, repair, upgrade wood → brick → metal, structural integrity (unsupported builds collapse), team ownership',
     'Milestone 3 — online multiplayer: up to 4 players per match (bots fill the rest), host-authoritative, via the claude.ai link or a self-hosted server; open-games list and join codes; bot takeover if someone disconnects',
     'Mobile: touch joystick, drag-to-look, on-screen buttons (drag FIRE to aim), tappable inventory/build bar/minimap, phone layouts and lighter graphics defaults',
+    'Ranked: Bronze → Silver → Gold → Platinum → Diamond → Champion (3 divisions each) → Legend; MMR-based matchmaking (bot difficulty), rank points for placement and eliminations, placement matches, separate Build / Zero Build ranks, ranks shown online',
   ],
   next: [
     'Editing ramps and cones; carrying downed teammates',
     'Pre-match warm-up island; match replays',
     'Ziplines; weapon attachments and scopes as items',
     'World: drivable vehicles (fuel, damage, passengers), doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards & vaults',
-    'Progression: challenges, achievements, more emotes and cosmetics',
+    'Progression: challenges, achievements, more emotes and cosmetics; ranked seasons and rewards; a shared online leaderboard (ranks are stored per device today)',
     'Online: more than 4 players, host migration, joining a match already in progress, anti-cheat (the host is trusted)',
     'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
   ],
@@ -92,6 +94,8 @@ export class Menus {
       case 'roadmap': this.showRoadmap(); break;
       case 'pick': P.character = d.id; save.write(); this.app.preview(); this.showChars(); break;
       case 'mode': P.mode = d.id; save.write(); this.showMain(); break;
+      case 'queue': P.ranked = d.id === 'ranked'; save.write(); this.showMain(); break;
+      case 'ranked': this.showRanked(); break;
       case 'team': P.teamSize = +d.id; save.write(); this.showMain(); break;
       case 'bots': save.data.settings.botCount = +d.id; save.write(); this.showMain(); break;
       case 'outfit': {
@@ -161,6 +165,7 @@ export class Menus {
           <h1 class="logo"><span>BENTON KIDS</span>Battle Island</h1>
           ${this._levelBar()}
           <div class="stats"><div><b>${pr.wins}</b>wins</div><div><b>${pr.matches}</b>matches</div><div><b>${pr.kills}</b>elims</div><div><b>${pr.bestPlace ? '#' + pr.bestPlace : '-'}</b>best</div></div>
+          ${this._rankCard(P.mode)}
           <label class="field">Player name <input data-set="name" maxlength="14" value="${escAttr(P.name || '')}" placeholder="You"></label>
           <nav class="nav">
             <button class="btn" data-act="chars">Characters</button>
@@ -178,6 +183,11 @@ export class Menus {
           <div class="seg two">
             <button class="btn ${P.mode === 'build' ? 'on' : ''}" data-act="mode" data-id="build">Build</button>
             <button class="btn ${P.mode === 'zerobuild' ? 'on' : ''}" data-act="mode" data-id="zerobuild">Zero Build</button>
+          </div>
+          <h3>Queue</h3>
+          <div class="seg two">
+            <button class="btn ${!P.ranked ? 'on' : ''}" data-act="queue" data-id="casual">Casual</button>
+            <button class="btn ${P.ranked ? 'on' : ''}" data-act="queue" data-id="ranked">Ranked</button>
           </div>
           <h3>Bots</h3>
           <div class="seg">${[9, 19, 29].map((n) => `<button class="btn ${S.botCount === n ? 'on' : ''}" data-act="bots" data-id="${n}">${n}</button>`).join('')}</div>
@@ -294,10 +304,10 @@ export class Menus {
         <p class="note">Connected via ${on.kind === 'claude' ? 'claude.ai: everyone viewing this game link can join. Hosting needs contribute or edit access to the link' : 'the Battle Island server'}. Up to 4 players per match; bots fill the rest.</p>
         ${st.error ? `<p class="err">${escAttr(st.error)}</p>` : ''}
         <h3>Host a game</h3>
-        <p class="note">Uses your lobby choices: ${['', 'Solo', 'Duos', 'Trios', 'Squads'][P.teamSize || 1]} · ${P.mode === 'zerobuild' ? 'Zero Build' : 'Build'} · ${S.botCount + 1} players total.</p>
+        <p class="note">Uses your lobby choices: ${P.ranked ? 'Ranked · ' : ''}${['', 'Solo', 'Duos', 'Trios', 'Squads'][P.teamSize || 1]} · ${P.mode === 'zerobuild' ? 'Zero Build' : 'Build'} · ${S.botCount + 1} players total.</p>
         <button class="btn play small" data-act="host">Host game</button>
         <h3>Open games</h3>
-        <div class="games">${games.length ? games.map((g) => `<div class="game-row"><b>${escAttr(g.n)}</b><span>${['', 'Solo', 'Duos', 'Trios', 'Squads'][g.cfg?.team || 1]} · ${g.cfg?.mode === 'zerobuild' ? 'Zero Build' : 'Build'} · ${g.cnt} player${g.cnt === 1 ? '' : 's'}</span><button class="btn small" data-act="join" data-code="${escAttr(g.code)}">Join</button></div>`).join('') : '<p class="note">No open games yet. Host one, or ask a friend for their code.</p>'}</div>
+        <div class="games">${games.length ? games.map((g) => `<div class="game-row"><b>${escAttr(g.n)}</b><span>${g.cfg?.ranked ? 'Ranked · ' : ''}${['', 'Solo', 'Duos', 'Trios', 'Squads'][g.cfg?.team || 1]} · ${g.cfg?.mode === 'zerobuild' ? 'Zero Build' : 'Build'} · ${g.cnt} player${g.cnt === 1 ? '' : 's'}</span><button class="btn small" data-act="join" data-code="${escAttr(g.code)}">Join</button></div>`).join('') : '<p class="note">No open games yet. Host one, or ask a friend for their code.</p>'}</div>
         <h3>Join with a code</h3>
         <div class="row left"><input id="join-code" maxlength="5" placeholder="abc12" autocomplete="off"><button class="btn" data-act="join">Join</button></div>`;
     }
@@ -310,17 +320,74 @@ export class Menus {
     const players = s.players();
     const hp = s.hostPresence();
     const inPlay = hp && hp.st === 'play';
-    const rows = players.map((p, i) => `<div class="player-row ${i < 4 ? '' : 'wait'}"><i style="background:${['#ffd23f', '#39f0ff', '#ff7ac8', '#7ed957'][i % 4]}"></i><b>${escAttr(p.name)}</b><span>${CHARACTERS[p.charId]?.name || ''}${p.host ? ' · host' : ''}${p.me ? ' · you' : ''}${i >= 4 ? ' · waiting (match is full)' : ''}</span></div>`).join('');
     const cfg = s.role === 'host' ? s.cfg : hp?.cfg;
+    const rows = players.map((p, i) => `<div class="player-row ${i < 4 ? '' : 'wait'}"><i style="background:${['#ffd23f', '#39f0ff', '#ff7ac8', '#7ed957'][i % 4]}"></i><b>${p.rk ? badgeHTML(p.rk[cfg && cfg.mode === 'zerobuild' ? 1 : 0][1], 20) : ''} ${escAttr(p.name)}</b><span>${p.rk ? divName(p.rk[cfg && cfg.mode === 'zerobuild' ? 1 : 0][1]) + ' · ' : ''}${CHARACTERS[p.charId]?.name || ''}${p.host ? ' · host' : ''}${p.me ? ' · you' : ''}${i >= 4 ? ' · waiting (match is full)' : ''}</span></div>`).join('');
     const host = s.role === 'host';
     this.screen(`
       <div class="sheet panel">
         <h2>Game <span class="code">${s.code.toUpperCase()}</span></h2>
-        <p class="note">${cfg ? `${['', 'Solo', 'Duos', 'Trios', 'Squads'][cfg.team || 1]} · ${cfg.mode === 'zerobuild' ? 'Zero Build' : 'Build'}. ` : ''}Friends join from Play Online with this code. ${cfg && cfg.team > 1 ? 'Players fill squads in this order.' : ''}</p>
+        <p class="note">${cfg ? `${cfg.ranked ? 'Ranked · ' : ''}${['', 'Solo', 'Duos', 'Trios', 'Squads'][cfg.team || 1]} · ${cfg.mode === 'zerobuild' ? 'Zero Build' : 'Build'}. ` : ''}Friends join from Play Online with this code. ${cfg && cfg.team > 1 ? 'Players fill squads in this order.' : ''}</p>
         ${note ? `<p class="err">${escAttr(note)}</p>` : ''}
         <div class="players">${rows || '<p class="note">Connecting…</p>'}</div>
         ${host ? '<button class="btn play" data-act="start-online">Start match</button>' : `<p class="note">${inPlay ? 'A match is in progress. You will join the next one.' : 'Waiting for the host to start…'}</p>`}
         <div class="row"><button class="btn" data-act="leave-online">Leave</button></div>
+      </div>`, 'screen right');
+  }
+
+  /** Compact rank card for the lobby. */
+  _rankCard(mode) {
+    const s = rankState(mode);
+    const label = mode === 'zerobuild' ? 'Zero Build rank' : 'Build rank';
+    const sub = s.d < 0 ? `${Math.max(0, PLACEMENT_MATCHES - s.matches)} placement match${PLACEMENT_MATCHES - s.matches === 1 ? '' : 'es'} left` : s.d >= TOP ? `${s.rp} RP` : `${s.rp}% to next`;
+    return `<button class="rank-card" data-act="ranked" style="--rc:${divColor(s.d)}">
+      ${badgeHTML(s.d, 42)}
+      <span class="rk-text"><small>${label}</small><b>${divName(s.d)}</b><span class="rk-bar"><i style="width:${s.d < 0 ? (s.matches / PLACEMENT_MATCHES) * 100 : s.d >= TOP ? 100 : s.rp}%"></i></span><small>${sub} · MMR ${s.mmr}</small></span>
+    </button>`;
+  }
+
+  /** Rank change on the results screen. */
+  _rankResult(k) {
+    const a = k.after, b = k.before;
+    let head;
+    if (k.placed) head = `<b class="promo">Placed: ${divName(a.d)}!</b>`;
+    else if (a.d < 0) head = `<b>Placement match ${PLACEMENT_MATCHES - k.placementLeft} of ${PLACEMENT_MATCHES}</b>`;
+    else if (k.promoted) head = `<b class="promo">Promoted to ${divName(a.d)}!</b>`;
+    else head = `<b>${divName(a.d)}</b>`;
+    const rp = a.d < 0 ? '' : `<span class="${k.dRP >= 0 ? 'up' : 'down'}">${k.dRP >= 0 ? '+' : ''}${k.dRP} RP</span>`;
+    const pct = a.d < 0 ? ((PLACEMENT_MATCHES - k.placementLeft) / PLACEMENT_MATCHES) * 100 : a.d >= TOP ? 100 : a.rp;
+    return `<div class="rank-result" style="--rc:${divColor(a.d)}">
+      ${badgeHTML(b.d, 34)}<span class="arrow">→</span>${badgeHTML(a.d, 46)}
+      <div class="rk-text">${head}<span class="rk-bar"><i style="width:${pct}%"></i></span>
+      <small>${rp} <span class="${k.dMMR >= 0 ? 'up' : 'down'}">MMR ${k.dMMR >= 0 ? '+' : ''}${k.dMMR}</span> (now ${a.mmr})</small></div>
+    </div>`;
+  }
+
+  showRanked() {
+    this.current = 'ranked';
+    const card = (mode, title) => {
+      const s = rankState(mode);
+      const hist = s.history.length ? s.history.map((h) => `<tr><td>${h.won ? '#1' : `#${h.place}/${h.total}`}</td><td>${h.kills}</td><td class="${h.dRP >= 0 ? 'up' : 'down'}">${h.d < 0 && !h.dRP ? '—' : (h.dRP >= 0 ? '+' : '') + h.dRP}</td><td class="${h.dMMR >= 0 ? 'up' : 'down'}">${h.dMMR >= 0 ? '+' : ''}${h.dMMR}</td></tr>`).join('') : '<tr><td colspan="4">No ranked matches yet</td></tr>';
+      return `<div class="rank-panel" style="--rc:${divColor(s.d)}">
+        <div class="rank-head">${badgeHTML(s.d, 64)}<div><small>${title}</small><h3>${divName(s.d)}</h3><span class="rk-bar"><i style="width:${s.d < 0 ? (s.matches / PLACEMENT_MATCHES) * 100 : s.d >= TOP ? 100 : s.rp}%"></i></span>
+        <small>${s.d < 0 ? `Placement: ${s.matches}/${PLACEMENT_MATCHES} matches` : s.d >= TOP ? `${s.rp} RP` : `${s.rp} / 100 RP`}</small></div></div>
+        <div class="stats"><div><b>${s.mmr}</b>MMR</div><div><b>${s.matches}</b>matches</div><div><b>${divName(s.peak).replace(' ', '&nbsp;')}</b>peak</div><div><b>${lobbyLabel(s.mmr)}</b>lobbies</div></div>
+        <table class="hist"><tr><th>Place</th><th>Elims</th><th>RP</th><th>MMR</th></tr>${hist}</table>
+      </div>`;
+    };
+    const ladder = Array.from({ length: TOP + 1 }, (_, d) => `<span class="ladder-step" style="--rc:${divColor(d)}" title="about ${divisionMMR(d)} MMR">${badgeHTML(d, 22)}${divName(d)}</span>`).join('');
+    this.screen(`
+      <div class="sheet panel wide">
+        <h2>Ranked</h2>
+        <div class="cols">${card('build', 'Build')}${card('zerobuild', 'Zero Build')}</div>
+        <h3>How it works</h3>
+        <ul class="howto">
+          <li><b>MMR</b> (matchmaking rating) is your skill score. It goes up when you place better than expected and down when you place worse. In Ranked, the bots you face are tuned to your MMR. Online, they're tuned to the average MMR of the players in the lobby.</li>
+          <li><b>Rank</b> is earned with rank points: 100 RP per division. Placement and eliminations earn RP. Each match costs a little entry RP, and the cost grows with rank. If your MMR is higher than your rank, you gain faster (and lose less) until your rank catches up.</li>
+          <li>Your first ${PLACEMENT_MATCHES} matches are placement matches. You can lose progress, but you never drop a division. Leaving a match early counts as being eliminated.</li>
+          <li>Build and Zero Build have separate ranks. Ranks are saved on this device.</li>
+        </ul>
+        <div class="ladder">${ladder}</div>
+        <div class="row"><button class="btn play small" data-act="main">Done</button></div>
       </div>`, 'screen right');
   }
 
@@ -347,6 +414,7 @@ export class Menus {
         ${r.won ? `<div class="crown">#1</div><h1 class="big">${r.team ? 'BENTON SQUAD CHAMPIONS!' : 'BENTON CHAMPION!'}</h1>` : `<h1 class="big">#${r.place} <small>of ${r.total} ${r.team ? 'squads' : ''}</small></h1><p class="sub">${r.team ? 'Your squad was eliminated' : r.killer ? `Eliminated by ${escAttr(r.killer)}` : 'Eliminated'}</p>`}
         <div class="stats"><div><b>${r.kills}</b>elims</div><div><b>${r.damage}</b>damage</div><div><b>${Math.floor(r.time / 60)}:${String(r.time % 60).padStart(2, '0')}</b>survived</div><div><b>+${r.xp}</b>XP</div></div>
         ${r.levelUp ? `<p class="lvlup">Level up! You reached level ${r.levelUp}.</p>` : ''}
+        ${r.ranked ? this._rankResult(r.ranked) : ''}
         <div class="level"><div class="lvl-badge">${L.level}</div><div class="lvl-bar"><div style="width:${(L.into / L.need) * 100}%"></div></div><small>${L.into} / ${L.need} XP</small></div>
         <div class="row">
           ${!r.won && this.app.matchRunning() ? '<button class="btn" data-act="spectate">Spectate</button>' : ''}

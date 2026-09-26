@@ -119,7 +119,8 @@ export class Building {
   }
 
   canPlace(actor, s, material) {
-    return s.free && actor.mats[material] >= BUILD_COST && this.supported(s);
+    // check the grid live: `s.free` can be stale if something was placed since the spot was computed
+    return !this.occupied.has(s.key) && actor.mats[material] >= BUILD_COST && this.supported(s);
   }
 
   place(actor, s, material) {

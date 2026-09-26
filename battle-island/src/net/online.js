@@ -107,7 +107,7 @@ export class Session {
 
   setProfile(pr) {
     this.profile = pr;
-    this.room.presence({ r: this.role === 'host' ? 'h' : 'c', v: PROTO, n: cleanName(pr.name), c: pr.charId, o: pr.outfit, s: pr.skin }).catch(() => {});
+    this.room.presence({ r: this.role === 'host' ? 'h' : 'c', v: PROTO, n: cleanName(pr.name), c: pr.charId, o: pr.outfit, s: pr.skin, rk: pr.rk || null }).catch(() => {});
   }
 
   get myPeer() {
@@ -129,7 +129,7 @@ export class Session {
   players() {
     const list = this.room.peers()
       .filter((p) => p.presence && p.presence.v === PROTO)
-      .map((p) => ({ peer: p.peer, me: p.sameTab, host: p.presence.r === 'h', name: p.presence.n || 'Player', charId: p.presence.c || 'colton', outfit: p.presence.o | 0, skin: p.presence.s | 0 }));
+      .map((p) => ({ peer: p.peer, me: p.sameTab, host: p.presence.r === 'h', name: p.presence.n || 'Player', charId: p.presence.c || 'colton', outfit: p.presence.o | 0, skin: p.presence.s | 0, rk: Array.isArray(p.presence.rk) ? p.presence.rk : null }));
     list.sort((a, b) => (b.host ? 1 : 0) - (a.host ? 1 : 0));
     return list;
   }

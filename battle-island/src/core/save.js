@@ -23,6 +23,7 @@ const DEFAULTS = {
     character: 'colton',
     mode: 'build', // build | zerobuild
     teamSize: 1, // 1 solo, 2 duos, 3 trios, 4 squads
+    ranked: false, // casual | ranked queue
     outfits: { colton: 0, emerson: 0, waylon: 0 },
     skin: 0,
   },

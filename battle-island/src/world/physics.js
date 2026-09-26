@@ -176,7 +176,10 @@ export class Physics {
         // ramps and cones are thin shells: you stand on them only from above
         top = c.surfaceY(x, z);
       }
-      if (top <= lim && top > best) {
+      // build heights snap to a grid, so a ramp's low end can sit a little above the
+      // ground: let walkers step onto it there
+      const reach = step > 0 && c.type === 'ramp' && top - c.minY < 1 ? lim + 0.8 : lim;
+      if (top <= reach && top > best) {
         best = top;
         bestC = c;
       }

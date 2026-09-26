@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { WEAPONS, RARITIES, CONSUMABLES, THROWABLES, AMMO, BUFFS, itemName } from '../gameplay/items.js';
 import { REVIVE_TIME, REBOOT_TIME } from '../gameplay/teams.js';
+import { lobbyLabel } from '../core/ranked.js';
 import { PIECE_NAMES, PIECES } from '../gameplay/building.js';
 import { ISLAND_SIZE } from '../world/island.js';
 import { save } from '../core/save.js';
@@ -26,6 +27,7 @@ export class Hud {
         <canvas class="minimap" width="190" height="190"></canvas>
         <div class="storm-info"><span class="storm-label">Storm</span><b class="storm-time">0:00</b></div>
         <div class="counts"><span class="pill"><i class="ico-alive"></i><b class="n-alive">0</b> <span class="alive-label">left</span></span><span class="pill"><i class="ico-kill"></i><b class="n-kills">0</b> elims</span></div>
+        <div class="ranked-pill"></div>
         <div class="team"></div>
       </div>
       <div class="markers"></div>
@@ -73,6 +75,7 @@ export class Hud {
       over: q('.bar.over'), shield: q('.bar.shield'), health: q('.bar.health'), stamina: q('.bar.stamina'), mats: q('.mats'), mag: q('.mag'), reserve: q('.reserve'),
       slots: q('.slots'), ammoList: q('.ammo-list'), build: q('.buildbar'), busHint: q('.bus-hint'), dmg: q('.dmgnums'), stormTint: q('.storm-tint'), hurtTint: q('.hurt-tint'),
       team: q('.team'), markers: q('.markers'), buffs: q('.buffs'), bi: q('.buildinfo'), biBar: q('.buildinfo .bhp div'), biText: q('.buildinfo span'),
+      rankedPill: q('.ranked-pill'),
       downed: q('.downed'), downFill: q('.downed .fill'), aliveLabel: q('.alive-label'), specResults: q('.spec-results'),
       scope: q('.scope'), bigmap: q('.bigmap'), bigCanvas: q('.bigmap canvas'), spec: q('.spectate-bar'), specName: q('.spec-name'), fps: q('.fps'),
     };
@@ -222,6 +225,8 @@ export class Hud {
     const T = game.teams;
     this.set('alive', this.el.alive, String(T.enabled ? T.teamsAlive().size : game.alive().length));
     this.set('aliveL', this.el.aliveLabel, T.enabled ? 'squads' : 'left');
+    this.set('rk', this.el.rankedPill, game.ranked ? `RANKED · ${lobbyLabel(game.lobbyRating)} lobby` : '', 'textContent');
+    this.set('rkd', this.el.rankedPill.style, game.ranked ? '' : 'none', 'display');
     this.set('kills', this.el.kills, String(specA.kills));
     // compass
     const deg = ((-c.yaw * 180) / Math.PI + 360 * 4) % 360;

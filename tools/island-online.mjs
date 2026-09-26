@@ -29,6 +29,7 @@ const H = await open('host');
 const C = await open('client');
 await H.fill('input[data-set=name]', 'Hostie');
 await H.click('[data-act=bots][data-id="29"]'); // biggest match: 30 players
+await H.click('[data-act=queue][data-id=ranked]'); // a ranked online match
 await C.fill('input[data-set=name]', 'Guesty');
 await C.click('[data-act=chars]');
 await C.click('[data-act=pick][data-id=emerson]');
@@ -46,7 +47,7 @@ const listed = await waitFor(C, (c) => !!document.querySelector(`[data-act=join]
 check("the host's game appears in the client's open games list", listed);
 await C.click(`[data-act=join][data-code="${code}"]`);
 const roster = await waitFor(H, () => document.querySelectorAll('.player-row').length === 2, 15000);
-const names = await H.evaluate(() => [...document.querySelectorAll('.player-row b')].map((e) => e.textContent));
+const names = await H.evaluate(() => [...document.querySelectorAll('.player-row b')].map((e) => e.textContent.replace(/^\S*\s/, '').trim()));
 check('client joins; both players are in the room roster', roster && names.includes('Hostie') && names.includes('Guesty'), JSON.stringify(names));
 
 await H.click('[data-act=start-online]');
@@ -170,6 +171,7 @@ await H.evaluate(() => { const g = __bi.game; g.applyDamage(g.actors[1], 999, g.
 const out = await waitFor(C, () => !__bi.game.player.alive && __bi.game.controller.spectating && !!__bi.game.result, 6000);
 const cres = await C.evaluate(() => ({ res: __bi.game.result, screen: !!document.querySelector('.result') }));
 check('client elimination: spectating + their own result screen (placement from the host)', out && cres.screen && cres.res.place > 1, JSON.stringify(cres.res));
+check('ranked online: the client gets its own rank/MMR update from its result', cres.res.ranked && cres.res.ranked.after.mmr !== undefined && (await C.evaluate(() => __bi.game.ranked && __bi.ranked.rankState('build').matches === 1)), JSON.stringify(cres.res.ranked));
 await C.screenshot({ path: `${shots}/on-02-client-result.png` });
 
 // host wins → match over for both
@@ -177,6 +179,7 @@ await H.evaluate(() => { const g = __bi.game; for (const a of g.actors) if (a !=
 const hwin = await waitFor(H, () => __bi.game.state === 'over' && __bi.game.result?.won, 5000);
 const cover = await waitFor(C, () => __bi.game.state === 'over', 5000);
 check('host wins: host victory, client sees the match end', hwin && cover);
+check('ranked online: the host rank updates too (lobby rated at the players\' average MMR)', await H.evaluate(() => !!__bi.game.result.ranked && __bi.game.lobbyRating === 1000 && __bi.ranked.rankState('build').matches === 1));
 
 // play again: host back to the room and starts a second match; client follows
 await H.waitForTimeout(1000);

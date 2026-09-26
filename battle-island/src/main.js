@@ -13,6 +13,8 @@ import { Hud } from './ui/hud.js';
 import { Menus } from './ui/menus.js';
 import { CharacterModel } from './entities/characters.js';
 import { Online, MAX_HUMANS } from './net/online.js';
+import * as ranked from './core/ranked.js';
+const { rankState } = ranked;
 import { TouchControls, isTouchDevice } from './ui/touch.js';
 
 const canvas = document.getElementById('scene');
@@ -128,7 +130,8 @@ online.onChange = rerender;
 
 function profileInfo() {
   const P = save.data.profile;
-  return { name: P.name || 'Player', charId: P.character, outfit: P.outfits[P.character], skin: P.skin };
+  const b = rankState('build'), z = rankState('zerobuild');
+  return { name: P.name || 'Player', charId: P.character, outfit: P.outfits[P.character], skin: P.skin, rk: [[b.mmr, b.d], [z.mmr, z.d]] };
 }
 
 async function openOnline() {
@@ -140,7 +143,7 @@ async function openOnline() {
 
 async function hostGame() {
   const P = save.data.profile;
-  session = await online.host(profileInfo(), { mode: P.mode, team: P.teamSize || 1, bots: save.data.settings.botCount });
+  session = await online.host(profileInfo(), { mode: P.mode, team: P.teamSize || 1, bots: save.data.settings.botCount, ranked: !!P.ranked });
   bindSession();
   menus.showSession(session);
 }
@@ -211,9 +214,12 @@ function startOnline() {
   if (!s || s.role !== 'host') return;
   const players = s.players().slice(0, MAX_HUMANS);
   const humans = players.map((p, i) => ({ id: i, local: p.me, peer: p.peer, name: p.name, charId: p.charId, outfit: p.outfit, skin: p.skin }));
-  const cfg = { ...s.cfg, bots: Math.max(0, s.cfg.bots + 1 - humans.length) };
+  // ranked lobbies are matched at the average MMR of the humans in them
+  const mi = s.cfg.mode === 'zerobuild' ? 1 : 0;
+  const rating = Math.round(players.reduce((sum, p) => sum + (p.rk ? p.rk[mi][0] : 1000), 0) / players.length);
+  const cfg = { ...s.cfg, bots: Math.max(0, s.cfg.bots + 1 - humans.length), rating };
   enterGame();
-  game.startMatch({ role: 'host', room: s.room, humans, mode: cfg.mode, teamSize: cfg.team, botCount: cfg.bots });
+  game.startMatch({ role: 'host', room: s.room, humans, mode: cfg.mode, teamSize: cfg.team, botCount: cfg.bots, ranked: !!cfg.ranked, lobbyRating: rating });
   s.announceStart(game, humans, cfg);
 }
 
@@ -221,7 +227,7 @@ function startClient(start) {
   const s = session;
   const humans = start.humans.map((h) => ({ id: h.id, local: h.p === s.myPeer, peer: h.p, name: h.n, charId: h.c, outfit: h.o, skin: h.s }));
   enterGame();
-  game.startMatch({ role: 'client', room: s.room, hostPeer: s.hostPeer(), seed: start.seed, mode: start.cfg.mode, teamSize: start.cfg.team, botCount: start.cfg.bots, humans, bus: start.bus });
+  game.startMatch({ role: 'client', room: s.room, hostPeer: s.hostPeer(), seed: start.seed, mode: start.cfg.mode, teamSize: start.cfg.team, botCount: start.cfg.bots, humans, bus: start.bus, ranked: !!start.cfg.ranked, lobbyRating: start.cfg.rating || 1000 });
 }
 
 game.onHostLeft = () => {
@@ -237,6 +243,7 @@ function play() {
     // online "Play again": back to the game room; the host starts the next match
     if (game.world) game.endMatch();
     enterMenus();
+    session.setProfile(profileInfo()); // updated rank for the room roster
     if (session.role === 'host') session.backToLobby();
     menus.showSession(session);
     return;
@@ -246,7 +253,7 @@ function play() {
   engine.view = { scene: engine.scene, camera: engine.camera };
   engine.resize();
   game.paused = false;
-  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount });
+  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount, ranked: !!P.ranked, lobbyRating: rankState(P.mode).mmr });
   input.enabled = true;
   touch.show(true);
   input.requestLock();
@@ -319,4 +326,4 @@ menus.showMain();
 engine.start();
 
 // test / debugging handle (used by the automated playtest)
-window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, get session() { return session; } };
+window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, ranked, get session() { return session; } };

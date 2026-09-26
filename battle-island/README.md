@@ -125,8 +125,34 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - The host streams snapshots (about 12 per second), effect batches and periodic full resyncs, all within the room's 4 KiB limit. A 30-player match is about 2.2 KB.
 - [x] **Mobile:** touch joystick, drag-to-look, on-screen buttons (drag FIRE to aim) and tappable HUD. There are phone layouts for the lobby and HUD, a prompt to turn the device sideways, and lighter graphics defaults.
 
+## Update: Ranked (MMR)
+
+- [x] **Casual / Ranked queue** in the lobby. Build and Zero Build are ranked separately.
+- [x] **Ranks:**
+  - Bronze, Silver, Gold, Platinum, Diamond and Champion, each with divisions I–III, then Legend.
+  - Each division takes 100 rank points (RP).
+  - You can lose progress inside a division, but you never drop a division.
+- [x] **MMR (matchmaking rating):** an Elo-style skill rating. It moves by how your placement compared with what your rating predicted, plus a little for eliminations and wins. It is shown on the **Ranked** screen.
+- [x] **Placement:** the first 3 ranked matches set your starting rank from your MMR, capped at Platinum I.
+- [x] **Rank points each match:**
+  - Earned from placement, eliminations and wins.
+  - Minus an entry cost that grows with rank.
+  - Scaled by how your MMR compares with your rank, so a rank that is too low climbs faster.
+- [x] **Matchmaking:**
+  - Ranked bots are tuned to the lobby's MMR, and the HUD shows the lobby's level.
+  - Online, the lobby rating is the average of the humans' MMR, and rank badges appear in the room roster.
+- [x] **Screens:**
+  - The **Ranked** screen shows both ranks, MMR, progress, peak, the last 10 matches, the full ladder and how it works.
+  - The result screen shows RP and MMR changes, promotions and placements.
+- Everything is saved on this device, like the rest of the progression. There is no shared online leaderboard yet.
+- Fixes in this update:
+  - Ramps built on the ground can always be walked onto.
+  - Reboot vans on slopes work for players and bots.
+  - A stale-grid double-placement bug is fixed.
+
 ## Roadmap: not built yet
 
+- [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
 - [ ] Building: editing ramps and cones
 - [ ] Match flow: pre-match warm-up area, match replays
 - [ ] Teams: carrying knocked teammates
@@ -139,17 +165,18 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 
 ## Testing
 
-Two automated suites drive the real game in headless Chromium:
+Automated suites drive the real game in headless Chromium:
 
 ```bash
 npm run island:dev &                        # serve on :5174
 node tools/island-playtest.mjs              # 33 checks
 node tools/island-features.mjs              # 10 checks
 node tools/island-milestone2.mjs            # 19 checks
+node tools/island-ranked.mjs                # 12 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
-node tools/island-online.mjs                # 20 checks: two browsers, host + client
+node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
-node tools/island-mobile.mjs                # 14 checks: emulated phone with real multi-touch
+node tools/island-mobile.mjs                # 17 checks: emulated phone with real multi-touch
 ```
 
 - **`island-playtest.mjs`:** a full solo match. Bus jump, landing, chest opening, pickup/drop/stacking/slot limit, heal interruption, rifle damage and reload, all four build pieces, running up a ramp, destroying a structure, harvesting, storm damage, pause/resume, and a full bot-vs-bot match to the final two. It then covers victory, Play again, player elimination with spectating, returning to the lobby, and every lobby button.
@@ -163,10 +190,12 @@ node tools/island-mobile.mjs                # 14 checks: emulated phone with rea
   - Building 2.0: supported placement, editing a door and resetting it, repair and upgrade, and collapse.
   - Match end: squad wipe and placement, and squad victory.
 
+- **`island-ranked.mjs`:** placement matches and the Platinum cap, promotion on a winning streak, losses without demotion, MMR following the lobby rating, separate Build/Zero Build ranks and history, bot skill following MMR, a real ranked match (queue, HUD, result screen, lobby card, Ranked screen), and casual matches leaving the rank alone.
 - **`island-online.mjs`:**
   - Joining: open-games list, roster, and matching rosters and bots on both machines.
   - Movement: bus jump, landing position agreement, host teleports, and client movement.
   - Actions: shooting, building, picking up loot and taking damage.
+  - Ranked: the host's queue choice and lobby rating reach the client, and rank badges show in the roster.
   - End of match: elimination with the player's own result, match end, Play again, and a bot taking over when someone disconnects.
   - Presence stays under the 4 KiB limit with 30 players.
   - It also passes against the production build served by the relay server.
@@ -191,5 +220,6 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/game.js` | Match flow, bus, damage routing, eliminations, XP |
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
+| `src/core/ranked.js` | Ranks, MMR, rank points, lobby bot skill |
 | `src/gameplay/{combat,building,loot,storm,effects,items}.js` | Systems and data |
 | `src/ui/{hud,menus}.js` | HUD and menu screens |

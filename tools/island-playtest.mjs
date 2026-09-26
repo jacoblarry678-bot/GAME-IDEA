@@ -134,6 +134,7 @@ const target = await ev(() => {
     x = gx; z = gz; break search;
   }
   P.pos.set(x, g.world.height(x, z), z);
+  window.F = { x, z };
   bot.state = 'ground'; bot.pos.set(x, g.world.height(x, z - 9), z - 9); bot.vel.set(0, 0, 0);
   bot.hp = 100; bot.shield = 50;
   P.state = 'ground';
@@ -163,13 +164,17 @@ await p.keyboard.press('KeyB');
 await p.waitForTimeout(200);
 const pieces = ['Digit1', 'Digit2', 'Digit3', 'Digit4'];
 const placed = [];
-for (const k of pieces) {
+await waitFor(() => __bi.game.controller.building, 5000);
+const mine = () => ev(() => [...__bi.game.building.pieces].filter((c) => c.owner === __bi.game.player).length);
+for (const [i, k] of pieces.entries()) {
   await p.keyboard.press(k);
-  await ev((i) => (__bi.game.controller.yaw = i * 1.571), placed.length);
+  await waitFor((n) => __bi.game.controller.piece === ['wall', 'floor', 'ramp', 'cone'][n], 5000, i);
+  await ev((n) => (__bi.game.controller.yaw = n * 1.571), i);
   await p.waitForTimeout(250);
+  const n0 = await mine();
   await p.mouse.click(640, 360);
-  await p.waitForTimeout(250);
-  placed.push(await ev(() => [...__bi.game.building.pieces].filter((c) => c.owner === __bi.game.player).length));
+  await waitFor((n) => [...__bi.game.building.pieces].filter((c) => c.owner === __bi.game.player).length > n, 4000, n0);
+  placed.push(await mine());
 }
 const wood = await ev(() => __bi.game.player.mats.wood);
 check('build wall/floor/ramp/cone with grid preview (10 wood each)', placed[3] === 4 && wood === 60, JSON.stringify({ placed, wood }));
@@ -181,24 +186,26 @@ check('occupied grid slot rejects a duplicate piece', dup.placed === false, JSON
 const ramp = await ev(() => {
   const g = __bi.game, P = g.player;
   g.controller.building = false;
-  const x = Math.floor(P.pos.x / 4) * 4 + 2, z = Math.floor(P.pos.z / 4) * 4 + 30;
-  P.pos.set(x, g.world.height(x, z) + 0.5, z);
+  // the clear, flat test field found for the shooting check (build pieces from the last step are far away)
+  const x = Math.floor((window.F.x + 10) / 4) * 4 + 2, z = Math.floor(window.F.z / 4) * 4 + 2;
+  P.pos.set(x, g.world.height(x, z), z);
   P.vel.set(0, 0, 0);
   P.state = 'ground';
   return true;
 });
-await waitFor(() => __bi.game.player.grounded, 10000);
+await waitFor(() => __bi.game.player.state === 'ground' && Math.abs(__bi.game.player.vel.y) < 0.01, 10000);
+await p.waitForTimeout(300);
 const climb = await ev(() => {
   const g = __bi.game, P = g.player;
   P.mats.wood = 50;
+  g.controller.yaw = 0; g.controller.pitch = 0;
   const s = g.building.spot(P, 'ramp', 0, 0);
   const c = g.building.place(P, s, 'wood');
-  g.controller.yaw = 0; g.controller.pitch = 0;
   return { ok: !!c, y0: P.pos.y, top: c && c.maxY };
 });
 await p.keyboard.down('KeyW');
 let climbed = 0;
-for (let i = 0; i < 25; i++) { climbed = Math.max(climbed, await ev(() => __bi.game.player.pos.y)); await p.waitForTimeout(100); }
+for (let i = 0; i < 50 && climbed < climb.y0 + 2.5; i++) { climbed = Math.max(climbed, await ev(() => __bi.game.player.pos.y)); await p.waitForTimeout(100); }
 await p.keyboard.up('KeyW');
 check('player can run up a placed ramp', climb.ok && climbed > climb.y0 + 2, JSON.stringify({ ...climb, after: climbed.toFixed(2) }));
 const destroyed = await ev(() => {
@@ -246,7 +253,7 @@ const storm = await ev(() => {
   P.pos.set(x, g.world.height(x, z) + 1, z);
   return { dmg: st.dmg };
 });
-await p.waitForTimeout(3500);
+await waitFor(() => __bi.game.player.hp < 100, 20000);
 const st2 = await ev(() => ({ hp: __bi.game.player.hp, sh: __bi.game.player.shield, out: __bi.game.storm.outside(__bi.game.player.pos.x, __bi.game.player.pos.z) }));
 check('storm damages health (not shields) outside the circle', st2.out && st2.hp < 100 && st2.sh === 50, JSON.stringify({ ...storm, ...st2 }));
 await shot('07-storm');

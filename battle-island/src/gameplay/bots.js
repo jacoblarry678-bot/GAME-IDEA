@@ -401,6 +401,7 @@ export class BotBrain {
     if (a.cards.length && g.teams.vansOnline() && !outside) {
       let best = null, bd = 1e9;
       for (const v of g.world.vans) {
+        if (this.blacklist.has(v)) continue; // got stuck on the way there: try another van
         const d = v.pos.distanceTo(a.pos) + v.cd * 6;
         if (d < bd) { bd = d; best = v; }
       }
@@ -465,7 +466,16 @@ export class BotBrain {
       this._steer(v.pos, dt);
       this.inp.sprint = d > 8;
       a.rebootVan = null;
-    } else if (v.cd <= 0) a.rebootVan = v;
+      this.vanWait = 0;
+    } else if (v.cd <= 0) {
+      a.rebootVan = v;
+      // standing at the van but the reboot never starts (e.g. unreachable): try another van
+      if (!a.rebootT && (this.vanWait = (this.vanWait || 0) + dt) > 3) {
+        this.blacklist.add(v);
+        this.vanWait = 0;
+        this.mode = 'roam';
+      }
+    }
   }
 
   _follow(dt) {

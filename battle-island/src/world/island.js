@@ -768,7 +768,8 @@ export class World {
     g.traverse((o) => (o.castShadow = true));
     this.root.add(g);
     this.physics.add(new Collider({ minX: x - 1.1, maxX: x + 1.1, minZ: z - 2.2, maxZ: z + 2.2, minY: y, maxY: y + 2.5, mesh: g }));
-    const van = { pos: new THREE.Vector3(x + 1.9, y, z + 0.4), cd: 0, screen };
+    // the reboot spot is beside the van, on the ground there (it can differ on a slope)
+    const van = { pos: new THREE.Vector3(x + 1.9, this.hm.get(x + 1.9, z + 0.4), z + 0.4), cd: 0, screen };
     this.vans.push(van);
     this.exclude.push({ x, z, r: 5 });
     this.animated.push(() => screen.material.emissive.set(van.cd > 0 ? '#551111' : '#1a8a99'));

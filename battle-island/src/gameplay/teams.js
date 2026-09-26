@@ -15,6 +15,9 @@ const BLEED = 1.5; // downed health lost per second
 const CARD_LIFE = 90;
 const VAN_COOLDOWN = 60;
 
+/** Reach to a reboot van: horizontal, with some vertical slack for slopes. */
+const vanDist = (v, p) => Math.hypot(v.pos.x - p.x, v.pos.z - p.z) + Math.max(0, Math.abs(v.pos.y - p.y) - 1.5);
+
 export class Teams {
   constructor(game, size) {
     this.game = game;
@@ -131,7 +134,7 @@ export class Teams {
   nearestVan(pos, maxD = Infinity) {
     let best = null, bd = maxD;
     for (const v of this.game.world.vans) {
-      const d = v.pos.distanceTo(pos);
+      const d = vanDist(v, pos);
       if (d < bd) { bd = d; best = v; }
     }
     return best;
@@ -185,7 +188,7 @@ export class Teams {
       } else a.reviveT = 0;
       const v = a.rebootVan;
       if (v) {
-        if (!a.cards.length || v.cd > 0 || !this.vansOnline() || v.pos.distanceTo(a.pos) > 3.2 || !a.canAct()) {
+        if (!a.cards.length || v.cd > 0 || !this.vansOnline() || vanDist(v, a.pos) > 3.2 || !a.canAct()) {
           a.rebootVan = null;
           a.rebootT = 0;
         } else if ((a.rebootT += dt) >= REBOOT_TIME) {
