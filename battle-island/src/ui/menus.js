@@ -8,6 +8,7 @@ import { CHARACTERS, CHARACTER_IDS, SKIN_TONES } from '../entities/characters.js
 import { save, levelInfo } from '../core/save.js';
 import { rankState, divName, divColor, divisionMMR, badgeHTML, TOP, PLACEMENT_MATCHES, lobbyLabel, isSupercharged, SUPER_LEAD, SUPER_MULT } from '../core/ranked.js';
 import { superXP, refillIn, CAP_XP, DAILY_XP } from '../core/supercharge.js';
+import { dailyChallenges, CHALLENGES, CHALLENGE_XP } from '../core/challenges.js';
 import { sfx } from '../core/audio.js';
 
 export const ROADMAP = {
@@ -29,13 +30,15 @@ export const ROADMAP = {
     'Mobile: touch joystick, drag-to-look, on-screen buttons (drag FIRE to aim), tappable inventory/build bar/minimap, phone layouts and lighter graphics defaults',
     'Ranked: Bronze → Silver → Gold → Platinum → Diamond → Champion (3 divisions each) → Legend; MMR-based matchmaking (bot difficulty), rank points for placement and eliminations, placement matches, separate Build / Zero Build ranks, ranks shown online',
     'Supercharged XP (daily bonus pool that doubles match XP, banks up to 3 days) and Supercharged rank (x1.5 rank gains and no RP loss while your MMR is well ahead of your rank)',
+    'Milestone 4 — Wheels & Deals: drivable Diesel Trucks (4 seats) and Pickle Karts (boost) with fuel, pumps, damage, explosions and run-over hits; passengers can shoot; bot teammates ride along',
+    'Ziplines between high points (shoot while riding), Benton Bucks from chests, floor loot and eliminations, three vending bots, two weapon upgrade benches, and three daily challenges worth bonus XP',
   ],
   next: [
     'Editing ramps and cones; carrying downed teammates',
     'Pre-match warm-up island; match replays',
-    'Ziplines; weapon attachments and scopes as items',
-    'World: drivable vehicles (fuel, damage, passengers), doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards & vaults',
-    'Progression: challenges, achievements, more emotes and cosmetics; ranked seasons and rewards; a shared online leaderboard (ranks are stored per device today)',
+    'Weapon attachments and scopes as items',
+    'World: doors, story NPCs and quests, bosses, keycards & vaults; bots that drive',
+    'Progression: weekly challenges, achievements, more emotes and cosmetics; ranked seasons and rewards; a shared online leaderboard (ranks are stored per device today)',
     'Online: more than 4 players, host migration, joining a match already in progress, anti-cheat (the host is trusted)',
     'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
   ],
@@ -46,7 +49,9 @@ const CONTROLS = [
   ['Space', 'Jump · jump from bus · open glider'], ['Shift', 'Sprint (uses stamina)'], ['C / Ctrl', 'Crouch · slide while sprinting'], ['R', 'Reload · rotate ramp (build mode)'],
   ['E', 'Open chest / pick up · swap when full'], ['G', 'Drop held item'], ['1 – 5 / Wheel', 'Select slot · choose piece in build mode'], ['F', 'Pickaxe (harvest)'],
   ['B or Q', 'Toggle build mode'], ['T', 'Cycle build material'], ['V', 'Edit the build you aim at · V again confirms, R resets'], ['U', 'Repair / upgrade the build you aim at'],
-  ['Hold E', 'Revive a knocked teammate · reboot at a reboot van'], ['Touch screens', 'Left thumb: move · right thumb: look · on-screen buttons for everything else'], ['Z / middle click', 'Ping'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
+  ['Hold E', 'Revive a knocked teammate · reboot at a reboot van'],
+  ['E (near a vehicle)', 'Drive / ride · E again to hop out'], ['W/S · A/D (driving)', 'Throttle / brake · steer'], ['Shift (kart) · H', 'Boost · horn'],
+  ['E (zipline tower)', 'Ride the zipline · Space lets go'], ['E (vending bot)', 'Open the shop · 1–3 buy with Benton Bucks'], ['E (upgrade bench)', 'Upgrade the held weapon'], ['Touch screens', 'Left thumb: move · right thumb: look · on-screen buttons for everything else'], ['Z / middle click', 'Ping'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
 ];
 
 export class Menus {
@@ -154,6 +159,13 @@ export class Menus {
     return `<div class="level"><div class="lvl-badge">${L.level}</div><div class="lvl-bar"><div style="width:${(L.into / L.need) * 100}%"></div></div><small>${L.into} / ${L.need} XP</small></div>${this._superXP()}`;
   }
 
+  /** Today's challenges (lobby card, or the result rows after a match). */
+  _challenges(rows = null) {
+    const list = rows || dailyChallenges().list.map((c) => ({ ...c, text: CHALLENGES[c.id].text, goal: CHALLENGES[c.id].goal }));
+    const row = (c) => `<div class="chal ${c.done ? 'done' : ''}"><div class="ch-row"><b>${c.done ? '✓ ' : ''}${c.text}</b><span>${c.justDone ? `+${CHALLENGE_XP.toLocaleString()} XP!` : c.done ? 'Done' : `${c.prog.toLocaleString()} / ${c.goal.toLocaleString()}`}</span></div><span class="rk-bar"><i style="width:${(c.prog / c.goal) * 100}%"></i></span></div>`;
+    return `<div class="chal-card ${rows ? 'chal-result' : ''}"><h4>Daily challenges <small>${rows ? '' : `+${CHALLENGE_XP.toLocaleString()} XP each · new in ${refillIn()}`}</small></h4>${list.map(row).join('')}</div>`;
+  }
+
   /** Daily Supercharged XP pool. */
   _superXP() {
     const s = superXP();
@@ -175,6 +187,7 @@ export class Menus {
           ${this._levelBar()}
           <div class="stats"><div><b>${pr.wins}</b>wins</div><div><b>${pr.matches}</b>matches</div><div><b>${pr.kills}</b>elims</div><div><b>${pr.bestPlace ? '#' + pr.bestPlace : '-'}</b>best</div></div>
           ${this._rankCard(P.mode)}
+          ${this._challenges()}
           <label class="field">Player name <input data-set="name" maxlength="14" value="${escAttr(P.name || '')}" placeholder="You"></label>
           <nav class="nav">
             <button class="btn" data-act="chars">Characters</button>
@@ -286,7 +299,7 @@ export class Menus {
       <div class="sheet panel wide">
         <h2>Roadmap</h2>
         <div class="cols">
-          <div><h3 class="ok">Playable now (milestone 1)</h3><ul>${ROADMAP.done.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+          <div><h3 class="ok">Playable now</h3><ul>${ROADMAP.done.map((x) => `<li>${x}</li>`).join('')}</ul></div>
           <div><h3 class="todo">Coming in later milestones</h3><ul>${ROADMAP.next.map((x) => `<li>${x}</li>`).join('')}</ul></div>
         </div>
         <div class="row"><button class="btn play small" data-act="main">Done</button></div>
@@ -425,6 +438,7 @@ export class Menus {
       <div class="sheet panel result ${r.won ? 'win' : ''}">
         ${r.won ? `<div class="crown">#1</div><h1 class="big">${r.team ? 'BENTON SQUAD CHAMPIONS!' : 'BENTON CHAMPION!'}</h1>` : `<h1 class="big">#${r.place} <small>of ${r.total} ${r.team ? 'squads' : ''}</small></h1><p class="sub">${r.team ? 'Your squad was eliminated' : r.killer ? `Eliminated by ${escAttr(r.killer)}` : 'Eliminated'}</p>`}
         <div class="stats"><div><b>${r.kills}</b>elims</div><div><b>${r.damage}</b>damage</div><div><b>${Math.floor(r.time / 60)}:${String(r.time % 60).padStart(2, '0')}</b>survived</div><div><b>+${r.xp}</b>XP</div></div>
+        ${r.challenges ? this._challenges(r.challenges) : ''}
         ${r.superXP ? `<p class="sx-won">⚡ +${r.superXP.toLocaleString()} Supercharged XP (included)</p>` : ''}
         ${r.levelUp ? `<p class="lvlup">Level up! You reached level ${r.levelUp}.</p>` : ''}
         ${r.ranked ? this._rankResult(r.ranked) : ''}

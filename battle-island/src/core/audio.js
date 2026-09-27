@@ -104,6 +104,12 @@ class Sfx {
       case 'elim': [520, 780, 1040].forEach((f, i) => this._tone(0.15, 0.15, f, f * 1.2, 'triangle', i * 0.06)); break;
       case 'ui': this._tone(0.08, 0.05, 900, 1100, 'triangle'); break;
       case 'bounce': this._tone(0.2 * g, 0.3, 200, 700, 'sine'); break;
+      case 'horn': this._tone(0.25 * g, 0.45, 392, 392, 'sawtooth'); this._tone(0.2 * g, 0.45, 494, 494, 'sawtooth'); break;
+      case 'crash': this._noise(0.7 * g, 0.4, 600, 0.6); this._tone(0.25 * g, 0.25, 110, 50, 'square'); break;
+      case 'engine': this._tone(0.18 * g, 0.5, 70, 160, 'sawtooth'); this._noise(0.15 * g, 0.4, 300); break;
+      case 'coin': this._tone(0.12, 0.07, 1320, 1320, 'square'); this._tone(0.12, 0.12, 1760, 1760, 'square', 0.07); break;
+      case 'buy': [880, 1320, 1760].forEach((f, i) => this._tone(0.12, 0.1, f, f, 'triangle', i * 0.06)); break;
+      case 'zip': this._noise(0.3 * g, 0.5, 2400, 4, 'bandpass'); break;
       case 'win': [523, 659, 784, 1046, 1318].forEach((f, i) => this._tone(0.16, 0.35, f, f, 'triangle', i * 0.12)); break;
       case 'lose': [440, 392, 330, 262].forEach((f, i) => this._tone(0.14, 0.35, f, f, 'triangle', i * 0.15)); break;
       default: break;

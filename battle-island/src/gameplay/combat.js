@@ -44,7 +44,8 @@ export class Combat {
 
   /** Nearest thing along a ray: world or actor. */
   trace(o, d, maxT, ignore) {
-    const w = this.game.world.physics.raycast(o.x, o.y, o.z, d.x, d.y, d.z, maxT);
+    // occupants shoot out of their own vehicle
+    const w = this.game.world.physics.raycast(o.x, o.y, o.z, d.x, d.y, d.z, maxT, ignore && ignore.vehicle);
     const lim = w ? w.t : maxT;
     const a = this.rayActors(o, d, lim, ignore);
     if (a) return { t: a.t, actor: a.actor, head: a.head };
@@ -217,10 +218,11 @@ export class Combat {
     const hitPieces = new Set();
     for (const c of list) {
       if (!c.alive || c.hp === Infinity) continue;
-      if (c.piece) {
-        // an edited piece has several colliders but one health pool
-        if (hitPieces.has(c.piece)) continue;
-        hitPieces.add(c.piece);
+      const pool = c.piece || c.vehicle;
+      if (pool) {
+        // an edited piece or a vehicle has several colliders but one health pool
+        if (hitPieces.has(pool)) continue;
+        hitPieces.add(pool);
       }
       const cx = Math.max(c.minX, Math.min(pos.x, c.maxX));
       const cy = Math.max(c.minY, Math.min(pos.y, c.maxY));

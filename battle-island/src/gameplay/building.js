@@ -302,7 +302,7 @@ export class Building {
     if (b.minY <= top + 0.7) return true;
     // resting on or attached to the world (buildings, rocks, trees)
     const e = 0.2;
-    return this.game.world.physics.query(b.minX - e, b.minZ - e, b.maxX + e, b.maxZ + e).some((c) => c.alive && c.kind !== 'build' && touch(c, b, e));
+    return this.game.world.physics.query(b.minX - e, b.minZ - e, b.maxX + e, b.maxZ + e).some((c) => c.alive && c.kind !== 'build' && c.kind !== 'vehicle' && touch(c, b, e));
   }
 
   supported(box) {

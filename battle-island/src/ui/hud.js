@@ -12,6 +12,7 @@ import { lobbyLabel } from '../core/ranked.js';
 import { PIECE_NAMES, PIECES } from '../gameplay/building.js';
 import { ISLAND_SIZE } from '../world/island.js';
 import { save } from '../core/save.js';
+import { VENDOR_STOCK, stockName } from '../gameplay/economy.js';
 
 const SHORT = { ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'PISTOL', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -52,12 +53,15 @@ export class Hud {
         </div>
       </div>
       <div class="hud-br">
+        <div class="bucks"><i class="coin"></i><b>0</b></div>
         <div class="mats"></div>
         <div class="ammo-big"><b class="mag">-</b><span class="reserve"></span></div>
         <div class="slots"></div>
         <div class="ammo-list"></div>
       </div>
       <div class="buildbar"></div>
+      <div class="vehpanel"><div class="vp-head"><b class="vp-name"></b><span class="vp-speed"></span></div><div class="vp-bar vp-hp"><div></div><span>HP</span></div><div class="vp-bar vp-fuel"><div></div><span>FUEL</span></div><small class="vp-hint"></small></div>
+      <div class="shop hidden"><div class="shop-title"></div><div class="shop-items"></div><small class="shop-hint"></small></div>
       <div class="bus-hint"></div>
       <div class="dmgnums"></div>
       <div class="storm-tint"></div>
@@ -71,11 +75,13 @@ export class Hud {
     this.el = {
       mini: q('.minimap'), stormLabel: q('.storm-label'), stormTime: q('.storm-time'), alive: q('.n-alive'), kills: q('.n-kills'),
       compass: q('.compass-strip'), killfeed: q('.killfeed'), toasts: q('.toasts'), banner: q('.banner'), cross: q('.crosshair'),
-      hit: q('.hitmarker'), hurtdir: q('.hurtdir'), prompt: q('.prompt'), promptText: q('.prompt span'), use: q('.usebar'), useFill: q('.usefill'), useLabel: q('.uselabel'),
+      hit: q('.hitmarker'), hurtdir: q('.hurtdir'), prompt: q('.prompt'), promptText: q('.prompt span'), promptKey: q('.prompt kbd'), use: q('.usebar'), useFill: q('.usefill'), useLabel: q('.uselabel'),
       over: q('.bar.over'), shield: q('.bar.shield'), health: q('.bar.health'), stamina: q('.bar.stamina'), mats: q('.mats'), mag: q('.mag'), reserve: q('.reserve'),
       slots: q('.slots'), ammoList: q('.ammo-list'), build: q('.buildbar'), busHint: q('.bus-hint'), dmg: q('.dmgnums'), stormTint: q('.storm-tint'), hurtTint: q('.hurt-tint'),
       team: q('.team'), markers: q('.markers'), buffs: q('.buffs'), bi: q('.buildinfo'), biBar: q('.buildinfo .bhp div'), biText: q('.buildinfo span'),
       rankedPill: q('.ranked-pill'),
+      bucks: q('.bucks b'), veh: q('.vehpanel'), vpName: q('.vp-name'), vpSpeed: q('.vp-speed'), vpHp: q('.vp-hp div'), vpFuel: q('.vp-fuel div'), vpHint: q('.vp-hint'),
+      shop: q('.shop'), shopTitle: q('.shop-title'), shopItems: q('.shop-items'), shopHint: q('.shop-hint'),
       downed: q('.downed'), downFill: q('.downed .fill'), aliveLabel: q('.alive-label'), specResults: q('.spec-results'),
       scope: q('.scope'), bigmap: q('.bigmap'), bigCanvas: q('.bigmap canvas'), spec: q('.spectate-bar'), specName: q('.spec-name'), fps: q('.fps'),
     };
@@ -103,6 +109,10 @@ export class Hud {
       if (e.target === this.el.bigmap) this.toggleMap(false);
     });
     q('.spec-next').addEventListener('click', () => this.game?.controller.nextSpectate());
+    this.el.shopItems.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-k]');
+      if (b) this.game?.controller.shopBuy(+b.dataset.k);
+    });
     q('.spec-results').addEventListener('click', () => this.menus.showResultAgain());
     q('.spec-leave').addEventListener('click', () => this.menus.act('quit', {}));
     this.show(false);
@@ -269,6 +279,9 @@ export class Hud {
       const al = Object.entries(specA.ammo).map(([k, v]) => `<span style="color:${AMMO[k].color}">${v}</span>`).join('');
       this.set('ammo', this.el.ammoList, al, 'innerHTML');
     }
+    this.set('bucks', this.el.bucks, String(specA.bucks | 0));
+    this._vehicle(game, specA, c);
+    this._shop(game, c);
     // build bar
     const building = c.building && !c.spectating;
     this.set('bshow', this.el.build.style, building ? '' : 'none', 'display');
@@ -288,6 +301,7 @@ export class Hud {
     this.set('pr', this.el.prompt.style, pr ? '' : 'none', 'display');
     if (pr) {
       this.set('prt', this.el.promptText, pr.text);
+      this.set('prk', this.el.promptKey, pr.key === '—' ? '' : pr.key || 'E');
       this.set('prc', this.el.promptText.style, pr.color || '#fff', 'color');
     }
     // use / reload bar
@@ -306,6 +320,7 @@ export class Hud {
     else if (tch && p.state === 'skydive') hint = p.canRedeploy ? '<kbd>JUMP</kbd> redeploy glider' : 'Push the stick up to dive · <kbd>JUMP</kbd> opens the glider';
     else if (!tch && p.state === 'skydive') hint = p.canRedeploy ? '<kbd>SPACE</kbd> redeploy glider' : '<kbd>W</kbd> dive · <kbd>SPACE</kbd> open glider';
     else if (p.state === 'glide' && p.canRedeploy) hint = '<kbd>SPACE</kbd> close glider';
+    else if (p.state === 'zip') hint = tch ? '<kbd>JUMP</kbd> let go' : '<kbd>SPACE</kbd> let go · you can shoot while riding';
     this.set('hint', this.el.busHint, hint, 'innerHTML');
     // tints
     this.hurtT = Math.max(0, this.hurtT - dt);
@@ -341,6 +356,36 @@ export class Hud {
     if (this.mapOpen && this.frame % 6 === 0) this._bigmap(game);
   }
 
+  _vehicle(game, a, c) {
+    const v = a.vehicle;
+    this.set('vp', this.el.veh.style, v && !c.spectating ? '' : 'none', 'display');
+    if (!v) return;
+    this.set('vpn', this.el.vpName, a.seat === 0 ? v.def.name : `${v.def.name} · passenger`);
+    this.set('vps', this.el.vpSpeed, `${Math.round(Math.abs(v.speed) * 3.6)} km/h`);
+    this.set('vph', this.el.vpHp.style, `${Math.max(0, v.hp / v.def.hp) * 100}%`, 'width');
+    this.set('vpf', this.el.vpFuel.style, `${Math.max(0, v.fuel)}%`, 'width');
+    const tch = document.body.classList.contains('touch');
+    const pump = game.world.pumps.some((pp) => Math.hypot(pp.x - v.pos.x, pp.z - v.pos.z) < 5.5);
+    let hint;
+    if (a.seat !== 0) hint = tch ? 'Aim and FIRE from your seat · USE to hop out' : 'Shoot from your seat · E exit';
+    else if (v.fuel <= 0) hint = 'Out of fuel! Push it to a pump, or hop out (E).';
+    else if (pump && v.fuel < 100) hint = Math.abs(v.speed) < 3 ? 'Refueling…' : 'Stop here to refuel';
+    else hint = tch ? 'Stick: drive + steer · push to the rim to boost · JUMP horn · USE exit' : `W/S drive · A/D steer${v.def.boost > 1 ? ' · Shift boost' : ''} · H horn · E exit`;
+    this.set('vph2', this.el.vpHint, hint);
+    this.set('vplow', this.el.vpFuel.parentElement, v.fuel < 20 ? 'vp-bar vp-fuel low' : 'vp-bar vp-fuel', 'className');
+  }
+
+  _shop(game, c) {
+    const s = c.shop;
+    this.el.shop.classList.toggle('hidden', !s);
+    if (!s) return;
+    const p = game.player;
+    this.set('shopt', this.el.shopTitle, `${s.label} · you have ${p.bucks | 0} Benton Bucks`);
+    const items = VENDOR_STOCK[s.i].map((it, k) => `<button class="btn small shop-item ${p.bucks >= it.price ? '' : 'poor'}" data-k="${k}"><em>${k + 1}</em><b>${stockName(it)}</b><span>${it.price} Bucks</span></button>`).join('');
+    this.set('shopi', this.el.shopItems, items, 'innerHTML');
+    this.set('shoph', this.el.shopHint, document.body.classList.contains('touch') ? 'Tap an item to buy · walk away to close' : 'Press 1–3 (or click) to buy · E or walk away to close');
+  }
+
   _minimap(game) {
     const g = this.ctx;
     const S = 190, W = 130; // metres shown
@@ -373,6 +418,41 @@ export class Hud {
   /** Reboot vans, squadmates and pings on a map canvas. */
   _mapIcons(g, game, tm, k) {
     const T = game.teams;
+    const W = game.world;
+    g.lineWidth = 1.5 * k;
+    for (const L of W.ziplines) {
+      const [ax, ay] = tm(L.a.x, L.a.z), [bx, by] = tm(L.b.x, L.b.z);
+      g.strokeStyle = '#39f0ff';
+      g.setLineDash([4 * k, 3 * k]);
+      g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+      g.setLineDash([]);
+    }
+    g.font = `800 ${Math.round(10 * k)}px "Baloo 2", "Trebuchet MS", sans-serif`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    for (const v of W.vendors) {
+      const [x, y] = tm(v.pos.x, v.pos.z);
+      g.fillStyle = '#ffd23f'; g.strokeStyle = '#000';
+      g.beginPath(); g.arc(x, y, 5.5 * k, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = '#1d2a3a'; g.fillText('$', x, y + 0.5);
+    }
+    for (const b of W.benches) {
+      const [x, y] = tm(b.pos.x, b.pos.z);
+      g.fillStyle = '#ffae1a'; g.strokeStyle = '#000';
+      g.beginPath(); g.moveTo(x, y - 6 * k); g.lineTo(x + 5.5 * k, y + 4 * k); g.lineTo(x - 5.5 * k, y + 4 * k); g.closePath(); g.fill(); g.stroke();
+    }
+    for (const v of game.vehicles.list) {
+      if (!v.alive) continue;
+      const [x, y] = tm(v.pos.x, v.pos.z);
+      g.save();
+      g.translate(x, y);
+      g.rotate(-v.yaw);
+      g.fillStyle = v.color; g.strokeStyle = '#000';
+      const w = (v.type === 'truck' ? 4 : 3) * k, h = (v.type === 'truck' ? 7 : 4.5) * k;
+      g.fillRect(-w / 2, -h / 2, w, h); g.strokeRect(-w / 2, -h / 2, w, h);
+      g.restore();
+    }
+    g.textBaseline = 'alphabetic';
     if (!T.enabled) return;
     for (const v of game.world.vans) {
       const [x, y] = tm(v.pos.x, v.pos.z);

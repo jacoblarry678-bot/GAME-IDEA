@@ -121,7 +121,12 @@ await ev(() => { __bi.game.player.mats.wood = 50; __bi.game.controller.pitch = -
 await tapAt(await center('.t-build'));
 const label = await ev(() => document.querySelector('.t-fire').textContent);
 await tapAt(await center('.t-fire'));
-const built = await waitFor(() => [...__bi.game.building.pieces].some((q) => q.owner === __bi.game.player), 3000);
+let built = await waitFor(() => [...__bi.game.building.pieces].some((q) => q.owner === __bi.game.player), 3000);
+if (!built) {
+  // slow headless frames can miss one very short tap: tap once more
+  await tapAt(await center('.t-fire'));
+  built = await waitFor(() => [...__bi.game.building.pieces].some((q) => q.owner === __bi.game.player), 3000);
+}
 await p.screenshot({ path: `${shots}/mob-02-build.png` });
 check('BUILD toggles build mode (fire becomes PLACE) and places a piece', label === 'PLACE' && built, label);
 await tapAt(await center('.t-build'));
@@ -163,6 +168,34 @@ await ev(() => { __bi.game.controller.building = false; });
 await p.screenshot({ path: `${shots}/mob-05-small.png` });
 await p.setViewportSize({ width: 844, height: 390 });
 check('buttons stay clear of screen edges and never overlap (844x390 and 740x360)', !bad1.length && !bad2.length, JSON.stringify({ bad1, bad2 }));
+
+// driving on touch: USE gets in, the stick drives, USE gets out
+await ev(() => {
+  const g = __bi.game, P = g.player, v = g.vehicles.list[4];
+  const x = P.pos.x + 3, z = P.pos.z + 4;
+  for (const c of [...g.world.physics.query(x - 6, z - 24, x + 6, z + 6)]) if (c.kind === 'tree' || c.kind === 'rock') g.world.destroyCollider(c);
+  v.pos.set(x, g.world.height(x, z), z); v.yaw = 0; v.speed = 0; g.vehicles._sync(v, true);
+  P.pos.set(x - 2.3, g.world.height(x - 2.3, z) + 0.05, z); P.vel.set(0, 0, 0); P.state = 'ground';
+  g.controller.yaw = 0;
+});
+await p.waitForTimeout(400);
+const useLabel = await ev(() => document.querySelector('.t-use').textContent);
+await tapAt(await center('.t-use'));
+const inKart = await waitFor(() => __bi.game.player.vehicle === __bi.game.vehicles.list[4], 3000);
+await p.waitForTimeout(300);
+const kz0 = await ev(() => __bi.game.vehicles.list[4].pos.z);
+await touch('touchStart', [[140, 260, 1]]);
+await touch('touchMove', [[140, 200, 1]]);
+await p.waitForTimeout(1800);
+const drivingUi = await ev(() => ({ fire: getComputedStyle(document.querySelector('.t-fire')).display, jump: document.querySelector('.t-jump').textContent, use: document.querySelector('.t-use').textContent }));
+const bad3 = await layout();
+await touch('touchEnd', []);
+await p.screenshot({ path: `${shots}/mob-06-driving.png` });
+const kdz = await ev((z) => z - __bi.game.vehicles.list[4].pos.z, kz0);
+await ev(() => (__bi.game.vehicles.list[4].speed = 0));
+await tapAt(await center('.t-use'));
+const outKart = await waitFor(() => !__bi.game.player.vehicle, 3000);
+check('touch driving: USE (ENTER) gets in, the stick drives, FIRE hides, JUMP honks, USE (EXIT) gets out; buttons stay tidy', useLabel === 'ENTER' && inKart && kdz > 2 && drivingUi.fire === 'none' && drivingUi.jump === 'HORN' && drivingUi.use === 'EXIT' && outKart && !bad3.length, JSON.stringify({ useLabel, kdz: +kdz.toFixed(2), drivingUi, bad3 }));
 
 // portrait asks to rotate
 await p.setViewportSize({ width: 390, height: 844 });

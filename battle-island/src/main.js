@@ -15,6 +15,7 @@ import { CharacterModel } from './entities/characters.js';
 import { Online, MAX_HUMANS } from './net/online.js';
 import * as ranked from './core/ranked.js';
 import * as supercharge from './core/supercharge.js';
+import * as challenges from './core/challenges.js';
 const { rankState } = ranked;
 import { TouchControls, isTouchDevice } from './ui/touch.js';
 
@@ -327,4 +328,4 @@ menus.showMain();
 engine.start();
 
 // test / debugging handle (used by the automated playtest)
-window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, ranked, supercharge, get session() { return session; } };
+window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, ranked, supercharge, challenges, get session() { return session; } };

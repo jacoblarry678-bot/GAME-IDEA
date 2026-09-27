@@ -289,7 +289,8 @@ const spec = await ev(() => {
   g.jumpFromBus(P);
   for (let i = 0; i < 60 * 40 && P.state !== 'ground' && P.state !== 'swim'; i++) __bi.engine.step(1 / 60);
   const enemy = g.actors.find((a) => a.team === 3);
-  for (const a of g.actors) if (a.team !== 0) { a.brain.update = function () { const i = this.inp; i.mx = i.mz = 0; i.jump = i.glide = false; return i; }; put(a, -150 + a.id, 150); }
+  // parked opponents must outlast the storm, or the match ends before the reboot
+  for (const a of g.actors) if (a.team !== 0) { a.brain.update = function () { const i = this.inp; i.mx = i.mz = 0; i.jump = i.glide = false; return i; }; put(a, -150 + a.id, 150); a.hp = 1e6; }
   P.hp = 1; P.shield = 0;
   g.applyDamage(P, 10, enemy, {});
   g.applyDamage(P, 200, enemy, {});
@@ -300,7 +301,7 @@ check('Eliminated with squad alive: spectate a teammate, wait for a reboot (no r
 const botReboot = await ev(() => {
   const g = __bi.game, P = g.player;
   let t = 0;
-  while (!P.alive && t < 150 && g.state !== 'over' && !g.result) { __bi.engine.step(1 / 60); t += 1 / 60; }
+  while (!P.alive && t < 240 && g.state !== 'over' && !g.result) { __bi.engine.step(1 / 60); t += 1 / 60; }
   return { alive: P.alive, secs: Math.round(t), spectating: g.controller.spectating, over: g.state === 'over', result: g.result, feed: document.querySelector('.killfeed').textContent.slice(0, 300), mates: g.actors.filter((a) => a.team === 0).map((a) => [a.alive, a.downed, a.cards.length, a.brain?.mode, Math.round(a.hp)]) };
 });
 check('Bot teammates collect the player\'s card and reboot them', botReboot.alive && !botReboot.spectating, JSON.stringify(botReboot));

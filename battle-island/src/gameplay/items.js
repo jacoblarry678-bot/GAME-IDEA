@@ -96,6 +96,7 @@ export function itemName(it) {
   if (it.kind === 'ammo') return AMMO[it.id].name;
   if (it.kind === 'mat') return MATS[it.id].name;
   if (it.kind === 'card') return `${it.name}'s Reboot Card`;
+  if (it.kind === 'coin') return 'Benton Bucks';
   return '?';
 }
 
@@ -150,6 +151,7 @@ export function rollFloor(rng) {
     return [w, ammoFor(w.id)];
   }
   if (r < 0.78) return [rollConsumable(rng)];
+  if (r < 0.88) return [{ kind: 'coin', id: 'bucks', count: 15 + Math.floor(rng() * 4) * 5 }];
   const ids = Object.keys(AMMO);
   const id = ids[Math.floor(rng() * ids.length)];
   return [{ kind: 'ammo', id, count: AMMO[id].drop }];
@@ -160,12 +162,13 @@ export function rollChest(rng) {
   const out = [w, ammoFor(w.id, 1.5), rollConsumable(rng)];
   const mats = ['wood', 'brick', 'metal'];
   out.push({ kind: 'mat', id: mats[Math.floor(rng() * 3)], count: 30 });
+  out.push({ kind: 'coin', id: 'bucks', count: 20 + Math.floor(rng() * 5) * 5 });
   return out;
 }
 
 export function rollSupply(rng) {
   const w = makeWeapon(pick(rng, [['ar', 3], ['sniper', 2], ['launcher', 2], ['shotgun', 2]]), rng() < 0.5 ? 3 : 4);
-  return [w, ammoFor(w.id, 2), { kind: 'consumable', id: 'bigshield', count: 2 }, { kind: 'mat', id: 'metal', count: 80 }];
+  return [w, ammoFor(w.id, 2), { kind: 'consumable', id: 'bigshield', count: 2 }, { kind: 'mat', id: 'metal', count: 80 }, { kind: 'coin', id: 'bucks', count: 100 }];
 }
 
 export function mulberry32(seed) {

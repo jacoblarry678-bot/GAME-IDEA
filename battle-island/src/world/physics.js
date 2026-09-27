@@ -188,6 +188,7 @@ export class Physics {
   }
 
   /** Ray vs world. dir must be normalized. Returns null or {t, x,y,z, nx,ny,nz, c, terrain}. */
+  /** `ignore`: a collider, or a vehicle (all of its colliders) to see through. */
   raycast(ox, oy, oz, dx, dy, dz, maxDist, ignore = null) {
     let best = maxDist;
     let hit = null;
@@ -206,7 +207,7 @@ export class Physics {
       if (list) {
         for (let n = 0; n < list.length; n++) {
           const c = list[n];
-          if (c._stamp === s || c === ignore) continue;
+          if (c._stamp === s || c === ignore || (ignore && c.vehicle === ignore)) continue;
           c._stamp = s;
           const r = intersect(c, ox, oy, oz, dx, dy, dz, best);
           if (r) {

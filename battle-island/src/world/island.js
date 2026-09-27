@@ -150,6 +150,11 @@ export class World {
     this.roads = [];
     this.animated = [];
     this.exclude = []; // circles where trees/rocks may not spawn
+    this.vehicleSpots = []; // drivable trucks and karts (spawned by the match)
+    this.pumps = []; // refuel spots
+    this.vendors = []; // vending bots that sell items for Benton Bucks
+    this.benches = []; // weapon upgrade benches
+    this.ziplines = [];
     this.onBarrel = null; // set by the match: explosion callback
     this._buildTerrain();
     this._buildWater();
@@ -162,6 +167,7 @@ export class World {
     this._buildDepot();
     for (const m of MINOR) this._cabin(m);
     for (const m of MINOR) this._rebootVan(m.x + 9, m.z + 1.5);
+    this._buildWheelsAndDeals();
     this._scatterNature();
     this.mapCanvas = this._renderMap();
     this.baseWid = this.physics.nextWid;
@@ -540,10 +546,10 @@ export class World {
     // trucks inside and out
     this.truck(p.x - 6.5, y + 0.1, p.z - 2, '#e8453c');
     this.truck(p.x + 6.5, y + 0.1, p.z - 3, '#3f7bff');
-    this.truck(p.x + 2, y, z0 - 10, '#ffcf3f');
     // fuel pumps, tires
     for (let i = 0; i < 3; i++) {
       this.box(p.x - 8 + i * 5, y, z0 - 16, p.x - 7 + i * 5, y + 1.8, z0 - 15.2, { color: '#ff5b5b', material: 'metal', hp: 150, harvest: 8 });
+      this.pumps.push(new THREE.Vector3(p.x - 7.5 + i * 5, y, z0 - 15.6));
     }
     for (const [tx, tz] of [[x0 - 3, z0 + 2], [x1 + 3, z1 - 3], [x0 - 4, z1 + 2]]) {
       for (let k = 0; k < 3; k++) {
@@ -774,6 +780,167 @@ export class World {
     this.exclude.push({ x, z, r: 5 });
     this.animated.push(() => screen.material.emissive.set(van.cd > 0 ? '#551111' : '#1a8a99'));
     return van;
+  }
+
+  // ------------------------------------------------ milestone 4: wheels & deals
+  _clearSpot(x, z, r) {
+    this.exclude.push({ x, z, r });
+    if (this._trees) this._trees = this._trees.filter((t) => Math.hypot(t.x - x, t.z - z) > r);
+  }
+
+  _buildWheelsAndDeals() {
+    // drivable vehicles (yaw 0 faces -z)
+    for (const [type, x, z, yaw] of [
+      ['truck', -66, 37, 0], ['truck', -104, 10, 0], ['truck', -2, 86, Math.PI / 2], ['truck', 58, -62, 0],
+      ['kart', 48, 57, 0], ['kart', 48, 62, 0], ['kart', -19, 10, Math.PI / 2], ['kart', 106, -8, 0],
+    ]) {
+      this.vehicleSpots.push({ type, x, z, yaw });
+      // keep the spot and a lane ahead of it free of trees and rocks
+      for (let d = 0; d <= 18; d += 6) this._clearSpot(x - Math.sin(yaw) * d, z - Math.cos(yaw) * d, type === 'truck' ? 5 : 4);
+    }
+    // an extra fuel pump at the Snack Shack
+    const sx = 104, sz = 10, sy = this.hm.get(sx, sz);
+    this.box(sx - 0.5, sy, sz - 0.4, sx + 0.5, sy + 1.8, sz + 0.4, { color: '#ff5b5b', material: 'metal', hp: 150, harvest: 8 });
+    this.box(sx - 0.55, sy + 1.2, sz - 0.45, sx + 0.55, sy + 1.5, sz + 0.45, { color: '#ffffff', solid: false });
+    this.pumps.push(new THREE.Vector3(sx, sy, sz));
+    this._clearSpot(sx, sz, 3);
+    // vending bots
+    this._vendor(-9, -11, Math.PI / 2, '#ffcf3f', 'SNACK-O-BOT');
+    this._vendor(76, 77, Math.PI, '#7ed957', 'PICKLE-O-BOT');
+    this._vendor(70, -46, 0, '#ff5c7a', 'BOOM-O-BOT');
+    // upgrade benches
+    this._bench(-78, 49, 0);
+    this._bench(-58, -57, Math.PI / 2);
+    // ziplines between high points
+    this._zipline(19, 14, 56, 50);
+    this._zipline(-10, -14, -50, -50);
+    this._zipline(-60, 72, -25, 96);
+  }
+
+  /** A vending bot behind a counter. The customer stands on the counter's open side. */
+  _vendor(x, z, yaw, color, label) {
+    const i = this.vendors.length;
+    const y = this.hm.get(x, z);
+    const g = new THREE.Group();
+    const counter = new THREE.Mesh(boxGeo(2.6, 1.1, 1.0), mat('#ffffff', 'wood'));
+    counter.position.set(0, 0.55, 0.35);
+    const front = new THREE.Mesh(boxGeo(2.62, 0.3, 1.02), mat(color));
+    front.position.set(0, 0.95, 0.35);
+    const body = new THREE.Mesh(boxGeo(1.2, 1.4, 0.9), mat('#9fb2c4', 'metal'));
+    body.position.set(0, 1.3, -0.55);
+    const head = new THREE.Mesh(boxGeo(1.0, 0.8, 0.8), mat('#c9d6e3', 'metal'));
+    head.position.set(0, 2.4, -0.55);
+    const face = new THREE.Mesh(boxGeo(0.8, 0.5, 0.05), mat('#1d2a3a', null, { emissive: '#0b3a4a' }));
+    face.position.set(0, 0.02, 0.41);
+    head.add(face);
+    for (const ex of [-0.18, 0.18]) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: '#39f0ff' }));
+      e.position.set(ex, 0.08, 0.45);
+      head.add(e);
+    }
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 5), mat('#dddddd'));
+    ant.position.set(0, 3.05, -0.55);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color }));
+    bulb.position.set(0, 3.32, -0.55);
+    const awning = new THREE.Mesh(boxGeo(3.0, 0.15, 1.8), mat(color));
+    awning.position.set(0, 3.7, 0);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.5), new THREE.MeshLambertMaterial({ map: textTexture(label, '#1d2a3a', color, 512) }));
+    sign.position.set(0, 3.95, 0.91);
+    for (const px of [-1.4, 1.4]) {
+      const post = new THREE.Mesh(boxGeo(0.12, 3.7, 0.12), mat('#8a5a33', 'wood'));
+      post.position.set(px, 1.85, 0.8);
+      g.add(post);
+    }
+    g.add(counter, front, body, head, ant, bulb, awning, sign);
+    g.position.set(x, y, z);
+    g.rotation.y = yaw;
+    g.traverse((m) => (m.castShadow = true));
+    this.root.add(g);
+    this.animated.push((t) => {
+      head.rotation.y = Math.sin(t * 0.9 + i) * 0.35;
+      bulb.material.color.set(Math.sin(t * 4 + i) > 0 ? color : '#ffffff');
+    });
+    // group +z points out of the counter: that side is where customers stand
+    const ox = Math.sin(yaw), oz = Math.cos(yaw);
+    this.physics.add(new Collider({ minX: x - 1.3, maxX: x + 1.3, minZ: z - 1.3, maxZ: z + 1.3, minY: y, maxY: y + 1.1 }));
+    this.physics.add(new Collider({ minX: x - 0.5, maxX: x + 0.5, minZ: z - 0.5, maxZ: z + 0.5, minY: y + 1.1, maxY: y + 2.8 }));
+    const stand = new THREE.Vector3(x + ox * 2.3, y, z + oz * 2.3);
+    this.vendors.push({ i, label, pos: new THREE.Vector3(x, y, z), stand, color });
+    this._clearSpot(x, z, 4);
+  }
+
+  _bench(x, z, yaw) {
+    const y = this.hm.get(x, z);
+    const g = new THREE.Group();
+    const top = new THREE.Mesh(boxGeo(2.4, 0.18, 1.1), mat('#b5773b', 'wood'));
+    top.position.y = 1.0;
+    g.add(top);
+    for (const [lx, lz] of [[-1.05, -0.4], [1.05, -0.4], [-1.05, 0.4], [1.05, 0.4]]) {
+      const leg = new THREE.Mesh(boxGeo(0.14, 1.0, 0.14), mat('#5a5a62', 'metal'));
+      leg.position.set(lx, 0.5, lz);
+      g.add(leg);
+    }
+    const vise = new THREE.Mesh(boxGeo(0.4, 0.35, 0.3), mat('#3f7bff', 'metal'));
+    vise.position.set(-0.7, 1.26, 0);
+    const anvil = new THREE.Mesh(boxGeo(0.7, 0.3, 0.35), mat('#2a2a2a', 'metal'));
+    anvil.position.set(0.5, 1.24, 0);
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.06, 6, 16), new THREE.MeshBasicMaterial({ color: '#ffae1a' }));
+    glow.rotation.x = Math.PI / 2;
+    glow.position.set(0, 1.12, 0);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.4), new THREE.MeshLambertMaterial({ map: textTexture('UPGRADE BENCH', '#1d2a3a', '#ffae1a', 512), side: THREE.DoubleSide }));
+    sign.position.set(0, 1.75, -0.5);
+    g.add(vise, anvil, glow, sign);
+    g.position.set(x, y, z);
+    g.rotation.y = yaw;
+    g.traverse((m) => (m.castShadow = true));
+    this.root.add(g);
+    this.animated.push((t) => glow.scale.setScalar(1 + Math.sin(t * 3) * 0.15));
+    this.physics.add(new Collider({ minX: x - 1.2, maxX: x + 1.2, minZ: z - 1.2, maxZ: z + 1.2, minY: y, maxY: y + 1.1 }));
+    this.benches.push({ i: this.benches.length, pos: new THREE.Vector3(x, y, z) });
+    this._clearSpot(x, z, 3.5);
+  }
+
+  /** A cable between two towers; riders hang under it. `line.at(t)` is the cable point at 0..1. */
+  _zipline(ax, az, bx, bz) {
+    const ga = this.hm.get(ax, az), gb = this.hm.get(bx, bz);
+    const len = Math.hypot(bx - ax, bz - az);
+    const sag = len * 0.035;
+    // towers tall enough that a rider (2.2 m under the cable) clears the ground everywhere
+    let ha = ga + 7, hb = gb + 7;
+    let need = 0;
+    for (let i = 1; i < 40; i++) {
+      const t = i / 40;
+      const cy = ha + (hb - ha) * t - sag * 4 * t * (1 - t);
+      need = Math.max(need, this.hm.get(ax + (bx - ax) * t, az + (bz - az) * t) + 3.4 + 2.2 - cy);
+    }
+    ha += need;
+    hb += need;
+    const line = { i: this.ziplines.length, a: new THREE.Vector3(ax, ha, az), b: new THREE.Vector3(bx, hb, bz), sag, len };
+    line.at = (t, out = new THREE.Vector3()) => out.lerpVectors(line.a, line.b, t).setY(line.a.y + (line.b.y - line.a.y) * t - sag * 4 * t * (1 - t));
+    line.base = [new THREE.Vector3(ax, ga, az), new THREE.Vector3(bx, gb, bz)];
+    this.ziplines.push(line);
+    for (const [x, z, g0, top] of [[ax, az, ga, ha], [bx, bz, gb, hb]]) {
+      const h = top - g0 + 0.6;
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.32, h, 8), mat('#ff8a3d', 'metal'));
+      pole.position.set(x, g0 + h / 2, z);
+      const cap = new THREE.Mesh(boxGeo(1.4, 0.3, 0.5), mat('#1d2a3a', 'metal'));
+      cap.position.set(x, top + 0.2, z);
+      cap.rotation.y = Math.atan2(bx - ax, bz - az);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 0.3, 12), mat('#39f0ff', null, { emissive: '#0b4a55' }));
+      base.position.set(x, g0 + 0.15, z);
+      pole.castShadow = cap.castShadow = true;
+      this.root.add(pole, cap, base);
+      this.physics.add(new Collider({ minX: x - 0.3, maxX: x + 0.3, minZ: z - 0.3, maxZ: z + 0.3, minY: g0, maxY: top + 0.4 }));
+      this._clearSpot(x, z, 4);
+    }
+    const pts = [];
+    for (let i = 0; i <= 24; i++) pts.push(line.at(i / 24));
+    this.root.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.05, 5, false), mat('#222222')));
+    // keep trees out from under the cable
+    for (let i = 0; i <= 12; i++) {
+      const p = line.at(i / 12);
+      this._clearSpot(p.x, p.z, 4);
+    }
   }
 
   barrel(x, y, z) {

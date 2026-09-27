@@ -88,11 +88,18 @@ export class Actor {
     this.netHeld = null; // client side: what a remote actor is holding
     this.reviveHold = false;
     this.stepT = 0;
+    // milestone 4: vehicles, ziplines, Benton Bucks, per-match stats for challenges
+    this.vehicle = null;
+    this.seat = -1;
+    this.zip = null; // { line, t, dir }
+    this.bucks = 0;
+    this.stats = { driven: 0, zips: 0, chests: 0, spent: 0, upgrades: 0, runovers: 0 };
     this.game.scene.add(this.model.root);
   }
 
   get height() {
     if (this.downed) return 0.8;
+    if (this.state === 'drive') return CROUCH_HEIGHT;
     return this.crouch || this.slideT > 0 ? CROUCH_HEIGHT : HEIGHT;
   }
 
@@ -110,7 +117,8 @@ export class Actor {
   }
 
   canAct() {
-    return this.alive && !this.downed && (this.state === 'ground' || this.state === 'air');
+    // passengers (not drivers) and zipline riders can shoot
+    return this.alive && !this.downed && (this.state === 'ground' || this.state === 'air' || this.state === 'zip' || (this.state === 'drive' && this.seat > 0));
   }
 
   // ------------------------------------------------------------------ health
@@ -152,6 +160,10 @@ export class Actor {
       this.ammo[it.id] += take;
       return it.count - take > 0 ? { ...it, count: it.count - take } : null;
     }
+    if (it.kind === 'coin') {
+      this.bucks += it.count;
+      return null;
+    }
     if (it.kind === 'mat') {
       const room = MAT_MAX - this.mats[it.id];
       const take = Math.min(room, it.count);
@@ -184,7 +196,7 @@ export class Actor {
   }
 
   hasRoomFor(it) {
-    if (it.kind === 'ammo' || it.kind === 'mat') return true;
+    if (it.kind === 'ammo' || it.kind === 'mat' || it.kind === 'coin') return true;
     if (this.slots.includes(null)) return true;
     if (it.kind === 'consumable' || it.kind === 'throwable') {
       return this.slots.some((s) => s && s.kind === it.kind && s.id === it.id && s.count < stackMax(it));
@@ -304,8 +316,12 @@ export class Actor {
 
   /** Movement for one frame. `inp` fields: see newInput(). */
   move(dt, inp) {
-    if (!this.alive || this.state === 'bus') return;
+    if (!this.alive || this.state === 'bus' || this.state === 'drive') return;
     const phys = this.game.world.physics;
+    if (this.state === 'zip') {
+      this._zipMove(dt, inp);
+      return;
+    }
     if (this.state === 'mantle') {
       const m = this.mantle;
       m.t += dt;
@@ -470,6 +486,47 @@ export class Actor {
     this.pos.z = Math.max(-lim, Math.min(lim, this.pos.z));
   }
 
+  /** Hops onto a zipline at the end nearest to us, heading for the other end. */
+  startZip(line) {
+    const atA = this.pos.distanceTo(line.base[0]) < this.pos.distanceTo(line.base[1]);
+    this.zip = { line, t: atA ? 0.02 : 0.98, dir: atA ? 1 : -1 };
+    this.state = 'zip';
+    this.grounded = false;
+    this.crouch = this.emote = false;
+    this.stats.zips++;
+    this.vel.set(0, 0, 0);
+    this._zipMove(0, { jump: false });
+    sfx.play('zip', this.pos);
+  }
+
+  _zipMove(dt, inp) {
+    const z = this.zip;
+    if (!z) {
+      this.state = 'air';
+      return;
+    }
+    const L = z.line;
+    const speed = 17 * (this.buffs.zoom ? 1.2 : 1);
+    z.t += (z.dir * speed * dt) / L.len;
+    const end = z.t <= 0 || z.t >= 1;
+    z.t = Math.max(0, Math.min(1, z.t));
+    const p = L.at(z.t);
+    const fx = (L.b.x - L.a.x) / L.len * z.dir, fz = (L.b.z - L.a.z) / L.len * z.dir;
+    this.vel.set(fx * speed, 0, fz * speed);
+    this.pos.set(p.x, p.y - 2.2, p.z);
+    if (end || inp.jump) {
+      // let go: keep the momentum, a little hop
+      this.zip = null;
+      this.state = 'air';
+      this.vel.set(fx * speed * 0.6, inp.jump ? JUMP_V * 0.7 : 2, fz * speed * 0.6);
+      if (end) {
+        // step off beside the tower
+        this.pos.x += fx * 1.2;
+        this.pos.z += fz * 1.2;
+      }
+    }
+  }
+
   _deploy() {
     this.state = 'glide';
     if (!this.isBot) sfx.play('glider');
@@ -589,9 +646,9 @@ export class Actor {
     m.setHeld(held, rar);
     m.animate(dt, {
       t,
-      speed: Math.hypot(this.vel.x, this.vel.z),
-      state: this.state === 'ground' ? 'ground' : this.state === 'mantle' ? 'air' : this.state,
-      crouch: this.crouch,
+      speed: this.state === 'drive' || this.state === 'zip' ? 0 : Math.hypot(this.vel.x, this.vel.z),
+      state: this.state === 'ground' || this.state === 'drive' ? 'ground' : this.state === 'mantle' || this.state === 'zip' ? 'air' : this.state,
+      crouch: this.crouch || this.state === 'drive',
       slide: this.slideT > 0,
       sprint: this.sprinting,
       pitch: this.aimPitch,
@@ -611,7 +668,7 @@ export class Actor {
     else if (it && it.kind === 'throwable') { pose = 'throw'; key = it.id; }
     else if (it && it.kind === 'consumable') { key = 'none'; }
     else pose = 'pickaxe';
-    if (this.state === 'skydive' || this.state === 'glide' || this.state === 'swim' || this.downed) key = 'none';
+    if (this.state === 'skydive' || this.state === 'glide' || this.state === 'swim' || this.downed || (this.state === 'drive' && this.seat === 0)) key = 'none';
     return { pose, key, rarity };
   }
 

@@ -16,14 +16,15 @@
 import * as THREE from 'three';
 import { sfx } from '../core/audio.js';
 import { WEAPONS, PICKAXE } from '../gameplay/items.js';
+import { buy, upgrade } from '../gameplay/economy.js';
 
 export const PROTO = 1;
 export const MAX_HUMANS = 4;
-const ST = ['bus', 'skydive', 'glide', 'ground', 'air', 'swim', 'mantle'];
+const ST = ['bus', 'skydive', 'glide', 'ground', 'air', 'swim', 'mantle', 'drive', 'zip'];
 export const HELD = ['none', 'pickaxe', 'ar', 'smg', 'shotgun', 'pistol', 'sniper', 'launcher', 'boomball'];
 const POSE = ['none', 'gun', 'pickaxe', 'build', 'heal', 'throw'];
 const FL = { alive: 1, downed: 2, crouch: 4, emote: 8, ads: 16, build: 32, sprint: 64, slide: 128, holdE: 256 };
-const KIND = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card'];
+const KIND = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin'];
 const AMMO_K = ['light', 'medium', 'heavy', 'shells', 'rockets'];
 const MAT_K = ['wood', 'brick', 'metal'];
 const r10 = (v) => Math.round(v * 10);
@@ -135,8 +136,10 @@ export class HostNet {
     if (me && a.alive && a.state !== 'bus' && (me[10] | 0) === (a.ep | 0)) {
       const st = ST[me[8]];
       const nx = me[0] / 10, ny = me[1] / 10, nz = me[2] / 10;
-      // client-simulated movement, with a sanity cap on teleports
-      if (st && st !== 'bus' && Math.hypot(nx - a.pos.x, nz - a.pos.z) < 60) {
+      if (a.vehicle && Array.isArray(pr.mv)) this.game.vehicles.applyDriver(a, pr.mv);
+      if (st === 'zip' && a.state !== 'zip') a.stats.zips++;
+      // client-simulated movement, with a sanity cap on teleports (seats are placed by the host)
+      if (st && st !== 'bus' && !a.vehicle && st !== 'drive' && Math.hypot(nx - a.pos.x, nz - a.pos.z) < 60) {
         a.pos.set(nx, ny, nz);
         a.vel.set(me[3] / 10, me[4] / 10, me[5] / 10);
         a.aimYaw = a.yaw = me[6] / 100;
@@ -222,6 +225,22 @@ export class HostNet {
       }
       case 'g': g.teams.ping(a, new THREE.Vector3(c[2] / 10, c[3] / 10, c[4] / 10)); break;
       case 'x': g.applyDamage(a, Math.min(200, Math.max(0, c[2])), null, { fall: true }); break;
+      case 've': {
+        const v = g.vehicles.list[c[2]];
+        if (v && a.canAct() && !a.vehicle && v.pos.distanceTo(a.pos) < 7) g.vehicles.enter(a, v);
+        break;
+      }
+      case 'vx': if (a.vehicle) g.vehicles.exit(a); break;
+      case 'by': {
+        const r = buy(g, a, c[2] | 0, c[3] | 0);
+        if (r) g.notify(a, r.text, r.color);
+        break;
+      }
+      case 'ug': {
+        const r = upgrade(g, a, c[2] | 0);
+        if (r) g.notify(a, r.text, r.color);
+        break;
+      }
       default: break;
     }
   }
@@ -240,6 +259,7 @@ export class HostNet {
       }),
       s: [r10(st.center.x), r10(st.center.y), r10(st.radius), r10(st.next.c.x), r10(st.next.c.y), r10(st.next.r), ['wait', 'shrink', 'done'].indexOf(st.stage), r10(st.timer), st.phase],
       pj: g.combat.projectiles.slice(0, 12).map((p) => [p.kind === 'grenade' ? 2 : p.kind === 'rocket' ? 1 : 0, r10(p.pos.x), r10(p.pos.y), r10(p.pos.z)]),
+      vh: g.vehicles.rows(),
     };
   }
 
@@ -260,6 +280,7 @@ export class HostNet {
         rv: r10(a.reviveT),
         rb: r10(a.rebootT),
         rd: a.canRedeploy ? 1 : 0,
+        bk: a.bucks,
       };
     }
     return out;
@@ -346,6 +367,7 @@ export class ClientNet {
       const f = flagsOf(p) | (p.reviveHold ? FL.holdE : 0);
       this.room.presence({
         me: [r10(p.pos.x), r10(p.pos.y), r10(p.pos.z), r10(p.vel.x), r10(p.vel.y), r10(p.vel.z), r100(p.yaw), r100(p.aimPitch), ST.indexOf(p.state), f, p.ep | 0],
+        mv: g.vehicles.driverRow(p),
         q: this.q,
       }).catch(() => {});
     }
@@ -423,6 +445,7 @@ export class ClientNet {
       a.slideT = f & FL.slide ? 0.3 : 0;
       a.netHeld = { key: HELD[Math.floor(r[11] / 100)] || 'none', pose: POSE[Math.floor(r[11] / 10) % 10] || 'none', rarity: r[11] % 10 };
     }
+    if (ss.vh) g.vehicles.applyRows(ss.vh, me);
     const s = ss.s;
     g.storm.applyNet(s);
     const P = pv['a' + me.id];
@@ -445,6 +468,7 @@ export class ClientNet {
     me.reviveT = P.rv / 10;
     me.rebootT = P.rb / 10;
     me.canRedeploy = !!P.rd;
+    me.bucks = P.bk | 0;
     me.reviveTarget = me.reviveT > 0 ? { name: 'teammate' } : null;
     me.rebootVan = me.rebootT > 0 ? {} : null;
   }
@@ -617,6 +641,19 @@ export class NetActions {
     this.net.cmd('g', r10(pos.x), r10(pos.y), r10(pos.z));
     sfx.play('ui');
   }
+  enterVehicle(v) {
+    this.net.cmd('ve', v.id);
+    return true;
+  }
+  exitVehicle() {
+    this.net.cmd('vx');
+  }
+  buy(vi, k) {
+    this.net.cmd('by', vi, k);
+  }
+  upgrade(bi) {
+    this.net.cmd('ug', bi);
+  }
 }
 
 /** Solo / host: actions run directly on the simulation. */
@@ -641,6 +678,16 @@ export class LocalActions {
   edit(piece, tiles) { return this.g.building.applyEdit(piece, tiles); }
   repair(piece) { return this.g.building.repairOrUpgrade(this.p, piece); }
   ping(pos) { this.g.teams.ping(this.p, pos); }
+  enterVehicle(v) { return this.g.vehicles.enter(this.p, v); }
+  exitVehicle() { this.g.vehicles.exit(this.p); }
+  buy(vi, k) {
+    const r = buy(this.g, this.p, vi, k);
+    if (r) this.g.hud.toast(r.text, r.color, 2);
+  }
+  upgrade(bi) {
+    const r = upgrade(this.g, this.p, bi);
+    if (r) this.g.hud.toast(r.text, r.color, 2);
+  }
 }
 
 export { ST, FL, WEAPONS };

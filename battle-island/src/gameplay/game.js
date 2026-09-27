@@ -16,9 +16,12 @@ import { Effects } from './effects.js';
 import { BotBrain, BOT_NAMES } from './bots.js';
 import { PlayerController } from './player.js';
 import { Teams } from './teams.js';
+import { Vehicles } from './vehicles.js';
+import { dropBucks } from './economy.js';
 import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
 import { superchargeXP } from '../core/supercharge.js';
+import { applyChallenges } from '../core/challenges.js';
 import { sfx } from '../core/audio.js';
 import { save, levelInfo } from '../core/save.js';
 import { applyRanked, botSkillRange, isSupercharged, rankState } from '../core/ranked.js';
@@ -134,6 +137,7 @@ export class Game {
     this.loot = new Loot(this);
     if (this.role !== 'client') this.loot.spawnInitial(rng);
     this.building = new Building(this);
+    this.vehicles = new Vehicles(this);
     this.storm = new Storm(this, rng);
     this.teamSize = opts.teamSize || 1;
     this.teams = new Teams(this, this.teamSize);
@@ -253,6 +257,7 @@ export class Game {
     this.combat.clear();
     this.loot.clear();
     this.building.clear();
+    this.vehicles.clear();
     this.storm.dispose();
     this.effects.clear();
     this.scene.remove(this.world.root);
@@ -400,6 +405,10 @@ export class Game {
       this.building.damage(c.piece, dmg, src);
       return;
     }
+    if (c.vehicle) {
+      this.vehicles.damage(c.vehicle, dmg, src);
+      return;
+    }
     c.hp -= dmg;
     c.lastDamager = src;
     if (c.mesh && !c.inst) {
@@ -426,6 +435,9 @@ export class Game {
     target.use = null;
     target.emote = false;
     target.reviveTarget = target.rebootVan = null;
+    if (target.vehicle) this.vehicles.exit(target, true);
+    target.zip = null;
+    dropBucks(this, target);
     // carried reboot cards fall to the ground with everything else
     for (const id of target.cards) this.teams.dropCard(this.actors[id]);
     target.cards = [];
@@ -472,7 +484,8 @@ export class Game {
   /** Stats for one human's result screen (XP is computed on their own device). */
   _stats(a, won) {
     const place = won ? 1 : this.teams.place[a.team] || a.place;
-    return { won, place, total: Math.ceil(this.actors.length / this.teamSize), team: this.teamSize > 1, kills: a.kills, damage: Math.round(a.damageDealt), time: Math.floor(this.time), killer: a.killerName || null };
+    const ms = Object.fromEntries(Object.entries(a.stats).map(([k, v]) => [k, Math.round(v)]));
+    return { won, place, total: Math.ceil(this.actors.length / this.teamSize), team: this.teamSize > 1, kills: a.kills, damage: Math.round(a.damageDealt), time: Math.floor(this.time), killer: a.killerName || null, ms };
   }
 
   _sendResult(h, won) {
@@ -506,14 +519,15 @@ export class Game {
     const before = levelInfo(save.data.progress.xp).level;
     const pr = save.data.progress;
     const superXP = superchargeXP(xp); // daily Supercharged XP doubles it while the pool lasts
-    pr.xp += xp + superXP;
+    const ch = applyChallenges(st.ms, { kills, damage: st.damage, place });
+    pr.xp += xp + superXP + ch.xp;
     pr.matches++;
     pr.kills += kills;
     if (won) pr.wins++;
     if (!pr.bestPlace || place < pr.bestPlace) pr.bestPlace = place;
     save.write();
     const after = levelInfo(pr.xp).level;
-    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: xp + superXP, superXP, levelUp: after > before ? after : 0, killer: st.killer };
+    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: xp + superXP + ch.xp, superXP, chalXP: ch.xp, challenges: ch.rows, levelUp: after > before ? after : 0, killer: st.killer };
     if (this.ranked) this.result.ranked = applyRanked(this.mode, { won, place, total: totalTeams, kills }, this.lobbyRating);
     if (won) {
       sfx.play('win');
@@ -558,6 +572,8 @@ export class Game {
       if (a.brain) a.move(dt, a.brain.update(dt));
       a.tickTimers(dt);
     }
+    this.vehicles.checkOccupants();
+    this.vehicles.update(dt);
     this.teams.update(dt);
     this.combat.update(dt);
     this.loot.update(dt, t);
@@ -580,9 +596,11 @@ export class Game {
     for (const a of this.actors) if (a.state === 'bus') a.pos.copy(this.bus.position);
     const p = this.player;
     this.controller.update(dt);
+    this.vehicles.clientUpdate(dt);
     p.fireCd = Math.max(0, p.fireCd - dt);
     p.equipT = Math.max(0, p.equipT - dt);
     this.net.smooth(dt);
+    this.vehicles.placeOccupants();
     for (const pg of this.teams.pings) pg.t -= dt;
     this.teams.pings = this.teams.pings.filter((pg) => pg.t > 0);
     this.loot.update(dt, t, true);

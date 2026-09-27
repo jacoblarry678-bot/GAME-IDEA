@@ -112,6 +112,20 @@ export function cardModel() {
   return g;
 }
 
+export function coinModel() {
+  const g = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 14), new THREE.MeshLambertMaterial({ color: '#ffd23f', emissive: '#7a5a00' }));
+    c.position.set((i - 1) * 0.12, 0.05 + i * 0.07, 0);
+    g.add(c);
+  }
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.07, 14), new THREE.MeshLambertMaterial({ color: '#7ed957', emissive: '#1d4a12' }));
+  b.position.set(0, 0.28, 0);
+  b.rotation.x = Math.PI / 2;
+  g.add(b);
+  return g;
+}
+
 export function ammoModel(id) {
   const g = new THREE.Group();
   g.add(bx(0.4, 0.22, 0.28, AMMO[id]?.color || '#fff', 0, 0.11, 0), bx(0.42, 0.05, 0.3, '#333', 0, 0.22, 0));
@@ -131,5 +145,6 @@ export function itemModel(it) {
   if (it.kind === 'consumable') return consumableModel(it.id);
   if (it.kind === 'ammo') return ammoModel(it.id);
   if (it.kind === 'card') return cardModel();
+  if (it.kind === 'coin') return coinModel();
   return matModel(it.id);
 }

@@ -40,7 +40,8 @@ Touch controls turn on automatically on touch screens. You can force them on or 
 | Right thumb (drag) | Look / aim |
 | FIRE | Shoot, swing, place a build piece or use an item. Hold it and drag to aim while firing |
 | AIM · JUMP · CROUCH · RELOAD | Aim down sights (toggle) · jump / glider · crouch/slide · reload |
-| USE | Open, pick up, or hold to revive/reboot. It lights up when something is in reach |
+| USE | Open, pick up, or hold to revive/reboot. It lights up when something is in reach and names the action (ENTER, EXIT, ZIP, SHOP, UPGRADE) |
+| Driving | The stick drives and steers (push to the rim to boost a kart) · JUMP honks · USE gets out. FIRE and AIM hide while you drive |
 | BUILD · ⛏ | Build mode · pickaxe |
 | EDIT · FIX · MAT | Edit, repair/upgrade, and material. These show up when you aim at a build or are in build mode |
 | Slots / build pieces | Tap to select |
@@ -73,6 +74,12 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 | V | Edit the wall/floor you aim at: click or drag tiles to cut, V confirms, R resets, B cancels |
 | U | Repair the build you aim at, or upgrade it wood → brick → metal |
 | Hold E | Revive a knocked teammate · reboot teammates at a reboot van |
+| E (next to a vehicle) | Drive, or ride as a passenger · E again gets out |
+| W/S · A/D (driving) | Throttle / brake and reverse · steer |
+| Shift · H (driving) | Boost (Pickle Kart) · horn |
+| E (zipline tower) | Ride the zipline · Space lets go |
+| E (vending bot) | Open the shop · 1–3 buy with Benton Bucks · E closes |
+| E (upgrade bench) | Upgrade the held weapon one rarity |
 | Z / middle click | Ping (enemy, chest, loot or "going here") |
 | M | Full map (click to place a drop marker) |
 | N | Emote |
@@ -162,16 +169,49 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - It's off during placement matches and at Legend.
   - The tag shows on the lobby rank card, the ranked HUD, the results screen and the Ranked screen (boosted matches get a ⚡ in the history).
 
+## Milestone 4: Wheels & Deals
+
+- [x] **Vehicles:**
+  - Four **Diesel Trucks** (a driver and 3 passengers) and four **Pickle Karts** (one seat, Shift to boost). They're parked at the Diesel Garage, the Farm House, the Lookout Cabin, Boom Co. Depot, Pickles Park, the Clubhouse and the Snack Shack.
+  - Arcade handling over the real terrain: they climb build ramps and hop crests.
+  - **Collisions:** hitting a wall stops the vehicle and damages it. At speed they smash weaker things, like build pieces and props.
+  - **Fuel and pumps:** driving burns fuel. Stop at a pump (Diesel Garage or Snack Shack) to refuel.
+  - **Damage:** vehicles have health. Bullets, pickaxes and explosions damage them, and at 0 they explode and throw everyone out.
+  - **Run-overs:** hitting an opponent at speed hurts them. Teammates are safe.
+  - **Shooting:** passengers can shoot, and their shots pass out of their own vehicle. Drivers can't shoot. A driver in a truck's cab is shielded by the truck.
+  - Bot teammates hop into free seats when you drive, and hop out when you do.
+  - The HUD shows speed, health and fuel, and the map shows every vehicle.
+- [x] **Ziplines:** three cables between high points: the Clubhouse to Pickles Park, the Clubhouse to Haunt Hollow, and the Diesel Garage to the Lookout Cabin. Press E at a tower to ride; you can shoot while riding, and Space lets go.
+- [x] **Benton Bucks:** a match currency.
+  - Found in every chest, in some floor loot and in supply drops. Eliminations drop the victim's Bucks plus 25.
+  - Picked up automatically, like ammo.
+- [x] **Vending bots:** three shops, each selling three items for Bucks (E, then 1–3, or tap on a phone).
+  - **Snack-O-Bot** (Clubhouse): healing.
+  - **Pickle-O-Bot** (Pickles Park): buffs.
+  - **Boom-O-Bot** (Boom Co. Depot): Boom Balls, an Epic Long Shot and a Rare Boom Launcher.
+- [x] **Upgrade benches** (Diesel Garage and Haunt Hollow): raise the held weapon one rarity for 50 / 100 / 175 / 250 Bucks.
+- [x] **Daily challenges:**
+  - Three a day, rolled from the date so every device gets the same three. They reset at local midnight.
+  - Each is worth 1,000 bonus XP. Examples: drive 500 m, ride ziplines, open chests, spend Bucks, upgrade a weapon, run someone over, eliminations, damage, top 10, or play matches.
+  - They're shown in the lobby and on the result screen. In online matches, the host counts what you did.
+- [x] **Online:** everything works for up to 4 players.
+  - A player's own vehicle is simulated on their device, like their movement. Other vehicles follow the host.
+  - Entering, leaving, buying and upgrading are checked by the host.
+  - A 30-player snapshot with every vehicle moving is about 2.5 KB, under the 4 KiB limit.
+- Also in this update:
+  - The lobby's side panels scroll on short windows, so nothing gets pushed off screen.
+  - Interaction prompts show the right key.
+  - Builds can't use a vehicle as support.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
 - [ ] Building: editing ramps and cones
 - [ ] Match flow: pre-match warm-up area, match replays
 - [ ] Teams: carrying knocked teammates
-- [ ] Movement: ziplines
 - [ ] Weapon attachments and scopes as separate items
-- [ ] World: drivable vehicles (fuel, damage, passengers), doors, NPCs, quests, vendors, currency, weapon upgrades, bosses, keycards and vaults
-- [ ] Progression: challenges, achievements, more emotes and cosmetics
+- [ ] World: doors, story NPCs and quests, bosses, keycards and vaults; bots that drive
+- [ ] Progression: weekly challenges, achievements, more emotes and cosmetics
 - [ ] Online: more than 4 players, host migration, joining a match in progress, and anti-cheat (the host is trusted)
 - [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization, hidden family collectibles, and rotating spooky/playground events
 
@@ -186,10 +226,12 @@ node tools/island-features.mjs              # 10 checks
 node tools/island-milestone2.mjs            # 19 checks
 node tools/island-ranked.mjs                # 12 checks
 node tools/island-supercharged.mjs          # 13 checks
+node tools/island-milestone4.mjs            # 22 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
-node tools/island-mobile.mjs                # 17 checks: emulated phone with real multi-touch
+node tools/island-online-m4.mjs             # 11 checks: a client drives, rides and shops through the host
+node tools/island-mobile.mjs                # 18 checks: emulated phone with real multi-touch
 ```
 
 - **`island-playtest.mjs`:** a full solo match. Bus jump, landing, chest opening, pickup/drop/stacking/slot limit, heal interruption, rifle damage and reload, all four build pieces, running up a ramp, destroying a structure, harvesting, storm damage, pause/resume, and a full bot-vs-bot match to the final two. It then covers victory, Play again, player elimination with spectating, returning to the lobby, and every lobby button.
@@ -207,6 +249,20 @@ node tools/island-mobile.mjs                # 17 checks: emulated phone with rea
 - **`island-supercharged.mjs`:**
   - Supercharged XP: the starting pool, daily refill and 3-day cap, XP doubling in a real match (saved and shown), running out, and the empty-pool refill timer.
   - Supercharged rank: when it turns on and off, no RP loss, ×1.5 gains, and the lobby card, HUD, results and Ranked screen.
+- **`island-milestone4.mjs`:**
+  - The world's vehicles, shops, benches, ziplines and pumps.
+  - Driving with real keys: entering with E, W/A driving, the vehicle panel and getting out.
+  - Fuel burn, running dry and refuelling at a pump.
+  - A bot teammate riding along.
+  - Run-overs (opponents only), crashing into a wall, shooting a truck, and the explosion that throws occupants out.
+  - Drivers can't shoot; passengers can.
+  - Climbing build ramps.
+  - Zipline rides: E, SPACE to let go, a full ride with ground clearance.
+  - Bucks from chests and eliminations.
+  - Buying at a vending bot (and being refused when short).
+  - Upgrading at a bench.
+  - Daily challenges paying out on the result screen and in the lobby.
+- **`island-online-m4.mjs`:** the same vehicles on both machines, a client driving (the host sees the movement, fuel and distance), getting out, the client seeing the host drive, a client purchase checked by the host, snapshot size with every vehicle moving, and challenge stats reaching the client's result.
 - **`island-online.mjs`:**
   - Joining: open-games list, roster, and matching rosters and bots on both machines.
   - Movement: bus jump, landing position agreement, host teleports, and client movement.
@@ -216,7 +272,7 @@ node tools/island-mobile.mjs                # 17 checks: emulated phone with rea
   - Presence stays under the 4 KiB limit with 30 players.
   - It also passes against the production build served by the relay server.
 - **`island-online-squad.mjs`:** a phone client and a desktop host on the same Duos squad revive each other over the network.
-- **`island-mobile.mjs`:** phone detection, the joystick, drag-look, firing while steering (multi-touch), tapping slots, build mode, the map, pause, and the portrait prompt.
+- **`island-mobile.mjs`:** phone detection, the joystick, drag-look, firing while steering (multi-touch), tapping slots, build mode, the map, pause, driving with the stick (USE to get in and out), and the portrait prompt.
 
 Online-play limits:
 - The claude.ai room path couldn't be tested from here, because it needs signed-in claude.ai viewers. It uses the same protocol, message sizes and rates as the relay path, which is fully tested.
@@ -230,12 +286,15 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | Path | What it does |
 | --- | --- |
 | `src/world/physics.js` | Heightmap, box/ramp/cone colliders, spatial hash, raycasts |
-| `src/world/island.js` | Terrain, POIs, buildings, props, chests, map image |
+| `src/world/island.js` | Terrain, POIs, buildings, props, chests, vehicle spots, pumps, vending bots, benches, ziplines, map image |
 | `src/entities/characters.js` | Kid models, outfits, procedural animation |
 | `src/entities/actor.js` | Movement, health/shields, inventory, item timers |
 | `src/gameplay/game.js` | Match flow, bus, damage routing, eliminations, XP |
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
+| `src/gameplay/vehicles.js` | Trucks and karts: handling, fuel, damage, run-overs, seats, network rows |
+| `src/gameplay/economy.js` | Benton Bucks, vending bot stock, upgrade benches |
+| `src/core/challenges.js` | Daily challenges |
 | `src/core/ranked.js` | Ranks, MMR, rank points, Supercharged rank, lobby bot skill |
 | `src/core/supercharge.js` | Daily Supercharged XP pool |
 | `src/gameplay/{combat,building,loot,storm,effects,items}.js` | Systems and data |

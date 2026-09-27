@@ -218,12 +218,16 @@ export class TouchControls {
     const p = game.player;
     const building = c.building || c.editing;
     this.btns.fire.textContent = c.editing ? 'CUT' : building ? 'PLACE' : p.item && p.item.kind === 'consumable' ? 'USE' : p.item ? 'FIRE' : 'SWING';
-    this.btns.use.textContent = c.prompt ? (c.prompt.key === 'Hold E' ? 'HOLD' : 'GRAB') : 'USE';
+    this.btns.use.textContent = c.prompt ? c.prompt.btn || (c.prompt.key === 'Hold E' ? 'HOLD' : 'GRAB') : 'USE';
     this.btns.use.classList.toggle('hot', !!c.prompt);
     this.btns.edit.textContent = c.editing ? 'DONE' : 'EDIT';
     for (const id of ['mat', 'edit', 'repair']) this.btns[id].style.display = building || c.aimPiece ? '' : 'none';
     this.btns.build.classList.toggle('lit', !!building);
     this.btns.aim.classList.toggle('lit', this.input.down('Mouse2'));
-    this.btns.build.style.display = game.mode === 'zerobuild' ? 'none' : '';
+    this.btns.build.style.display = game.mode === 'zerobuild' || p.vehicle ? 'none' : '';
+    // driving: steer with the stick, no weapons; JUMP honks
+    const driving = !!p.vehicle && p.seat === 0;
+    for (const id of ['fire', 'aim', 'reload', 'crouch', 'pick']) this.btns[id].style.display = driving ? 'none' : '';
+    this.btns.jump.textContent = driving ? 'HORN' : p.state === 'zip' ? 'DROP' : 'JUMP';
   }
 }

@@ -175,6 +175,7 @@ export class Loot {
   openChest(actor, ch) {
     if (ch.opened) return;
     ch.opened = true;
+    if (actor && actor.stats) actor.stats.chests++;
     this.game.net?.push?.(['ch', this.game.world.chests.indexOf(ch)]);
     const rng = Math.random;
     let items = ch.supply ? rollSupply(rng) : rollChest(rng);
@@ -257,14 +258,15 @@ export class Loot {
           }
           continue;
         }
-        if ((pk.it.kind !== 'ammo' && pk.it.kind !== 'mat') || pk.age < 0.5) continue;
+        if ((pk.it.kind !== 'ammo' && pk.it.kind !== 'mat' && pk.it.kind !== 'coin') || pk.age < 0.5) continue;
         if (Math.abs(pk.pos.x - a.pos.x) > 1.5 || Math.abs(pk.pos.z - a.pos.z) > 1.5 || Math.abs(pk.pos.y - a.pos.y) > 2) continue;
         if (pk.it.kind === 'mat' && this.game.mode === 'zerobuild') continue;
         const before = pk.it.count;
         const left = a.addItem(pk.it);
         if (a === this.game.player && (!left || left.count < before)) {
           sfx.play('pickup');
-          this.game.hud?.toast(`+${before - (left ? left.count : 0)} ${itemName(pk.it)}`, '#ffffff', 1.2);
+          this.game.hud?.toast(`+${before - (left ? left.count : 0)} ${itemName(pk.it)}`, pk.it.kind === 'coin' ? '#ffd23f' : '#ffffff', 1.2);
+          if (pk.it.kind === 'coin') sfx.play('coin');
         }
         if (left) {
           pk.it = left;
@@ -295,7 +297,7 @@ export class Loot {
   }
 }
 
-const KIND_S = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card'];
+const KIND_S = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin'];
 function rowToItemShim(r) {
   const kind = KIND_S[r[1]];
   if (kind === 'weapon') return { kind, id: r[2], rarity: r[3], mag: r[7] };

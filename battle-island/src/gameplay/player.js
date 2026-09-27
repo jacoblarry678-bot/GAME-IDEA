@@ -10,6 +10,7 @@ import { PIECES } from './building.js';
 import { save } from '../core/save.js';
 import { sfx } from '../core/audio.js';
 import { itemName, RARITIES } from './items.js';
+import { nearVendor, nearBench, upgradeInfo } from './economy.js';
 
 const MATS = ['wood', 'brick', 'metal'];
 const _dir = new THREE.Vector3();
@@ -41,6 +42,8 @@ export class PlayerController {
     this.exitEdit();
     this.aimPiece = null;
     this.buildInfo = null;
+    this.drive = null; // driver input for the vehicle: { thr, steer, boost }
+    this.shop = null; // open vending bot
   }
 
   /** Leaves edit mode without applying changes. */
@@ -127,6 +130,9 @@ export class PlayerController {
       if (pressed('Space')) g.actions.jumpBus();
       return;
     }
+    this.drive = null;
+    if (p.vehicle && this._vehicleControls()) return;
+    if (this.shop && (!p.canAct() || p.vehicle || Math.hypot(this.shop.stand.x - p.pos.x, this.shop.stand.z - p.pos.z) > 4.5)) this.shop = null;
 
     // movement relative to camera yaw
     let fx = 0, fz = 0;
@@ -172,14 +178,18 @@ export class PlayerController {
     // slots, pickaxe, build toggle
     for (let i = 0; i < 5; i++) {
       if (!pressed('Digit' + (i + 1))) continue;
-      if (this.building) this.piece = PIECES[Math.min(3, i)];
+      if (this.shop) {
+        if (i < 3) this.shopBuy(i);
+      } else if (this.building) this.piece = PIECES[Math.min(3, i)];
       else {
         this.exitEdit();
         g.actions.select(i);
       }
     }
     if (pressed('KeyF')) { this.building = false; this.exitEdit(); g.actions.select(-1); }
-    if ((pressed('KeyB') || pressed('KeyQ')) && g.mode !== 'zerobuild') {
+    if ((pressed('KeyB') || pressed('KeyQ')) && (p.vehicle || p.state === 'zip')) {
+      // no building from a seat or a zipline
+    } else if ((pressed('KeyB') || pressed('KeyQ')) && g.mode !== 'zerobuild') {
       if (this.editing) this.exitEdit();
       else this.building = !this.building;
       p.cancelActions();
@@ -205,7 +215,7 @@ export class PlayerController {
     const cd = this.camDir().clone();
     const skip = cam.distanceTo(p.eye);
     const o = cam.clone().addScaledVector(cd, skip);
-    const hit = g.combat.trace(o, cd, 500, p);
+    const hit = g.combat.trace(o, cd, 500, p.vehicle ? p : null);
     this.aimPoint.copy(o).addScaledVector(cd, hit ? hit.t : 500);
     const shotDir = this.aimPoint.clone().sub(p.eye).normalize();
 
@@ -305,6 +315,17 @@ export class PlayerController {
     // interact
     this.prompt = null;
     let hold = false;
+    if (p.vehicle) {
+      this.prompt = { key: 'E', text: `Exit ${p.vehicle.def.name}`, color: '#ffe9b0', btn: 'EXIT' };
+      p.reviveHold = false;
+      return;
+    }
+    if (p.state === 'zip') {
+      this.prompt = { key: 'SPACE', text: 'Let go of the zipline', color: '#39f0ff', btn: 'DROP' };
+      p.reviveHold = false;
+      p.move(dt, inp);
+      return;
+    }
     const mate = canAct && g.actors.find((a) => a !== p && a.alive && a.downed && a.team === p.team && a.pos.distanceTo(p.pos) < 2.2);
     const van = canAct && p.cards.length ? g.teams.nearestVan(p.pos, 3.2) : null;
     if (mate) {
@@ -320,8 +341,35 @@ export class PlayerController {
       }
     } else if (canAct) {
       const ch = g.loot.nearestChest(p);
-      const pk = g.loot.nearest(p, 2.4, (k) => k.it.kind !== 'ammo' && k.it.kind !== 'mat' && k.it.kind !== 'card');
-      if (ch && (!pk || ch.pos.distanceTo(p.pos) < pk.pos.distanceTo(p.pos))) {
+      const pk = g.loot.nearest(p, 2.4, (k) => k.it.kind !== 'ammo' && k.it.kind !== 'mat' && k.it.kind !== 'card' && k.it.kind !== 'coin');
+      const veh = !ch && !pk && g.vehicles.nearest(p);
+      const zl = !ch && !pk && !veh && p.grounded && this._nearZip();
+      const vend = !ch && !pk && !veh && !zl && nearVendor(g, p);
+      const bench = !ch && !pk && !veh && !zl && !vend && nearBench(g, p);
+      if (veh) {
+        const free = veh.seats.indexOf(null);
+        if (free < 0) this.prompt = { key: '—', text: `${veh.def.name} is full`, color: '#ff8a8a' };
+        else {
+          this.prompt = { key: 'E', text: free === 0 ? `Drive ${veh.def.name}` : `Ride in ${veh.def.name}`, color: '#ffd23f', btn: 'ENTER' };
+          if (pressed('KeyE')) g.actions.enterVehicle(veh);
+        }
+      } else if (zl) {
+        this.prompt = { key: 'E', text: 'Ride the zipline', color: '#39f0ff', btn: 'ZIP' };
+        if (pressed('KeyE')) p.startZip(zl);
+      } else if (vend) {
+        this.prompt = this.shop ? { key: 'E', text: 'Close shop', color: '#ffd23f', btn: 'CLOSE' } : { key: 'E', text: `Shop at ${vend.label}`, color: '#ffd23f', btn: 'SHOP' };
+        if (pressed('KeyE')) {
+          this.shop = this.shop ? null : vend;
+          sfx.play('ui');
+        }
+      } else if (bench) {
+        const info = upgradeInfo(p);
+        this.prompt = { key: info.cost ? 'E' : '—', text: info.text, color: info.ok ? info.color : '#ffe9b0', btn: 'UPGRADE' };
+        if (pressed('KeyE') && info.cost) {
+          if (info.ok) g.actions.upgrade(bench.i);
+          else g.hud.toast(`Not enough Benton Bucks (${info.cost} needed).`, '#ff8a8a', 1.5);
+        }
+      } else if (ch && (!pk || ch.pos.distanceTo(p.pos) < pk.pos.distanceTo(p.pos))) {
         this.prompt = { key: 'E', text: ch.supply ? 'Open Supply Drop' : 'Open Chest' };
         if (pressed('KeyE')) g.actions.openChest(ch);
       } else if (pk) {
@@ -345,6 +393,56 @@ export class PlayerController {
     p.move(dt, inp);
   }
 
+  /** Buys item k from the open vending bot. */
+  shopBuy(k) {
+    if (!this.shop) return;
+    this.game.actions.buy(this.shop.i, k);
+  }
+
+  _nearZip() {
+    const p = this.player;
+    for (const L of this.game.world.ziplines) {
+      for (const b of L.base) if (Math.hypot(b.x - p.pos.x, b.z - p.pos.z) < 2.6 && Math.abs(b.y - p.pos.y) < 2) return L;
+    }
+    return null;
+  }
+
+  /** Driving or riding. Returns true when the rest of the controls are skipped (the driver). */
+  _vehicleControls() {
+    const g = this.game;
+    const input = g.input;
+    const p = this.player;
+    this.building = false;
+    p.building = false;
+    this.shop = null;
+    this.exitEdit();
+    g.building.hideGhost();
+    p.aimYaw = this.yaw;
+    p.aimPitch = this.pitch;
+    if (input.pressed('KeyE')) {
+      g.actions.exitVehicle();
+      return true;
+    }
+    if (p.seat !== 0) return false; // passengers aim and shoot as usual
+    const down = (c) => input.down(c);
+    let thr = (down('KeyW') ? 1 : 0) - (down('KeyS') ? 1 : 0);
+    let steer = (down('KeyD') ? 1 : 0) - (down('KeyA') ? 1 : 0);
+    const an = input.analog;
+    let rim = false;
+    if (an && (an.x || an.y)) {
+      if (Math.abs(an.y) > 0.15) thr -= an.y;
+      if (Math.abs(an.x) > 0.15) steer += an.x;
+      rim = Math.hypot(an.x, an.y) > 0.95 && an.y < -0.5;
+    }
+    this.drive = { thr: Math.max(-1, Math.min(1, thr)), steer: Math.max(-1, Math.min(1, steer)), boost: down('ShiftLeft') || down('ShiftRight') || rim };
+    if (input.pressed('KeyH') || input.pressed('Space')) sfx.play('horn', p.pos);
+    if (input.pressed('KeyM')) g.hud.toggleMap();
+    this.prompt = { key: 'E', text: `Exit ${p.vehicle.def.name}`, color: '#ffe9b0', btn: 'EXIT' };
+    p.reviveHold = false;
+    p.reviveTarget = p.rebootVan = null;
+    return true;
+  }
+
   updateCamera(dt) {
     const g = this.game;
     const cam = g.camera;
@@ -359,6 +457,11 @@ export class PlayerController {
     } else if (a.state === 'skydive' || a.state === 'glide') {
       pivot = a.pos.clone().add(new THREE.Vector3(0, 1.5, 0));
       dist = 7.5;
+      side = 0;
+    } else if (a.vehicle && a.seat === 0) {
+      const truck = a.vehicle.type === 'truck';
+      pivot = a.vehicle.pos.clone().add(new THREE.Vector3(0, truck ? 3.4 : 2.0, 0));
+      dist = truck ? 8.5 : 5.5;
       side = 0;
     } else {
       pivot = a.pos.clone().add(new THREE.Vector3(0, (a.state === 'swim' ? 1.2 : a.height) - 0.15, 0));
@@ -383,7 +486,7 @@ export class PlayerController {
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
     const base = pivot.clone().addScaledVector(right, side);
     // camera collision: pull in when something is between pivot and camera
-    const h = g.world.physics.raycast(base.x, base.y, base.z, d.x, d.y, d.z, dist + 0.3);
+    const h = g.world.physics.raycast(base.x, base.y, base.z, d.x, d.y, d.z, dist + 0.3, a.vehicle || null);
     let want = dist;
     if (h) want = Math.max(0.3, h.t - 0.3);
     this.dist = want < this.dist ? want : this.dist + (want - this.dist) * Math.min(1, dt * 6 || 1);

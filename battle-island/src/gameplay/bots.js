@@ -239,6 +239,8 @@ export class BotBrain {
     inp.dive = 0;
     inp.mx = inp.mz = 0;
     if (!a.alive || a.state === 'bus') return inp;
+    // riding with our human: hop out when they do
+    if (a.vehicle && (!this.leader || this.leader.vehicle !== a.vehicle)) g.vehicles.exit(a);
 
     if (a.state === 'skydive' || a.state === 'glide') {
       if (this.followDrop && this.leader) {
@@ -306,6 +308,7 @@ export class BotBrain {
       case 'reboot': this._reboot(dt); break;
       case 'card': this._card(dt); break;
       case 'follow': this._follow(dt); break;
+      case 'ride': this._ride(dt); break;
       default: this._roam(dt);
     }
     if (this.mode !== 'revive') a.reviveTarget = null;
@@ -417,6 +420,13 @@ export class BotBrain {
       return true;
     }
     const L = this.leader;
+    // the player is driving: jump in if there's a seat
+    const lv = L && L.alive && L.vehicle;
+    if (lv && (a.vehicle === lv || (!a.vehicle && lv.seats.includes(null) && lv.pos.distanceTo(a.pos) < 45))) {
+      this.mode = 'ride';
+      this.goalObj = { kind: 'vehicle', obj: lv };
+      return true;
+    }
     if (L && L.alive && !L.downed && L.state !== 'bus' && L.pos.distanceTo(a.pos) > 26) {
       this.mode = 'follow';
       this.goal = L.pos;
@@ -476,6 +486,15 @@ export class BotBrain {
         this.mode = 'roam';
       }
     }
+  }
+
+  _ride(dt) {
+    const a = this.a;
+    const v = this.goalObj?.obj;
+    if (!v || !v.alive || a.vehicle) return;
+    const d = this._steer(v.pos, dt);
+    this.inp.sprint = d > 5;
+    if (this.game.vehicles.nearest(a, 2.2) === v) this.game.vehicles.enter(a, v);
   }
 
   _follow(dt) {
