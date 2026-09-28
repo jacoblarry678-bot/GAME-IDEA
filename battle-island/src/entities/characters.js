@@ -20,6 +20,7 @@ export const CHARACTERS = {
       { name: 'Everyday Ace', level: 1, c: { top: '#8e9196', top2: '#26262b', pants: '#2f3a4f', shoes: '#f5f5f5', hair: '#5b4330', hat: '#5b4330', pack: '#3f7bff', heather: true } },
       { name: 'Haunt Hunter', level: 2, c: { top: '#3a3548', top2: '#ff8a1a', pants: '#5d3f80', shoes: '#1f1f2e', hair: '#5b4330', hat: '#ff8a1a', pack: '#ff8a1a', heather: true } },
       { name: 'Storm Chaser', level: 3, c: { top: '#6a3fd0', top2: '#39f0ff', pants: '#1f1f2e', shoes: '#39f0ff', hair: '#5b4330', hat: '#1f1f2e', pack: '#b35cff' } },
+      { name: 'Crankbolt Rider', pass: 10, c: { top: '#ff8a3d', top2: '#4a5566', pants: '#3a3f4a', shoes: '#ff8a3d', hair: '#5b4330', hat: '#4a5566', pack: '#9fb2c4', heather: true } },
     ],
   },
   emerson: {
@@ -31,6 +32,7 @@ export const CHARACTERS = {
       { name: 'Star Sprinter', level: 1, c: { top: '#b35cff', top2: '#ff7ac8', pants: '#27b3a7', shoes: '#ff7ac8', hair: '#f2c35b', hat: '#ff7ac8', pack: '#ffd23f' } },
       { name: 'Pickle Pop', level: 2, c: { top: '#7ed957', top2: '#ffffff', pants: '#ff7ac8', shoes: '#ffffff', hair: '#f2c35b', hat: '#7ed957', pack: '#ff7ac8' } },
       { name: 'Midnight Glow', level: 5, c: { top: '#1d2a5a', top2: '#39f0ff', pants: '#101828', shoes: '#39f0ff', hair: '#f2c35b', hat: '#39f0ff', pack: '#6a3fd0' } },
+      { name: 'Vault Runner', pass: 14, c: { top: '#ffd23f', top2: '#1d2a3a', pants: '#1d2a3a', shoes: '#ffd23f', hair: '#f2c35b', hat: '#1d2a3a', pack: '#ffae1a' } },
     ],
   },
   waylon: {
@@ -42,6 +44,7 @@ export const CHARACTERS = {
       { name: 'Dino Explorer', level: 1, c: { top: '#3fb24a', top2: '#ffe066', pants: '#3f7bff', shoes: '#8a5a33', hair: '#3b2616', hat: '#3fb24a', pack: '#3fb24a' } },
       { name: 'Clubhouse Captain', level: 4, c: { top: '#e8453c', top2: '#ffffff', pants: '#1f3f7a', shoes: '#ffffff', hair: '#3b2616', hat: '#ffcf3f', pack: '#e8453c' } },
       { name: 'Golden Ace', level: 6, c: { top: '#ffcf3f', top2: '#ffffff', pants: '#8a5a1a', shoes: '#ffcf3f', hair: '#3b2616', hat: '#ffae1a', pack: '#ff7a1a' } },
+      { name: 'Bolt Buddy', pass: 17, c: { top: '#39f0ff', top2: '#1d2a3a', pants: '#4a5566', shoes: '#1d2a3a', hair: '#3b2616', hat: '#39f0ff', pack: '#ff8a3d' } },
     ],
   },
 };
@@ -83,9 +86,42 @@ function toonGradient() {
 const G = {};
 const geo = (k, f) => G[k] || (G[k] = f());
 
+/** Glider canopy designs (see GLIDERS in core/season.js). */
+function gliderTexture(style, pal) {
+  const G = {
+    pickle: ['#5bbf3a', '#3f9a2a', 'dots'], storm: ['#6a3fd0', '#39f0ff', 'bolt'], night: ['#1d2a5a', '#ffe45c', 'stars'],
+    crankbolt: ['#ff8a3d', '#4a5566', 'stripes'], golden: ['#ffcf3f', '#ffae1a', 'stripes'], champion: [null, null, 'rainbow'],
+  }[style];
+  if (!G) return stripeTexture(pal.top, pal.top2);
+  const [a, b, pat] = G;
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 32;
+  const g = c.getContext('2d');
+  if (pat === 'rainbow') {
+    ['#ff5c7a', '#ffcf3f', '#7ed957', '#39f0ff', '#b35cff'].forEach((col, i) => { g.fillStyle = col; g.fillRect(0, i * 6.4, 256, 6.4); });
+  } else {
+    g.fillStyle = a;
+    g.fillRect(0, 0, 256, 32);
+    g.fillStyle = b;
+    for (let i = 0; i < 16; i++) {
+      const x = i * 16 + 8;
+      if (pat === 'dots') { g.beginPath(); g.arc(x, 10 + (i % 2) * 12, 4, 0, 7); g.fill(); }
+      else if (pat === 'stars') { g.font = '12px sans-serif'; g.fillText('★', x - 5, 14 + (i % 2) * 12); }
+      else if (pat === 'bolt') { g.beginPath(); g.moveTo(x, 3); g.lineTo(x - 4, 16); g.lineTo(x + 1, 16); g.lineTo(x - 2, 29); g.lineTo(x + 5, 13); g.lineTo(x, 13); g.closePath(); g.fill(); }
+      else if (i % 2) g.fillRect(i * 16, 0, 16, 32);
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export class CharacterModel {
-  constructor(charId, outfit = 0, skin = 0) {
+  /** cos: equipped cosmetics { emote, glider } (defaults: signature emote, outfit-striped glider). */
+  constructor(charId, outfit = 0, skin = 0, cos = {}) {
     this.charId = charId;
+    this.emoteId = cos.emote || 'sig';
     const def = CHARACTERS[charId];
     const pal = def.outfits[outfit]?.c || def.outfits[0].c;
     this.mats = [];
@@ -274,7 +310,7 @@ export class CharacterModel {
 
     // glider (hidden until deployed)
     this.glider = new THREE.Group();
-    const canopyTex = stripeTexture(pal.top, pal.top2);
+    const canopyTex = gliderTexture(cos.glider, pal);
     const canopy = new THREE.Mesh(new THREE.SphereGeometry(1.8, 16, 6, 0, Math.PI * 2, 0, Math.PI / 3.2), new THREE.MeshToonMaterial({ map: canopyTex, gradientMap: toonGradient(), side: THREE.DoubleSide }));
     canopy.scale.set(1.3, 0.6, 0.9);
     canopy.position.y = 1.2;
@@ -442,6 +478,57 @@ export class CharacterModel {
   }
 
   _emote(t, legL, legR, armL, armR) {
+    const e = this.emoteId;
+    if (e === 'wave') {
+      const w = Math.sin(t * 7);
+      armL.rotation.set(-2.8, 0, 0.5 + w * 0.35);
+      armR.rotation.set(-2.8, 0, -0.5 + w * 0.35);
+      this.hips.position.y = 0.8 + Math.abs(Math.sin(t * 3.5)) * 0.04;
+      this.head.rotation.z = w * 0.1;
+      return;
+    }
+    if (e === 'hop') {
+      const b = Math.sin(t * 6);
+      this.body.position.x = b * 0.18;
+      this.hips.position.y = 0.8 + Math.abs(Math.cos(t * 6)) * 0.28;
+      legL.rotation.set(-0.5 * Math.abs(b), 0, 0.2);
+      legR.rotation.set(-0.5 * Math.abs(b), 0, -0.2);
+      armL.rotation.set(-1.6, 0, 0.6 + b * 0.3);
+      armR.rotation.set(-1.6, 0, -0.6 + b * 0.3);
+      return;
+    }
+    if (e === 'robo') {
+      const step = Math.floor(t * 4) % 4;
+      const k = [0.6, 0, -0.6, 0][step];
+      this.body.rotation.y = k * 0.5;
+      armL.rotation.set(-1.57, 0, step % 2 ? 0.2 : 1.2);
+      armR.rotation.set(-1.57, 0, step % 2 ? -1.2 : -0.2);
+      legL.rotation.x = step === 0 ? -0.5 : 0;
+      legR.rotation.x = step === 2 ? -0.5 : 0;
+      this.head.rotation.y = -k * 0.6;
+      return;
+    }
+    if (e === 'guitar') {
+      const s = Math.sin(t * 14);
+      this.spine.rotation.x = -0.25;
+      armL.rotation.set(-1.3, 0.8, 0.4);
+      armR.rotation.set(-0.8 + s * 0.35, -0.5, -0.3);
+      this.head.rotation.x = Math.sin(t * 7) * 0.25;
+      legL.rotation.set(-0.3, 0, 0.3);
+      legR.rotation.set(0.2, 0, -0.3);
+      this.hips.position.y = 0.72;
+      return;
+    }
+    if (e === 'lap') {
+      const r = Math.sin(t * 12);
+      armL.rotation.set(-3.0, 0, 0.3 + r * 0.1);
+      armR.rotation.set(-3.0, 0, -0.3 - r * 0.1);
+      legL.rotation.x = r * 0.9;
+      legR.rotation.x = -r * 0.9;
+      this.hips.position.y = 0.8 + Math.abs(r) * 0.08;
+      this.body.rotation.y = t * 1.5;
+      return;
+    }
     if (this.charId === 'colton') {
       const b = Math.sin(t * 8);
       armL.rotation.set(-2.6 * (b > 0 ? 1 : 0.3), 0, 0.3);

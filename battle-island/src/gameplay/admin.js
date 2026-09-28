@@ -13,6 +13,7 @@ import { rankState, divisionMMR, PLACEMENT_MATCHES, TOP } from '../core/ranked.j
 import { superXP, CAP_XP } from '../core/supercharge.js';
 import { dailyChallenges, CHALLENGES } from '../core/challenges.js';
 import { CHARACTERS } from '../entities/characters.js';
+import { pass, passTier, addPassXP, TIER_XP, PASS } from '../core/season.js';
 
 export const PLACES = [...POIS.map((p) => ({ id: p.id, name: p.name, x: p.x, z: p.z })), { id: 'vault', name: VAULT.name, x: VAULT.x, z: VAULT.z + 12 }];
 
@@ -159,6 +160,17 @@ export function progressOp(op, arg, mode) {
       while (levelInfo(pr.xp).level < need) pr.xp += xpForLevel(levelInfo(pr.xp).level);
       save.write();
       return `Every outfit unlocked (level ${levelInfo(pr.xp).level})`;
+    }
+    case 'pass': {
+      const p = pass();
+      const up = addPassXP((passTier(p) + 1) * TIER_XP - p.xp);
+      return `Benton Pass tier ${up.after}${up.got.length ? ' (unlocked a reward)' : ''}`;
+    }
+    case 'cosmetics': {
+      const p = pass();
+      for (const r of PASS) if (r && r.kind !== 'super' && !p.owned.includes(`${r.kind}:${r.id}`)) p.owned.push(`${r.kind}:${r.id}`);
+      save.write();
+      return 'Every emote, glider and pass outfit unlocked';
     }
     case 'super':
       superXP().pool = CAP_XP;

@@ -23,6 +23,7 @@ import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
 import { superchargeXP } from '../core/supercharge.js';
 import { applyChallenges } from '../core/challenges.js';
+import { applyWeekly, applyAchievements, unlockReached, refreshLevel, addPassXP } from '../core/season.js';
 import { sfx } from '../core/audio.js';
 import { save, levelInfo } from '../core/save.js';
 import { applyRanked, botSkillRange, isSupercharged, rankState } from '../core/ranked.js';
@@ -156,7 +157,7 @@ export class Game {
     const k = this.teamSize;
     const client = this.role === 'client';
     // humans take the first ids (the host is 0), bots fill the rest; teams are k consecutive ids
-    const humans = opts.humans || [{ id: 0, local: true, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin }];
+    const humans = opts.humans || [{ id: 0, local: true, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin, emote: opts.cos?.emote, glider: opts.cos?.glider }];
     const rr = mulberry32(this.seed + 1); // roster rng: identical on host and clients
     const names = [...BOT_NAMES].sort(() => rr() - 0.5);
     const total = humans.length + opts.botCount;
@@ -164,7 +165,7 @@ export class Game {
       const h = humans.find((x) => x.id === id);
       let a;
       if (h) {
-        a = new Actor(this, { id, team: Math.floor(id / k), name: h.name || 'Player', charId: h.charId, outfit: h.outfit, skin: h.skin, human: true, remote: h.local ? null : h.peer || null });
+        a = new Actor(this, { id, team: Math.floor(id / k), name: h.name || 'Player', charId: h.charId, outfit: h.outfit, skin: h.skin, cos: { emote: h.emote, glider: h.glider }, human: true, remote: h.local ? null : h.peer || null });
         if (h.local) this.player = a;
       } else {
         const bi = id - humans.length;
@@ -542,14 +543,26 @@ export class Game {
     const pr = save.data.progress;
     const superXP = superchargeXP(xp); // daily Supercharged XP doubles it while the pool lasts
     const ch = applyChallenges(st.ms, { kills, damage: st.damage, place });
-    pr.xp += xp + superXP + ch.xp;
+    const wk = applyWeekly(st.ms, { kills, damage: st.damage, place });
+    const ach = applyAchievements(st.ms, { kills, won, team: this.teamSize > 1 });
+    pr.xp += xp + superXP + ch.xp + wk.xp + ach.xp;
+    // reaching a level can itself unlock an achievement (and its XP)
+    refreshLevel();
+    const ach2 = unlockReached();
+    pr.xp += ach2.xp;
     pr.matches++;
     pr.kills += kills;
     if (won) pr.wins++;
     if (!pr.bestPlace || place < pr.bestPlace) pr.bestPlace = place;
     save.write();
     const after = levelInfo(pr.xp).level;
-    this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: xp + superXP + ch.xp, superXP, chalXP: ch.xp, challenges: ch.rows, levelUp: after > before ? after : 0, killer: st.killer };
+    const total = xp + superXP + ch.xp + wk.xp + ach.xp + ach2.xp;
+    const passUp = addPassXP(total); // the Benton Pass fills with every XP point earned
+    this.result = {
+      won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: total, superXP, chalXP: ch.xp, challenges: ch.rows,
+      weeklyXP: wk.xp, weekly: wk.rows.filter((w) => w.justDone), achXP: ach.xp + ach2.xp, achievements: [...ach.got, ...ach2.got], pass: passUp,
+      levelUp: after > before ? after : 0, killer: st.killer,
+    };
     if (this.ranked) this.result.ranked = applyRanked(this.mode, { won, place, total: totalTeams, kills }, this.lobbyRating);
     if (won) {
       sfx.play('win');

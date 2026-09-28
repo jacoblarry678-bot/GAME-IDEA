@@ -8,6 +8,9 @@ import { connectShim } from './roomShim.js';
 import { PROTO, MAX_HUMANS } from './sync.js';
 
 const CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
+// cosmetic ids from other players: short plain words only (unknown ones fall back to defaults)
+const cosId = (v) => (typeof v === 'string' && /^[a-z]{1,12}$/.test(v) ? v : null);
+
 // presence strings must be free of control/format characters
 export const cleanName = (s) => String(s || '').replace(/[\p{C}]/gu, '').trim().slice(0, 14) || 'Player';
 const code5 = () => Array.from({ length: 5 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
@@ -107,7 +110,7 @@ export class Session {
 
   setProfile(pr) {
     this.profile = pr;
-    this.room.presence({ r: this.role === 'host' ? 'h' : 'c', v: PROTO, n: cleanName(pr.name), c: pr.charId, o: pr.outfit, s: pr.skin, rk: pr.rk || null }).catch(() => {});
+    this.room.presence({ r: this.role === 'host' ? 'h' : 'c', v: PROTO, n: cleanName(pr.name), c: pr.charId, o: pr.outfit, s: pr.skin, e: pr.emote || 'sig', gl: pr.glider || 'classic', rk: pr.rk || null }).catch(() => {});
   }
 
   get myPeer() {
@@ -129,7 +132,7 @@ export class Session {
   players() {
     const list = this.room.peers()
       .filter((p) => p.presence && p.presence.v === PROTO)
-      .map((p) => ({ peer: p.peer, me: p.sameTab, host: p.presence.r === 'h', name: p.presence.n || 'Player', charId: p.presence.c || 'colton', outfit: p.presence.o | 0, skin: p.presence.s | 0, rk: Array.isArray(p.presence.rk) ? p.presence.rk : null }));
+      .map((p) => ({ peer: p.peer, me: p.sameTab, host: p.presence.r === 'h', name: p.presence.n || 'Player', charId: p.presence.c || 'colton', outfit: p.presence.o | 0, skin: p.presence.s | 0, emote: cosId(p.presence.e), glider: cosId(p.presence.gl), rk: Array.isArray(p.presence.rk) ? p.presence.rk : null }));
     list.sort((a, b) => (b.host ? 1 : 0) - (a.host ? 1 : 0));
     return list;
   }
@@ -148,7 +151,7 @@ export class Session {
       seed: game.seed,
       cfg,
       bus: [...game.busFrom.toArray(), ...game.busTo.toArray()].map((v) => Math.round(v * 10) / 10),
-      humans: humans.map((h) => ({ id: h.id, p: h.peer, n: h.name, c: h.charId, o: h.outfit, s: h.skin })),
+      humans: humans.map((h) => ({ id: h.id, p: h.peer, n: h.name, c: h.charId, o: h.outfit, s: h.skin, e: h.emote, gl: h.glider })),
     };
     this.room.presence({ st: 'play', start }).catch(() => {});
     this.online.lobby.presence({ g: null }).catch(() => {});

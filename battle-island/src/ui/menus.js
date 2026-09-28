@@ -10,6 +10,7 @@ import { rankState, divName, divColor, divisionMMR, badgeHTML, TOP, PLACEMENT_MA
 import { superXP, refillIn, CAP_XP, DAILY_XP } from '../core/supercharge.js';
 import { dailyChallenges, CHALLENGES, CHALLENGE_XP } from '../core/challenges.js';
 import { owner } from '../core/owner.js';
+import * as season from '../core/season.js';
 import { matchOp, progressOp, canAdminMatch, PLACES } from '../gameplay/admin.js';
 import { sfx } from '../core/audio.js';
 
@@ -34,6 +35,7 @@ export const ROADMAP = {
     'Supercharged XP (daily bonus pool that doubles match XP, banks up to 3 days) and Supercharged rank (x1.5 rank gains and no RP loss while your MMR is well ahead of your rank)',
     'Milestone 4 — Wheels & Deals: drivable Diesel Trucks (4 seats) and Pickle Karts (boost) with fuel, pumps, damage, explosions and run-over hits; passengers can shoot; bot teammates ride along',
     'Ziplines between high points (shoot while riding), Benton Bucks from chests, floor loot and eliminations, three vending bots, two weapon upgrade benches, and three daily challenges worth bonus XP',
+    'Milestone 6 — Seasons & Style: 8-week seasons with soft rank resets, the free 20-tier Benton Pass (5 new emotes, 6 gliders, 3 new outfits), weekly challenges, 16 achievements, and an expanded Locker (cosmetics show online)',
     "Milestone 5 — Boss & Vault: Crankbolt, a giant rocket-firing guard robot (drops the Vault Keycard and a Mythic rifle); Crankbolt's Vault on its hilltop; doors on every house; carrying knocked teammates",
     'Admin panel for the owner: progression tools in the lobby, match tools in the pause menu (god mode, teleports, storm, bots, boss, vault); admin matches never count for XP, rank or challenges',
   ],
@@ -42,7 +44,7 @@ export const ROADMAP = {
     'Pre-match warm-up island; match replays',
     'Weapon attachments and scopes as items',
     'World: story NPCs and quests, more bosses and vaults; bots that drive',
-    'Progression: weekly challenges, achievements, more emotes and cosmetics; ranked seasons and rewards; a shared online leaderboard (ranks are stored per device today)',
+    'Progression: a shared online leaderboard (ranks and passes are stored per device today); more seasons of pass rewards',
     'Online: more than 4 players, host migration, joining a match already in progress, anti-cheat (the host is trusted)',
     'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
   ],
@@ -111,11 +113,13 @@ export class Menus {
       case 'team': P.teamSize = +d.id; save.write(); this.showMain(); break;
       case 'bots': save.data.settings.botCount = +d.id; save.write(); this.showMain(); break;
       case 'outfit': {
-        const lvl = levelInfo(save.data.progress.xp).level;
-        if (CHARACTERS[P.character].outfits[+d.id].level <= lvl) { P.outfits[P.character] = +d.id; save.write(); this.app.preview(); }
+        if (this.outfitUnlocked(P.character, +d.id)) { P.outfits[P.character] = +d.id; save.write(); this.app.preview(); }
         this.showLocker();
         break;
       }
+      case 'equip': if (season.equip(d.kind, d.id)) { this.app.preview(); if (d.kind === 'emote') this.app.previewEmote(); } this.showLocker(); break;
+      case 'pass': this.showPass(); break;
+      case 'achievements': this.showAchievements(); break;
       case 'skin': P.skin = +d.id; save.write(); this.app.preview(); this.showLocker(); break;
       case 'emote': this.app.previewEmote(); break;
       case 'resume': this.app.resume(); break;
@@ -221,6 +225,8 @@ export class Menus {
             <button class="btn" data-act="settings">Settings</button>
             <button class="btn" data-act="controls">Controls</button>
             <button class="btn" data-act="roadmap">Roadmap</button>
+            <button class="btn pass-btn" data-act="pass">Pass · Tier ${season.passTier()}</button>
+            <button class="btn" data-act="achievements">Achievements</button>
             ${owner.is ? '<button class="btn admin-btn" data-act="admin">Admin</button>' : ''}
           </nav>
         </div>
@@ -264,25 +270,43 @@ export class Menus {
       </div>`, 'screen right');
   }
 
+  /** Level outfits unlock with XP; pass outfits with the Benton Pass. */
+  outfitUnlocked(charId, i) {
+    const o = CHARACTERS[charId].outfits[i];
+    if (!o) return false;
+    return o.pass ? season.owns('outfit', `${charId}:${i}`) : o.level <= levelInfo(save.data.progress.xp).level;
+  }
+
+  _cosItem(kind, id, name, current, colors = null) {
+    const have = season.owns(kind, id);
+    const tier = season.PASS.findIndex((r) => r && r.kind === kind && r.id === id);
+    const sw = colors ? `<span class="cos-sw" style="background:linear-gradient(90deg,${colors.map((c, i) => `${c} ${(i / colors.length) * 100}% ${((i + 1) / colors.length) * 100}%`).join(',')})"></span>` : '';
+    return `<button class="cos ${current === id ? 'on' : ''} ${have ? '' : 'locked'}" data-act="${have ? 'equip' : 'pass'}" data-kind="${kind}" data-id="${id}">${sw}<b>${escAttr(name)}</b><small>${have ? (current === id ? 'Equipped' : 'Tap to equip') : `Pass tier ${tier}`}</small></button>`;
+  }
+
   showLocker() {
     const P = this.profile;
     const c = CHARACTERS[P.character];
-    const lvl = levelInfo(save.data.progress.xp).level;
+    const eq = season.equipped(P.character);
     this.app.menuView();
     this.screen(`
       <div class="sheet panel">
         <h2>Locker · ${c.name}</h2>
         <h3>Outfits</h3>
         <div class="outfits">${c.outfits.map((o, i) => {
-          const locked = o.level > lvl;
+          const locked = !this.outfitUnlocked(P.character, i);
+          const how = o.pass ? `Benton Pass tier ${o.pass}` : `Unlocks at level ${o.level}`;
           return `<button class="outfit ${P.outfits[P.character] === i ? 'on' : ''} ${locked ? 'locked' : ''}" data-act="outfit" data-id="${i}" style="--a:${o.c.top};--b:${o.c.top2};--c:${o.c.pants}">
-            <span class="sw"></span><b>${o.name}</b><small>${locked ? 'Unlocks at level ' + o.level : P.outfits[P.character] === i ? 'Equipped' : 'Unlocked'}</small></button>`;
+            <span class="sw"></span><b>${o.name}</b><small>${locked ? how : P.outfits[P.character] === i ? 'Equipped' : 'Unlocked'}</small></button>`;
         }).join('')}</div>
         <h3>Skin tone</h3>
         <div class="skins">${SKIN_TONES.map((s, i) => `<button class="skin ${P.skin === i ? 'on' : ''}" style="background:${s}" data-act="skin" data-id="${i}" aria-label="Skin tone ${i + 1}"></button>`).join('')}</div>
-        <h3>Emote</h3>
-        <button class="btn" data-act="emote">Preview “${c.emote}”</button>
-        <p class="note">Earn XP in matches to level up and unlock outfits. More cosmetics are on the roadmap.</p>
+        <h3>Emote <small class="muted">N in a match</small></h3>
+        <div class="cos-list">${Object.entries(season.EMOTES).map(([id, e]) => this._cosItem('emote', id, id === 'sig' ? `${c.emote}` : e.name, eq.emote)).join('')}</div>
+        <button class="btn small" data-act="emote">Preview emote</button>
+        <h3>Glider</h3>
+        <div class="cos-list">${Object.entries(season.GLIDERS).map(([id, gl]) => this._cosItem('glider', id, gl.name, eq.glider, gl.colors)).join('')}</div>
+        <p class="note">Level up to unlock outfits. The free Benton Pass unlocks emotes, gliders and new outfits as you earn XP this season.</p>
         <div class="row"><button class="btn" data-act="chars">Characters</button><button class="btn play small" data-act="main">Done</button></div>
       </div>`, 'screen right');
   }
@@ -437,8 +461,54 @@ export class Menus {
           <li><b>⚡ Supercharged rank:</b> when your MMR is at least ${SUPER_LEAD} ahead of your rank (about 1.5 divisions), rank gains are ×${SUPER_MULT} and matches never cost RP. It switches off once your rank catches up.</li>
           <li>Your first ${PLACEMENT_MATCHES} matches are placement matches. You can lose progress, but you never drop a division. Leaving a match early counts as being eliminated.</li>
           <li>Build and Zero Build have separate ranks. Ranks are saved on this device.</li>
+          <li><b>Seasons:</b> this is Season ${season.seasonAt().n} (${season.seasonAt().name}), ending in ${season.daysLeft()} days. At a new season your peak is recorded and each rank drops two tiers, so everyone climbs again.</li>
         </ul>
         <div class="ladder">${ladder}</div>
+        <div class="row"><button class="btn play small" data-act="main">Done</button></div>
+      </div>`, 'screen right');
+  }
+
+  showPass() {
+    this.current = 'pass';
+    const p = season.pass();
+    const S = season.seasonAt();
+    const tier = season.passTier(p);
+    const into = tier >= season.TIERS ? season.TIER_XP : p.xp - tier * season.TIER_XP;
+    const tiers = season.PASS.slice(1).map((r, i) => {
+      const t = i + 1;
+      const got = t <= tier;
+      return `<div class="tier ${got ? 'got' : ''} ${t === tier + 1 ? 'next' : ''}"><em>${t}</em><span>${escAttr(season.rewardName(r, CHARACTERS))}</span>${got ? '<b>✓</b>' : ''}</div>`;
+    }).join('');
+    const wk = season.weeklyChallenges();
+    const weekly = wk.list.map((c) => {
+      const def = season.weeklyDef(c.id);
+      return `<div class="chal ${c.done ? 'done' : ''}"><div class="ch-row"><b>${c.done ? '✓ ' : ''}${def.text}</b><span>${c.done ? 'Done' : `${c.prog.toLocaleString()} / ${def.goal.toLocaleString()}`}</span></div><span class="rk-bar"><i style="width:${(c.prog / def.goal) * 100}%"></i></span></div>`;
+    }).join('');
+    const past = (save.data.seasons || []).map((r) => `<li>Season ${r.season}: pass tier ${r.pass} · Build peak ${divName(r.ranks.build)} · Zero Build peak ${divName(r.ranks.zerobuild)}</li>`).join('');
+    this.screen(`
+      <div class="sheet panel wide pass">
+        <h2>Benton Pass <small>Season ${S.n}: ${S.name} · ends in ${season.daysLeft()} day${season.daysLeft() === 1 ? '' : 's'}</small></h2>
+        <div class="pass-head"><div class="lvl-badge">${tier}</div><div class="lvl-bar"><div style="width:${(into / season.TIER_XP) * 100}%"></div></div><small>${tier >= season.TIERS ? 'Pass complete!' : `${into.toLocaleString()} / ${season.TIER_XP.toLocaleString()} XP to tier ${tier + 1}`}</small></div>
+        <p class="note">Free for everyone: every XP point you earn this season also fills the pass. Rewards unlock automatically and stay yours when the season ends.</p>
+        <div class="tiers">${tiers}</div>
+        <div class="chal-card"><h4>Weekly challenges <small>+${season.WEEKLY_XP.toLocaleString()} XP each · new every Monday</small></h4>${weekly}</div>
+        ${past ? `<h3>Past seasons</h3><ul class="howto">${past}</ul>` : ''}
+        <div class="row"><button class="btn" data-act="locker">Locker</button><button class="btn play small" data-act="main">Done</button></div>
+      </div>`, 'screen right');
+  }
+
+  showAchievements() {
+    this.current = 'achievements';
+    const list = season.ACHIEVEMENTS.map((a) => {
+      const done = season.achDone(a.id);
+      const prog = season.achProgress(a);
+      return `<div class="ach ${done ? 'done' : ''}"><span class="medal">${done ? '★' : '☆'}</span><div><b>${a.name}</b><small>${a.desc}</small><span class="rk-bar"><i style="width:${(prog / a.goal) * 100}%"></i></span><small>${done ? `Unlocked · +${season.ACH_XP.toLocaleString()} XP` : `${prog.toLocaleString()} / ${a.goal.toLocaleString()}`}</small></div></div>`;
+    }).join('');
+    const n = season.ACHIEVEMENTS.filter((a) => season.achDone(a.id)).length;
+    this.screen(`
+      <div class="sheet panel wide">
+        <h2>Achievements <small>${n} / ${season.ACHIEVEMENTS.length}</small></h2>
+        <div class="achs">${list}</div>
         <div class="row"><button class="btn play small" data-act="main">Done</button></div>
       </div>`, 'screen right');
   }
@@ -459,7 +529,7 @@ export class Menus {
         <div class="cols">
           <div>
             <h3>Level & XP <small>level ${L.level} · ${save.data.progress.xp.toLocaleString()} XP</small></h3>
-            <div class="adm-grid">${b('level', '+1 level', 1)}${b('level', '+10 levels', 10)}${b('outfits', 'Unlock every outfit')}${b('super', 'Refill Supercharged XP')}</div>
+            <div class="adm-grid">${b('level', '+1 level', 1)}${b('level', '+10 levels', 10)}${b('outfits', 'Unlock every outfit')}${b('super', 'Refill Supercharged XP')}${b('pass', '+1 pass tier')}${b('cosmetics', 'Unlock every cosmetic')}</div>
             <h3>Daily challenges <small>${c.list.filter((x) => x.done).length}/3 done</small></h3>
             <div class="adm-grid">${b('chal-done', 'Mark today\'s done')}${b('chal-reset', 'Reset today\'s progress')}</div>
           </div>
@@ -535,6 +605,9 @@ export class Menus {
         <div class="stats"><div><b>${r.kills}</b>elims</div><div><b>${r.damage}</b>damage</div><div><b>${Math.floor(r.time / 60)}:${String(r.time % 60).padStart(2, '0')}</b>survived</div><div><b>+${r.xp}</b>XP</div></div>
         ${r.admin ? '<p class="adm-note">Admin tools were used in this match, so it doesn\'t count for XP, rank or challenges.</p>' : ''}
         ${r.challenges ? this._challenges(r.challenges) : ''}
+        ${r.weekly && r.weekly.length ? `<p class="sx-won">Weekly challenge${r.weekly.length > 1 ? 's' : ''} done: ${r.weekly.map((w) => escAttr(w.text)).join(', ')} (+${r.weeklyXP.toLocaleString()} XP)</p>` : ''}
+        ${r.achievements && r.achievements.length ? `<p class="sx-won">★ Achievement${r.achievements.length > 1 ? 's' : ''} unlocked: ${r.achievements.map((a) => escAttr(a.name)).join(', ')} (+${r.achXP.toLocaleString()} XP)</p>` : ''}
+        ${r.pass && r.pass.after > r.pass.before ? `<p class="pass-up">Benton Pass tier ${r.pass.after}!${r.pass.got.length ? ' Unlocked: ' + r.pass.got.map((g) => escAttr(season.rewardName(g, CHARACTERS))).join(', ') : ''}</p>` : ''}
         ${r.superXP ? `<p class="sx-won">⚡ +${r.superXP.toLocaleString()} Supercharged XP (included)</p>` : ''}
         ${r.levelUp ? `<p class="lvlup">Level up! You reached level ${r.levelUp}.</p>` : ''}
         ${r.ranked ? this._rankResult(r.ranked) : ''}

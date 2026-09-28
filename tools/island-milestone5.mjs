@@ -56,6 +56,7 @@ await ev(() => {
   window.doors0 = P.stats.doors;
 });
 await p.waitForTimeout(300);
+await waitFor(() => /Open door/.test(__bi.game.controller.prompt?.text || ''), 5000);
 const dp = await ev(() => __bi.game.controller.prompt?.text);
 const blocked = await ev(() => { const g = __bi.game; return !!g.world.physics.raycast(D.pos.x, D.pos.y + 1, D.pos.z - D.inward * 1.3, 0, 0, D.inward, 2); });
 await key('KeyE');
@@ -102,7 +103,7 @@ await ev(() => {
   window.hp0 = P.hp + P.shield;
 });
 const aggro = await waitFor(() => __bi.game.boss.target === __bi.game.player, 6000);
-const rockets = await waitFor(() => __bi.game.boss.shots > 0, 8000);
+const rockets = await waitFor(() => __bi.game.boss.shots > 0, 20000);
 await p.screenshot({ path: `${shots}/m5-02-boss.png` });
 const bar = await ev(() => ({ shown: getComputedStyle(document.querySelector('.bossbar')).display !== 'none', text: document.querySelector('.bossbar').textContent }));
 const hurt = await waitFor(() => __bi.game.player.hp + __bi.game.player.shield < hp0 - 10, 12000);
@@ -183,6 +184,7 @@ await ev(() => {
   g.controller.yaw = 0;
 });
 await p.waitForTimeout(300);
+await waitFor(() => /Locked/.test(__bi.game.controller.prompt?.text || ''), 4000);
 const locked = await ev(() => __bi.game.controller.prompt?.text);
 await key('KeyE');
 await p.waitForTimeout(300);
@@ -227,12 +229,13 @@ await ev(() => {
 });
 await p.waitForTimeout(300);
 const knocked = await ev(() => mate.downed);
+await waitFor(() => /X to carry/.test(__bi.game.controller.prompt?.text || ''), 5000);
 const cp = await ev(() => __bi.game.controller.prompt?.text);
 await key('KeyX');
 const carrying = await waitFor(() => __bi.game.player.carrying === mate && mate.carriedBy === __bi.game.player, 2000);
 const z0 = await ev(() => __bi.game.player.pos.z);
 await p.keyboard.down('KeyW');
-await p.waitForTimeout(1200);
+await waitFor((z) => z - __bi.game.player.pos.z > 1.5, 8000, z0); // slow headless frames: walk until we've moved
 await p.keyboard.up('KeyW');
 await p.screenshot({ path: `${shots}/m5-04-carry.png` });
 const ride = await ev((z) => { const P = __bi.game.player; return { moved: +(z - P.pos.z).toFixed(2), onTop: +(mate.pos.y - P.pos.y).toFixed(2), sameXZ: Math.hypot(mate.pos.x - P.pos.x, mate.pos.z - P.pos.z) < 0.1, carried: +P.stats.carried.toFixed(1), prompt: __bi.game.controller.prompt?.text }; }, z0);

@@ -255,6 +255,22 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [x] **Outfit swap:** Colton now has the Haunt Hollow outfit **Haunt Hunter** (level 2, as a speckled tee). Waylon now has Colton's gold outfit, renamed **Golden Ace** (level 6).
 - The model is built in code like everything else. A reference photo guided the look, but no photo is stored in the game or the repo.
 
+## Milestone 6: Seasons & Style
+
+- [x] **Seasons:** 8-week seasons, starting with Season 1: Crankbolt Rising (from 1 September 2026). The Pass and Ranked screens show the countdown.
+  - At a new season, each ranked mode records its peak and drops two tiers (Gold II becomes Bronze II). MMR eases toward the middle, and everyone climbs again.
+  - Past seasons are listed on the Pass screen.
+- [x] **The Benton Pass (free, 20 tiers):** every XP point earned in a season also fills the pass, at 2,000 XP per tier. Rewards unlock automatically and are kept forever.
+  - **Emotes (5):** Big Wave, Pickle Hop, Robo Shuffle, Air Guitar, Victory Lap.
+  - **Gliders (6):** Pickle Parachute, Storm Sail, Night Sky, Crankbolt Canopy, Golden Wing, Champion Rainbow.
+  - **Outfits (3):** Crankbolt Rider for Colton, Vault Runner for Emerson, Bolt Buddy for Waylon.
+  - **Supercharged XP top-ups** fill the tiers in between.
+- [x] **Locker:** equip an emote (N in a match) and a glider along with your outfit. Locked items show which pass tier unlocks them.
+  - Other players see your emote and glider online.
+- [x] **Weekly challenges:** five a week, bigger than the dailies, worth 3,000 XP each, shown on the Pass screen. Examples: 15 eliminations, 20 chests, 2 km driven, 1,500 damage to Crankbolt.
+- [x] **Achievements:** 16 permanent medals, each worth 1,000 XP, on their own screen. Examples: first win, a squad win, 50 eliminations, taking down Crankbolt, opening the vault, driving 5 km, reaching Gold, reaching level 20.
+- [x] **Admin (owner):** +1 pass tier and "unlock every cosmetic".
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
@@ -262,7 +278,7 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [ ] Match flow: pre-match warm-up area, match replays
 - [ ] Weapon attachments and scopes as separate items
 - [ ] World: story NPCs and quests, more bosses and vaults; bots that drive
-- [ ] Progression: weekly challenges, achievements, more emotes and cosmetics
+- [ ] Progression: a shared online leaderboard; new pass rewards each season
 - [ ] Online: more than 4 players, host migration, joining a match in progress, and anti-cheat (the host is trusted)
 - [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization, hidden family collectibles, and rotating spooky/playground events
 
@@ -280,6 +296,7 @@ node tools/island-supercharged.mjs          # 13 checks
 node tools/island-milestone4.mjs            # 22 checks
 node tools/island-milestone5.mjs            # 17 checks
 node tools/island-admin.mjs                 # 20 checks
+node tools/island-milestone6.mjs            # 12 checks (the last one needs the relay server)
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
@@ -324,6 +341,14 @@ node tools/island-mobile.mjs                # 18 checks: emulated phone with rea
   - The vault: locked without the keycard, opened with it, the keycard used up, and the gold and chests inside.
   - Carrying: picking up, riding on the carrier, no shooting, putting down.
   - The new challenges.
+- **`island-milestone6.mjs`:**
+  - The season and the pass screen.
+  - Tiers unlocking cosmetics and Supercharged XP.
+  - The Locker: equipping, refusing locked items, a pass outfit.
+  - All six emotes animating in a match.
+  - A match paying out weekly challenges and achievements into the pass, and the achievements screen.
+  - Season rollover.
+  - A client's equipped emote and glider showing on the host.
 - **`island-admin.mjs`:**
   - Who sees the panel: the owner does; anyone else gets no button and the screen won't open.
   - Every progression tool, and the `` ` `` key and pause-menu entry.
@@ -372,6 +397,7 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/vehicles.js` | Trucks and karts: handling, fuel, damage, run-overs, seats, network rows |
 | `src/gameplay/economy.js` | Benton Bucks, vending bot stock, upgrade benches |
 | `src/core/challenges.js` | Daily challenges |
+| `src/core/season.js` | Seasons, the Benton Pass, cosmetics, weekly challenges, achievements |
 | `src/core/ranked.js` | Ranks, MMR, rank points, Supercharged rank, lobby bot skill |
 | `src/core/supercharge.js` | Daily Supercharged XP pool |
 | `src/gameplay/{combat,building,loot,storm,effects,items}.js` | Systems and data |

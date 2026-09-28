@@ -28,7 +28,7 @@ export class Actor {
     this.isBot = !!o.isBot;
     this.charId = o.charId;
     this.team = o.team ?? o.id;
-    this.model = new CharacterModel(o.charId, o.outfit || 0, o.skin || 0);
+    this.model = new CharacterModel(o.charId, o.outfit || 0, o.skin || 0, o.cos || {});
     this.pos = new THREE.Vector3();
     this.vel = new THREE.Vector3();
     this.yaw = 0; // body facing (three.js camera convention: forward = -Z at yaw 0)

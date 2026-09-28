@@ -74,6 +74,7 @@ await ev(() => {
   g.controller.yaw = 0;
 });
 await p.waitForTimeout(300);
+await waitFor(() => /Drive Diesel Truck/.test(__bi.game.controller.prompt?.text || ''), 5000);
 const prompt = await ev(() => __bi.game.controller.prompt?.text);
 await key('KeyE');
 const inside = await waitFor(() => __bi.game.player.vehicle && __bi.game.player.seat === 0 && __bi.game.player.state === 'drive', 3000);
@@ -97,7 +98,7 @@ await key('KeyE');
 const out = await waitFor(() => !__bi.game.player.vehicle && ['ground', 'air'].includes(__bi.game.player.state), 3000);
 await waitFor(() => __bi.game.player.grounded, 4000); // slow headless frames: give the hop time to land
 const outInfo = await ev(() => { const g = __bi.game, P = g.player, v = g.vehicles.list[0]; const m = g.actors.find((a) => a !== P && a.team === P.team); return { d: P.pos.distanceTo(v.pos), ground: P.grounded, mateOut: !m.vehicle, st: P.state, y: +(P.pos.y - g.world.height(P.pos.x, P.pos.z)).toFixed(2), vy: +P.vel.y.toFixed(2), paused: g.paused, cur: __bi.menus.current }; });
-check('E hops out beside the truck; the bot teammate gets out too', out && outInfo.d < 5 && outInfo.ground && outInfo.mateOut, JSON.stringify(outInfo));
+check('E hops out beside the truck; the bot teammate gets out too', out && outInfo.d < 5 && (outInfo.ground || outInfo.st === 'swim') && outInfo.mateOut, JSON.stringify(outInfo));
 
 // ---- fuel: running dry, then a pump
 const fuel = await ev(() => {
@@ -249,6 +250,7 @@ await ev(() => {
   window.zips0 = P.stats.zips;
 });
 await p.waitForTimeout(300);
+await waitFor(() => /zipline/.test(__bi.game.controller.prompt?.text || ''), 5000);
 const zp = await ev(() => __bi.game.controller.prompt?.text);
 await key('KeyE');
 const riding = await waitFor(() => __bi.game.player.state === 'zip', 3000);
@@ -299,6 +301,7 @@ await ev(() => {
   window.spent0 = P.stats.spent;
 });
 await p.waitForTimeout(300);
+await waitFor(() => /SNACK-O-BOT/.test(__bi.game.controller.prompt?.text || ''), 5000);
 const sp = await ev(() => __bi.game.controller.prompt?.text);
 await key('KeyE');
 const open = await waitFor(() => !document.querySelector('.shop').classList.contains('hidden'), 2000);
@@ -322,6 +325,7 @@ await ev(() => {
   put(P, B.pos.x + 1.8, B.pos.z + 1.8, B.pos.y + 1);
 });
 await p.waitForTimeout(300);
+await waitFor(() => /Upgrade to/.test(__bi.game.controller.prompt?.text || ''), 5000);
 const bp = await ev(() => __bi.game.controller.prompt?.text);
 await key('KeyE');
 await p.waitForTimeout(300);

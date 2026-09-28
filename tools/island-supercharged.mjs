@@ -36,7 +36,7 @@ await p.click('[data-act=play]');
 await p.waitForTimeout(600);
 await winMatch();
 await p.waitForTimeout(700);
-const r1 = await ev(() => ({ xp: __bi.game.result.xp, chal: __bi.game.result.chalXP, sup: __bi.game.result.superXP, pool: __bi.supercharge.superXP().pool, saved: __bi.save.data.progress.xp, line: document.querySelector('.sx-won')?.textContent }));
+const r1 = await ev(() => ({ xp: __bi.game.result.xp, chal: __bi.game.result.chalXP + (__bi.game.result.weeklyXP || 0) + (__bi.game.result.achXP || 0), sup: __bi.game.result.superXP, pool: __bi.supercharge.superXP().pool, saved: __bi.save.data.progress.xp, line: [...document.querySelectorAll('.sx-won')].map((e) => e.textContent).find((t) => /Supercharged XP/.test(t)) }));
 await p.screenshot({ path: `${shots}/sc-01-result.png` });
 check('match XP is doubled from the pool and the result says so', r1.sup > 0 && r1.xp === r1.sup * 2 + r1.chal && r1.pool === 7500 - r1.sup && r1.saved === r1.xp && /Supercharged XP/.test(r1.line || ''), JSON.stringify(r1));
 

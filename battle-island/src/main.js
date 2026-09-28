@@ -16,6 +16,7 @@ import { Online, MAX_HUMANS } from './net/online.js';
 import * as ranked from './core/ranked.js';
 import * as supercharge from './core/supercharge.js';
 import * as challenges from './core/challenges.js';
+import * as season from './core/season.js';
 import { owner, detectOwner } from './core/owner.js';
 const { rankState } = ranked;
 import { TouchControls, isTouchDevice } from './ui/touch.js';
@@ -61,7 +62,7 @@ function preview() {
     previewModel.dispose();
   }
   const P = save.data.profile;
-  previewModel = new CharacterModel(P.character, P.outfits[P.character], P.skin);
+  previewModel = new CharacterModel(P.character, P.outfits[P.character], P.skin, season.equipped(P.character));
   previewModel.root.position.x = document.querySelector('#menus.right') ? -2.1 : -0.2;
   menuScene.add(previewModel.root);
   previewEmoteT = 2.5;
@@ -135,7 +136,8 @@ online.onChange = rerender;
 function profileInfo() {
   const P = save.data.profile;
   const b = rankState('build'), z = rankState('zerobuild');
-  return { name: P.name || 'Player', charId: P.character, outfit: P.outfits[P.character], skin: P.skin, rk: [[b.mmr, b.d], [z.mmr, z.d]] };
+  const cos = season.equipped(P.character);
+  return { name: P.name || 'Player', charId: P.character, outfit: P.outfits[P.character], skin: P.skin, emote: cos.emote, glider: cos.glider, rk: [[b.mmr, b.d], [z.mmr, z.d]] };
 }
 
 async function openOnline() {
@@ -217,7 +219,7 @@ function startOnline() {
   const s = session;
   if (!s || s.role !== 'host') return;
   const players = s.players().slice(0, MAX_HUMANS);
-  const humans = players.map((p, i) => ({ id: i, local: p.me, peer: p.peer, name: p.name, charId: p.charId, outfit: p.outfit, skin: p.skin }));
+  const humans = players.map((p, i) => ({ id: i, local: p.me, peer: p.peer, name: p.name, charId: p.charId, outfit: p.outfit, skin: p.skin, emote: p.emote, glider: p.glider }));
   // ranked lobbies are matched at the average MMR of the humans in them
   const mi = s.cfg.mode === 'zerobuild' ? 1 : 0;
   const rating = Math.round(players.reduce((sum, p) => sum + (p.rk ? p.rk[mi][0] : 1000), 0) / players.length);
@@ -229,7 +231,7 @@ function startOnline() {
 
 function startClient(start) {
   const s = session;
-  const humans = start.humans.map((h) => ({ id: h.id, local: h.p === s.myPeer, peer: h.p, name: h.n, charId: h.c, outfit: h.o, skin: h.s }));
+  const humans = start.humans.map((h) => ({ id: h.id, local: h.p === s.myPeer, peer: h.p, name: h.n, charId: h.c, outfit: h.o, skin: h.s, emote: h.e, glider: h.gl }));
   enterGame();
   game.startMatch({ role: 'client', room: s.room, hostPeer: s.hostPeer(), seed: start.seed, mode: start.cfg.mode, teamSize: start.cfg.team, botCount: start.cfg.bots, humans, bus: start.bus, ranked: !!start.cfg.ranked, lobbyRating: start.cfg.rating || 1000 });
 }
@@ -257,7 +259,7 @@ function play() {
   engine.view = { scene: engine.scene, camera: engine.camera };
   engine.resize();
   game.paused = false;
-  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount, ranked: !!P.ranked, lobbyRating: rankState(P.mode).mmr });
+  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, cos: season.equipped(P.character), mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount, ranked: !!P.ranked, lobbyRating: rankState(P.mode).mmr });
   input.enabled = true;
   touch.show(true);
   input.requestLock();
@@ -344,5 +346,6 @@ owner.onChange = () => {
   if (menus.current === 'main') menus.showMain();
 };
 detectOwner();
+season.seasonCheck(); // a new season may have started since the last visit
 
-window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, ranked, supercharge, challenges, owner, get session() { return session; } };
+window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, ranked, supercharge, challenges, season, owner, get session() { return session; } };
