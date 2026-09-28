@@ -89,7 +89,9 @@ export class BotBrain {
       dz = nz;
     } else if (a.grounded) {
       const low = phys.raycast(a.pos.x, a.pos.y + 0.6, a.pos.z, dx, 0, dz, 1.3);
-      if (low) {
+      if (low && low.c && low.c.door && !low.c.door.open) {
+        this.game.toggleDoor(low.c.door.i, a); // bots open doors in their way
+      } else if (low) {
         const high = phys.raycast(a.pos.x, a.pos.y + 2.2, a.pos.z, dx, 0, dz, 1.3);
         if (!high) this.inp.jump = true;
         else {
@@ -199,7 +201,7 @@ export class BotBrain {
     const a = this.a;
     let best = null, bd = 55;
     for (const ch of g.world.chests) {
-      if (ch.opened || this.blacklist.has(ch)) continue;
+      if (ch.opened || this.blacklist.has(ch) || (ch.vault && !g.world.vault.open)) continue;
       if (ch.pos.y - g.world.height(ch.pos.x, ch.pos.z) > 5) continue;
       const d = ch.pos.distanceTo(a.pos);
       if (d < bd) { bd = d; best = { kind: 'chest', obj: ch, pos: ch.pos }; }

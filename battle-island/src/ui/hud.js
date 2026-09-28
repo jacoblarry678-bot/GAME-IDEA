@@ -14,7 +14,7 @@ import { ISLAND_SIZE } from '../world/island.js';
 import { save } from '../core/save.js';
 import { VENDOR_STOCK, stockName } from '../gameplay/economy.js';
 
-const SHORT = { ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'PISTOL', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
+const SHORT = { vault: 'KEYCARD', ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'PISTOL', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const _v = new THREE.Vector3();
 export const TEAM_COLORS = ['#ffd23f', '#39f0ff', '#ff7ac8', '#7ed957'];
@@ -34,6 +34,7 @@ export class Hud {
       <div class="markers"></div>
       <div class="compass"><div class="compass-strip"></div><div class="compass-mark"></div></div>
       <div class="killfeed"></div>
+      <div class="bossbar"><b>CRANKBOLT</b><small>Vault Guardian</small><div class="bb-bar"><div></div></div></div>
       <div class="toasts"></div>
       <div class="banner"></div>
       <div class="crosshair"><i class="c-t"></i><i class="c-b"></i><i class="c-l"></i><i class="c-r"></i><b class="c-dot"></b></div>
@@ -79,7 +80,7 @@ export class Hud {
       over: q('.bar.over'), shield: q('.bar.shield'), health: q('.bar.health'), stamina: q('.bar.stamina'), mats: q('.mats'), mag: q('.mag'), reserve: q('.reserve'),
       slots: q('.slots'), ammoList: q('.ammo-list'), build: q('.buildbar'), busHint: q('.bus-hint'), dmg: q('.dmgnums'), stormTint: q('.storm-tint'), hurtTint: q('.hurt-tint'),
       team: q('.team'), markers: q('.markers'), buffs: q('.buffs'), bi: q('.buildinfo'), biBar: q('.buildinfo .bhp div'), biText: q('.buildinfo span'),
-      rankedPill: q('.ranked-pill'),
+      rankedPill: q('.ranked-pill'), boss: q('.bossbar'), bossFill: q('.bb-bar div'), bossSub: q('.bossbar small'),
       bucks: q('.bucks b'), veh: q('.vehpanel'), vpName: q('.vp-name'), vpSpeed: q('.vp-speed'), vpHp: q('.vp-hp div'), vpFuel: q('.vp-fuel div'), vpHint: q('.vp-hint'),
       shop: q('.shop'), shopTitle: q('.shop-title'), shopItems: q('.shop-items'), shopHint: q('.shop-hint'),
       downed: q('.downed'), downFill: q('.downed .fill'), aliveLabel: q('.alive-label'), specResults: q('.spec-results'),
@@ -202,7 +203,8 @@ export class Hud {
     d.className = 'kf';
     const mine = (n) => (player && n === player.name ? ' me' : '');
     const icon = { headshot: '◎', boom: '✹', elim: '➤', storm: '☁', fall: '↓', out: '✖', knock: '▼', reboot: '↻' }[m.how] || '➤';
-    if (m.how === 'reboot') d.innerHTML = `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> rebooted <b>${esc(m.b)}</b>`;
+    if (m.how === 'boss') d.innerHTML = `<b class="${mine(m.a)}">${esc(m.a || 'Someone')}</b> <i>★</i> took down <b>${esc(m.b)}</b>`;
+    else if (m.how === 'reboot') d.innerHTML = `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> rebooted <b>${esc(m.b)}</b>`;
     else if (m.how === 'knock') d.innerHTML = m.a ? `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> knocked <b class="${mine(m.b)}">${esc(m.b)}</b>` : `<b class="${mine(m.b)}">${esc(m.b)}</b> <i>${icon}</i> was knocked down`;
     else d.innerHTML = m.a ? `<b class="${mine(m.a)}">${esc(m.a)}</b> <i>${icon}</i> <b class="${mine(m.b)}">${esc(m.b)}</b>` : `<b class="${mine(m.b)}">${esc(m.b)}</b> <i>${icon}</i> ${m.how === 'storm' ? 'lost to the storm' : m.how === 'fall' ? 'fell too far' : 'was eliminated'}`;
     this.el.killfeed.prepend(d);
@@ -262,7 +264,7 @@ export class Hud {
         slots += `<div class="slot empty"><em>${i + 1}</em></div>`;
         return;
       }
-      const rc = s.kind === 'weapon' ? RARITIES[s.rarity].color : s.kind === 'consumable' ? CONSUMABLES[s.id].color : THROWABLES[s.id]?.color || '#888';
+      const rc = s.kind === 'weapon' ? RARITIES[s.rarity].color : s.kind === 'consumable' ? CONSUMABLES[s.id].color : s.kind === 'key' ? '#ffd23f' : THROWABLES[s.id]?.color || '#888';
       const sub = s.kind === 'weapon' ? `${s.mag}/${specA.ammo[WEAPONS[s.id].ammo]}` : `x${s.count}`;
       slots += `<div class="slot ${specA.sel === i && !c.building ? 'sel' : ''}" style="--rc:${rc}"><em>${i + 1}</em><b>${SHORT[s.id] || s.id}</b><small>${sub}</small></div>`;
     });
@@ -280,6 +282,13 @@ export class Hud {
       this.set('ammo', this.el.ammoList, al, 'innerHTML');
     }
     this.set('bucks', this.el.bucks, String(specA.bucks | 0));
+    const B = game.boss;
+    const nearBoss = B && B.alive && !c.spectating && specA.state !== 'bus' && Math.hypot(B.pos.x - specA.pos.x, B.pos.z - specA.pos.z) < 60;
+    this.set('bossd', this.el.boss.style, nearBoss ? '' : 'none', 'display');
+    if (nearBoss) {
+      this.set('bossw', this.el.bossFill.style, `${Math.max(0, B.hp / B.maxHp) * 100}%`, 'width');
+      this.set('bosss', this.el.bossSub, B.enraged ? 'Vault Guardian · ENRAGED' : 'Vault Guardian');
+    }
     this._vehicle(game, specA, c);
     this._shop(game, c);
     // build bar
@@ -435,6 +444,17 @@ export class Hud {
       g.fillStyle = '#ffd23f'; g.strokeStyle = '#000';
       g.beginPath(); g.arc(x, y, 5.5 * k, 0, 7); g.fill(); g.stroke();
       g.fillStyle = '#1d2a3a'; g.fillText('$', x, y + 0.5);
+    }
+    if (W.vault) {
+      const [x, y] = tm(W.vault.pos.x, W.vault.pos.z);
+      g.fillStyle = W.vault.open ? '#7ed957' : '#ffd23f'; g.strokeStyle = '#000';
+      g.fillRect(x - 6 * k, y - 5 * k, 12 * k, 10 * k); g.strokeRect(x - 6 * k, y - 5 * k, 12 * k, 10 * k);
+    }
+    if (game.boss && game.boss.alive) {
+      const [x, y] = tm(game.boss.pos.x, game.boss.pos.z);
+      g.fillStyle = '#ff4b4b'; g.strokeStyle = '#000';
+      g.beginPath(); g.arc(x, y, 6 * k, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = '#fff'; g.fillText('B', x, y + 0.5);
     }
     for (const b of W.benches) {
       const [x, y] = tm(b.pos.x, b.pos.z);

@@ -52,7 +52,7 @@ export function nearBench(game, a) {
 export function upgradeInfo(a) {
   const it = a.item;
   if (!it || it.kind !== 'weapon') return { ok: false, text: 'Hold a weapon to upgrade it' };
-  if (it.rarity >= 4) return { ok: false, text: `${itemName(it)} is already Legendary` };
+  if (it.rarity >= 4) return { ok: false, text: `${itemName(it)} is already ${RARITIES[it.rarity].name}` };
   const cost = UPGRADE_COST[it.rarity];
   return { ok: a.bucks >= cost, cost, text: `Upgrade to ${RARITIES[it.rarity + 1].name} · ${cost} Bucks`, color: RARITIES[it.rarity + 1].color };
 }

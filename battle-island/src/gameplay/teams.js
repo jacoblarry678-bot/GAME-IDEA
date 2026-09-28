@@ -177,7 +177,7 @@ export class Teams {
       // revives (held interaction; the caller refreshes reviveTarget every frame)
       const t = a.reviveTarget;
       if (t) {
-        if (!t.alive || !t.downed || t.team !== a.team || t.pos.distanceTo(a.pos) > 2.6 || !a.canAct()) {
+        if (!t.alive || !t.downed || t.team !== a.team || t.carriedBy || a.carrying || t.pos.distanceTo(a.pos) > 2.6 || !a.canAct()) {
           a.reviveTarget = null;
           a.reviveT = 0;
         } else if ((a.reviveT += dt) >= REVIVE_TIME) {

@@ -17,6 +17,7 @@ import { BotBrain, BOT_NAMES } from './bots.js';
 import { PlayerController } from './player.js';
 import { Teams } from './teams.js';
 import { Vehicles } from './vehicles.js';
+import { Boss } from './boss.js';
 import { dropBucks } from './economy.js';
 import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
@@ -138,6 +139,7 @@ export class Game {
     if (this.role !== 'client') this.loot.spawnInitial(rng);
     this.building = new Building(this);
     this.vehicles = new Vehicles(this);
+    this.boss = new Boss(this);
     this.storm = new Storm(this, rng);
     this.teamSize = opts.teamSize || 1;
     this.teams = new Teams(this, this.teamSize);
@@ -258,6 +260,7 @@ export class Game {
     this.loot.clear();
     this.building.clear();
     this.vehicles.clear();
+    this.boss.dispose();
     this.storm.dispose();
     this.effects.clear();
     this.scene.remove(this.world.root);
@@ -336,6 +339,10 @@ export class Game {
   applyDamage(target, amount, src, opts = {}) {
     if (this.role === 'client') {
       if (target === this.player && opts.fall && this.net) this.net.cmd('x', Math.round(amount));
+      return;
+    }
+    if (target.isBoss) {
+      if (this.state !== 'over') target.damage(amount * (src && src.buffs && src.buffs.spicy ? 1.2 : 1), src, opts);
       return;
     }
     if (!target.alive || target.state === 'bus' || amount <= 0 || this.state === 'over') return;
@@ -436,6 +443,8 @@ export class Game {
     target.emote = false;
     target.reviveTarget = target.rebootVan = null;
     if (target.vehicle) this.vehicles.exit(target, true);
+    if (target.carrying) this.dropCarried(target);
+    if (target.carriedBy) this.dropCarried(target.carriedBy);
     target.zip = null;
     dropBucks(this, target);
     // carried reboot cards fall to the ground with everything else
@@ -574,6 +583,8 @@ export class Game {
     }
     this.vehicles.checkOccupants();
     this.vehicles.update(dt);
+    this.boss.update(dt);
+    this.updateCarry(dt);
     this.teams.update(dt);
     this.combat.update(dt);
     this.loot.update(dt, t);
@@ -601,6 +612,8 @@ export class Game {
     p.equipT = Math.max(0, p.equipT - dt);
     this.net.smooth(dt);
     this.vehicles.placeOccupants();
+    this.boss.smooth(dt);
+    this.placeCarried();
     for (const pg of this.teams.pings) pg.t -= dt;
     this.teams.pings = this.teams.pings.filter((pg) => pg.t > 0);
     this.loot.update(dt, t, true);
@@ -651,6 +664,7 @@ export class Game {
 
   _present(dt, t) {
     this.world.update(dt, t);
+    this.boss.present(dt, t);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const tw = this.tweens[i];
       tw.t += dt;
@@ -690,6 +704,107 @@ export class Game {
       p.lastPoi = poi;
     }
     this.hud.update(this, dt);
+  }
+
+  // ------------------------------------------------------------ doors, vault, carrying (host)
+  /** Opens/closes door i. `a` (optional) must be next to it. */
+  toggleDoor(i, a = null) {
+    const d = this.world.doors[i];
+    if (!d || d.broken) return false;
+    if (a && (a.pos.distanceTo(d.pos) > 3.2 || !a.canAct())) return false;
+    const open = !d.open;
+    if (!open) {
+      // don't shut a door on someone standing in it
+      for (const o of this.actors) if (o.alive && Math.abs(o.pos.x - d.pos.x) < 1.3 && Math.abs(o.pos.z - d.pos.z) < 0.7 && Math.abs(o.pos.y - d.pos.y) < 2) return false;
+    }
+    this.world.setDoor(i, open);
+    if (open && a) a.stats.doors++;
+    sfx.play('door', d.pos);
+    this.net?.push?.(['dr', i, open ? 1 : 0]);
+    return true;
+  }
+
+  hasKey(a) {
+    return a.slots.findIndex((s) => s && s.kind === 'key');
+  }
+
+  /** Opens the vault with a keycard in `a`'s inventory. Returns a message. */
+  openVault(a) {
+    const v = this.world.vault;
+    if (!v || v.open) return null;
+    if (a.pos.distanceTo(v.pos) > 3.6 || !a.canAct()) return null;
+    const k = this.hasKey(a);
+    if (k < 0) return { text: 'Locked. Defeat Crankbolt for the Vault Keycard.', color: '#ff8a8a' };
+    a.slots[k] = null;
+    if (a.sel === k) a.sel = -1;
+    this.world.openVault();
+    a.stats.vault++;
+    sfx.play('vault', v.pos);
+    this.net?.push?.(['vo']);
+    this.loot.drop({ kind: 'coin', id: 'bucks', count: 200 }, v.inside.clone().add(new THREE.Vector3(0, 1, 0)), new THREE.Vector3(0, 3, 0));
+    this.notifyAll(`${a.name.replace(' [BOT]', '')} opened Crankbolt's Vault!`, '#ffd23f', 3.5);
+    return { text: 'The vault is open!', color: '#ffd23f' };
+  }
+
+  /** Picks up a knocked teammate (or puts them down if already carrying). */
+  carry(a, m) {
+    if (a.carrying) return this.dropCarried(a);
+    if (!m || !m.alive || !m.downed || m.team !== a.team || m.carriedBy || a.vehicle || !a.canAct() || m.pos.distanceTo(a.pos) > 2.8) return false;
+    a.carrying = m;
+    m.carriedBy = a;
+    a.cancelActions();
+    a.ads = a.building = false;
+    a.reviveTarget = m.reviveTarget = null;
+    m.ep = (m.ep | 0) + 1;
+    this.notify(a, `Carrying ${m.name}. X puts them down.`, '#7ed957', 2);
+    return true;
+  }
+
+  dropCarried(a) {
+    const m = a.carrying;
+    if (!m) return false;
+    a.carrying = null;
+    m.carriedBy = null;
+    const f = new THREE.Vector3(-Math.sin(a.yaw), 0, -Math.cos(a.yaw));
+    const x = a.pos.x + f.x * 1.1, z = a.pos.z + f.z * 1.1;
+    const y = this.world.physics.groundAt(x, z, a.pos.y + 1).y;
+    const blocked = Math.abs(y - a.pos.y) > 1.5;
+    m.pos.set(blocked ? a.pos.x : x, (blocked ? a.pos.y : y) + 0.3, blocked ? a.pos.z : z);
+    m.vel.set(f.x * 2, 2, f.z * 2);
+    m.state = 'air';
+    m.grounded = false;
+    m.ep = (m.ep | 0) + 1;
+    return true;
+  }
+
+  /** Host: carried teammates ride on their carrier's shoulders. */
+  updateCarry(dt) {
+    for (const a of this.actors) {
+      const m = a.carrying;
+      if (!m) continue;
+      if (!a.alive || a.downed || a.vehicle || a.state === 'zip' || !m.alive || !m.downed) {
+        if (m.carriedBy === a && m.alive && m.downed) this.dropCarried(a);
+        else {
+          a.carrying = null;
+          if (m.carriedBy === a) m.carriedBy = null;
+        }
+        continue;
+      }
+      if (a.stats) a.stats.carried = (a.stats.carried || 0) + Math.hypot(a.vel.x, a.vel.z) * dt;
+    }
+    this.placeCarried();
+  }
+
+  placeCarried() {
+    for (const a of this.actors) {
+      const m = a.carrying;
+      if (!m) continue;
+      m.pos.set(a.pos.x, a.pos.y + 1.15, a.pos.z);
+      m.vel.set(0, 0, 0);
+      m.yaw = a.yaw + Math.PI / 2;
+      m.state = 'ground';
+      m.grounded = true;
+    }
   }
 
   onStormShrink(phase) {

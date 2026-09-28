@@ -22,6 +22,9 @@ export const CHALLENGES = {
   runover: { text: 'Hit an opponent with a vehicle', goal: 1, stat: (m) => m.runovers },
   top10: { text: 'Finish in the top 10', goal: 1, stat: (m, r) => (r.place <= 10 ? 1 : 0) },
   play: { text: 'Play 3 matches', goal: 3, stat: () => 1 },
+  boss: { text: 'Deal 500 damage to Crankbolt', goal: 500, stat: (m) => m.bossDmg },
+  vault: { text: "Open Crankbolt's Vault", goal: 1, stat: (m) => m.vault },
+  doors: { text: 'Open 8 doors', goal: 8, stat: (m) => m.doors },
 };
 
 /** Today's three challenges (rolled from the date, so every device agrees). */

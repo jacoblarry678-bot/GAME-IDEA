@@ -207,7 +207,7 @@ export class Physics {
       if (list) {
         for (let n = 0; n < list.length; n++) {
           const c = list[n];
-          if (c._stamp === s || c === ignore || (ignore && c.vehicle === ignore)) continue;
+          if (c._stamp === s || c === ignore || c.noRay || (ignore && c.vehicle === ignore)) continue;
           c._stamp = s;
           const r = intersect(c, ox, oy, oz, dx, dy, dz, best);
           if (r) {

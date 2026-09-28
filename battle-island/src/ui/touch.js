@@ -27,6 +27,7 @@ const BTN = [
   ['repair', 'FIX', 'KeyU', ''],
   ['mat', 'MAT', 'KeyT', ''],
   ['emote', '♪', 'KeyN', ''],
+  ['carry', 'CARRY', 'KeyX', ''],
 ];
 
 export function isTouchDevice() {
@@ -229,5 +230,9 @@ export class TouchControls {
     const driving = !!p.vehicle && p.seat === 0;
     for (const id of ['fire', 'aim', 'reload', 'crouch', 'pick']) this.btns[id].style.display = driving ? 'none' : '';
     this.btns.jump.textContent = driving ? 'HORN' : p.state === 'zip' ? 'DROP' : 'JUMP';
+    // carry: shown next to a knocked teammate, or while carrying one
+    const downedMate = game.actors.some((a) => a !== p && a.alive && a.downed && !a.carriedBy && a.team === p.team && a.pos.distanceTo(p.pos) < 2.2);
+    this.btns.carry.style.display = p.carrying || (downedMate && p.canAct() && !p.vehicle) ? '' : 'none';
+    this.btns.carry.textContent = p.carrying ? 'DROP' : 'CARRY';
   }
 }

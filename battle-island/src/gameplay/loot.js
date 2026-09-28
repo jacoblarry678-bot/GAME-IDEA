@@ -297,7 +297,7 @@ export class Loot {
   }
 }
 
-const KIND_S = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin'];
+const KIND_S = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin', 'key'];
 function rowToItemShim(r) {
   const kind = KIND_S[r[1]];
   if (kind === 'weapon') return { kind, id: r[2], rarity: r[3], mag: r[7] };

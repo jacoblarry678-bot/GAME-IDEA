@@ -433,3 +433,12 @@ body.touch .shop { top: 12%; }
 .chal.done .rk-bar i { background: var(--green); }
 .chal-result { max-width: 420px; margin: 6px auto; text-align: left; }
 @media (max-height: 520px) { .chal-card { padding: 4px 8px; margin: 4px 0; } .chal { margin: 1px 0; font-size: 12px; } }
+
+/* Milestone 5: boss bar, carry button */
+.bossbar { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); width: min(60vw, 460px); text-align: center; }
+.bossbar b { color: #ff8a3d; font-size: 18px; letter-spacing: 0.08em; }
+.bossbar small { margin-left: 8px; color: var(--muted); font-size: 12px; }
+.bb-bar { height: 12px; border-radius: 6px; background: rgba(29, 21, 55, 0.8); border: 2px solid rgba(255, 255, 255, 0.35); overflow: hidden; margin-top: 2px; }
+.bb-bar div { height: 100%; background: linear-gradient(90deg, #ff4b4b, #ff8a3d); transition: width 0.15s; }
+.t-carry { right: calc(var(--sr) + 268px); bottom: calc(var(--sb) + 40px); width: 56px; height: 56px; font-size: 11px; background: rgba(126, 217, 87, 0.35); }
+body.touch .bossbar { top: calc(var(--st) + 36px); width: 40vw; }

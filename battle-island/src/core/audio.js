@@ -110,6 +110,9 @@ class Sfx {
       case 'coin': this._tone(0.12, 0.07, 1320, 1320, 'square'); this._tone(0.12, 0.12, 1760, 1760, 'square', 0.07); break;
       case 'buy': [880, 1320, 1760].forEach((f, i) => this._tone(0.12, 0.1, f, f, 'triangle', i * 0.06)); break;
       case 'zip': this._noise(0.3 * g, 0.5, 2400, 4, 'bandpass'); break;
+      case 'boss': this._tone(0.35 * g, 0.8, 90, 45, 'sawtooth'); this._noise(0.3 * g, 0.6, 250, 0.6); break;
+      case 'door': this._noise(0.25 * g, 0.18, 700, 2, 'bandpass'); this._tone(0.08 * g, 0.12, 180, 120, 'triangle'); break;
+      case 'vault': [196, 262, 330, 392, 523].forEach((f, i) => this._tone(0.16 * g, 0.3, f, f, 'square', i * 0.09)); this._noise(0.3 * g, 1.0, 400, 0.5); break;
       case 'win': [523, 659, 784, 1046, 1318].forEach((f, i) => this._tone(0.16, 0.35, f, f, 'triangle', i * 0.12)); break;
       case 'lose': [440, 392, 330, 262].forEach((f, i) => this._tone(0.14, 0.35, f, f, 'triangle', i * 0.15)); break;
       default: break;

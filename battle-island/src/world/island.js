@@ -31,6 +31,8 @@ const MINOR = [
   { name: 'Snack Shack', x: 116, z: 4, h: 5 },
 ];
 const POND = { x: 90, z: 84, r: 10 };
+/** Crankbolt's Vault: a sealed bunker on a hilltop plateau, guarded by the boss. */
+export const VAULT = { name: "Crankbolt's Vault", x: 42, z: -30, h: 17, r: 16 };
 
 function coastRadius(a) {
   return 132 + 11 * Math.sin(3 * a + 1) + 7 * Math.sin(5 * a + 2) + 4 * Math.sin(9 * a + 0.5);
@@ -54,6 +56,7 @@ function rawHeight(x, z) {
     const w = smooth(16, 8, Math.hypot(x - m.x, z - m.z));
     h += (m.h - h) * w;
   }
+  h += (VAULT.h - h) * smooth(VAULT.r + 10, VAULT.r, Math.hypot(x - VAULT.x, z - VAULT.z));
   const pd = Math.hypot(x - POND.x, z - POND.z);
   h -= 6.5 * smooth(POND.r + 4, POND.r - 3, pd);
   return h;
@@ -155,6 +158,8 @@ export class World {
     this.vendors = []; // vending bots that sell items for Benton Bucks
     this.benches = []; // weapon upgrade benches
     this.ziplines = [];
+    this.doors = []; // openable house doors
+    this.vault = null;
     this.onBarrel = null; // set by the match: explosion callback
     this._buildTerrain();
     this._buildWater();
@@ -168,6 +173,7 @@ export class World {
     for (const m of MINOR) this._cabin(m);
     for (const m of MINOR) this._rebootVan(m.x + 9, m.z + 1.5);
     this._buildWheelsAndDeals();
+    this._buildVault();
     this._scatterNature();
     this.mapCanvas = this._renderMap();
     this.baseWid = this.physics.nextWid;
@@ -203,6 +209,7 @@ export class World {
   poiAt(x, z) {
     for (const p of POIS) if (Math.hypot(x - p.x, z - p.z) < p.r + 6) return p;
     for (const m of MINOR) if (Math.hypot(x - m.x, z - m.z) < 14) return m;
+    if (Math.hypot(x - VAULT.x, z - VAULT.z) < VAULT.r) return VAULT;
     return null;
   }
 
@@ -412,6 +419,9 @@ export class World {
     const ry = y0 + 0.15 + stories * STORY;
     this.box(x0 - 0.4, ry - 0.25, z0 - 0.4, x1 + 0.4, ry + 0.05, z1 + 0.4, { color: o.floor || '#c9b79a', tex: 'wood', material: 'wood', hp: 400 });
     if (o.roof) this.roof(x0 - 0.4, z0 - 0.4, x1 + 0.4, z1 + 0.4, ry + 0.05, Math.min(w, d) * 0.38, o.roof);
+    // doors in the ground-floor doorways (they swing inward)
+    this.door(doorA, doorB, z0, y0 + 0.15, 1);
+    if (o.backDoor !== false) this.door(doorA, doorB, z1, y0 + 0.15, -1);
     // some furniture for cover
     this.box(x0 + 0.6, y0 + 0.15, z1 - 1.6, x0 + 2.8, y0 + 1.0, z1 - 0.5, { color: o.furniture || '#6b8fd6', material: 'wood', hp: 120, harvest: 5 });
     if (o.chest !== false) this.chest(x0 + 1.2, y0 + 0.15, z0 + 1.2, 0);
@@ -436,6 +446,112 @@ export class World {
     const ch = { pos: new THREE.Vector3(x, y, z), group: g, lid, opened: false, legendary, t: this.rng() * 6 };
     this.chests.push(ch);
     return ch;
+  }
+
+  /** A door across x0..x1 in a wall at z. `inward` is the side it swings toward (+1 = +z). */
+  door(x0, x1, z, y, inward) {
+    const w = x1 - x0, h = 2.35;
+    const hinge = new THREE.Group();
+    hinge.position.set(x0, y, z);
+    const panel = new THREE.Mesh(boxGeo(w - 0.04, h, 0.1), mat('#a8703f', 'wood'));
+    panel.position.set(w / 2, h / 2, 0);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), mat('#ffd23f', null, { emissive: '#5a4000' }));
+    knob.position.set(w - 0.2, 1.05, 0.09 * inward);
+    const knob2 = knob.clone();
+    knob2.position.z = -0.09 * inward;
+    hinge.add(panel, knob, knob2);
+    hinge.traverse((m) => (m.castShadow = true));
+    this.root.add(hinge);
+    const c = new Collider({ minX: x0, maxX: x1, minZ: z - 0.08, maxZ: z + 0.08, minY: y, maxY: y + h, mesh: hinge, hp: 150, maxHp: 150, material: 'wood', harvest: 5 });
+    const door = { i: this.doors.length, open: false, broken: false, c, hinge, inward, pos: new THREE.Vector3((x0 + x1) / 2, y, z), angle: 0 };
+    c.door = door;
+    this.physics.add(c);
+    this.doors.push(door);
+    this.animated.push(() => {
+      const want = door.open ? -door.inward * Math.PI / 2 : 0;
+      door.angle += (want - door.angle) * 0.25;
+      hinge.rotation.y = door.angle;
+    });
+    return door;
+  }
+
+  /** Opens or closes a door (both machines). Returns false if it can't change. */
+  setDoor(i, open) {
+    const d = this.doors[i];
+    if (!d || d.broken || d.open === open) return false;
+    d.open = open;
+    if (open) this.physics.remove(d.c);
+    else {
+      this.physics.add(d.c);
+      d.c.alive = true;
+    }
+    return true;
+  }
+
+  // ---------------------------------------------------------------- vault
+  _buildVault() {
+    const V = VAULT;
+    const y = V.h;
+    const cx = V.x, cz = V.z - 6;
+    const x0 = cx - 5, x1 = cx + 5, z0 = cz - 4, z1 = cz + 4;
+    const steel = { color: '#4a5566', tex: 'metal' }; // no material: indestructible
+    this.footprints.push({ x0, z0, x1, z1, color: '#ffd23f' });
+    this.box(x0 - 0.3, y - 3, z0 - 0.3, x1 + 0.3, y + 0.15, z1 + 0.3, { color: '#3a3f4a', tex: 'metal' });
+    const H = 3.6;
+    // the doorway faces the plateau (+z)
+    this.wall(false, z1, x0, x1, y + 0.15, H, [{ a: cx - 1.5, b: cx + 1.5, bottom: 0, top: 3 }], steel);
+    this.wall(false, z0, x0, x1, y + 0.15, H, [], steel);
+    this.wall(true, x0, z0 + 0.15, z1 - 0.15, y + 0.15, H, [], steel);
+    this.wall(true, x1, z0 + 0.15, z1 - 0.15, y + 0.15, H, [], steel);
+    this.box(x0 - 0.5, y + H + 0.15, z0 - 0.5, x1 + 0.5, y + H + 0.6, z1 + 0.5, { color: '#2f3642', tex: 'metal' });
+    // hazard stripes and a sign
+    for (let i = 0; i < 6; i++) this.box(cx - 2.6 + i * 0.95, y + 3.2, z1 + 0.16, cx - 2.1 + i * 0.95, y + 3.6, z1 + 0.2, { color: i % 2 ? '#1d2a3a' : '#ffd23f', solid: false });
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(6, 0.9), new THREE.MeshLambertMaterial({ map: textTexture('VAULT', '#1d2a3a', '#ffd23f', 1024) }));
+    sign.position.set(cx, y + 4.3, z1 + 0.62);
+    this.root.add(sign);
+    // the heavy door: slides into the wall when a keycard opens it
+    const door = new THREE.Group();
+    const slab = new THREE.Mesh(boxGeo(3.0, 3.0, 0.35), mat('#9aa6b8', 'metal'));
+    slab.position.y = 1.5;
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.08, 8, 20), mat('#ffd23f', null, { emissive: '#5a4000' }));
+    wheel.position.set(0, 1.5, 0.22);
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: '#ff4b4b' }));
+    light.position.set(1.15, 2.6, 0.2);
+    door.add(slab, wheel, light);
+    door.position.set(cx, y + 0.15, z1);
+    door.traverse((m) => (m.castShadow = true));
+    this.root.add(door);
+    const c = new Collider({ minX: cx - 1.5, maxX: cx + 1.5, minZ: z1 - 0.2, maxZ: z1 + 0.2, minY: y + 0.15, maxY: y + 3.15, mesh: door });
+    this.physics.add(c);
+    const vault = { open: false, c, door, light, wheel, slide: 0, pos: new THREE.Vector3(cx, y + 0.15, z1), inside: new THREE.Vector3(cx, y + 0.2, cz), home: new THREE.Vector3(V.x, y, V.z + 7) };
+    this.vault = vault;
+    this.animated.push((t) => {
+      vault.slide += ((vault.open ? 3.1 : 0) - vault.slide) * 0.05;
+      door.position.x = cx + vault.slide;
+      wheel.rotation.z = vault.slide * 2;
+      light.material.color.set(vault.open ? '#7ed957' : Math.sin(t * 3) > 0 ? '#ff4b4b' : '#661111');
+    });
+    // treasure: two legendary chests and a heap of gold
+    for (const [dx, rot] of [[-3, 0], [3, 0]]) {
+      const ch = this.chest(cx + dx, y + 0.15, cz - 2.4, rot, true);
+      ch.vault = true;
+    }
+    for (let i = 0; i < 9; i++) {
+      const bar = new THREE.Mesh(boxGeo(0.5, 0.18, 0.25), mat('#ffd23f', null, { emissive: '#7a5a00' }));
+      bar.position.set(cx - 0.6 + (i % 3) * 0.55, y + 0.24 + Math.floor(i / 3) * 0.19, cz - 2.2 + (i % 2) * 0.1);
+      this.root.add(bar);
+    }
+    this.exclude.push({ x: V.x, z: V.z, r: V.r + 2 });
+    if (this._trees) this._trees = this._trees.filter((t) => Math.hypot(t.x - V.x, t.z - V.z) > V.r + 2);
+  }
+
+  /** Opens the vault door (both machines). */
+  openVault() {
+    const v = this.vault;
+    if (!v || v.open) return false;
+    v.open = true;
+    this.physics.remove(v.c);
+    return true;
   }
 
   tree(x, z, kind, scale = 1) {
@@ -1115,6 +1231,7 @@ export class World {
       this.onDestroyed?.(c.wid);
     }
     this.physics.remove(c);
+    if (c.door) c.door.broken = true;
     if (c.linked) for (const l of c.linked) this.physics.remove(l);
     if (c.inst) {
       const zero = new THREE.Matrix4().makeScale(0, 0, 0);

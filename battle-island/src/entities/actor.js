@@ -93,7 +93,9 @@ export class Actor {
     this.seat = -1;
     this.zip = null; // { line, t, dir }
     this.bucks = 0;
-    this.stats = { driven: 0, zips: 0, chests: 0, spent: 0, upgrades: 0, runovers: 0 };
+    this.stats = { driven: 0, zips: 0, chests: 0, spent: 0, upgrades: 0, runovers: 0, bossDmg: 0, bosses: 0, vault: 0, doors: 0, carried: 0 };
+    this.carrying = null; // knocked teammate on our shoulders
+    this.carriedBy = null;
     this.game.scene.add(this.model.root);
   }
 
@@ -316,7 +318,7 @@ export class Actor {
 
   /** Movement for one frame. `inp` fields: see newInput(). */
   move(dt, inp) {
-    if (!this.alive || this.state === 'bus' || this.state === 'drive') return;
+    if (!this.alive || this.state === 'bus' || this.state === 'drive' || this.carriedBy) return;
     const phys = this.game.world.physics;
     if (this.state === 'zip') {
       this._zipMove(dt, inp);
@@ -385,6 +387,7 @@ export class Actor {
         if (inp.ads) speed = Math.min(speed, ADS);
         if (this.use) speed = Math.min(speed, USE);
         if (this.buffs.zoom) speed *= 1.3;
+        if (this.carrying) speed *= 0.72;
         if (this.downed) {
           // crawling: slow, no sprint, no jumps
           speed = 1.7;

@@ -41,6 +41,7 @@ Touch controls turn on automatically on touch screens. You can force them on or 
 | FIRE | Shoot, swing, place a build piece or use an item. Hold it and drag to aim while firing |
 | AIM · JUMP · CROUCH · RELOAD | Aim down sights (toggle) · jump / glider · crouch/slide · reload |
 | USE | Open, pick up, or hold to revive/reboot. It lights up when something is in reach and names the action (ENTER, EXIT, ZIP, SHOP, UPGRADE) |
+| CARRY | Shows next to a knocked teammate: pick them up; tap again (DROP) to put them down |
 | Driving | The stick drives and steers (push to the rim to boost a kart) · JUMP honks · USE gets out. FIRE and AIM hide while you drive |
 | BUILD · ⛏ | Build mode · pickaxe |
 | EDIT · FIX · MAT | Edit, repair/upgrade, and material. These show up when you aim at a build or are in build mode |
@@ -80,6 +81,9 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 | E (zipline tower) | Ride the zipline · Space lets go |
 | E (vending bot) | Open the shop · 1–3 buy with Benton Bucks · E closes |
 | E (upgrade bench) | Upgrade the held weapon one rarity |
+| E (door) | Open / close a door |
+| E (vault door) | Open Crankbolt's Vault (needs the Vault Keycard) |
+| X | Pick up / put down a knocked teammate |
 | Z / middle click | Ping (enemy, chest, loot or "going here") |
 | M | Full map (click to place a drop marker) |
 | N | Emote |
@@ -203,14 +207,35 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - Interaction prompts show the right key.
   - Builds can't use a vehicle as support.
 
+## Milestone 5: Boss & Vault
+
+- [x] **Crankbolt, the vault guardian:** a giant rocket-firing robot boss on the hilltop plateau south-east of the Clubhouse. It's red **B** on the map.
+  - It has 2,000 HP and a big health bar when you're near.
+  - It fires rocket volleys (faster when it's below half health), and anyone who gets too close gets a wound-up stomp that knocks them into the air.
+  - It has a head hitbox for critical hits. Explosions hurt it by their player damage, not their building damage, and you can ram it with a vehicle.
+  - It guards its hilltop: it only picks fights within about 30 m and never leaves its plateau. Left alone, it walks home and repairs itself.
+  - It isn't a player, so it doesn't count toward players left or placement. Bots fight back when it attacks them.
+  - **Loot:** the **Vault Keycard**, a **Mythic** Thunder Rifle (a new top rarity above Legendary), 150 Benton Bucks, ammo and shields.
+- [x] **Crankbolt's Vault:** a sealed steel bunker behind the boss.
+  - Nothing breaks the walls. The keycard takes an inventory slot; press E at the door with it to open the vault.
+  - Inside: two legendary chests and 200 Bucks. Bots leave the vault chests alone until it's open.
+- [x] **Doors:** every house has front and back doors.
+  - E opens or closes them. They won't close on someone standing in the doorway.
+  - They can be shot or pickaxed down. Bots open doors that are in their way.
+- [x] **Carrying knocked teammates:** press X (or CARRY on touch) next to a knocked teammate to lift them onto your shoulders.
+  - You move a bit slower and can't shoot while carrying. Press X again to put them down in front of you, ready to revive.
+- [x] **New daily challenges:** deal 500 damage to Crankbolt, open the vault, open 8 doors.
+- [x] **Online:** doors, the vault, carrying and the boss are all host-checked and synced.
+  - A client's hits on Crankbolt give them hitmarkers.
+  - A client who crashes a truck at speed now takes crash damage on the host too. Previously the crash only registered on their own device.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
 - [ ] Building: editing ramps and cones
 - [ ] Match flow: pre-match warm-up area, match replays
-- [ ] Teams: carrying knocked teammates
 - [ ] Weapon attachments and scopes as separate items
-- [ ] World: doors, story NPCs and quests, bosses, keycards and vaults; bots that drive
+- [ ] World: story NPCs and quests, more bosses and vaults; bots that drive
 - [ ] Progression: weekly challenges, achievements, more emotes and cosmetics
 - [ ] Online: more than 4 players, host migration, joining a match in progress, and anti-cheat (the host is trusted)
 - [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization, hidden family collectibles, and rotating spooky/playground events
@@ -227,10 +252,12 @@ node tools/island-milestone2.mjs            # 19 checks
 node tools/island-ranked.mjs                # 12 checks
 node tools/island-supercharged.mjs          # 13 checks
 node tools/island-milestone4.mjs            # 22 checks
+node tools/island-milestone5.mjs            # 17 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
 node tools/island-online-m4.mjs             # 11 checks: a client drives, rides and shops through the host
+node tools/island-online-m5.mjs             # 10 checks: doors, Crankbolt, the vault, carrying and crashes online
 node tools/island-mobile.mjs                # 18 checks: emulated phone with real multi-touch
 ```
 
@@ -262,6 +289,21 @@ node tools/island-mobile.mjs                # 18 checks: emulated phone with rea
   - Buying at a vending bot (and being refused when short).
   - Upgrading at a bench.
   - Daily challenges paying out on the result screen and in the lobby.
+- **`island-milestone5.mjs`:**
+  - The world: doors, the vault and the boss.
+  - Doors: E to open and close, walking through, no closing on someone, and bots opening them.
+  - Crankbolt: aggro, rocket volleys that hurt, the boss bar, shooting it with real clicks, head and body hitboxes, the stomp, the leash and self-repair, and explosion damage.
+  - Defeating Crankbolt, and its drops (keycard, Mythic rifle, Bucks).
+  - The vault: locked without the keycard, opened with it, the keycard used up, and the gold and chests inside.
+  - Carrying: picking up, riding on the carrier, no shooting, putting down.
+  - The new challenges.
+- **`island-online-m5.mjs`:**
+  - A client opening a door, and the host closing it.
+  - A client damaging Crankbolt: the host applies it, the boss turns on them, and the client gets the bar and hitmarkers.
+  - The boss's drops appearing for the client.
+  - A client opening the vault.
+  - A client carrying the knocked host and putting them down.
+  - Crash damage for a client-driven truck.
 - **`island-online-m4.mjs`:** the same vehicles on both machines, a client driving (the host sees the movement, fuel and distance), getting out, the client seeing the host drive, a client purchase checked by the host, snapshot size with every vehicle moving, and challenge stats reaching the client's result.
 - **`island-online.mjs`:**
   - Joining: open-games list, roster, and matching rosters and bots on both machines.
@@ -292,6 +334,7 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/game.js` | Match flow, bus, damage routing, eliminations, XP |
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
+| `src/gameplay/boss.js` | Crankbolt: AI, attacks, hitbox, drops, network row |
 | `src/gameplay/vehicles.js` | Trucks and karts: handling, fuel, damage, run-overs, seats, network rows |
 | `src/gameplay/economy.js` | Benton Bucks, vending bot stock, upgrade benches |
 | `src/core/challenges.js` | Daily challenges |

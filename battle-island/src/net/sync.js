@@ -24,7 +24,7 @@ const ST = ['bus', 'skydive', 'glide', 'ground', 'air', 'swim', 'mantle', 'drive
 export const HELD = ['none', 'pickaxe', 'ar', 'smg', 'shotgun', 'pistol', 'sniper', 'launcher', 'boomball'];
 const POSE = ['none', 'gun', 'pickaxe', 'build', 'heal', 'throw'];
 const FL = { alive: 1, downed: 2, crouch: 4, emote: 8, ads: 16, build: 32, sprint: 64, slide: 128, holdE: 256 };
-const KIND = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin'];
+const KIND = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin', 'key'];
 const AMMO_K = ['light', 'medium', 'heavy', 'shells', 'rockets'];
 const MAT_K = ['wood', 'brick', 'metal'];
 const r10 = (v) => Math.round(v * 10);
@@ -139,7 +139,7 @@ export class HostNet {
       if (a.vehicle && Array.isArray(pr.mv)) this.game.vehicles.applyDriver(a, pr.mv);
       if (st === 'zip' && a.state !== 'zip') a.stats.zips++;
       // client-simulated movement, with a sanity cap on teleports (seats are placed by the host)
-      if (st && st !== 'bus' && !a.vehicle && st !== 'drive' && Math.hypot(nx - a.pos.x, nz - a.pos.z) < 60) {
+      if (st && st !== 'bus' && !a.vehicle && !a.carriedBy && st !== 'drive' && Math.hypot(nx - a.pos.x, nz - a.pos.z) < 60) {
         a.pos.set(nx, ny, nz);
         a.vel.set(me[3] / 10, me[4] / 10, me[5] / 10);
         a.aimYaw = a.yaw = me[6] / 100;
@@ -231,6 +231,13 @@ export class HostNet {
         break;
       }
       case 'vx': if (a.vehicle) g.vehicles.exit(a); break;
+      case 'dr': g.toggleDoor(c[2] | 0, a); break;
+      case 'vo': {
+        const r = g.openVault(a);
+        if (r) g.notify(a, r.text, r.color);
+        break;
+      }
+      case 'cy': g.carry(a, g.actors[c[2]]); break;
       case 'by': {
         const r = buy(g, a, c[2] | 0, c[3] | 0);
         if (r) g.notify(a, r.text, r.color);
@@ -260,6 +267,8 @@ export class HostNet {
       s: [r10(st.center.x), r10(st.center.y), r10(st.radius), r10(st.next.c.x), r10(st.next.c.y), r10(st.next.r), ['wait', 'shrink', 'done'].indexOf(st.stage), r10(st.timer), st.phase],
       pj: g.combat.projectiles.slice(0, 12).map((p) => [p.kind === 'grenade' ? 2 : p.kind === 'rocket' ? 1 : 0, r10(p.pos.x), r10(p.pos.y), r10(p.pos.z)]),
       vh: g.vehicles.rows(),
+      bs: g.boss.row(),
+      cr: g.actors.filter((a) => a.carrying).map((a) => [a.id, a.carrying.id]),
     };
   }
 
@@ -313,7 +322,7 @@ export class HostNet {
     send('pk', g.loot.pickups.map(pickupRow));
     send('pc', [...g.building.pieces].map(pieceRow));
     const extra = g.world.chests.slice(g.world.baseChests).map((ch, i) => [g.world.baseChests + i, r10(ch.pos.x), r10(ch.pos.y), r10(ch.pos.z), ch.legendary ? 1 : 0, ch.supply ? 1 : 0]);
-    send('ch', [g.world.chests.map((ch, i) => (ch.opened ? i : -1)).filter((i) => i >= 0), extra, g.world.destroyed]);
+    send('ch', [g.world.chests.map((ch, i) => (ch.opened ? i : -1)).filter((i) => i >= 0), extra, g.world.destroyed, g.world.doors.filter((d) => d.open).map((d) => d.i), g.world.vault.open ? 1 : 0]);
   }
 }
 
@@ -446,6 +455,12 @@ export class ClientNet {
       a.netHeld = { key: HELD[Math.floor(r[11] / 100)] || 'none', pose: POSE[Math.floor(r[11] / 10) % 10] || 'none', rarity: r[11] % 10 };
     }
     if (ss.vh) g.vehicles.applyRows(ss.vh, me);
+    if (ss.bs) g.boss.applyRow(ss.bs);
+    for (const a of g.actors) a.carrying = a.carriedBy = null;
+    for (const [c, m] of ss.cr || []) {
+      const A = g.actors[c], M = g.actors[m];
+      if (A && M) { A.carrying = M; M.carriedBy = A; }
+    }
     const s = ss.s;
     g.storm.applyNet(s);
     const P = pv['a' + me.id];
@@ -511,6 +526,8 @@ export class ClientNet {
         case 'ch': g.loot.openChestVisual(g.world.chests[e[1]]); break;
         case 'ch+': g.world.netChest(e[1], e[2] / 10, e[3] / 10, e[4] / 10, !!e[5], !!e[6]); break;
         case 'wd': g.world.destroyWid(e[1]); break;
+        case 'dr': g.world.setDoor(e[1], !!e[2]); sfx.play('door', g.world.doors[e[1]]?.pos); break;
+        case 'vo': if (g.world.openVault()) sfx.play('vault', g.world.vault.pos); break;
         case 'pg': g.teams.pings.push({ pos: v(e, 2), t: 12, team: e[1], label: e[5], color: e[6], by: g.actors[e[7]] }); break;
         case 'sdp': g.loot.supplyDrop(e[1] / 10, e[2] / 10); break;
         case 'res': if (e[1] === me.id) g.showNetResult(e[2]); break;
@@ -532,7 +549,10 @@ export class ClientNet {
     if (d.k === 'pk') g.loot.netReconcile(rows);
     else if (d.k === 'pc') g.building.reconcile(rows);
     else if (d.k === 'ch') {
-      const [opened, extra, destroyed] = rows;
+      const [opened, extra, destroyed, doors, vault] = rows;
+      const open = new Set(doors || []);
+      for (const d of g.world.doors) g.world.setDoor(d.i, open.has(d.i));
+      if (vault) g.world.openVault();
       for (const x of extra || []) g.world.netChest(x[0], x[1] / 10, x[2] / 10, x[3] / 10, !!x[4], !!x[5]);
       for (const i of opened || []) if (g.world.chests[i] && !g.world.chests[i].opened) g.loot.openChestVisual(g.world.chests[i]);
       for (const w of destroyed || []) g.world.destroyWid(w);
@@ -654,6 +674,15 @@ export class NetActions {
   upgrade(bi) {
     this.net.cmd('ug', bi);
   }
+  door(i) {
+    this.net.cmd('dr', i);
+  }
+  vault() {
+    this.net.cmd('vo');
+  }
+  carry(m) {
+    this.net.cmd('cy', m ? m.id : -1);
+  }
 }
 
 /** Solo / host: actions run directly on the simulation. */
@@ -688,6 +717,12 @@ export class LocalActions {
     const r = upgrade(this.g, this.p, bi);
     if (r) this.g.hud.toast(r.text, r.color, 2);
   }
+  door(i) { this.g.toggleDoor(i, this.p); }
+  vault() {
+    const r = this.g.openVault(this.p);
+    if (r) this.g.hud.toast(r.text, r.color, 2.5);
+  }
+  carry(m) { this.g.carry(this.p, m); }
 }
 
 export { ST, FL, WEAPONS };

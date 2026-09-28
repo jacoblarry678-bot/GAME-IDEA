@@ -6,6 +6,7 @@ export const RARITIES = [
   { id: 'rare', name: 'Rare', color: '#3f9bff', mult: 1.1, reload: 0.9 },
   { id: 'epic', name: 'Epic', color: '#b35cff', mult: 1.16, reload: 0.85 },
   { id: 'legendary', name: 'Legendary', color: '#ffae1a', mult: 1.22, reload: 0.8 },
+  { id: 'mythic', name: 'Mythic', color: '#ffe45c', mult: 1.32, reload: 0.72 }, // only from Crankbolt
 ];
 
 export const AMMO = {
@@ -97,6 +98,7 @@ export function itemName(it) {
   if (it.kind === 'mat') return MATS[it.id].name;
   if (it.kind === 'card') return `${it.name}'s Reboot Card`;
   if (it.kind === 'coin') return 'Benton Bucks';
+  if (it.kind === 'key') return 'Vault Keycard';
   return '?';
 }
 

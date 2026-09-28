@@ -39,6 +39,14 @@ export class Combat {
       const tb = rayBox(o, d, a.pos.x - 0.4, a.pos.y, a.pos.z - 0.4, a.pos.x + 0.4, top, a.pos.z + 0.4);
       if (tb !== null && tb < maxT && (!best || tb < best.t)) best = { actor: a, t: tb, head: false };
     }
+    const B = this.game.boss;
+    if (B && B.alive && B !== ignore) {
+      const hb = B.hitbox();
+      const th = raySphere(o, d, hb.head.x, hb.head.y, hb.head.z, hb.head.r);
+      if (th !== null && th < maxT && (!best || th < best.t)) best = { actor: B, t: th, head: true };
+      const tb = rayBox(o, d, ...hb.body);
+      if (tb !== null && tb < maxT && (!best || tb < best.t)) best = { actor: B, t: tb, head: false };
+    }
     return best;
   }
 
@@ -81,7 +89,7 @@ export class Combat {
   fire(actor, dir) {
     const it = actor.item;
     const w = actor.weapon;
-    if (!w || !actor.canAct() || actor.fireCd > 0 || actor.equipT > 0 || actor.reloadT > 0 || actor.use) return 0;
+    if (!w || actor.carrying || !actor.canAct() || actor.fireCd > 0 || actor.equipT > 0 || actor.reloadT > 0 || actor.use) return 0;
     if (it.mag <= 0) {
       if (!actor.startReload() && !actor.isBot) sfx.play('empty');
       return 0;
@@ -153,7 +161,7 @@ export class Combat {
 
   throwItem(actor, dir) {
     const it = actor.item;
-    if (!it || it.kind !== 'throwable' || actor.fireCd > 0 || actor.equipT > 0 || !actor.canAct()) return false;
+    if (!it || it.kind !== 'throwable' || actor.carrying || actor.fireCd > 0 || actor.equipT > 0 || !actor.canAct()) return false;
     const T = THROWABLES[it.id];
     actor.fireCd = 0.9;
     actor.model.kick = 1;
@@ -173,7 +181,7 @@ export class Combat {
 
   /** Pickaxe swing: melee damage and harvesting. Returns true if swung. */
   swing(actor, dir) {
-    if (actor.fireCd > 0 || actor.equipT > 0 || !actor.canAct()) return false;
+    if (actor.fireCd > 0 || actor.equipT > 0 || actor.carrying || !actor.canAct()) return false;
     actor.fireCd = 1 / PICKAXE.rate;
     actor.model.swing = 1;
     actor.emote = false;
@@ -212,6 +220,11 @@ export class Combat {
       let amt = dmg * (1 - (d / radius) * 0.6);
       if (a === src) amt *= 0.5;
       this.game.applyDamage(a, amt, src, { pos: _p.clone(), explosive: true });
+    }
+    const B = this.game.boss;
+    if (B && B.alive && B !== src) {
+      const d = Math.max(0, _p.set(B.pos.x, B.pos.y + 2, B.pos.z).distanceTo(pos) - 1.2);
+      if (d <= radius) this.game.applyDamage(B, dmg * (1 - (d / radius) * 0.6), src, { pos: B.eye, explosive: true });
     }
     const phys = this.game.world.physics;
     const list = [...phys.query(pos.x - radius, pos.z - radius, pos.x + radius, pos.z + radius)];

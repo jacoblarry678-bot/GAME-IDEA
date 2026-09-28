@@ -286,7 +286,7 @@ export class PlayerController {
       if (!down('Mouse0')) this.lastKey = '';
     } else {
       g.building.hideGhost();
-      if (canAct && !p.emote) {
+      if (canAct && !p.emote && !p.carrying) {
         const it = p.item;
         if (!it) {
           if (down('Mouse0')) g.actions.swing(shotDir);
@@ -307,6 +307,8 @@ export class PlayerController {
           if (pressed('Mouse0')) {
             if (!g.actions.use()) g.hud.toast("You don't need that right now.", '#ffffff', 1.2);
           }
+        } else if (it.kind === 'key') {
+          if (pressed('Mouse0')) g.hud.toast("Take the keycard to Crankbolt's Vault (gold square on the map) and press E at the door.", '#ffd23f', 3);
         }
       }
     }
@@ -326,10 +328,10 @@ export class PlayerController {
       p.move(dt, inp);
       return;
     }
-    const mate = canAct && g.actors.find((a) => a !== p && a.alive && a.downed && a.team === p.team && a.pos.distanceTo(p.pos) < 2.2);
+    const mate = canAct && !p.carrying && g.actors.find((a) => a !== p && a.alive && a.downed && !a.carriedBy && a.team === p.team && a.pos.distanceTo(p.pos) < 2.2);
     const van = canAct && p.cards.length ? g.teams.nearestVan(p.pos, 3.2) : null;
     if (mate) {
-      this.prompt = { key: 'Hold E', text: `Revive ${mate.name}`, color: '#7ed957' };
+      this.prompt = { key: 'Hold E', text: `Revive ${mate.name} · X to carry`, color: '#7ed957' };
       if (down('KeyE')) { p.reviveTarget = mate; hold = true; }
     } else if (van) {
       const n = p.cards.length;
@@ -346,6 +348,9 @@ export class PlayerController {
       const zl = !ch && !pk && !veh && p.grounded && this._nearZip();
       const vend = !ch && !pk && !veh && !zl && nearVendor(g, p);
       const bench = !ch && !pk && !veh && !zl && !vend && nearBench(g, p);
+      const V = g.world.vault;
+      const vault = !ch && !pk && !veh && !zl && !vend && !bench && V && !V.open && p.pos.distanceTo(V.pos) < 3.4;
+      const door = !ch && !pk && !veh && !zl && !vend && !bench && !vault && this._nearDoor();
       if (veh) {
         const free = veh.seats.indexOf(null);
         if (free < 0) this.prompt = { key: '—', text: `${veh.def.name} is full`, color: '#ff8a8a' };
@@ -362,6 +367,13 @@ export class PlayerController {
           this.shop = this.shop ? null : vend;
           sfx.play('ui');
         }
+      } else if (vault) {
+        const key = g.hasKey(p) >= 0;
+        this.prompt = key ? { key: 'E', text: "Open Crankbolt's Vault", color: '#ffd23f', btn: 'OPEN' } : { key: '—', text: 'Locked: needs the Vault Keycard (defeat Crankbolt)', color: '#ff8a8a' };
+        if (key && pressed('KeyE')) g.actions.vault();
+      } else if (door) {
+        this.prompt = { key: 'E', text: door.open ? 'Close door' : 'Open door', color: '#ffe9b0', btn: door.open ? 'CLOSE' : 'OPEN' };
+        if (pressed('KeyE')) g.actions.door(door.i);
       } else if (bench) {
         const info = upgradeInfo(p);
         this.prompt = { key: info.cost ? 'E' : '—', text: info.text, color: info.ok ? info.color : '#ffe9b0', btn: 'UPGRADE' };
@@ -383,6 +395,13 @@ export class PlayerController {
         }
       }
     }
+    // carrying a knocked teammate: X puts them down
+    if (p.carrying) {
+      this.prompt = { key: 'X', text: `Put down ${p.carrying.name}`, color: '#7ed957', btn: 'DROP' };
+      hold = false;
+      p.reviveTarget = null;
+      if (pressed('KeyX')) g.actions.carry(null);
+    } else if (mate && pressed('KeyX')) g.actions.carry(mate);
     p.reviveHold = hold;
     if (!hold) {
       p.reviveTarget = null;
@@ -397,6 +416,17 @@ export class PlayerController {
   shopBuy(k) {
     if (!this.shop) return;
     this.game.actions.buy(this.shop.i, k);
+  }
+
+  _nearDoor() {
+    const p = this.player;
+    let best = null, bd = 2.2;
+    for (const d of this.game.world.doors) {
+      if (d.broken || Math.abs(d.pos.y - p.pos.y) > 1.5) continue;
+      const dist = Math.hypot(d.pos.x - p.pos.x, d.pos.z - p.pos.z);
+      if (dist < bd) { bd = dist; best = d; }
+    }
+    return best;
   }
 
   _nearZip() {

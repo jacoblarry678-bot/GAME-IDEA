@@ -288,6 +288,7 @@ export class Vehicles {
     const drv = v.seats[0];
     if (g.role !== 'client') {
       if (hit.vehicle && impact > 6) this.damage(hit.vehicle, impact * 5, drv);
+      else if (hit.kind === 'boss' && impact > 6) g.boss.damage(impact * 6, drv);
       else if (!hit.terrain && hit.hp !== Infinity && impact > 8) g.damageCollider(hit, impact * 9, drv);
       if (impact > 13) this.damage(v, (impact - 13) * 7, null);
     }
@@ -479,6 +480,9 @@ export class Vehicles {
     if (Math.hypot(x - v.pos.x, z - v.pos.z) > 40) return;
     const moved = Math.hypot(x - v.pos.x, z - v.pos.z);
     if (moved < 10) a.stats.driven += moved;
+    // the driver's device handles collisions; a sudden stop at speed is a crash the host charges for
+    const before = Math.abs(v.speed), after = Math.abs(mv[5] / 10);
+    if (before > 13 && after < before * 0.4) this.damage(v, (before - 13) * 7, null);
     v.pos.set(x, y, z);
     v.yaw = mv[4] / 100;
     v.speed = mv[5] / 10;

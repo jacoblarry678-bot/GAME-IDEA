@@ -32,12 +32,13 @@ export const ROADMAP = {
     'Supercharged XP (daily bonus pool that doubles match XP, banks up to 3 days) and Supercharged rank (x1.5 rank gains and no RP loss while your MMR is well ahead of your rank)',
     'Milestone 4 — Wheels & Deals: drivable Diesel Trucks (4 seats) and Pickle Karts (boost) with fuel, pumps, damage, explosions and run-over hits; passengers can shoot; bot teammates ride along',
     'Ziplines between high points (shoot while riding), Benton Bucks from chests, floor loot and eliminations, three vending bots, two weapon upgrade benches, and three daily challenges worth bonus XP',
+    "Milestone 5 — Boss & Vault: Crankbolt, a giant rocket-firing guard robot (drops the Vault Keycard and a Mythic rifle); Crankbolt's Vault on its hilltop; doors on every house; carrying knocked teammates",
   ],
   next: [
-    'Editing ramps and cones; carrying downed teammates',
+    'Editing ramps and cones',
     'Pre-match warm-up island; match replays',
     'Weapon attachments and scopes as items',
-    'World: doors, story NPCs and quests, bosses, keycards & vaults; bots that drive',
+    'World: story NPCs and quests, more bosses and vaults; bots that drive',
     'Progression: weekly challenges, achievements, more emotes and cosmetics; ranked seasons and rewards; a shared online leaderboard (ranks are stored per device today)',
     'Online: more than 4 players, host migration, joining a match already in progress, anti-cheat (the host is trusted)',
     'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
@@ -51,7 +52,8 @@ const CONTROLS = [
   ['B or Q', 'Toggle build mode'], ['T', 'Cycle build material'], ['V', 'Edit the build you aim at · V again confirms, R resets'], ['U', 'Repair / upgrade the build you aim at'],
   ['Hold E', 'Revive a knocked teammate · reboot at a reboot van'],
   ['E (near a vehicle)', 'Drive / ride · E again to hop out'], ['W/S · A/D (driving)', 'Throttle / brake · steer'], ['Shift (kart) · H', 'Boost · horn'],
-  ['E (zipline tower)', 'Ride the zipline · Space lets go'], ['E (vending bot)', 'Open the shop · 1–3 buy with Benton Bucks'], ['E (upgrade bench)', 'Upgrade the held weapon'], ['Touch screens', 'Left thumb: move · right thumb: look · on-screen buttons for everything else'], ['Z / middle click', 'Ping'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
+  ['E (zipline tower)', 'Ride the zipline · Space lets go'], ['E (vending bot)', 'Open the shop · 1–3 buy with Benton Bucks'], ['E (upgrade bench)', 'Upgrade the held weapon'],
+  ['E (door)', 'Open / close'], ['E (vault door)', 'Open with the Vault Keycard'], ['X', 'Carry / put down a knocked teammate'], ['Touch screens', 'Left thumb: move · right thumb: look · on-screen buttons for everything else'], ['Z / middle click', 'Ping'], ['M', 'Full map (click to set drop marker)'], ['N', 'Emote'], ['Esc', 'Pause'],
 ];
 
 export class Menus {

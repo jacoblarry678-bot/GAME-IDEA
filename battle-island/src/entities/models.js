@@ -112,6 +112,12 @@ export function cardModel() {
   return g;
 }
 
+export function keyModel() {
+  const g = new THREE.Group();
+  g.add(bx(0.55, 0.36, 0.05, '#ffd23f', 0, 0.3, 0, '#7a5a00'), bx(0.4, 0.08, 0.06, '#1d2a3a', 0, 0.36, 0), bx(0.12, 0.12, 0.06, '#ff4b4b', 0.17, 0.22, 0, '#661111'));
+  return g;
+}
+
 export function coinModel() {
   const g = new THREE.Group();
   for (let i = 0; i < 3; i++) {
@@ -146,5 +152,6 @@ export function itemModel(it) {
   if (it.kind === 'ammo') return ammoModel(it.id);
   if (it.kind === 'card') return cardModel();
   if (it.kind === 'coin') return coinModel();
+  if (it.kind === 'key') return keyModel();
   return matModel(it.id);
 }
