@@ -95,8 +95,8 @@ check('bot teammate hops into a passenger seat', mateIn, await ev(() => { const 
 await ev(() => { __bi.game.vehicles.list[0].speed = 0; });
 await key('KeyE');
 const out = await waitFor(() => !__bi.game.player.vehicle && ['ground', 'air'].includes(__bi.game.player.state), 3000);
-await p.waitForTimeout(600);
-const outInfo = await ev(() => { const g = __bi.game, P = g.player, v = g.vehicles.list[0]; const m = g.actors.find((a) => a !== P && a.team === P.team); return { d: P.pos.distanceTo(v.pos), ground: P.grounded, mateOut: !m.vehicle }; });
+await waitFor(() => __bi.game.player.grounded, 4000); // slow headless frames: give the hop time to land
+const outInfo = await ev(() => { const g = __bi.game, P = g.player, v = g.vehicles.list[0]; const m = g.actors.find((a) => a !== P && a.team === P.team); return { d: P.pos.distanceTo(v.pos), ground: P.grounded, mateOut: !m.vehicle, st: P.state, y: +(P.pos.y - g.world.height(P.pos.x, P.pos.z)).toFixed(2), vy: +P.vel.y.toFixed(2), paused: g.paused, cur: __bi.menus.current }; });
 check('E hops out beside the truck; the bot teammate gets out too', out && outInfo.d < 5 && outInfo.ground && outInfo.mateOut, JSON.stringify(outInfo));
 
 // ---- fuel: running dry, then a pump

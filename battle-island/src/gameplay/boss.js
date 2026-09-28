@@ -321,6 +321,20 @@ export class Boss {
     m.visor.material.color.set(this.hitT > 0 ? '#ffffff' : this.enraged ? '#ff4b4b' : '#39f0ff');
   }
 
+  /** Admin: back to full health at home. */
+  reset() {
+    this.alive = true;
+    this.hp = this.maxHp;
+    this.pos.copy(this.home);
+    this.vel.set(0, 0, 0);
+    this.mode = 'idle';
+    this.target = null;
+    this.aggro.clear();
+    this.windup = 0;
+    this.volley = 0;
+    this._sync();
+  }
+
   dispose() {
     this.alive = false;
     this._sync();

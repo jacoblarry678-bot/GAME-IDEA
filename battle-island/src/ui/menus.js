@@ -9,6 +9,8 @@ import { save, levelInfo } from '../core/save.js';
 import { rankState, divName, divColor, divisionMMR, badgeHTML, TOP, PLACEMENT_MATCHES, lobbyLabel, isSupercharged, SUPER_LEAD, SUPER_MULT } from '../core/ranked.js';
 import { superXP, refillIn, CAP_XP, DAILY_XP } from '../core/supercharge.js';
 import { dailyChallenges, CHALLENGES, CHALLENGE_XP } from '../core/challenges.js';
+import { owner } from '../core/owner.js';
+import { matchOp, progressOp, canAdminMatch, PLACES } from '../gameplay/admin.js';
 import { sfx } from '../core/audio.js';
 
 export const ROADMAP = {
@@ -33,6 +35,7 @@ export const ROADMAP = {
     'Milestone 4 — Wheels & Deals: drivable Diesel Trucks (4 seats) and Pickle Karts (boost) with fuel, pumps, damage, explosions and run-over hits; passengers can shoot; bot teammates ride along',
     'Ziplines between high points (shoot while riding), Benton Bucks from chests, floor loot and eliminations, three vending bots, two weapon upgrade benches, and three daily challenges worth bonus XP',
     "Milestone 5 — Boss & Vault: Crankbolt, a giant rocket-firing guard robot (drops the Vault Keycard and a Mythic rifle); Crankbolt's Vault on its hilltop; doors on every house; carrying knocked teammates",
+    'Admin panel for the owner: progression tools in the lobby, match tools in the pause menu (god mode, teleports, storm, bots, boss, vault); admin matches never count for XP, rank or challenges',
   ],
   next: [
     'Editing ramps and cones',
@@ -130,6 +133,27 @@ export class Menus {
       case 'start-online': this.app.startOnline(); break;
       case 'leave-online': this.app.leaveSession(); break;
       case 'pause-back': this.showPause(); break;
+      case 'admin': if (owner.is) this.showAdmin(); break;
+      case 'admin-match': if (owner.is) this.showAdminMatch(); break;
+      case 'adm': {
+        if (!owner.is) break;
+        if (d.scope === 'match') {
+          const g = this.app.game;
+          const had = !!g.result;
+          const msg = matchOp(g, d.op, d.arg);
+          if (!had && g.result) {
+            g.paused = false; // that ended the match: the result screen is showing
+            break;
+          }
+          this.showAdminMatch(msg);
+        }
+        else {
+          const sel = this.root.querySelector('#adm-rank');
+          // "Set rank" reads the dropdown; other buttons carry their own value
+          this.showAdmin(progressOp(d.op, d.op === 'rank' && d.arg === '' ? sel?.value : d.arg, P.mode));
+        }
+        break;
+      }
       case 'quit': this.app.toLobby(); break;
       case 'again': this.app.play(); break;
       case 'spectate': this.hide(); break;
@@ -197,6 +221,7 @@ export class Menus {
             <button class="btn" data-act="settings">Settings</button>
             <button class="btn" data-act="controls">Controls</button>
             <button class="btn" data-act="roadmap">Roadmap</button>
+            ${owner.is ? '<button class="btn admin-btn" data-act="admin">Admin</button>' : ''}
           </nav>
         </div>
         <div class="lobby-center"><div class="hero-name">${ch.name}<small>${ch.title} · ${ch.outfits[P.outfits[P.character]].name}</small></div></div>
@@ -418,6 +443,73 @@ export class Menus {
       </div>`, 'screen right');
   }
 
+  /** Owner-only: progression tools for this device, plus where to find match tools. */
+  showAdmin(msg = '') {
+    this.current = 'admin';
+    const P = this.profile;
+    const L = levelInfo(save.data.progress.xp);
+    const b = (op, label, arg = '') => `<button class="btn small" data-act="adm" data-scope="progress" data-op="${op}" data-arg="${arg}">${label}</button>`;
+    const rs = rankState(P.mode);
+    const opts = Array.from({ length: TOP + 2 }, (_, i) => i - 1).map((d) => `<option value="${d}" ${d === rs.d ? 'selected' : ''}>${divName(d)}</option>`).join('');
+    const c = dailyChallenges();
+    this.screen(`
+      <div class="sheet panel wide admin">
+        <h2>Admin <small>owner only · ${escAttr(owner.how)}</small></h2>
+        ${msg ? `<p class="adm-msg">${escAttr(msg)}</p>` : ''}
+        <div class="cols">
+          <div>
+            <h3>Level & XP <small>level ${L.level} · ${save.data.progress.xp.toLocaleString()} XP</small></h3>
+            <div class="adm-grid">${b('level', '+1 level', 1)}${b('level', '+10 levels', 10)}${b('outfits', 'Unlock every outfit')}${b('super', 'Refill Supercharged XP')}</div>
+            <h3>Daily challenges <small>${c.list.filter((x) => x.done).length}/3 done</small></h3>
+            <div class="adm-grid">${b('chal-done', 'Mark today\'s done')}${b('chal-reset', 'Reset today\'s progress')}</div>
+          </div>
+          <div>
+            <h3>${P.mode === 'zerobuild' ? 'Zero Build' : 'Build'} rank <small>${divName(rs.d)} · ${rs.rp}% · MMR ${rs.mmr}</small></h3>
+            <div class="adm-grid"><select id="adm-rank">${opts}</select>${b('rank', 'Set rank')}</div>
+            <div class="adm-grid">${b('rp', 'Progress 0%', 0)}${b('rp', 'Progress 50%', 50)}${b('rp', 'Progress 95%', 95)}${b('rank', 'Reset to Unranked', -1)}</div>
+            <p class="note">Switch Build / Zero Build in the lobby to edit the other rank.</p>
+          </div>
+        </div>
+        <h3>Match tools</h3>
+        <p class="note">God mode, loadouts, teleports, the storm, bots, Crankbolt and the vault are in the <b>pause menu → Admin</b> during a match (or press <kbd>\`</kbd>). They work in solo matches and matches you host, and a match where they're used doesn't count for XP, rank or challenges.</p>
+        <div class="row"><button class="btn play small" data-act="main">Done</button></div>
+      </div>`, 'screen right');
+  }
+
+  /** Owner-only: tools for the match this device is running. */
+  showAdminMatch(msg = '') {
+    this.current = 'admin-match';
+    const g = this.app.game;
+    const ok = canAdminMatch(g);
+    const A = (g && g.admin) || {};
+    const b = (op, label, arg = '', on = false) => `<button class="btn small ${on ? 'on' : ''}" data-act="adm" data-scope="match" data-op="${op}" data-arg="${arg}">${label}</button>`;
+    const body = ok ? `
+        <div class="cols">
+          <div>
+            <h3>You</h3>
+            <div class="adm-grid">${b('god', `God mode: ${A.god ? 'ON' : 'off'}`, '', A.god)}${b('heal', 'Full health + shields')}${b('loadout', 'Starter loadout')}${b('mythic', 'Mythic weapons')}${b('mats', 'Max materials')}${b('bucks', '+500 Bucks')}${b('keycard', 'Vault Keycard')}</div>
+            <h3>Teleport</h3>
+            <div class="adm-grid">${b('tp', 'To map marker', 'marker')}${PLACES.map((p) => b('tp', escAttr(p.name), p.id)).join('')}</div>
+          </div>
+          <div>
+            <h3>World</h3>
+            <div class="adm-grid">${b('storm-skip', 'Storm: next step')}${b('storm-pause', `Storm: ${A.stormPaused ? 'paused' : 'running'}`, '', A.stormPaused)}${b('supply', 'Supply drop here')}${b('vehicle', 'Bring a truck', 'truck')}${b('vehicle', 'Bring a kart', 'kart')}${b('vault', 'Open the vault')}</div>
+            <h3>Bots & boss</h3>
+            <div class="adm-grid">${b('freeze', `Bots: ${A.freezeBots ? 'frozen' : 'moving'}`, '', A.freezeBots)}${b('clear-bots', 'Remove opposing bots')}${b('boss-kill', 'Defeat Crankbolt')}${b('boss-reset', 'Reset Crankbolt')}</div>
+            ${g.role === 'solo' ? `<h3>Game speed</h3><div class="adm-grid">${['0.5', '1', '2'].map((s) => b('speed', `×${s}`, s, String(g.engine.timeScale) === s)).join('')}</div>` : ''}
+          </div>
+        </div>
+        <p class="note">${g.adminUsed ? 'Admin tools are on: this match won\'t count for XP, rank or challenges.' : 'Using any of these means this match won\'t count for XP, rank or challenges.'}${g.role === 'host' ? ' Everyone in the match is told when you use them.' : ''}</p>`
+      : `<p class="note">You're a guest in someone else's match, so admin tools can't touch it. They work in solo matches and matches you host.</p>`;
+    this.screen(`
+      <div class="sheet panel wide admin">
+        <h2>Admin <small>match tools</small></h2>
+        ${msg ? `<p class="adm-msg">${escAttr(msg)}</p>` : ''}
+        ${body}
+        <div class="row"><button class="btn play small" data-act="resume">Resume</button><button class="btn" data-act="pause-back">Back</button></div>
+      </div>`, 'screen dim');
+  }
+
   showPause() {
     this.screen(`
       <div class="sheet panel small-sheet">
@@ -427,6 +519,7 @@ export class Menus {
           <button class="btn" data-act="fullscreen">Full screen</button>
           <button class="btn" data-act="settings" data-back="pause">Settings</button>
           <button class="btn" data-act="controls" data-back="pause">Controls</button>
+          ${owner.is ? '<button class="btn admin-btn" data-act="admin-match">Admin</button>' : ''}
           <button class="btn danger" data-act="quit">Leave match</button>
         </div>
       </div>`, 'screen dim');
@@ -440,6 +533,7 @@ export class Menus {
       <div class="sheet panel result ${r.won ? 'win' : ''}">
         ${r.won ? `<div class="crown">#1</div><h1 class="big">${r.team ? 'BENTON SQUAD CHAMPIONS!' : 'BENTON CHAMPION!'}</h1>` : `<h1 class="big">#${r.place} <small>of ${r.total} ${r.team ? 'squads' : ''}</small></h1><p class="sub">${r.team ? 'Your squad was eliminated' : r.killer ? `Eliminated by ${escAttr(r.killer)}` : 'Eliminated'}</p>`}
         <div class="stats"><div><b>${r.kills}</b>elims</div><div><b>${r.damage}</b>damage</div><div><b>${Math.floor(r.time / 60)}:${String(r.time % 60).padStart(2, '0')}</b>survived</div><div><b>+${r.xp}</b>XP</div></div>
+        ${r.admin ? '<p class="adm-note">Admin tools were used in this match, so it doesn\'t count for XP, rank or challenges.</p>' : ''}
         ${r.challenges ? this._challenges(r.challenges) : ''}
         ${r.superXP ? `<p class="sx-won">⚡ +${r.superXP.toLocaleString()} Supercharged XP (included)</p>` : ''}
         ${r.levelUp ? `<p class="lvlup">Level up! You reached level ${r.levelUp}.</p>` : ''}

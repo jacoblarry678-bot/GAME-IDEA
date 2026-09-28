@@ -442,3 +442,12 @@ body.touch .shop { top: 12%; }
 .bb-bar div { height: 100%; background: linear-gradient(90deg, #ff4b4b, #ff8a3d); transition: width 0.15s; }
 .t-carry { right: calc(var(--sr) + 268px); bottom: calc(var(--sb) + 40px); width: 56px; height: 56px; font-size: 11px; background: rgba(126, 217, 87, 0.35); }
 body.touch .bossbar { top: calc(var(--st) + 36px); width: 40vw; }
+
+/* Admin panel (owner only) */
+.admin-btn { background: linear-gradient(180deg, #ffd23f, #ffae1a) !important; color: #2a1d00 !important; }
+.admin h2 small, .admin h3 small { color: var(--muted); font-size: 13px; font-weight: 600; margin-left: 6px; }
+.adm-grid { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; align-items: center; }
+.adm-grid .btn.on { background: #7ed957; color: #102a08; }
+.adm-grid select { font: inherit; padding: 4px 8px; border-radius: 8px; }
+.adm-msg { background: rgba(255, 210, 63, 0.18); border: 1px solid #ffd23f; color: #ffd23f; border-radius: 10px; padding: 4px 10px; margin: 4px 0 8px; font-weight: 700; }
+.adm-note { color: #ffd23f; font-weight: 700; margin: 4px 0; }

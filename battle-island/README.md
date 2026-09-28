@@ -229,6 +229,26 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - A client's hits on Crankbolt give them hitmarkers.
   - A client who crashes a truck at speed now takes crash damage on the host too. Previously the crash only registered on their own device.
 
+## Mini update: Admin panel (owner only)
+
+- [x] **Who gets it:**
+  - On the claude.ai link: only the person who owns the game link. The link asks claude.ai; nothing extra needs to be granted.
+  - Elsewhere there are no accounts, so the owner is whoever runs it on their own computer: the double-clicked file, or the dev/relay server opened on that machine. Friends joining your relay server from other devices on the Wi-Fi don't get it.
+- [x] **Lobby → Admin (progression on this device):**
+  - Add 1 or 10 levels, unlock every outfit, refill Supercharged XP.
+  - Set your Build or Zero Build rank from the ladder, set its progress, or reset it to Unranked.
+  - Mark today's challenges done, or reset their progress.
+- [x] **Pause menu → Admin, or the `` ` `` key (match tools):**
+  - **You:** god mode, full health, starter loadout, Mythic weapons, max materials, +500 Bucks, a Vault Keycard.
+  - **Teleport:** to any named place or to your map marker.
+  - **World:** move the storm to its next step or pause it, call a supply drop, bring the nearest free truck or kart to you, open the vault.
+  - **Bots and boss:** freeze bots or remove opposing ones, defeat or reset Crankbolt.
+  - **Game speed:** ×0.5, ×1 or ×2 (solo only).
+- **Fair play:**
+  - Match tools only act on a match your device runs (solo, or online as the host). A guest in someone else's match can't touch it.
+  - A match where they're used doesn't count for anyone's XP, rank or challenges. Everyone is told when the tools are turned on, and the result screen says why.
+  - Like every in-browser game, a determined player could flip the switch in their browser's developer tools. That only affects matches they run themselves, never yours.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
@@ -253,6 +273,7 @@ node tools/island-ranked.mjs                # 12 checks
 node tools/island-supercharged.mjs          # 13 checks
 node tools/island-milestone4.mjs            # 22 checks
 node tools/island-milestone5.mjs            # 17 checks
+node tools/island-admin.mjs                 # 20 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
@@ -297,6 +318,12 @@ node tools/island-mobile.mjs                # 18 checks: emulated phone with rea
   - The vault: locked without the keycard, opened with it, the keycard used up, and the gold and chests inside.
   - Carrying: picking up, riding on the carrier, no shooting, putting down.
   - The new challenges.
+- **`island-admin.mjs`:**
+  - Who sees the panel: the owner does; anyone else gets no button and the screen won't open.
+  - Every progression tool, and the `` ` `` key and pause-menu entry.
+  - Every match tool.
+  - The guest refusal.
+  - A ranked admin match that doesn't count, and the next match starting clean.
 - **`island-online-m5.mjs`:**
   - A client opening a door, and the host closing it.
   - A client damaging Crankbolt: the host applies it, the boss turns on them, and the client gets the bar and hitmarkers.
@@ -334,6 +361,7 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/game.js` | Match flow, bus, damage routing, eliminations, XP |
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
+| `src/gameplay/admin.js`, `src/core/owner.js` | Owner check and admin tools |
 | `src/gameplay/boss.js` | Crankbolt: AI, attacks, hitbox, drops, network row |
 | `src/gameplay/vehicles.js` | Trucks and karts: handling, fuel, damage, run-overs, seats, network rows |
 | `src/gameplay/economy.js` | Benton Bucks, vending bot stock, upgrade benches |

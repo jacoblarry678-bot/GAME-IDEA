@@ -16,6 +16,7 @@ import { Online, MAX_HUMANS } from './net/online.js';
 import * as ranked from './core/ranked.js';
 import * as supercharge from './core/supercharge.js';
 import * as challenges from './core/challenges.js';
+import { owner, detectOwner } from './core/owner.js';
 const { rankState } = ranked;
 import { TouchControls, isTouchDevice } from './ui/touch.js';
 
@@ -69,6 +70,7 @@ function preview() {
 // ---------------------------------------------------------------- app
 let game;
 const menus = new Menus(document.getElementById('menus'), {
+  get game() { return game; },
   play,
   preview,
   previewEmote: () => (previewEmoteT = 4),
@@ -294,6 +296,15 @@ input.onLockChange = (locked) => {
   if (!locked && game.world && !hud.mapOpen) pause();
 };
 window.addEventListener('keydown', (e) => {
+  // owner: ` opens the admin tools mid-match
+  if (e.code === 'Backquote' && owner.is && game.world && game.player.alive) {
+    if (menus.current === 'admin-match') resume();
+    else {
+      if (menus.overlayHidden) pause();
+      menus.showAdminMatch();
+    }
+    return;
+  }
   if (e.code !== 'Escape' || !game.world) return;
   if (hud.mapOpen) {
     hud.toggleMap(false);
@@ -328,4 +339,10 @@ menus.showMain();
 engine.start();
 
 // test / debugging handle (used by the automated playtest)
-window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, ranked, supercharge, challenges, get session() { return session; } };
+// the lobby shows the Admin button once we know this viewer owns the game
+owner.onChange = () => {
+  if (menus.current === 'main') menus.showMain();
+};
+detectOwner();
+
+window.__bi = { engine, game, input, menus, hud, save, play, toLobby, resume, online, touch, ranked, supercharge, challenges, owner, get session() { return session; } };

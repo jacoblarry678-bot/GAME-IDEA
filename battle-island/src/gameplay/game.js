@@ -28,6 +28,7 @@ import { save, levelInfo } from '../core/save.js';
 import { applyRanked, botSkillRange, isSupercharged, rankState } from '../core/ranked.js';
 
 const BUS_H = 115, BUS_SPEED = 19, BUS_R = 215;
+const FROZEN = { mx: 0, mz: 0, jump: false, sprint: false, crouch: false, slide: false, glide: false, dive: 0, ads: false }; // admin: bots hold still
 
 export class Game {
   constructor(engine, input, hud) {
@@ -41,6 +42,7 @@ export class Game {
     this.tweens = [];
     this.time = 0;
     this.paused = false;
+    this.admin = {};
     this.world = null;
     this._setupLights();
     this.effects = new Effects(this.scene);
@@ -127,6 +129,8 @@ export class Game {
     this.ranked = !!opts.ranked;
     this.lobbyRating = opts.lobbyRating || 1000;
     this.rankSuper = this.ranked && isSupercharged(rankState(opts.mode)); // this device's rank
+    this.adminUsed = false; // owner admin tools used: the match doesn't count
+    this.admin = {};
     this.actions = this.role === 'client' ? new NetActions(this) : new LocalActions(this);
     this.mode = opts.mode;
     this.seed = opts.seed ?? Math.floor(Math.random() * 1e9);
@@ -341,6 +345,7 @@ export class Game {
       if (target === this.player && opts.fall && this.net) this.net.cmd('x', Math.round(amount));
       return;
     }
+    if (target === this.player && this.admin.god) return; // admin god mode
     if (target.isBoss) {
       if (this.state !== 'over') target.damage(amount * (src && src.buffs && src.buffs.spicy ? 1.2 : 1), src, opts);
       return;
@@ -494,7 +499,7 @@ export class Game {
   _stats(a, won) {
     const place = won ? 1 : this.teams.place[a.team] || a.place;
     const ms = Object.fromEntries(Object.entries(a.stats).map(([k, v]) => [k, Math.round(v)]));
-    return { won, place, total: Math.ceil(this.actors.length / this.teamSize), team: this.teamSize > 1, kills: a.kills, damage: Math.round(a.damageDealt), time: Math.floor(this.time), killer: a.killerName || null, ms };
+    return { won, place, total: Math.ceil(this.actors.length / this.teamSize), team: this.teamSize > 1, kills: a.kills, damage: Math.round(a.damageDealt), time: Math.floor(this.time), killer: a.killerName || null, ms, adm: this.adminUsed ? 1 : 0 };
   }
 
   _sendResult(h, won) {
@@ -524,6 +529,14 @@ export class Game {
     const p = this.player;
     const { won, place, total: totalTeams, kills } = st;
     const survive = st.time;
+    if (st.adm || this.adminUsed) {
+      // admin tools were used in this match: it doesn't count for anyone
+      this.result = { won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: 0, superXP: 0, chalXP: 0, levelUp: 0, killer: st.killer, admin: true };
+      sfx.play(won ? 'win' : 'lose');
+      if (won) p.emote = true;
+      this.hud.playerResult(this.result);
+      return;
+    }
     const xp = 60 + kills * 75 + Math.round(st.damage / 4) + Math.floor(survive / 3) + Math.max(0, (totalTeams - place) * 8 * this.teamSize) + (won ? 400 : 0);
     const before = levelInfo(save.data.progress.xp).level;
     const pr = save.data.progress;
@@ -578,7 +591,7 @@ export class Game {
     this.controller.update(dt);
     for (const a of this.actors) {
       if (!a.alive) continue;
-      if (a.brain) a.move(dt, a.brain.update(dt));
+      if (a.brain) a.move(dt, this.admin.freezeBots ? FROZEN : a.brain.update(dt));
       a.tickTimers(dt);
     }
     this.vehicles.checkOccupants();
@@ -588,7 +601,8 @@ export class Game {
     this.teams.update(dt);
     this.combat.update(dt);
     this.loot.update(dt, t);
-    if (this.state !== 'over') this.storm.update(dt, t);
+    if (this.state !== 'over' && !this.admin.stormPaused) this.storm.update(dt, t);
+    else this.storm.render(t);
     this._present(dt, t);
     if (this.net) this.net.update(dt);
   }
