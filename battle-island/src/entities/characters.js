@@ -15,10 +15,11 @@ export const CHARACTERS = {
     title: 'The Garage Ace',
     bio: 'Knows every truck at Benton Diesel by the sound of its engine. First one off the bus, every time.',
     emote: 'Wrench Wiggle',
+    // Colton's look: short brown crew cut, round rosy face, sturdy build, heather-gray athletic tee
     outfits: [
-      { name: 'Garage Grease', level: 1, c: { top: '#ff7a1a', top2: '#ffd23f', pants: '#2f4f8a', shoes: '#f5f5f5', hair: '#6b4226', hat: '#e8453c', pack: '#3f7bff' } },
-      { name: 'Storm Chaser', level: 3, c: { top: '#6a3fd0', top2: '#39f0ff', pants: '#1f1f2e', shoes: '#39f0ff', hair: '#6b4226', hat: '#1f1f2e', pack: '#b35cff' } },
-      { name: 'Golden Wrench', level: 6, c: { top: '#ffcf3f', top2: '#ffffff', pants: '#8a5a1a', shoes: '#ffcf3f', hair: '#6b4226', hat: '#ffae1a', pack: '#ff7a1a' } },
+      { name: 'Everyday Ace', level: 1, c: { top: '#8e9196', top2: '#26262b', pants: '#2f3a4f', shoes: '#f5f5f5', hair: '#5b4330', hat: '#5b4330', pack: '#3f7bff', heather: true } },
+      { name: 'Haunt Hunter', level: 2, c: { top: '#3a3548', top2: '#ff8a1a', pants: '#5d3f80', shoes: '#1f1f2e', hair: '#5b4330', hat: '#ff8a1a', pack: '#ff8a1a', heather: true } },
+      { name: 'Storm Chaser', level: 3, c: { top: '#6a3fd0', top2: '#39f0ff', pants: '#1f1f2e', shoes: '#39f0ff', hair: '#5b4330', hat: '#1f1f2e', pack: '#b35cff' } },
     ],
   },
   emerson: {
@@ -39,12 +40,35 @@ export const CHARACTERS = {
     emote: 'Dino Stomp',
     outfits: [
       { name: 'Dino Explorer', level: 1, c: { top: '#3fb24a', top2: '#ffe066', pants: '#3f7bff', shoes: '#8a5a33', hair: '#3b2616', hat: '#3fb24a', pack: '#3fb24a' } },
-      { name: 'Haunt Hunter', level: 2, c: { top: '#3a3548', top2: '#ff8a1a', pants: '#5d3f80', shoes: '#1f1f2e', hair: '#3b2616', hat: '#ff8a1a', pack: '#ff8a1a' } },
       { name: 'Clubhouse Captain', level: 4, c: { top: '#e8453c', top2: '#ffffff', pants: '#1f3f7a', shoes: '#ffffff', hair: '#3b2616', hat: '#ffcf3f', pack: '#e8453c' } },
+      { name: 'Golden Ace', level: 6, c: { top: '#ffcf3f', top2: '#ffffff', pants: '#8a5a1a', shoes: '#ffcf3f', hair: '#3b2616', hat: '#ffae1a', pack: '#ff7a1a' } },
     ],
   },
 };
 export const CHARACTER_IDS = Object.keys(CHARACTERS);
+
+/** Speckled "heather" knit for athletic tees (multiplies the outfit colour). */
+let heatherTex = null;
+function heather() {
+  if (heatherTex) return heatherTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, 64, 64);
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 1400; i++) {
+    const v = Math.round(232 + rnd() * 23);
+    g.fillStyle = `rgb(${v},${v},${v})`;
+    g.fillRect(Math.floor(rnd() * 64), Math.floor(rnd() * 64), 1 + Math.floor(rnd() * 3), 1);
+  }
+  heatherTex = new THREE.CanvasTexture(c);
+  heatherTex.wrapS = heatherTex.wrapT = THREE.RepeatWrapping;
+  heatherTex.repeat.set(5, 5);
+  heatherTex.colorSpace = THREE.SRGBColorSpace;
+  return heatherTex;
+}
 
 let gradient = null;
 function toonGradient() {
@@ -65,13 +89,14 @@ export class CharacterModel {
     const def = CHARACTERS[charId];
     const pal = def.outfits[outfit]?.c || def.outfits[0].c;
     this.mats = [];
-    const M = (color, emissive = '#000000') => {
-      const mm = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), emissive });
+    const M = (color, emissive = '#000000', map = null) => {
+      const mm = new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), emissive, map });
       this.mats.push(mm);
       return mm;
     };
     const skinM = M(SKIN_TONES[skin] || SKIN_TONES[0]);
-    const top = M(pal.top), top2 = M(pal.top2), pants = M(pal.pants), shoes = M(pal.shoes), hair = M(pal.hair), hat = M(pal.hat), pack = M(pal.pack);
+    const colton = charId === 'colton';
+    const top = M(pal.top, '#000000', pal.heather ? heather() : null), top2 = M(pal.top2), pants = M(pal.pants), shoes = M(pal.shoes), hair = M(pal.hair), hat = M(pal.hat), pack = M(pal.pack);
     const black = M('#111111'), white = M('#ffffff');
     const mesh = (g, mt, x = 0, y = 0, z = 0) => {
       const o = new THREE.Mesh(g, mt);
@@ -86,14 +111,18 @@ export class CharacterModel {
     this.hips = new THREE.Group();
     this.hips.position.y = 0.8;
     this.body.add(this.hips);
-    this.hips.add(mesh(geo('pelvis', () => new THREE.BoxGeometry(0.42, 0.2, 0.26)), pants, 0, 0, 0));
+    const pelvis = mesh(geo('pelvis', () => new THREE.BoxGeometry(0.42, 0.2, 0.26)), pants, 0, 0, 0);
+    if (colton) pelvis.scale.set(1.14, 1, 1.1);
+    this.hips.add(pelvis);
 
     // legs
     this.legs = [];
     for (const s of [-1, 1]) {
       const leg = new THREE.Group();
-      leg.position.set(0.12 * s, -0.02, 0);
-      leg.add(mesh(geo('leg', () => new THREE.CapsuleGeometry(0.1, 0.5, 4, 8)), pants, 0, -0.36, 0));
+      leg.position.set((colton ? 0.135 : 0.12) * s, -0.02, 0);
+      const legM = mesh(geo('leg', () => new THREE.CapsuleGeometry(0.1, 0.5, 4, 8)), pants, 0, -0.36, 0);
+      if (colton) legM.scale.set(1.18, 1, 1.18);
+      leg.add(legM);
       leg.add(mesh(geo('shoe', () => new THREE.BoxGeometry(0.2, 0.14, 0.32)), shoes, 0, -0.72, 0.05));
       this.hips.add(leg);
       this.legs.push(leg);
@@ -104,14 +133,21 @@ export class CharacterModel {
     this.spine.position.y = 0.05;
     this.hips.add(this.spine);
     const torso = mesh(geo('torso', () => new THREE.CapsuleGeometry(0.24, 0.28, 4, 10)), top, 0, 0.3, 0);
-    torso.scale.set(1.05, 1, 0.8);
+    torso.scale.set(colton ? 1.24 : 1.05, 1, colton ? 0.95 : 0.8); // Colton: a sturdier build
     this.spine.add(torso);
     // outfit detail
-    if (charId === 'colton') {
-      this.spine.add(mesh(geo('pocket', () => new THREE.BoxGeometry(0.3, 0.12, 0.05)), top2, 0, 0.18, 0.2));
-      const hood = mesh(geo('hood', () => new THREE.TorusGeometry(0.18, 0.06, 6, 12)), top, 0, 0.55, -0.1);
-      hood.rotation.x = Math.PI / 2.4;
-      this.spine.add(hood);
+    if (colton) {
+      // athletic tee: a crew-neck collar and a small wrench badge on the chest
+      const collar = mesh(geo('collar', () => new THREE.TorusGeometry(0.13, 0.025, 6, 16)), top2, 0, 0.6, 0.02);
+      collar.rotation.x = Math.PI / 2;
+      collar.scale.set(1.1, 1, 0.9);
+      this.spine.add(collar);
+      const badge = new THREE.Group();
+      badge.position.set(0.12, 0.44, 0.225);
+      badge.rotation.z = -0.6;
+      badge.add(mesh(geo('badgeBar', () => new THREE.BoxGeometry(0.018, 0.075, 0.012)), top2, 0, 0, 0));
+      badge.add(mesh(geo('badgeHead', () => new THREE.TorusGeometry(0.018, 0.007, 4, 8, Math.PI * 1.5)), top2, 0, 0.045, 0));
+      this.spine.add(badge);
     } else if (charId === 'emerson') {
       const star = mesh(geo('star', () => new THREE.CylinderGeometry(0.1, 0.1, 0.04, 5)), top2, 0.08, 0.38, 0.19);
       star.rotation.x = Math.PI / 2;
@@ -147,23 +183,57 @@ export class CharacterModel {
     this.head = new THREE.Group();
     this.head.position.y = 0.62;
     this.spine.add(this.head);
-    this.head.add(mesh(geo('head', () => new THREE.SphereGeometry(0.28, 16, 12)), skinM, 0, 0.24, 0));
-    for (const s of [-1, 1]) {
+    const headM = mesh(geo('head', () => new THREE.SphereGeometry(0.28, 16, 12)), skinM, 0, 0.24, 0);
+    if (colton) headM.scale.set(1.1, 1.0, 1.02); // a round, full face
+    this.head.add(headM);
+    if (colton) {
+      // Colton: ears that show under the crew cut, straight brows, brown eyes, rosy cheeks, a calm little smile
+      for (const s of [-1, 1]) {
+        const ear = mesh(geo('ear', () => new THREE.SphereGeometry(0.06, 8, 6)), skinM, 0.305 * s, 0.22, 0);
+        ear.scale.set(0.55, 1, 0.8);
+        this.head.add(ear);
+        this.head.add(mesh(geo('eyeC', () => new THREE.SphereGeometry(0.05, 8, 6)), M('#3b2616'), 0.1 * s, 0.265, 0.245));
+        this.head.add(mesh(geo('glint', () => new THREE.SphereGeometry(0.018, 6, 4)), white, 0.1 * s + 0.018, 0.285, 0.29));
+        const lid = mesh(geo('lid', () => new THREE.SphereGeometry(0.056, 8, 6, 0, Math.PI * 2, 0, Math.PI / 3.4)), skinM, 0.1 * s, 0.27, 0.243);
+        lid.rotation.x = 0.2; // relaxed, slightly heavy eyelids
+        this.head.add(lid);
+        const brow = mesh(geo('brow', () => new THREE.BoxGeometry(0.09, 0.018, 0.02)), hair, 0.1 * s, 0.34, 0.25);
+        brow.rotation.z = -0.08 * s;
+        this.head.add(brow);
+        const cheek = mesh(geo('cheekC', () => new THREE.SphereGeometry(0.065, 8, 6)), M('#f29a9a'), 0.19 * s, 0.17, 0.2);
+        cheek.scale.set(1, 0.8, 0.5);
+        this.head.add(cheek);
+      }
+      // calm, closed lips
+      const lips = mesh(geo('lips', () => new THREE.SphereGeometry(0.04, 10, 6)), M('#c9716f'), 0, 0.13, 0.268);
+      lips.scale.set(1.35, 0.42, 0.45);
+      this.head.add(lips);
+    }
+    for (const s of colton ? [] : [-1, 1]) {
       this.head.add(mesh(geo('eye', () => new THREE.SphereGeometry(0.055, 8, 6)), black, 0.1 * s, 0.27, 0.24));
       this.head.add(mesh(geo('glint', () => new THREE.SphereGeometry(0.018, 6, 4)), white, 0.1 * s + 0.02, 0.29, 0.29));
       this.head.add(mesh(geo('cheek', () => new THREE.SphereGeometry(0.04, 6, 4)), M('#ff9a9a'), 0.17 * s, 0.18, 0.21));
     }
-    const smile = mesh(geo('smile', () => new THREE.TorusGeometry(0.07, 0.015, 4, 10, Math.PI)), black, 0, 0.16, 0.26);
-    smile.rotation.z = Math.PI;
-    this.head.add(smile);
+    if (!colton) {
+      const smile = mesh(geo('smile', () => new THREE.TorusGeometry(0.07, 0.015, 4, 10, Math.PI)), black, 0, 0.16, 0.26);
+      smile.rotation.z = Math.PI;
+      this.head.add(smile);
+    }
     // hair / hats
     const cap = mesh(geo('haircap', () => new THREE.SphereGeometry(0.295, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.1)), hair, 0, 0.27, -0.02);
     this.head.add(cap);
-    if (charId === 'colton') {
-      const c1 = mesh(geo('cap', () => new THREE.SphereGeometry(0.3, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.4)), hat, 0, 0.3, 0);
-      const brim = mesh(geo('brim', () => new THREE.BoxGeometry(0.34, 0.03, 0.24)), hat, 0, 0.34, 0.3);
-      brim.rotation.x = 0.12;
-      this.head.add(c1, brim);
+    if (colton) {
+      // short crew cut: close-cropped on top with a straight front hairline, faded sides
+      cap.scale.set(1.12, 0.92, 1.07);
+      cap.position.set(0, 0.275, -0.015);
+      cap.rotation.x = -0.42; // hairline sits high on the forehead, low at the back
+      // the faded sides wrap the sides and back only (the forehead stays clear)
+      const sides = mesh(geo('fade', () => new THREE.SphereGeometry(0.3, 16, 8, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, Math.PI / 3.2, Math.PI / 7)), hair, 0, 0.245, -0.02);
+      sides.scale.set(1.04, 1, 1.0);
+      sides.material = M(pal.hair);
+      sides.material.opacity = 0.75;
+      sides.material.transparent = true;
+      this.head.add(sides);
     } else if (charId === 'emerson') {
       const band = mesh(geo('band', () => new THREE.TorusGeometry(0.285, 0.03, 6, 20)), hat, 0, 0.36, 0);
       band.rotation.x = Math.PI / 2 - 0.3;
@@ -187,8 +257,12 @@ export class CharacterModel {
     this.arms = [];
     for (const s of [-1, 1]) {
       const arm = new THREE.Group();
-      arm.position.set(0.32 * s, 0.5, 0);
-      arm.add(mesh(geo('arm', () => new THREE.CapsuleGeometry(0.075, 0.38, 4, 8)), top, 0, -0.25, 0));
+      arm.position.set((colton ? 0.36 : 0.32) * s, 0.5, 0);
+      if (colton) {
+        // short sleeves: tee sleeve, then bare arm
+        arm.add(mesh(geo('sleeve', () => new THREE.CapsuleGeometry(0.095, 0.12, 4, 8)), top, 0, -0.1, 0));
+        arm.add(mesh(geo('forearm', () => new THREE.CapsuleGeometry(0.082, 0.28, 4, 8)), skinM, 0, -0.32, 0));
+      } else arm.add(mesh(geo('arm', () => new THREE.CapsuleGeometry(0.075, 0.38, 4, 8)), top, 0, -0.25, 0));
       arm.add(mesh(geo('hand', () => new THREE.SphereGeometry(0.085, 8, 6)), skinM, 0, -0.5, 0));
       this.spine.add(arm);
       this.arms.push(arm);

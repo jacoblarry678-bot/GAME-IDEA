@@ -249,6 +249,12 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - A match where they're used doesn't count for anyone's XP, rank or challenges. Everyone is told when the tools are turned on, and the result screen says why.
   - Like every in-browser game, a determined player could flip the switch in their browser's developer tools. That only affects matches they run themselves, never yours.
 
+## Mini update: Colton revamp and an outfit swap
+
+- [x] **Colton's new look:** a short brown crew cut with a high, straight hairline and faded sides, and a round face with rosy cheeks. He has brown eyes, straight brows and ears that show. His build is sturdier, and his default outfit is now **Everyday Ace**: a heather-gray athletic tee with short sleeves, a crew-neck collar and a small wrench badge.
+- [x] **Outfit swap:** Colton now has the Haunt Hollow outfit **Haunt Hunter** (level 2, as a speckled tee). Waylon now has Colton's gold outfit, renamed **Golden Ace** (level 6).
+- The model is built in code like everything else. A reference photo guided the look, but no photo is stored in the game or the repo.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
