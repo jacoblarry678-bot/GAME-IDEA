@@ -33,12 +33,53 @@ export function weaponModel(id, rarity = 0) {
     case 'smg':
       g.add(bx(0.1, 0.15, 0.45, dark, 0, 0.06, 0.12), cyl(0.028, 0.18, '#1a1a1a', 0, 0.08, 0.42), bx(0.07, 0.26, 0.08, rc, 0, -0.12, 0.2), bx(0.08, 0.1, 0.12, rc, 0, 0.03, -0.12));
       break;
-    case 'shotgun':
-      g.add(bx(0.1, 0.13, 0.7, '#6b4a2e', 0, 0.05, 0.1), cyl(0.04, 0.55, '#1a1a1a', 0, 0.1, 0.55), bx(0.11, 0.09, 0.2, rc, 0, 0.0, 0.45), bx(0.09, 0.16, 0.26, '#6b4a2e', 0, 0.0, -0.3));
+    case 'shotgun': {
+      // "Night Pump": a compact tactical pump with a vented heat shield
+      const steel = '#3a4150', black = '#16191f';
+      const grip = bx(0.075, 0.2, 0.09, black, 0, -0.1, -0.02);
+      grip.rotation.x = -0.35;
+      const stock = bx(0.08, 0.13, 0.32, steel, 0, 0.02, -0.3);
+      stock.rotation.x = 0.12;
+      g.add(
+        bx(0.11, 0.15, 0.42, steel, 0, 0.05, 0.05), // receiver
+        bx(0.112, 0.03, 0.3, rc, 0, 0.1, 0.05), // rarity trim
+        grip, stock,
+        bx(0.09, 0.16, 0.05, black, 0, -0.01, -0.47), // butt pad
+        bx(0.02, 0.07, 0.1, black, 0, -0.05, 0.1), // trigger guard
+        cyl(0.036, 0.62, black, 0, 0.09, 0.56), // barrel
+        cyl(0.03, 0.5, '#23272f', 0, 0.01, 0.52), // mag tube
+        bx(0.1, 0.1, 0.2, rc, 0, 0.02, 0.5), // pump
+        bx(0.105, 0.02, 0.2, black, 0, 0.075, 0.5),
+        bx(0.105, 0.02, 0.2, black, 0, -0.03, 0.5),
+        bx(0.085, 0.05, 0.5, '#555c69', 0, 0.14, 0.58), // heat shield
+        cyl(0.045, 0.04, rc, 0, 0.09, 0.88), // muzzle ring
+        bx(0.05, 0.06, 0.1, black, 0, 0.16, 0.0), // red-dot sight
+        bx(0.035, 0.035, 0.012, '#ff4f5c', 0, 0.165, 0.052, '#ff2030'),
+      );
+      for (let i = 0; i < 4; i++) g.add(bx(0.09, 0.012, 0.05, black, 0, 0.167, 0.4 + i * 0.12)); // shield vents
       break;
-    case 'pistol':
-      g.add(bx(0.07, 0.11, 0.3, dark, 0, 0.07, 0.1), bx(0.07, 0.18, 0.08, rc, 0, -0.04, 0.0));
+    }
+    case 'pistol': {
+      // "Hand Cannon": a heavy slab-sided pistol with a ported barrel
+      const steel = '#4a505c', black = '#16191f';
+      const grip = bx(0.075, 0.24, 0.1, black, 0, -0.12, -0.02);
+      grip.rotation.x = -0.28;
+      g.add(
+        bx(0.085, 0.1, 0.42, steel, 0, 0.1, 0.12), // slide
+        bx(0.087, 0.025, 0.36, rc, 0, 0.16, 0.12), // rarity top strip
+        bx(0.08, 0.07, 0.3, black, 0, 0.02, 0.08), // frame
+        grip,
+        bx(0.078, 0.05, 0.08, rc, 0, -0.22, -0.06), // mag base
+        bx(0.02, 0.06, 0.1, black, 0, -0.04, 0.1), // trigger guard
+        cyl(0.03, 0.14, black, 0, 0.1, 0.38), // barrel
+        bx(0.095, 0.08, 0.08, '#2a2f38', 0, 0.1, 0.43), // compensator
+        bx(0.1, 0.02, 0.05, black, 0, 0.145, 0.43), // ports
+        bx(0.02, 0.035, 0.03, black, 0, 0.18, 0.3), // front sight
+        bx(0.06, 0.035, 0.03, black, 0, 0.18, -0.07), // rear sight
+        bx(0.03, 0.05, 0.04, steel, 0, 0.12, -0.12), // hammer
+      );
       break;
+    }
     case 'sniper':
       g.add(bx(0.09, 0.13, 0.9, '#3b4f3a', 0, 0.05, 0.2), cyl(0.028, 0.6, '#1a1a1a', 0, 0.07, 0.95), cyl(0.05, 0.36, '#111', 0, 0.2, 0.25), bx(0.09, 0.18, 0.32, rc, 0, 0.0, -0.3));
       break;

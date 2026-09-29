@@ -83,41 +83,100 @@ export class Game {
   }
 
   _busModel() {
+    // Benton Bus v2: a rounded school bus hanging under a striped party balloon.
     const g = new THREE.Group();
-    const yellow = new THREE.MeshLambertMaterial({ color: '#ffcf3f' });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3, 10), yellow);
-    body.position.y = 0;
-    const hood = new THREE.Mesh(new THREE.BoxGeometry(3, 1.8, 2), yellow);
-    hood.position.set(0, -0.6, 6);
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(3.25, 0.25, 10.05), new THREE.MeshLambertMaterial({ color: '#222' }));
-    stripe.position.y = -0.4;
-    const win = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.9, 8.5), new THREE.MeshLambertMaterial({ color: '#9fe3ff', emissive: '#1b4a5a' }));
-    win.position.set(0, 0.6, 0.3);
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.1), new THREE.MeshBasicMaterial({ map: textTexture('BENTON BUS', '#222222', '#ffcf3f', 512) }));
-    sign.position.set(1.66, -0.5, 0);
+    const mat = (color, emissive) => new THREE.MeshLambertMaterial({ color, emissive: emissive || '#000000' });
+    const box = (w, h, d, material, x, y, z) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      g.add(mesh);
+      return mesh;
+    };
+    const yellow = mat('#ffc933'), dark = mat('#1f2329'), chrome = mat('#c9d1dc'), glass = mat('#9fe3ff', '#1b4a5a');
+    box(3.4, 2.6, 9.6, yellow, 0, 0.1, -0.4); // cabin
+    const roof = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 9.6, 16, 1, false, -Math.PI / 2, Math.PI), yellow);
+    roof.rotation.x = Math.PI / 2;
+    roof.scale.set(1, 1, 0.35);
+    roof.position.set(0, 1.4, -0.4);
+    g.add(roof);
+    box(3.1, 1.6, 2.2, yellow, 0, -0.55, 5.4); // hood
+    box(2.4, 0.9, 0.12, dark, 0, -0.55, 6.52); // grille
+    box(3.6, 0.35, 0.4, chrome, 0, -1.2, 6.6); // front bumper
+    box(3.6, 0.35, 0.4, chrome, 0, -1.2, -5.25); // rear bumper
+    for (const x of [-1.1, 1.1]) {
+      const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.28, 12), new THREE.MeshBasicMaterial({ color: '#fff6c2' }));
+      lamp.position.set(x, -0.3, 6.53);
+      g.add(lamp);
+    }
+    box(3.2, 1.1, 0.1, glass, 0, 0.8, 4.36); // windshield
+    box(3.45, 0.22, 9.65, dark, 0, -0.55, -0.4); // stripes
+    box(3.45, 0.12, 9.65, dark, 0, -0.9, -0.4);
+    for (let i = 0; i < 6; i++) box(3.46, 0.85, 1.1, glass, 0, 0.75, 3.3 - i * 1.45); // windows
+    box(0.1, 1.9, 1.0, glass, 1.72, -0.1, 3.6); // door
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.0), new THREE.MeshBasicMaterial({ map: textTexture('BENTON BUS', '#222222', '#ffc933', 512) }));
+    sign.position.set(1.74, -0.2, -1.2);
     sign.rotation.y = Math.PI / 2;
     const sign2 = sign.clone();
-    sign2.position.x = -1.66;
+    sign2.position.x = -1.74;
     sign2.rotation.y = -Math.PI / 2;
-    const balloon = new THREE.Mesh(new THREE.SphereGeometry(4.5, 20, 14), new THREE.MeshLambertMaterial({ color: '#ff5ca8' }));
-    balloon.position.y = 8;
-    balloon.scale.set(1, 1.1, 1.4);
-    const band = new THREE.Mesh(new THREE.TorusGeometry(4.55, 0.3, 6, 24), new THREE.MeshLambertMaterial({ color: '#ffffff' }));
-    band.position.y = 8;
-    band.rotation.x = Math.PI / 2;
-    band.scale.set(1, 1.4, 1);
-    g.add(body, hood, stripe, win, sign, sign2, balloon, band);
-    for (const [x, z] of [[-1.4, -3], [1.4, -3], [-1.4, 3], [1.4, 3]]) {
-      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.4, 12), new THREE.MeshLambertMaterial({ color: '#222' }));
-      w.rotation.z = Math.PI / 2;
-      w.position.set(x, -1.6, z);
-      g.add(w);
-      const line = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 6, 4), new THREE.MeshBasicMaterial({ color: '#444' }));
-      line.position.set(x * 0.9, 4.2, z * 0.5);
-      g.add(line);
+    g.add(sign, sign2);
+    const stop = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.06, 8), mat('#e5323b'));
+    stop.rotation.z = Math.PI / 2;
+    stop.position.set(-1.8, 0.2, 3.2);
+    g.add(stop);
+    // roof rack, luggage and flags
+    box(2.8, 0.1, 6, dark, 0, 2.05, -0.8);
+    box(1.0, 0.6, 1.3, mat('#6fd0ff'), -0.6, 2.4, 0.6);
+    box(0.9, 0.5, 1.0, mat('#7ee07a'), 0.7, 2.35, -1.2);
+    box(1.1, 0.7, 0.9, mat('#ff8a3c'), -0.4, 2.45, -2.6);
+    for (const [z, c] of [[2.4, '#ff5ca8'], [-3.9, '#6fd0ff']]) {
+      box(0.06, 1.4, 0.06, dark, 1.2, 2.7, z);
+      box(0.04, 0.5, 0.8, mat(c), 1.2, 3.1, z - 0.42);
     }
-    this.propeller = new THREE.Mesh(new THREE.BoxGeometry(5, 0.3, 0.5), new THREE.MeshLambertMaterial({ color: '#666' }));
-    this.propeller.position.set(0, 0, -5.3);
+    // wheels
+    for (const [x, z] of [[-1.5, -3.2], [1.5, -3.2], [-1.5, 4.4], [1.5, 4.4]]) {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.45, 14), dark);
+      w.rotation.z = Math.PI / 2;
+      w.position.set(x, -1.45, z);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.5, 8), chrome);
+      hub.rotation.z = Math.PI / 2;
+      hub.position.copy(w.position);
+      g.add(w, hub);
+    }
+    // striped balloon, ropes and hoop
+    const stripes = ['#ff5ca8', '#ffffff', '#ffc933', '#ffffff'];
+    for (let i = 0; i < 12; i++) {
+      const seg = new THREE.Mesh(new THREE.SphereGeometry(5, 4, 14, (i / 12) * Math.PI * 2, Math.PI / 6), mat(stripes[i % 4]));
+      seg.position.y = 9;
+      seg.scale.set(1, 1.05, 1.35);
+      g.add(seg);
+    }
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.12, 6, 20), dark);
+    hoop.rotation.x = Math.PI / 2;
+    hoop.position.y = 4.1;
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), mat('#ff5ca8'));
+    cap.position.y = 14.2;
+    g.add(hoop, cap);
+    for (const [x, z] of [[-1.5, -4], [1.5, -4], [-1.5, 3], [1.5, 3]]) {
+      const from = new THREE.Vector3(x, 1.6, z), to = new THREE.Vector3(Math.sign(x) * 1.5, 4.1, Math.sign(z) * 1.5);
+      const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, from.distanceTo(to), 4), new THREE.MeshBasicMaterial({ color: '#444' }));
+      rope.position.copy(from).add(to).multiplyScalar(0.5);
+      rope.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+      g.add(rope);
+    }
+    // rear propeller
+    box(0.5, 0.5, 0.5, dark, 0, 0.2, -5.4);
+    this.propeller = new THREE.Group();
+    for (const r of [0, Math.PI / 2]) {
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(5, 0.35, 0.12), mat('#ff5ca8'));
+      blade.rotation.z = r;
+      this.propeller.add(blade);
+    }
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.5, 10), chrome);
+    nose.rotation.x = -Math.PI / 2;
+    nose.position.z = -0.25;
+    this.propeller.add(nose);
+    this.propeller.position.set(0, 0.2, -5.75);
     g.add(this.propeller);
     return g;
   }

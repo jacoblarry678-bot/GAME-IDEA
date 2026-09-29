@@ -38,6 +38,7 @@ export const ROADMAP = {
     'Milestone 6 — Seasons & Style: 8-week seasons with soft rank resets, the free 20-tier Benton Pass (5 new emotes, 6 gliders, 3 new outfits), weekly challenges, 16 achievements, and an expanded Locker (cosmetics show online)',
     "Milestone 5 — Boss & Vault: Crankbolt, a giant rocket-firing guard robot (drops the Vault Keycard and a Mythic rifle); Crankbolt's Vault on its hilltop; doors on every house; carrying knocked teammates",
     'Admin panel for the owner: progression tools in the lobby, match tools in the pause menu (god mode, teleports, storm, bots, boss, vault); admin matches never count for XP, rank or challenges',
+    'New looks: the Night Pump shotgun, the heavy-hitting Hand Cannon pistol, and Benton Bus v2 under a striped balloon',
   ],
   next: [
     'Editing ramps and cones',

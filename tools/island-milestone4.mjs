@@ -97,6 +97,7 @@ await ev(() => { __bi.game.vehicles.list[0].speed = 0; });
 await key('KeyE');
 const out = await waitFor(() => !__bi.game.player.vehicle && ['ground', 'air'].includes(__bi.game.player.state), 3000);
 await waitFor(() => __bi.game.player.grounded, 4000); // slow headless frames: give the hop time to land
+await waitFor(() => { const g = __bi.game; return !g.actors.find((a) => a !== g.player && a.team === g.player.team).vehicle; }, 4000);
 const outInfo = await ev(() => { const g = __bi.game, P = g.player, v = g.vehicles.list[0]; const m = g.actors.find((a) => a !== P && a.team === P.team); return { d: P.pos.distanceTo(v.pos), ground: P.grounded, mateOut: !m.vehicle, st: P.state, y: +(P.pos.y - g.world.height(P.pos.x, P.pos.z)).toFixed(2), vy: +P.vel.y.toFixed(2), paused: g.paused, cur: __bi.menus.current }; });
 check('E hops out beside the truck; the bot teammate gets out too', out && outInfo.d < 5 && (outInfo.ground || outInfo.st === 'swim') && outInfo.mateOut, JSON.stringify(outInfo));
 
@@ -171,7 +172,7 @@ await ev(() => {
   window.hp0 = v.hp;
 });
 await p.mouse.down();
-await p.waitForTimeout(1200);
+await waitFor(() => __bi.game.vehicles.list[3].hp < hp0, 5000); // slow headless frames: hold until a round lands
 await p.mouse.up();
 const shot = await ev(() => ({ hp: __bi.game.vehicles.list[3].hp, hp0 }));
 check('shooting a truck damages it', shot.hp < shot.hp0, JSON.stringify(shot));
@@ -193,7 +194,7 @@ const seats = await ev(() => {
   const g = __bi.game, P = g.player, v = g.vehicles.list[1];
   v.pos.set(F.x, F.y, F.z); v.yaw = 0; v.speed = 0; g.vehicles._sync(v, true);
   const foe = freshFoe();
-  put(foe, F.x, F.z + 30);
+  put(foe, F.x, F.z + 14); // close enough that terrain never blocks the line
   const dir = () => foe.eye.sub(P.eye).normalize();
   g.vehicles.enter(P, v);
   P.select(0);

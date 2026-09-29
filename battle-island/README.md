@@ -96,7 +96,7 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [x] **Island:** Benton Diesel Garage (garage bays, mezzanine, office), Pickles Park (giant pickle, slide, jungle gym, swings, pond, trampoline), Haunt Hollow (haunted house, graveyard, hidden crypt), Boom Co. Depot (warehouse catwalk, container yard, explosive barrels), and the Benton Kids Clubhouse (a treehouse on the central hill). There are also 4 cabins, roads, hills, beaches and a pond.
 - [x] **Buildings:** walk-in interiors with stairs, upper floors, walkable roofs and destructible walls. Secrets: a legendary chest on top of the pickle statue (reach it with the trampoline) and one inside the Haunt Hollow crypt.
 - [x] **Movement:** sprint with stamina, crouch, slide, jump, mantle/hurdle, swimming, fall damage, bounce pads with glider redeploy, and a third-person camera with collision. Mouse sensitivity, ADS sensitivity, FOV and invert-Y are in Settings.
-- [x] **Weapons:** Thunder Rifle (AR), Zip SMG, Pump Buster (shotgun), Pop Pistol, Long Shot (scoped sniper with bullet drop), Boom Launcher (rockets) and Boom Ball grenades.
+- [x] **Weapons:** Thunder Rifle (AR), Zip SMG, Night Pump (shotgun), Hand Cannon (pistol), Long Shot (scoped sniper with bullet drop), Boom Launcher (rockets) and Boom Ball grenades.
   - Five rarities, magazines, reloads and five ammo types.
   - Recoil, bloom/spread, ADS, damage falloff and headshots.
   - Hit feedback: hitmarkers, damage numbers and a damage-direction indicator.
@@ -270,6 +270,13 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [x] **Weekly challenges:** five a week, bigger than the dailies, worth 3,000 XP each, shown on the Pass screen. Examples: 15 eliminations, 20 chests, 2 km driven, 1,500 damage to Crankbolt.
 - [x] **Achievements:** 16 permanent medals, each worth 1,000 XP, on their own screen. Examples: first win, a squad win, 50 eliminations, taking down Crankbolt, opening the vault, driving 5 km, reaching Gold, reaching level 20.
 - [x] **Admin (owner):** +1 pass tier and "unlock every cosmetic".
+
+## Mini update: New shotgun, pistol and Benton Bus
+
+- **Night Pump** (shotgun): a new compact tactical pump with a vented heat shield, a red-dot sight, a ribbed pump and rarity-colored trim. Its stats are unchanged.
+- **Hand Cannon** (pistol): a new heavy pistol with a ported compensator. It now hits much harder (40 damage, x2.0 headshots) but fires slower (2.6 shots/s) from an 8-round mag. The HUD shows it as CANNON.
+- **Benton Bus v2**: a rounded school bus with a grille, headlights, bumpers, a roof rack with luggage and flags, and a stop sign. It hangs by ropes under a striped pink, white and gold balloon and has a spinning rear propeller.
+- All three are built in code like every other model. The uploaded shotgun and pistol files were not used: they look like assets extracted from Fortnite and came with no licence.
 
 ## Roadmap: not built yet
 

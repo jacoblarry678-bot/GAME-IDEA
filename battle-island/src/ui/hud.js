@@ -14,7 +14,7 @@ import { ISLAND_SIZE } from '../world/island.js';
 import { save } from '../core/save.js';
 import { VENDOR_STOCK, stockName } from '../gameplay/economy.js';
 
-const SHORT = { vault: 'KEYCARD', ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'PISTOL', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
+const SHORT = { vault: 'KEYCARD', ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'CANNON', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const _v = new THREE.Vector3();
 export const TEAM_COLORS = ['#ffd23f', '#39f0ff', '#ff7ac8', '#7ed957'];

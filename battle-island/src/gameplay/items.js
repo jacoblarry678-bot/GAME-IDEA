@@ -40,14 +40,14 @@ export const WEAPONS = {
     head: 1.5, range: 120, falloff: [25, 0.6], sound: 'smg',
   },
   shotgun: {
-    name: 'Pump Buster', cls: 'Shotgun', ammo: 'shells', mag: 5, dmg: 10, pellets: 10, rate: 1.0, reload: 4.2,
+    name: 'Night Pump', cls: 'Shotgun', ammo: 'shells', mag: 5, dmg: 10, pellets: 10, rate: 1.0, reload: 4.2,
     hip: 0.085, ads: 0.065, bloom: 0, maxBloom: 0, recoil: 0.06, auto: false, zoom: 1.2,
     head: 1.8, range: 50, falloff: [8, 0.2], sound: 'shotgun',
   },
   pistol: {
-    name: 'Pop Pistol', cls: 'Pistol', ammo: 'light', mag: 16, dmg: 24, rate: 6.5, reload: 1.4,
-    hip: 0.02, ads: 0.007, bloom: 0.012, maxBloom: 0.05, recoil: 0.018, auto: false, zoom: 1.2,
-    head: 1.6, range: 120, falloff: [30, 0.6], sound: 'pistol',
+    name: 'Hand Cannon', cls: 'Pistol', ammo: 'light', mag: 8, dmg: 40, rate: 2.6, reload: 1.8,
+    hip: 0.022, ads: 0.006, bloom: 0.02, maxBloom: 0.06, recoil: 0.045, auto: false, zoom: 1.25,
+    head: 2.0, range: 130, falloff: [30, 0.6], sound: 'pistol',
   },
   sniper: {
     name: 'Long Shot', cls: 'Sniper Rifle', ammo: 'heavy', mag: 1, dmg: 105, rate: 0.6, reload: 2.4,
