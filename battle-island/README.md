@@ -294,15 +294,41 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - Edits sync online, and touch shows PICK or RAISE on the fire button.
 - [x] **Bots that drive:** on a long trip to the safe zone or across the map, a bot takes a free truck or kart nearby. It steers toward its goal, backs up and retries when stuck, and gets out near the goal, at water, low on fuel or when a fight starts. It gives up on cars it can't reach. Bots only take cars with nobody else inside. Their driving runs on the host, so everyone online sees it.
 
+## Milestone 8: Gear, Secrets & Events
+
+- [x] **Weapon attachments:** loot that snaps onto a gun. They drop from chests (about 1 in 3), the floor, and every supply drop. Walk up and press **E** (**ATTACH** on touch):
+
+  | Attachment | Slot | Fits | Effect |
+  |---|---|---|---|
+  | **Red Dot Sight** | optic | rifle, SMG, pistol, shotgun | Steadier aim, 1.6x zoom |
+  | **4x Scope** | optic | rifle, SMG, pistol | Scoped 3x zoom with the scope overlay, pinpoint aim |
+  | **Steady Grip** | under | rifle, SMG, shotgun, sniper | Less recoil and bloom |
+  | **Drum Mag** | mag | rifle, SMG, pistol, sniper | +50% magazine (the rifle holds 45) |
+  | **Tight Choke** | barrel | shotgun | Tighter spread, longer reach |
+
+  - Each goes on the gun in your hands if it fits, otherwise on the first gun it fits. Each gun takes one attachment per slot; a new one swaps the old one out onto the ground. If nothing fits, the prompt says which guns take it.
+  - Attachments show on the gun model and as coloured dots on the inventory slot. They stay on the gun when you drop it and survive bench upgrades. Bots use them too, and they sync online.
+- [x] **Hidden Benton Badges:** 12 family keepsakes hidden around the island, mostly up high: Colton's Baseball on the Clubhouse roof, Waylon's Toy Dino above Haunt Hollow, Grandma's Cookie Tin on the Farm House, the Treehouse Key above the tallest zipline tower, the Squeaky Dog Bone on the island's peak, a Message in a Bottle on the farthest beach, and more. Build, zipline or bounce your way up.
+  - Touching one saves it on this device for good, worth **+500 XP** after the match. Badges you already have show as faint ghosts.
+  - **Lobby → Badges** opens the collection book, with a hint for each badge you haven't found.
+  - **6 badges** unlock the **Treasure Map** glider; **all 12** unlock the **Badge Collector** glider.
+  - Online, each player collects for their own device.
+- [x] **Rotating island events:** one twist a day, the same for everyone that day, rotating through five. The lobby card shows today's event and tomorrow's, with an **On/Off** switch. Ranked is always classic. Online, the host's event is used for everyone.
+  - 🎃 **Spooky Night:** night falls, and 28 glowing pumpkins spill Benton Bucks and treats when smashed.
+  - 🪐 **Low Gravity:** jumps go about twice as high and there's no fall damage.
+  - 🎈 **Supply Frenzy:** a supply drop every 45 seconds.
+  - ✨ **Golden Loot:** every weapon on the floor and in chests is one rarity better.
+  - 🛝 **Playground Party:** bounce pads at every named place, with a Bouncy Soda by each.
+- [x] **Admin (owner):** find every badge or forget them; pin any island event or go back to the daily rotation.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
 - [ ] Match flow: pre-match warm-up area, match replays
-- [ ] Weapon attachments and scopes as separate items
 - [ ] World: more bosses, vaults and questlines
 - [ ] Progression: a shared online leaderboard; new pass rewards each season
 - [ ] Online: more than 4 players, host migration, joining a match in progress, and anti-cheat (the host is trusted)
-- [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization, hidden family collectibles, and rotating spooky/playground events
+- [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization
 
 ## Testing
 
@@ -317,15 +343,17 @@ node tools/island-ranked.mjs                # 12 checks
 node tools/island-supercharged.mjs          # 13 checks
 node tools/island-milestone4.mjs            # 22 checks
 node tools/island-milestone5.mjs            # 17 checks
-node tools/island-admin.mjs                 # 23 checks (run `npm run island:build` first)
+node tools/island-admin.mjs                 # 24 checks (run `npm run island:build` first)
 node tools/island-milestone6.mjs            # 12 checks (the last one needs the relay server)
 node tools/island-milestone7.mjs            # 19 checks
+node tools/island-milestone8.mjs            # 21 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
 node tools/island-online-m4.mjs             # 11 checks: a client drives, rides and shops through the host
 node tools/island-online-m5.mjs             # 10 checks: doors, Crankbolt, the vault, carrying and crashes online
 node tools/island-online-m7.mjs             # 9 checks: a client's quest, ramp and cone edits, and a bot driving
+node tools/island-online-m8.mjs             # 6 checks: the host's event on the client, pumpkins, a client's attachment and badge
 node tools/island-mobile.mjs                # 18 checks: emulated phone with real multi-touch
 ```
 
@@ -380,6 +408,12 @@ node tools/island-mobile.mjs                # 18 checks: emulated phone with rea
   - Cone corners raised and stood on, plus the all-raised refusal and reset.
   - A bot taking a truck on a long rotation and getting out near its goal.
   - Quest XP and the Helping Hand achievement on the result screen.
+- **`island-milestone8.mjs`:**
+  - Attachments: the scope (with real E and right-click), swapping a red dot in, drum/grip/choke stats, an attachment with no gun it fits, and a dropped gun keeping its attachments.
+  - Badges: placement, finding one (saved, toast, ghost), the Treasure Map unlock at 6, result XP, the book and the locker.
+  - Events: the lobby card, its toggle and ranked staying classic; each of the five events in a real match; a classic match afterwards.
+- **`island-online-m8.mjs`:** the host's Spooky Night on a client whose events are off, a pumpkin smashed on the host, a client attaching a scope through the host, a client-only badge find, and the client's badge XP.
+- Automated browsers start with island events off so the older suites stay predictable; the Milestone 8 suites switch them on.
 - **`island-online-m7.mjs`:** matching NPC spots on host and client; a client's quest from start to hand-in, with bucks and reward; ramp and cone edits through the host; a bot's drive seen from the client; and the client's quest XP.
 - **`island-admin.mjs`:**
   - Who sees the panel: the owner does; anyone else gets no button and the screen won't open.
@@ -425,6 +459,8 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
 | `src/gameplay/admin.js`, `src/core/owner.js` | Owner check and admin tools |
+| `src/gameplay/badges.js`, `src/core/badges.js` | Benton Badges: placement, collecting, saved collection and rewards |
+| `src/gameplay/events.js`, `src/core/events.js` | Island events: the daily rotation, pumpkins, pads, supply frenzy, low gravity |
 | `src/gameplay/quests.js` | Story NPCs, quests, tackle boxes, tracker and map icons |
 | `src/gameplay/boss.js` | Crankbolt: AI, attacks, hitbox, drops, network row |
 | `src/gameplay/vehicles.js` | Trucks and karts: handling, fuel, damage, run-overs, seats, network rows |

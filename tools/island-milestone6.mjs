@@ -59,7 +59,7 @@ const refused = await ev(() => __bi.season.equip('emote', 'robo'));
 await p.click('.cos[data-kind=emote][data-id=robo]'); // a locked one opens the pass
 await p.waitForTimeout(150);
 const toPass = await ev(() => __bi.menus.current === 'pass');
-check('Locker lists 6 emotes and 7 gliders; equipping owned ones works, locked ones are refused and link to the pass; pass outfits show their tier', lk.emotes === 6 && lk.gliders === 7 && lk.lockedRobo && /Pass tier 10/.test(lk.passOutfit) && eq.emote === 'wave' && eq.glider === 'pickle' && !refused && toPass, JSON.stringify({ lk, eq, refused, toPass }));
+check('Locker lists 6 emotes and 9 gliders (7 pass + 2 badge); equipping owned ones works, locked ones are refused and link to the pass; pass outfits show their tier', lk.emotes === 6 && lk.gliders === 9 && lk.lockedRobo && /Pass tier 10/.test(lk.passOutfit) && eq.emote === 'wave' && eq.glider === 'pickle' && !refused && toPass, JSON.stringify({ lk, eq, refused, toPass }));
 
 // ---- pass outfits
 const outfit = await ev(() => {

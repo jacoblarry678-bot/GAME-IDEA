@@ -166,7 +166,7 @@ export class BotBrain {
       if (same) return it.rarity > same.rarity;
       return a.slots.includes(null) || a.slots.some((s) => s && s.kind === 'weapon' && s.rarity < it.rarity);
     }
-    if (it.kind === 'consumable' || it.kind === 'throwable') return a.hasRoomFor(it);
+    if (it.kind === 'consumable' || it.kind === 'throwable' || it.kind === 'mod') return a.hasRoomFor(it);
     return false;
   }
 

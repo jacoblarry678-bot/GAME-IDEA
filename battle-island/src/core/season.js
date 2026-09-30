@@ -13,6 +13,7 @@ import { superXP, CAP_XP } from './supercharge.js';
 import { rankState, divName, divisionMMR } from './ranked.js';
 import { CHALLENGES } from './challenges.js';
 import { mulberry32 } from '../gameplay/items.js';
+import { badgeCount } from './badges.js';
 
 // ------------------------------------------------------------ cosmetics
 export const EMOTES = {
@@ -32,6 +33,8 @@ export const GLIDERS = {
   crankbolt: { name: 'Crankbolt Canopy', colors: ['#ff8a3d', '#4a5566'], pattern: 'stripes' },
   golden: { name: 'Golden Wing', colors: ['#ffcf3f', '#ffae1a'], pattern: 'stripes' },
   champion: { name: 'Champion Rainbow', colors: ['#ff5c7a', '#ffcf3f', '#7ed957', '#39f0ff', '#b35cff'], pattern: 'rainbow' },
+  treasure: { name: 'Treasure Map', colors: ['#e8d3a0', '#b0472f'], pattern: 'map', badges: 6 },
+  medal: { name: 'Badge Collector', colors: ['#1d2a5a', '#ffcf3f'], pattern: 'medals', badges: 12 },
 };
 
 // ------------------------------------------------------------ seasons
@@ -84,7 +87,10 @@ export function passTier(p = pass()) {
 /** Cosmetics this device owns. */
 export function owned() {
   const p = pass();
-  return new Set(['emote:sig', 'glider:classic', ...p.owned]);
+  // gliders earned by finding Benton Badges
+  const n = badgeCount();
+  const byBadges = Object.entries(GLIDERS).filter(([, g]) => g.badges && n >= g.badges).map(([id]) => `glider:${id}`);
+  return new Set(['emote:sig', 'glider:classic', ...p.owned, ...byBadges]);
 }
 
 export function owns(kind, id) {

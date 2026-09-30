@@ -87,6 +87,54 @@ export const BUFFS = {
   snack: { name: 'Snack', dur: 15, color: '#39f0ff', desc: 'Regenerate 4 shield/s' },
 };
 
+/**
+ * Weapon attachments ("mods"): loot that snaps onto a gun. One per slot
+ * (optic, under, mag, barrel); a new one in a taken slot swaps the old one out.
+ * `apply` returns the stats it changes.
+ */
+export const MODS = {
+  dot: { name: 'Red Dot Sight', slot: 'optic', color: '#ff5c5c', fits: ['ar', 'smg', 'pistol', 'shotgun'], desc: 'Steadier aim, 1.6x zoom', apply: (w) => ({ zoom: Math.max(w.zoom, 1.6), ads: w.ads * 0.7 }) },
+  scope: { name: '4x Scope', slot: 'optic', color: '#39f0ff', fits: ['ar', 'smg', 'pistol'], desc: 'Scoped 3x zoom, pinpoint aim', apply: (w) => ({ zoom: 3, scope: true, ads: w.ads * 0.45 }) },
+  grip: { name: 'Steady Grip', slot: 'under', color: '#7ed957', fits: ['ar', 'smg', 'shotgun', 'sniper'], desc: 'Less recoil and bloom', apply: (w) => ({ recoil: w.recoil * 0.55, bloom: w.bloom * 0.6, hip: w.hip * 0.85 }) },
+  drum: { name: 'Drum Mag', slot: 'mag', color: '#ffae1a', fits: ['ar', 'smg', 'pistol', 'sniper'], desc: '+50% magazine', apply: (w) => ({ mag: Math.max(w.mag + 1, Math.round(w.mag * 1.5)) }) },
+  choke: { name: 'Tight Choke', slot: 'barrel', color: '#b35cff', fits: ['shotgun'], desc: 'Tighter spread, longer reach', apply: (w) => ({ hip: w.hip * 0.7, ads: w.ads * 0.7, falloff: [w.falloff[0] * 1.4, w.falloff[1]] }) },
+};
+export const MOD_IDS = Object.keys(MODS);
+
+export const modBits = (mods) => (mods || []).reduce((m, id) => m | (1 << MOD_IDS.indexOf(id)), 0);
+export const bitsToMods = (bits) => MOD_IDS.filter((_, i) => bits & (1 << i));
+
+const statCache = new Map();
+/** A weapon item's stats with its attachments applied (cached per combination). */
+export function weaponStats(it) {
+  const base = WEAPONS[it.id];
+  if (!it.mods || !it.mods.length) return base;
+  const k = it.id + ':' + modBits(it.mods);
+  let w = statCache.get(k);
+  if (!w) {
+    w = { ...base };
+    for (const id of MOD_IDS) if (it.mods.includes(id)) Object.assign(w, MODS[id].apply(w));
+    statCache.set(k, w);
+  }
+  return w;
+}
+
+/** The weapon slot an attachment would go on: the held gun if it fits, else the first gun that does. */
+export function modTarget(actor, modId) {
+  const fits = (s) => s && s.kind === 'weapon' && MODS[modId].fits.includes(s.id);
+  if (fits(actor.slots[actor.sel])) return actor.sel;
+  const i = actor.slots.findIndex(fits);
+  return i >= 0 ? i : -1;
+}
+
+/** Puts an attachment on a slot's weapon. Returns the attachment it replaced (or null). */
+export function attachMod(actor, slot, modId) {
+  const w = actor.slots[slot];
+  const old = (w.mods || []).find((m) => MODS[m].slot === MODS[modId].slot) || null;
+  w.mods = [...(w.mods || []).filter((m) => m !== old), modId];
+  return old;
+}
+
 export const PICKAXE = { name: 'Pickaxe', dmg: 20, structDmg: 50, rate: 1.9, range: 2.9 };
 
 export function itemName(it) {
@@ -99,6 +147,7 @@ export function itemName(it) {
   if (it.kind === 'card') return `${it.name}'s Reboot Card`;
   if (it.kind === 'coin') return 'Benton Bucks';
   if (it.kind === 'key') return 'Vault Keycard';
+  if (it.kind === 'mod') return MODS[it.id].name;
   return '?';
 }
 
@@ -133,6 +182,10 @@ export function rollWeapon(rng, chest) {
   return makeWeapon(id, rarity);
 }
 
+export function rollMod(rng) {
+  return { kind: 'mod', id: pick(rng, [['dot', 30], ['scope', 16], ['grip', 26], ['drum', 20], ['choke', 12]]), count: 1 };
+}
+
 export function rollConsumable(rng) {
   if (rng() < 0.18) return { kind: 'throwable', id: 'boomball', count: 2 };
   const id = pick(rng, CONSUMABLE_TABLE);
@@ -152,7 +205,8 @@ export function rollFloor(rng) {
     const w = rollWeapon(rng, false);
     return [w, ammoFor(w.id)];
   }
-  if (r < 0.78) return [rollConsumable(rng)];
+  if (r < 0.72) return [rollConsumable(rng)];
+  if (r < 0.8) return [rollMod(rng)];
   if (r < 0.88) return [{ kind: 'coin', id: 'bucks', count: 15 + Math.floor(rng() * 4) * 5 }];
   const ids = Object.keys(AMMO);
   const id = ids[Math.floor(rng() * ids.length)];
@@ -165,12 +219,13 @@ export function rollChest(rng) {
   const mats = ['wood', 'brick', 'metal'];
   out.push({ kind: 'mat', id: mats[Math.floor(rng() * 3)], count: 30 });
   out.push({ kind: 'coin', id: 'bucks', count: 20 + Math.floor(rng() * 5) * 5 });
+  if (rng() < 0.35) out.push(rollMod(rng));
   return out;
 }
 
 export function rollSupply(rng) {
   const w = makeWeapon(pick(rng, [['ar', 3], ['sniper', 2], ['launcher', 2], ['shotgun', 2]]), rng() < 0.5 ? 3 : 4);
-  return [w, ammoFor(w.id, 2), { kind: 'consumable', id: 'bigshield', count: 2 }, { kind: 'mat', id: 'metal', count: 80 }, { kind: 'coin', id: 'bucks', count: 100 }];
+  return [w, ammoFor(w.id, 2), { kind: 'consumable', id: 'bigshield', count: 2 }, { kind: 'mat', id: 'metal', count: 80 }, { kind: 'coin', id: 'bucks', count: 100 }, rollMod(rng)];
 }
 
 export function mulberry32(seed) {

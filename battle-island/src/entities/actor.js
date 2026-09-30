@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { GRAVITY, WATER_Y } from '../world/physics.js';
 import { CharacterModel } from './characters.js';
-import { WEAPONS, CONSUMABLES, THROWABLES, AMMO, MAT_MAX, RARITIES, BUFFS, stackMax } from '../gameplay/items.js';
+import { WEAPONS, CONSUMABLES, THROWABLES, AMMO, MAT_MAX, RARITIES, BUFFS, stackMax, weaponStats, modTarget } from '../gameplay/items.js';
 import { sfx } from '../core/audio.js';
 
 export const RADIUS = 0.38;
@@ -115,7 +115,7 @@ export class Actor {
 
   get weapon() {
     const it = this.item;
-    return it && it.kind === 'weapon' ? WEAPONS[it.id] : null;
+    return it && it.kind === 'weapon' ? weaponStats(it) : null; // with its attachments
   }
 
   canAct() {
@@ -199,6 +199,7 @@ export class Actor {
 
   hasRoomFor(it) {
     if (it.kind === 'ammo' || it.kind === 'mat' || it.kind === 'coin') return true;
+    if (it.kind === 'mod') return modTarget(this, it.id) >= 0; // snaps onto a gun, needs no slot
     if (this.slots.includes(null)) return true;
     if (it.kind === 'consumable' || it.kind === 'throwable') {
       return this.slots.some((s) => s && s.kind === it.kind && s.id === it.id && s.count < stackMax(it));
@@ -290,7 +291,7 @@ export class Actor {
         this.reloadT = 0;
         const it = this.item;
         if (it && it.kind === 'weapon') {
-          const need = WEAPONS[it.id].mag - it.mag;
+          const need = weaponStats(it).mag - it.mag;
           const take = Math.min(need, this.ammo[WEAPONS[it.id].ammo]);
           it.mag += take;
           this.ammo[WEAPONS[it.id].ammo] -= take;
@@ -419,7 +420,7 @@ export class Actor {
         this.state = 'air';
         sfx.play('jump', this.pos);
       }
-      this.vel.y -= GRAVITY * dt;
+      this.vel.y -= GRAVITY * (this.game.eventFx?.lowGravity ? 0.45 : 1) * dt; // Low Gravity event
     }
 
     // integrate with substeps so fast falls never tunnel
@@ -468,7 +469,7 @@ export class Actor {
     }
 
     // landing: fall damage
-    if (!wasGrounded && this.grounded && impact < -17.5 && !this.buffs.bounce) {
+    if (!wasGrounded && this.grounded && impact < -17.5 && !this.buffs.bounce && !this.game.eventFx?.lowGravity) {
       const dmg = Math.round((-impact - 17.5) * 5);
       this.game.applyDamage(this, dmg, null, { fall: true });
       sfx.play('land', this.pos);
@@ -646,7 +647,7 @@ export class Actor {
     const h = this.netHeld || this.heldInfo();
     const { pose, key: held } = h;
     const rar = h.rarity;
-    m.setHeld(held, rar);
+    m.setHeld(held, rar, h.mods);
     m.animate(dt, {
       t,
       speed: this.state === 'drive' || this.state === 'zip' ? 0 : Math.hypot(this.vel.x, this.vel.z),
@@ -664,15 +665,15 @@ export class Actor {
   /** What the character model should hold and how it should pose. */
   heldInfo() {
     const it = this.item;
-    let pose = 'none', key = 'pickaxe', rarity = 0;
+    let pose = 'none', key = 'pickaxe', rarity = 0, mods = null;
     if (this.building) { pose = 'build'; key = 'none'; }
     else if (this.use) { pose = 'heal'; key = 'none'; }
-    else if (it && it.kind === 'weapon') { pose = 'gun'; key = it.id; rarity = it.rarity; }
+    else if (it && it.kind === 'weapon') { pose = 'gun'; key = it.id; rarity = it.rarity; mods = it.mods; }
     else if (it && it.kind === 'throwable') { pose = 'throw'; key = it.id; }
     else if (it && it.kind === 'consumable') { key = 'none'; }
     else pose = 'pickaxe';
     if (this.state === 'skydive' || this.state === 'glide' || this.state === 'swim' || this.downed || (this.state === 'drive' && this.seat === 0)) key = 'none';
-    return { pose, key, rarity };
+    return { pose, key, rarity, mods };
   }
 
   dispose() {

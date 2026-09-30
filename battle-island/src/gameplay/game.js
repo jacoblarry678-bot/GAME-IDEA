@@ -20,6 +20,10 @@ import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 import { dropBucks } from './economy.js';
 import { Quests, QUEST_XP } from './quests.js';
+import { BadgeHunt } from './badges.js';
+import { IslandEvent } from './events.js';
+import { EVENTS } from '../core/events.js';
+import { BADGE_XP } from '../core/badges.js';
 import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
 import { superchargeXP } from '../core/supercharge.js';
@@ -199,13 +203,19 @@ export class Game {
     this.world = new World(7); // the island layout is fixed; loot and storm vary per match
     this.world.onBarrel = (c) => this.role !== 'client' && this.combat.explode(new THREE.Vector3((c.minX + c.maxX) / 2, c.minY + 0.6, (c.minZ + c.maxZ) / 2), 4.5, 65, 250, c.lastDamager || null);
     this.scene.add(this.world.root);
+    this.eventFx = new IslandEvent(this, opts.event); // today's island event (null: classic)
+    this.event = this.eventFx.id;
     this.combat = new Combat(this);
     this.loot = new Loot(this);
-    if (this.role !== 'client') this.loot.spawnInitial(rng);
+    if (this.role !== 'client') {
+      this.loot.spawnInitial(rng);
+      this.eventFx.spawnLoot();
+    }
     this.building = new Building(this);
     this.vehicles = new Vehicles(this);
     this.boss = new Boss(this);
     this.quests = new Quests(this);
+    this.badges = new BadgeHunt(this);
     this.storm = new Storm(this, rng);
     this.teamSize = opts.teamSize || 1;
     this.teams = new Teams(this, this.teamSize);
@@ -299,6 +309,7 @@ export class Game {
     this.hud.show(true);
     this.hud.onMatchStart(this);
     this.hud.toast('Welcome aboard the Benton Bus! Press SPACE to jump.', '#ffd23f', 4);
+    if (this.event) this.hud.toast(`${EVENTS[this.event].icon} Island event: ${EVENTS[this.event].name} · ${EVENTS[this.event].desc}`, EVENTS[this.event].color, 6);
     // networking
     this.net = null;
     if (opts.room && this.role === 'host') {
@@ -328,6 +339,8 @@ export class Game {
     this.vehicles.clear();
     this.boss.dispose();
     this.quests.dispose();
+    this.badges.dispose();
+    this.eventFx.dispose();
     this.storm.dispose();
     this.effects.clear();
     this.scene.remove(this.world.root);
@@ -609,7 +622,9 @@ export class Game {
     const ach = applyAchievements(st.ms, { kills, won, team: this.teamSize > 1 });
     const questN = (st.ms && st.ms.quests) || 0;
     const questXP = questN * QUEST_XP; // story quests handed in this match
-    pr.xp += xp + superXP + ch.xp + wk.xp + ach.xp + questXP;
+    const badgeN = this.badges.foundNow.length; // Benton Badges found on this device
+    const badgeXP = badgeN * BADGE_XP;
+    pr.xp += xp + superXP + ch.xp + wk.xp + ach.xp + questXP + badgeXP;
     // reaching a level can itself unlock an achievement (and its XP)
     refreshLevel();
     const ach2 = unlockReached();
@@ -620,11 +635,11 @@ export class Game {
     if (!pr.bestPlace || place < pr.bestPlace) pr.bestPlace = place;
     save.write();
     const after = levelInfo(pr.xp).level;
-    const total = xp + superXP + ch.xp + wk.xp + ach.xp + ach2.xp + questXP;
+    const total = xp + superXP + ch.xp + wk.xp + ach.xp + ach2.xp + questXP + badgeXP;
     const passUp = addPassXP(total); // the Benton Pass fills with every XP point earned
     this.result = {
       won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: total, superXP, chalXP: ch.xp, challenges: ch.rows,
-      questXP, quests: questN, weeklyXP: wk.xp, weekly: wk.rows.filter((w) => w.justDone), achXP: ach.xp + ach2.xp, achievements: [...ach.got, ...ach2.got], pass: passUp,
+      questXP, quests: questN, badgeXP, badges: badgeN, weeklyXP: wk.xp, weekly: wk.rows.filter((w) => w.justDone), achXP: ach.xp + ach2.xp, achievements: [...ach.got, ...ach2.got], pass: passUp,
       levelUp: after > before ? after : 0, killer: st.killer,
     };
     if (this.ranked) this.result.ranked = applyRanked(this.mode, { won, place, total: totalTeams, kills }, this.lobbyRating);
@@ -675,6 +690,7 @@ export class Game {
     this.vehicles.update(dt);
     this.boss.update(dt);
     this.quests.update(dt);
+    this.eventFx.update(dt);
     this.updateCarry(dt);
     this.teams.update(dt);
     this.combat.update(dt);
@@ -758,6 +774,7 @@ export class Game {
     this.world.update(dt, t);
     this.boss.present(dt, t);
     this.quests.present(dt, t);
+    this.badges.update(dt, t);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const tw = this.tweens[i];
       tw.t += dt;

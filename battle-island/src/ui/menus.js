@@ -13,6 +13,8 @@ import { owner } from '../core/owner.js';
 import * as season from '../core/season.js';
 import { matchOp, progressOp, canAdminMatch, PLACES } from '../gameplay/admin.js';
 import { sfx } from '../core/audio.js';
+import { BADGES, BADGE_REWARDS, BADGE_XP, hasBadge, badgeCount } from '../core/badges.js';
+import { EVENTS, EVENT_IDS, todaysEvent, matchEvent } from '../core/events.js';
 
 export const ROADMAP = {
   done: [
@@ -40,14 +42,14 @@ export const ROADMAP = {
     'Admin panel for the owner: progression tools in the lobby, match tools in the pause menu (god mode, teleports, storm, bots, boss, vault); admin matches never count for XP, rank or challenges',
     'New looks: the Night Pump shotgun, the heavy-hitting Hand Cannon pistol, and Benton Bus v2 under a striped balloon',
     'Milestone 7 — Quests, Edits & Road Trips: story NPCs (Grandpa Gus, Captain Kay, Ranger Rae) with in-match quests and rewards; ramp and cone editing; bots that drive to the safe zone',
+    'Milestone 8 — Gear, Secrets & Events: weapon attachments (red dot, 4x scope, grip, drum mag, choke); 12 hidden Benton Badges with a collection book and gliders; a daily island event (Spooky Night, Low Gravity, Supply Frenzy, Golden Loot, Playground Party)',
   ],
   next: [
     'Pre-match warm-up island; match replays',
-    'Weapon attachments and scopes as items',
     'World: more bosses, vaults and questlines',
     'Progression: a shared online leaderboard (ranks and passes are stored per device today); more seasons of pass rewards',
     'Online: more than 4 players, host migration, joining a match already in progress, anti-cheat (the host is trusted)',
-    'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
+    'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, and more family surprises',
   ],
 };
 
@@ -121,6 +123,8 @@ export class Menus {
       case 'equip': if (season.equip(d.kind, d.id)) { this.app.preview(); if (d.kind === 'emote') this.app.previewEmote(); } this.showLocker(); break;
       case 'pass': this.showPass(); break;
       case 'achievements': this.showAchievements(); break;
+      case 'badges': this.showBadges(); break;
+      case 'event-toggle': P.event = !matchEvent(P, false); save.write(); this.showMain(); break;
       case 'skin': P.skin = +d.id; save.write(); this.app.preview(); this.showLocker(); break;
       case 'emote': this.app.previewEmote(); break;
       case 'resume': this.app.resume(); break;
@@ -197,6 +201,19 @@ export class Menus {
     return `<div class="chal-card ${rows ? 'chal-result' : ''}"><h4>Daily challenges <small>${rows ? '' : `+${CHALLENGE_XP.toLocaleString()} XP each · new in ${refillIn()}`}</small></h4>${list.map(row).join('')}</div>`;
   }
 
+  /** Today's island event, with an on/off switch (ranked is always classic). */
+  _eventCard() {
+    const P = this.profile;
+    const id = EVENTS[P.eventPick] ? P.eventPick : todaysEvent();
+    const E = EVENTS[id];
+    const on = !!matchEvent(P, false);
+    const next = EVENTS[todaysEvent(Date.now() + 86400000)];
+    const note = P.ranked ? 'Ranked matches are always classic.' : P.eventPick ? 'Picked by the owner (Admin).' : `Tomorrow: ${next.icon} ${next.name}`;
+    return `<div class="event-card ${on && !P.ranked ? 'on' : ''}" style="--ec:${E.color}">
+      <div class="ev-head"><b>${E.icon} ${E.name}</b><button class="btn small" data-act="event-toggle">${on ? 'On' : 'Off'}</button></div>
+      <small>${E.desc}</small><small class="ev-note">${note}</small></div>`;
+  }
+
   /** Daily Supercharged XP pool. */
   _superXP() {
     const s = superXP();
@@ -228,6 +245,7 @@ export class Menus {
             <button class="btn" data-act="roadmap">Roadmap</button>
             <button class="btn pass-btn" data-act="pass">Pass · Tier ${season.passTier()}</button>
             <button class="btn" data-act="achievements">Achievements</button>
+            <button class="btn badge-btn" data-act="badges">Badges · ${badgeCount()}/${BADGES.length}</button>
             ${owner.is ? '<button class="btn admin-btn" data-act="admin">Admin</button>' : ''}
           </nav>
         </div>
@@ -245,6 +263,7 @@ export class Menus {
             <button class="btn ${!P.ranked ? 'on' : ''}" data-act="queue" data-id="casual">Casual</button>
             <button class="btn ${P.ranked ? 'on' : ''}" data-act="queue" data-id="ranked">Ranked</button>
           </div>
+          ${this._eventCard()}
           <h3>Bots</h3>
           <div class="seg">${[9, 19, 29].map((n) => `<button class="btn ${S.botCount === n ? 'on' : ''}" data-act="bots" data-id="${n}">${n}</button>`).join('')}</div>
           <p class="note">Bots are labelled [BOT]. Use Play Online to team up with (or battle) friends — up to 4 players per match.</p>
@@ -281,8 +300,9 @@ export class Menus {
   _cosItem(kind, id, name, current, colors = null) {
     const have = season.owns(kind, id);
     const tier = season.PASS.findIndex((r) => r && r.kind === kind && r.id === id);
+    const byBadges = kind === 'glider' && season.GLIDERS[id].badges; // earned by finding Benton Badges
     const sw = colors ? `<span class="cos-sw" style="background:linear-gradient(90deg,${colors.map((c, i) => `${c} ${(i / colors.length) * 100}% ${((i + 1) / colors.length) * 100}%`).join(',')})"></span>` : '';
-    return `<button class="cos ${current === id ? 'on' : ''} ${have ? '' : 'locked'}" data-act="${have ? 'equip' : 'pass'}" data-kind="${kind}" data-id="${id}">${sw}<b>${escAttr(name)}</b><small>${have ? (current === id ? 'Equipped' : 'Tap to equip') : `Pass tier ${tier}`}</small></button>`;
+    return `<button class="cos ${current === id ? 'on' : ''} ${have ? '' : 'locked'}" data-act="${have ? 'equip' : byBadges ? 'badges' : 'pass'}" data-kind="${kind}" data-id="${id}">${sw}<b>${escAttr(name)}</b><small>${have ? (current === id ? 'Equipped' : 'Tap to equip') : byBadges ? `Find ${byBadges} Benton Badges` : `Pass tier ${tier}`}</small></button>`;
   }
 
   showLocker() {
@@ -514,6 +534,25 @@ export class Menus {
       </div>`, 'screen right');
   }
 
+  /** The Benton Badges collection book. */
+  showBadges() {
+    this.current = 'badges';
+    const n = badgeCount();
+    const list = BADGES.map((b) => {
+      const got = hasBadge(b.id);
+      return `<div class="bdg ${got ? 'got' : ''}" style="--bc:${b.color}"><span class="bdg-coin">${got ? b.mark : '?'}</span><div><b>${got ? escAttr(b.name) : 'Hidden badge'}</b><small>${got ? 'Found!' : `Hint: ${escAttr(b.hint)}`}</small></div></div>`;
+    }).join('');
+    const rewards = BADGE_REWARDS.map((r) => `<span class="${n >= r.n ? 'on' : ''}">${n >= r.n ? '✓' : `${r.n} badges:`} ${escAttr(season.GLIDERS[r.glider].name)} glider</span>`).join('');
+    this.screen(`
+      <div class="sheet panel wide">
+        <h2>Benton Badges <small>${n} / ${BADGES.length} found</small></h2>
+        <p class="note">Twelve family keepsakes are hidden around the island, most of them up high: build, zipline or bounce your way to them. Each one is yours for good and worth +${BADGE_XP} XP when you find it.</p>
+        <div class="bdg-rewards">${rewards}</div>
+        <div class="bdgs">${list}</div>
+        <div class="row"><button class="btn play small" data-act="main">Done</button></div>
+      </div>`, 'screen right');
+  }
+
   /** Owner-only: progression tools for this device, plus where to find match tools. */
   showAdmin(msg = '') {
     this.current = 'admin';
@@ -530,7 +569,9 @@ export class Menus {
         <div class="cols">
           <div>
             <h3>Level & XP <small>level ${L.level} · ${save.data.progress.xp.toLocaleString()} XP</small></h3>
-            <div class="adm-grid">${b('level', '+1 level', 1)}${b('level', '+10 levels', 10)}${b('outfits', 'Unlock every outfit')}${b('super', 'Refill Supercharged XP')}${b('pass', '+1 pass tier')}${b('cosmetics', 'Unlock every cosmetic')}</div>
+            <div class="adm-grid">${b('level', '+1 level', 1)}${b('level', '+10 levels', 10)}${b('outfits', 'Unlock every outfit')}${b('super', 'Refill Supercharged XP')}${b('pass', '+1 pass tier')}${b('cosmetics', 'Unlock every cosmetic')}${b('badges', 'Find every badge', 1)}${b('badges', 'Forget found badges', 0)}</div>
+            <h3>Island event <small>${P.eventPick && EVENTS[P.eventPick] ? `pinned: ${EVENTS[P.eventPick].name}` : `today's: ${EVENTS[todaysEvent()].name}`}</small></h3>
+            <div class="adm-grid">${b('event', "Use today's", '')}${EVENT_IDS.map((id) => b('event', `${EVENTS[id].icon} ${EVENTS[id].name}`, id)).join('')}</div>
             <h3>Daily challenges <small>${c.list.filter((x) => x.done).length}/3 done</small></h3>
             <div class="adm-grid">${b('chal-done', 'Mark today\'s done')}${b('chal-reset', 'Reset today\'s progress')}</div>
           </div>
@@ -607,6 +648,7 @@ export class Menus {
         ${r.admin ? '<p class="adm-note">Admin tools were used in this match, so it doesn\'t count for XP, rank or challenges.</p>' : ''}
         ${r.challenges ? this._challenges(r.challenges) : ''}
         ${r.weekly && r.weekly.length ? `<p class="sx-won">Weekly challenge${r.weekly.length > 1 ? 's' : ''} done: ${r.weekly.map((w) => escAttr(w.text)).join(', ')} (+${r.weeklyXP.toLocaleString()} XP)</p>` : ''}
+        ${r.badges ? `<p class="sx-won">🏅 Benton Badge${r.badges > 1 ? 's' : ''} found: ${r.badges} (+${r.badgeXP.toLocaleString()} XP)</p>` : ''}
         ${r.quests ? `<p class="sx-won">📜 Story quest${r.quests > 1 ? 's' : ''} completed: ${r.quests} (+${r.questXP.toLocaleString()} XP)</p>` : ''}
         ${r.achievements && r.achievements.length ? `<p class="sx-won">★ Achievement${r.achievements.length > 1 ? 's' : ''} unlocked: ${r.achievements.map((a) => escAttr(a.name)).join(', ')} (+${r.achXP.toLocaleString()} XP)</p>` : ''}
         ${r.pass && r.pass.after > r.pass.before ? `<p class="pass-up">Benton Pass tier ${r.pass.after}!${r.pass.got.length ? ' Unlocked: ' + r.pass.got.map((g) => escAttr(season.rewardName(g, CHARACTERS))).join(', ') : ''}</p>` : ''}

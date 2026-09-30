@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { WEAPONS, RARITIES, CONSUMABLES, THROWABLES, AMMO, BUFFS, itemName } from '../gameplay/items.js';
+import { WEAPONS, RARITIES, CONSUMABLES, THROWABLES, AMMO, BUFFS, MODS, itemName } from '../gameplay/items.js';
 import { REVIVE_TIME, REBOOT_TIME } from '../gameplay/teams.js';
 import { lobbyLabel } from '../core/ranked.js';
 import { PIECE_NAMES, PIECES } from '../gameplay/building.js';
@@ -267,7 +267,8 @@ export class Hud {
       }
       const rc = s.kind === 'weapon' ? RARITIES[s.rarity].color : s.kind === 'consumable' ? CONSUMABLES[s.id].color : s.kind === 'key' ? '#ffd23f' : THROWABLES[s.id]?.color || '#888';
       const sub = s.kind === 'weapon' ? `${s.mag}/${specA.ammo[WEAPONS[s.id].ammo]}` : `x${s.count}`;
-      slots += `<div class="slot ${specA.sel === i && !c.building ? 'sel' : ''}" style="--rc:${rc}"><em>${i + 1}</em><b>${SHORT[s.id] || s.id}</b><small>${sub}</small></div>`;
+      const mods = s.mods && s.mods.length ? `<i class="slot-mods">${s.mods.map((m) => `<u style="background:${MODS[m].color}" title="${MODS[m].name}"></u>`).join('')}</i>` : '';
+      slots += `<div class="slot ${specA.sel === i && !c.building ? 'sel' : ''}" style="--rc:${rc}"><em>${i + 1}</em><b>${SHORT[s.id] || s.id}</b><small>${sub}</small>${mods}</div>`;
     });
     this.set('slots', this.el.slots, slots, 'innerHTML');
     const w = specA.weapon;

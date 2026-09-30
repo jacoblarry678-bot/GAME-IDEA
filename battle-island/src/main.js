@@ -20,6 +20,7 @@ import * as season from './core/season.js';
 import { owner, detectOwner } from './core/owner.js';
 const { rankState } = ranked;
 import { TouchControls, isTouchDevice } from './ui/touch.js';
+import { matchEvent } from './core/events.js';
 
 const canvas = document.getElementById('scene');
 const engine = new Engine(canvas);
@@ -225,7 +226,8 @@ function startOnline() {
   const rating = Math.round(players.reduce((sum, p) => sum + (p.rk ? p.rk[mi][0] : 1000), 0) / players.length);
   const cfg = { ...s.cfg, bots: Math.max(0, s.cfg.bots + 1 - humans.length), rating };
   enterGame();
-  game.startMatch({ role: 'host', room: s.room, humans, mode: cfg.mode, teamSize: cfg.team, botCount: cfg.bots, ranked: !!cfg.ranked, lobbyRating: rating });
+  cfg.event = matchEvent(save.data.profile, !!cfg.ranked); // the host's island event goes to everyone
+  game.startMatch({ role: 'host', room: s.room, humans, mode: cfg.mode, teamSize: cfg.team, botCount: cfg.bots, ranked: !!cfg.ranked, lobbyRating: rating, event: cfg.event });
   s.announceStart(game, humans, cfg);
 }
 
@@ -233,7 +235,7 @@ function startClient(start) {
   const s = session;
   const humans = start.humans.map((h) => ({ id: h.id, local: h.p === s.myPeer, peer: h.p, name: h.n, charId: h.c, outfit: h.o, skin: h.s, emote: h.e, glider: h.gl }));
   enterGame();
-  game.startMatch({ role: 'client', room: s.room, hostPeer: s.hostPeer(), seed: start.seed, mode: start.cfg.mode, teamSize: start.cfg.team, botCount: start.cfg.bots, humans, bus: start.bus, ranked: !!start.cfg.ranked, lobbyRating: start.cfg.rating || 1000 });
+  game.startMatch({ role: 'client', room: s.room, hostPeer: s.hostPeer(), seed: start.seed, mode: start.cfg.mode, teamSize: start.cfg.team, botCount: start.cfg.bots, humans, bus: start.bus, ranked: !!start.cfg.ranked, lobbyRating: start.cfg.rating || 1000, event: start.cfg.event || null });
 }
 
 game.onHostLeft = () => {
@@ -259,7 +261,7 @@ function play() {
   engine.view = { scene: engine.scene, camera: engine.camera };
   engine.resize();
   game.paused = false;
-  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, cos: season.equipped(P.character), mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount, ranked: !!P.ranked, lobbyRating: rankState(P.mode).mmr });
+  game.startMatch({ charId: P.character, outfit: P.outfits[P.character], skin: P.skin, cos: season.equipped(P.character), mode: P.mode, teamSize: P.teamSize || 1, botCount: save.data.settings.botCount, ranked: !!P.ranked, lobbyRating: rankState(P.mode).mmr, event: matchEvent(P) });
   input.enabled = true;
   touch.show(true);
   input.requestLock();

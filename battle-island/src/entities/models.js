@@ -1,7 +1,7 @@
 /** Procedural low-poly models for weapons, consumables, ammo and materials. */
 
 import * as THREE from 'three';
-import { RARITIES, CONSUMABLES, AMMO, MATS } from '../gameplay/items.js';
+import { RARITIES, CONSUMABLES, AMMO, MATS, MODS } from '../gameplay/items.js';
 
 const cache = new Map();
 const m = (color, emissive) => {
@@ -22,7 +22,32 @@ const cyl = (r, l, color, x = 0, y = 0, z = 0, alongZ = true) => {
 };
 
 /** Weapon models point their barrel along +Z; grip at the origin. */
-export function weaponModel(id, rarity = 0) {
+/** Where attachments sit on each gun: top of the receiver, under the barrel, the mag well, the muzzle (z). */
+const MOUNT = {
+  ar: { top: 0.15, topZ: 0.15, under: 0.45, mag: 0.28, muzzle: 0.9 },
+  smg: { top: 0.14, topZ: 0.1, under: 0.3, mag: 0.2, muzzle: 0.52 },
+  shotgun: { top: 0.2, topZ: 0.02, under: 0.5, mag: 0.1, muzzle: 0.9 },
+  pistol: { top: 0.19, topZ: 0.1, under: 0.3, mag: -0.02, muzzle: 0.48 },
+  sniper: { top: 0.28, topZ: 0.25, under: 0.55, mag: 0.1, muzzle: 1.25 },
+};
+
+function addMods(g, id, mods) {
+  const M = MOUNT[id];
+  if (!M || !mods) return;
+  for (const mod of mods) {
+    if (mod === 'dot') g.add(bx(0.07, 0.07, 0.1, '#1b1f27', 0, M.top + 0.04, M.topZ), bx(0.05, 0.05, 0.012, '#ff5c5c', 0, M.top + 0.045, M.topZ + 0.055, '#ff2030'));
+    else if (mod === 'scope') g.add(cyl(0.045, 0.34, '#1b1f27', 0, M.top + 0.08, M.topZ), cyl(0.05, 0.03, '#39f0ff', 0, M.top + 0.08, M.topZ + 0.17), bx(0.03, 0.06, 0.04, '#1b1f27', 0, M.top + 0.03, M.topZ));
+    else if (mod === 'grip') g.add(bx(0.05, 0.16, 0.06, '#2c3440', 0, -0.06, M.under), bx(0.055, 0.03, 0.065, '#7ed957', 0, -0.13, M.under));
+    else if (mod === 'drum') {
+      const d = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.09, 14), m('#2c3440'));
+      d.rotation.z = Math.PI / 2;
+      d.position.set(0, -0.12, M.mag);
+      g.add(d, bx(0.095, 0.03, 0.03, '#ffae1a', 0, -0.12, M.mag));
+    } else if (mod === 'choke') g.add(cyl(0.05, 0.08, '#b35cff', 0, 0.09, M.muzzle + 0.02));
+  }
+}
+
+export function weaponModel(id, rarity = 0, mods = null) {
   const g = new THREE.Group();
   const rc = RARITIES[rarity]?.color || '#aaaaaa';
   const dark = '#2c3440';
@@ -105,6 +130,7 @@ export function weaponModel(id, rarity = 0) {
     default:
       g.add(bx(0.2, 0.2, 0.2, rc));
   }
+  addMods(g, id, mods);
   return g;
 }
 
@@ -186,8 +212,22 @@ export function matModel(id) {
   return g;
 }
 
+/** An attachment on the ground: a small case with the part sitting on top. */
+export function modModel(id) {
+  const g = new THREE.Group();
+  const c = MODS[id].color;
+  g.add(bx(0.42, 0.1, 0.3, '#2c3440', 0, 0, 0), bx(0.43, 0.03, 0.31, c, 0, 0.05, 0, c));
+  const part = new THREE.Group();
+  addMods(part, 'ar', [id]);
+  part.position.set(0, id === 'grip' || id === 'drum' ? 0.25 : id === 'choke' ? -0.02 : -0.08, id === 'choke' ? -0.9 : id === 'grip' ? -0.45 : id === 'drum' ? -0.28 : -0.15);
+  part.scale.setScalar(1.3);
+  g.add(part);
+  return g;
+}
+
 export function itemModel(it) {
-  if (it.kind === 'weapon') return weaponModel(it.id, it.rarity);
+  if (it.kind === 'weapon') return weaponModel(it.id, it.rarity, it.mods);
+  if (it.kind === 'mod') return modModel(it.id);
   if (it.kind === 'throwable') return weaponModel(it.id);
   if (it.kind === 'consumable') return consumableModel(it.id);
   if (it.kind === 'ammo') return ammoModel(it.id);

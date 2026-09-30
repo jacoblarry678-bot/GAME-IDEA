@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { itemModel } from '../entities/models.js';
-import { RARITIES, rollFloor, rollChest, rollSupply, itemName } from './items.js';
+import { RARITIES, rollFloor, rollChest, rollSupply, itemName, MODS, modTarget, attachMod, bitsToMods } from './items.js';
 import { WATER_Y } from '../world/physics.js';
 import { sfx } from '../core/audio.js';
 import { pickupRow } from '../net/sync.js';
@@ -28,6 +28,7 @@ export class Loot {
     for (const p of this.game.world.lootSpots) {
       if (rng() > 0.8) continue;
       const items = rollFloor(rng);
+      if (this.game.eventFx?.golden) for (const it of items) if (it.kind === 'weapon') it.rarity = Math.min(4, it.rarity + 1);
       items.forEach((it, i) => this.drop(it, p.clone().add(new THREE.Vector3(i * 0.7, 0.3, 0)), null, true));
     }
   }
@@ -39,7 +40,7 @@ export class Loot {
     model.scale.setScalar(it.kind === 'weapon' ? 1.3 : 1.5);
     g.add(model);
     const rar = it.kind === 'weapon' ? it.rarity : 0;
-    if (it.kind === 'weapon' || it.kind === 'consumable' || it.kind === 'throwable') {
+    if (it.kind === 'weapon' || it.kind === 'consumable' || it.kind === 'throwable' || it.kind === 'mod') {
       const beam = new THREE.Mesh(it.kind === 'weapon' ? this.beamGeo : this.ringGeo, this.beamMats[rar]);
       g.add(beam);
     }
@@ -143,6 +144,17 @@ export class Loot {
   /** Interact pickup with swap rules. Returns a status string for the HUD. */
   take(actor, pk, forceSwap = false) {
     const it = pk.it;
+    if (it.kind === 'mod') {
+      // attachments snap onto the held gun (or the first one they fit); a replaced one drops
+      const slot = modTarget(actor, it.id);
+      if (slot < 0) return 'nofit';
+      const old = attachMod(actor, slot, it.id);
+      this.remove(pk);
+      if (old) this.drop({ kind: 'mod', id: old, count: 1 }, actor.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), new THREE.Vector3((Math.random() - 0.5) * 2, 3, (Math.random() - 0.5) * 2));
+      this.game.notify(actor, `${MODS[it.id].name} attached to ${itemName(actor.slots[slot])}${old ? ` (swapped out the ${MODS[old].name})` : ''}`, MODS[it.id].color, 2);
+      sfx.play('pickup', actor.pos);
+      return 'ok';
+    }
     if (actor.hasRoomFor(it) && !(forceSwap && actor.sel >= 0)) {
       const left = actor.addItem(it);
       if (left) {
@@ -180,6 +192,7 @@ export class Loot {
     const rng = Math.random;
     let items = ch.supply ? rollSupply(rng) : rollChest(rng);
     if (ch.legendary && items[0].kind === 'weapon') items[0].rarity = 4;
+    if (this.game.eventFx?.golden && items[0].kind === 'weapon') items[0].rarity = Math.min(4, items[0].rarity + 1);
     const base = ch.pos.clone().add(new THREE.Vector3(0, 0.9, 0));
     items.forEach((it, i) => {
       const a = ch.group.rotation.y + (i - (items.length - 1) / 2) * 0.6;
@@ -297,10 +310,10 @@ export class Loot {
   }
 }
 
-const KIND_S = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin', 'key'];
+const KIND_S = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin', 'key', 'mod'];
 function rowToItemShim(r) {
   const kind = KIND_S[r[1]];
-  if (kind === 'weapon') return { kind, id: r[2], rarity: r[3], mag: r[7] };
+  if (kind === 'weapon') return { kind, id: r[2], rarity: r[3], mag: r[7], mods: bitsToMods(r[8] | 0) };
   if (kind === 'card') return { kind, id: r[2], team: r[3], name: r[7], expires: Infinity };
   return { kind, id: r[2], count: r[3] };
 }

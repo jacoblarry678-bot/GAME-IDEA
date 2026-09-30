@@ -14,6 +14,8 @@ import { superXP, CAP_XP } from '../core/supercharge.js';
 import { dailyChallenges, CHALLENGES } from '../core/challenges.js';
 import { CHARACTERS } from '../entities/characters.js';
 import { pass, passTier, addPassXP, TIER_XP, PASS } from '../core/season.js';
+import { setAllBadges } from '../core/badges.js';
+import { EVENTS } from '../core/events.js';
 
 export const PLACES = [...POIS.map((p) => ({ id: p.id, name: p.name, x: p.x, z: p.z })), { id: 'vault', name: VAULT.name, x: VAULT.x, z: VAULT.z + 12 }];
 
@@ -166,6 +168,16 @@ export function progressOp(op, arg, mode) {
       const up = addPassXP((passTier(p) + 1) * TIER_XP - p.xp);
       return `Benton Pass tier ${up.after}${up.got.length ? ' (unlocked a reward)' : ''}`;
     }
+    case 'event': {
+      const P = save.data.profile;
+      P.eventPick = EVENTS[arg] ? arg : null;
+      P.event = true;
+      save.write();
+      return P.eventPick ? `Island event pinned: ${EVENTS[arg].name}` : "Island event back to today's rotation";
+    }
+    case 'badges':
+      setAllBadges(+arg === 1);
+      return +arg === 1 ? 'Every Benton Badge found (and their gliders unlocked)' : 'Found badges forgotten: hunt them again';
     case 'cosmetics': {
       const p = pass();
       for (const r of PASS) if (r && r.kind !== 'super' && !p.owned.includes(`${r.kind}:${r.id}`)) p.owned.push(`${r.kind}:${r.id}`);

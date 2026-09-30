@@ -91,6 +91,7 @@ function gliderTexture(style, pal) {
   const G = {
     pickle: ['#5bbf3a', '#3f9a2a', 'dots'], storm: ['#6a3fd0', '#39f0ff', 'bolt'], night: ['#1d2a5a', '#ffe45c', 'stars'],
     crankbolt: ['#ff8a3d', '#4a5566', 'stripes'], golden: ['#ffcf3f', '#ffae1a', 'stripes'], champion: [null, null, 'rainbow'],
+    treasure: ['#e8d3a0', '#b0472f', 'map'], medal: ['#1d2a5a', '#ffcf3f', 'medals'],
   }[style];
   if (!G) return stripeTexture(pal.top, pal.top2);
   const [a, b, pat] = G;
@@ -108,6 +109,8 @@ function gliderTexture(style, pal) {
       const x = i * 16 + 8;
       if (pat === 'dots') { g.beginPath(); g.arc(x, 10 + (i % 2) * 12, 4, 0, 7); g.fill(); }
       else if (pat === 'stars') { g.font = '12px sans-serif'; g.fillText('★', x - 5, 14 + (i % 2) * 12); }
+      else if (pat === 'map') { g.fillRect(x - 6, 15, 4, 2); g.fillRect(x + 1, 15, 4, 2); if (i % 4 === 3) { g.lineWidth = 2; g.strokeStyle = b; g.beginPath(); g.moveTo(x - 4, 8); g.lineTo(x + 4, 24); g.moveTo(x + 4, 8); g.lineTo(x - 4, 24); g.stroke(); } }
+      else if (pat === 'medals') { g.beginPath(); g.arc(x, 16, 6, 0, 7); g.fill(); g.fillStyle = a; g.beginPath(); g.arc(x, 16, 3, 0, 7); g.fill(); g.fillStyle = b; }
       else if (pat === 'bolt') { g.beginPath(); g.moveTo(x, 3); g.lineTo(x - 4, 16); g.lineTo(x + 1, 16); g.lineTo(x - 2, 29); g.lineTo(x + 5, 13); g.lineTo(x, 13); g.closePath(); g.fill(); }
       else if (i % 2) g.fillRect(i * 16, 0, 16, 32);
     }
@@ -332,13 +335,14 @@ export class CharacterModel {
     this.kick = 0;
   }
 
-  setHeld(key, rarity) {
-    if (key === this.heldKey) return;
-    this.heldKey = key;
+  setHeld(key, rarity, mods) {
+    const k = `${key}|${rarity | 0}|${(mods || []).join(',')}`; // rebuild when the gun, its rarity or attachments change
+    if (k === this.heldKey) return;
+    this.heldKey = k;
     if (this.held) this.hand.remove(this.held);
     this.held = null;
     if (!key || key === 'none') return;
-    this.held = weaponModel(key, rarity);
+    this.held = weaponModel(key, rarity, mods);
     if (key === 'pickaxe') this.held.rotation.x = -0.3;
     this.held.traverse((o) => (o.castShadow = true));
     this.hand.add(this.held);

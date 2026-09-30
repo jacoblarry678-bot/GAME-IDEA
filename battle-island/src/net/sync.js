@@ -15,7 +15,7 @@
 
 import * as THREE from 'three';
 import { sfx } from '../core/audio.js';
-import { WEAPONS, PICKAXE } from '../gameplay/items.js';
+import { WEAPONS, PICKAXE, modBits, bitsToMods } from '../gameplay/items.js';
 import { buy, upgrade } from '../gameplay/economy.js';
 
 export const PROTO = 1;
@@ -24,7 +24,7 @@ const ST = ['bus', 'skydive', 'glide', 'ground', 'air', 'swim', 'mantle', 'drive
 export const HELD = ['none', 'pickaxe', 'ar', 'smg', 'shotgun', 'pistol', 'sniper', 'launcher', 'boomball'];
 const POSE = ['none', 'gun', 'pickaxe', 'build', 'heal', 'throw'];
 const FL = { alive: 1, downed: 2, crouch: 4, emote: 8, ads: 16, build: 32, sprint: 64, slide: 128, holdE: 256 };
-const KIND = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin', 'key'];
+const KIND = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin', 'key', 'mod'];
 const AMMO_K = ['light', 'medium', 'heavy', 'shells', 'rockets'];
 const MAT_K = ['wood', 'brick', 'metal'];
 const r10 = (v) => Math.round(v * 10);
@@ -70,7 +70,7 @@ export function pickupRow(pk) {
   const it = pk.it;
   const k = KIND.indexOf(it.kind);
   const pos = [r10(pk.pos.x), r10(pk.pos.y), r10(pk.pos.z)];
-  if (it.kind === 'weapon') return [pk.nid, k, it.id, it.rarity, ...pos, it.mag];
+  if (it.kind === 'weapon') return [pk.nid, k, it.id, it.rarity, ...pos, it.mag, modBits(it.mods)];
   if (it.kind === 'card') return [pk.nid, k, it.id, it.team, ...pos, it.name];
   return [pk.nid, k, it.id, it.count, ...pos];
 }
@@ -278,7 +278,7 @@ export class HostNet {
     for (const a of this.game.actors) {
       if (!a.remote) continue;
       out['a' + a.id] = {
-        sl: a.slots.map((s) => (s ? [KIND.indexOf(s.kind), s.id, s.rarity | 0, s.kind === 'weapon' ? s.mag : s.count] : 0)),
+        sl: a.slots.map((s) => (s ? [KIND.indexOf(s.kind), s.id, s.rarity | 0, s.kind === 'weapon' ? s.mag : s.count, s.kind === 'weapon' ? modBits(s.mods) : 0] : 0)),
         se: a.sel,
         am: AMMO_K.map((k) => a.ammo[k]),
         mt: MAT_K.map((k) => a.mats[k]),
@@ -472,7 +472,7 @@ export class ClientNet {
 
   _private(me, P) {
     const kinds = KIND;
-    me.slots = P.sl.map((s) => (s ? (kinds[s[0]] === 'weapon' ? { kind: 'weapon', id: s[1], rarity: s[2], mag: s[3] } : { kind: kinds[s[0]], id: s[1], count: s[3] }) : null));
+    me.slots = P.sl.map((s) => (s ? (kinds[s[0]] === 'weapon' ? { kind: 'weapon', id: s[1], rarity: s[2], mag: s[3], mods: bitsToMods(s[4] | 0) } : { kind: kinds[s[0]], id: s[1], count: s[3] }) : null));
     if (this.selHold <= 0) me.sel = P.se;
     AMMO_K.forEach((k, i) => (me.ammo[k] = P.am[i]));
     MAT_K.forEach((k, i) => (me.mats[k] = P.mt[i]));

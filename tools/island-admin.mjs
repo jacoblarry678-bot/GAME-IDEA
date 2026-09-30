@@ -98,6 +98,16 @@ const done = await ev(() => __bi.challenges.dailyChallenges().list.every((c) => 
 await tool('chal-reset');
 const undone = await ev(() => __bi.challenges.dailyChallenges().list.every((c) => !c.done && c.prog === 0));
 check("mark today's challenges done, and reset them", done && undone);
+const bAll = await tool('badges', '1');
+const nAll = await ev(() => ({ n: Object.keys(__bi.save.data.badges.found).length, medal: __bi.season.owns('glider', 'medal') }));
+const bNone = await tool('badges', '0');
+const nNone = await ev(() => Object.keys(__bi.save.data.badges.found).length);
+const evPin = await tool('event', 'golden');
+const pinned = await ev(() => ({ pick: __bi.save.data.profile.eventPick, on: __bi.save.data.profile.event }));
+const evToday = await tool('event', '');
+const unpinned = await ev(() => __bi.save.data.profile.eventPick);
+check('find every Benton Badge / forget them; pin an island event and go back to the daily rotation', nAll.n === 12 && nAll.medal && nNone === 0 && /Every Benton Badge/.test(bAll) && /forgotten/.test(bNone) && pinned.pick === 'golden' && pinned.on === true && /pinned: Golden Loot/.test(evPin) && unpinned === null && /today's rotation/.test(evToday), JSON.stringify({ bAll, nAll, nNone, evPin, pinned, evToday, unpinned }));
+await ev(() => { __bi.save.data.profile.event = false; __bi.save.write(); }); // the match tools below run a classic match
 await p.click('[data-act=main]');
 
 // ---- match tools

@@ -9,7 +9,7 @@ import { newInput } from '../entities/actor.js';
 import { PIECES } from './building.js';
 import { save } from '../core/save.js';
 import { sfx } from '../core/audio.js';
-import { itemName, RARITIES } from './items.js';
+import { itemName, RARITIES, MODS, WEAPONS, modTarget } from './items.js';
 import { nearVendor, nearBench, upgradeInfo } from './economy.js';
 
 const MATS = ['wood', 'brick', 'metal'];
@@ -400,8 +400,12 @@ export class PlayerController {
         const it = pk.it;
         const full = !p.hasRoomFor(it);
         const rar = it.kind === 'weapon' ? RARITIES[it.rarity] : null;
-        this.prompt = { key: 'E', text: `${full ? (p.sel >= 0 ? 'Swap for' : 'Inventory full —') : 'Pick up'} ${rar ? rar.name + ' ' : ''}${itemName(it)}${it.count > 1 ? ' x' + it.count : ''}`, color: rar ? rar.color : '#fff' };
-        if (pressed('KeyE')) {
+        if (it.kind === 'mod') {
+          const slot = modTarget(p, it.id);
+          this.prompt = slot >= 0 ? { key: 'E', text: `Attach ${MODS[it.id].name} to ${itemName(p.slots[slot])} · ${MODS[it.id].desc}`, color: MODS[it.id].color, btn: 'ATTACH' } : { key: '—', text: `${MODS[it.id].name}: no gun it fits (${MODS[it.id].fits.map((w) => WEAPONS[w].cls).join(', ')})`, color: '#ff8a8a' };
+          if (pressed('KeyE') && slot >= 0) g.actions.take(pk);
+        } else this.prompt = { key: 'E', text: `${full ? (p.sel >= 0 ? 'Swap for' : 'Inventory full —') : 'Pick up'} ${rar ? rar.name + ' ' : ''}${itemName(it)}${it.count > 1 ? ' x' + it.count : ''}${it.mods && it.mods.length ? ` + ${it.mods.length} attachment${it.mods.length > 1 ? 's' : ''}` : ''}`, color: rar ? rar.color : '#fff' };
+        if (pressed('KeyE') && it.kind !== 'mod') {
           const r2 = g.actions.take(pk);
           if (r2 === 'full') g.hud.toast('Inventory full: select a slot (1-5) to swap it out.', '#ff8a8a', 2);
         }
