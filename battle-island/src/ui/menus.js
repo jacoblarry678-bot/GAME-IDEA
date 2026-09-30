@@ -16,6 +16,9 @@ import { sfx } from '../core/audio.js';
 import { BADGES, BADGE_REWARDS, BADGE_XP, hasBadge, badgeCount } from '../core/badges.js';
 import { EVENTS, EVENT_IDS, todaysEvent, matchEvent } from '../core/events.js';
 
+/** The solo edition (e.g. the itch.io upload) has no online server, so it doesn't offer online play. */
+const SOLO_EDITION = typeof window !== 'undefined' && window.BI_EDITION === 'solo';
+
 export const ROADMAP = {
   done: [
     'Milestone 1 — solo battle royale vs labelled bots: lobby → Benton Bus → drop marker → skydive/glider → loot → 6-phase storm → victory/elimination → spectate → replay',
@@ -266,9 +269,9 @@ export class Menus {
           ${this._eventCard()}
           <h3>Bots</h3>
           <div class="seg">${[9, 19, 29].map((n) => `<button class="btn ${S.botCount === n ? 'on' : ''}" data-act="bots" data-id="${n}">${n}</button>`).join('')}</div>
-          <p class="note">Bots are labelled [BOT]. Use Play Online to team up with (or battle) friends — up to 4 players per match.</p>
+          <p class="note">Bots are labelled [BOT].${SOLO_EDITION ? '' : ' Use Play Online to team up with (or battle) friends — up to 4 players per match.'}</p>
           <button class="btn play" data-act="play">PLAY</button>
-          <button class="btn online-btn" data-act="online">Play Online</button>
+          ${SOLO_EDITION ? '' : '<button class="btn online-btn" data-act="online">Play Online</button>'}
         </div>
       </div>`);
   }

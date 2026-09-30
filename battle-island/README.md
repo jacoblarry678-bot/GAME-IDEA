@@ -330,7 +330,19 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [ ] Online: more than 4 players, host migration, joining a match in progress, and anti-cheat (the host is trusted)
 - [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization
 
-## Testing
+## Releasing on itch.io (solo edition)
+
+`battle-island/release/battle-island-itch.zip` is ready to upload. Rebuild it after changes with `npm run island:itch`.
+
+1. On itch.io, choose **Upload new project**.
+2. Set **Kind of project** to **HTML**.
+3. Upload the zip and tick **This file will be played in the browser**.
+4. Under **Embed options**, set the viewport to about **1280 × 720** and turn on **Fullscreen button** and **Mobile friendly**.
+5. Save, then publish.
+
+The zip holds a single `index.html`, the full game except online play (itch.io can't run the game server), so the **Play Online** button is hidden. Solo, Duos/Trios/Squads with bots, Build and Zero Build, ranked, the pass, quests, badges and daily events all work. Progress is saved in the player's browser. The owner Admin panel never shows in this edition.
+
+
 
 Automated suites drive the real game in headless Chromium:
 
