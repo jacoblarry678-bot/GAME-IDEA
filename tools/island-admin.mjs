@@ -37,6 +37,41 @@ const guest = await ev(() => {
 });
 check('anyone else sees no Admin button, and the admin screen refuses to open for them', !guest.btn && !guest.opened, JSON.stringify(guest));
 
+// ---- who counts as the owner in other places the game can run
+// (a separate context each, with the same game; no localStorage involved)
+async function ownerIn(setup, frameUrl) {
+  const ctx = await b.newContext({ viewport: { width: 900, height: 560 } });
+  if (setup) await ctx.addInitScript(setup.fn, setup.arg);
+  const q = await ctx.newPage();
+  await q.goto(url, { waitUntil: 'load' });
+  if (frameUrl) await q.setContent(frameUrl); // the parent page lives on the same server; Chrome won't frame localhost from about:blank
+  const f = frameUrl ? q.frames()[1] : q.mainFrame();
+  const t0 = Date.now();
+  let r = null;
+  while (Date.now() - t0 < 15000) {
+    r = await f.evaluate(() => (window.__bi && __bi.owner.checked ? { is: __bi.owner.is, how: __bi.owner.how, btn: !!document.querySelector('.lobby [data-act=admin]'), host: location.hostname } : null)).catch(() => null);
+    if (r) break;
+    await q.waitForTimeout(200);
+  }
+  await ctx.close();
+  return r;
+}
+const fakeRuntime = { fn: (own) => { window.claude = { use: async (n) => (n === 'user' ? { isOwner: async () => own } : null) }; } };
+const rtNo = await ownerIn({ ...fakeRuntime, arg: false });
+const rtYes = await ownerIn({ ...fakeRuntime, arg: true });
+check('on the game link, the platform decides: a viewer who is not the owner gets no Admin, the owner does', rtNo && !rtNo.is && !rtNo.btn && rtYes && rtYes.is && rtYes.btn && /own this game link/.test(rtYes.how), JSON.stringify({ rtNo, rtYes }));
+const embedded = await ownerIn(null, `<iframe src="${url}" style="width:880px;height:520px"></iframe>`);
+check('the game embedded in another page (even from this computer) is not the owner', embedded && !embedded.is && !embedded.btn, JSON.stringify(embedded));
+let sandboxed = null;
+try {
+  const fs = await import('node:fs');
+  const html = fs.readFileSync(new URL('../battle-island/build/battle-island.html', import.meta.url), 'utf8');
+  sandboxed = await ownerIn(null, `<iframe sandbox="allow-scripts" style="width:880px;height:520px" srcdoc="${html.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></iframe>`);
+} catch (e) {
+  sandboxed = { error: e.message };
+}
+check('a sandboxed copy with a blank hostname (how shared links used to slip through) is not the owner', sandboxed && sandboxed.host === '' && !sandboxed.is && !sandboxed.btn, JSON.stringify(sandboxed));
+
 // ---- progression tools
 await p.click('.lobby [data-act=admin]');
 await p.waitForTimeout(200);

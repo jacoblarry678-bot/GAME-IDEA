@@ -234,6 +234,7 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - [x] **Who gets it:**
   - On the claude.ai link: only the person who owns the game link. The link asks claude.ai; nothing extra needs to be granted.
   - Elsewhere there are no accounts, so the owner is whoever runs it on their own computer: the double-clicked file, or the dev/relay server opened on that machine. Friends joining your relay server from other devices on the Wi-Fi don't get it.
+  - **Fix (after Milestone 7):** a copy running inside a sandboxed or embedded frame reports a blank hostname, and the old check counted that as "this computer". That gave every viewer the panel. Now only the platform decides on the game link, and the "this computer" rule only applies when the file or localhost is opened directly, never inside another page. The admin tests cover the owner, a non-owner viewer on the link, an embedded copy and a sandboxed copy.
 - [x] **Lobby → Admin (progression on this device):**
   - Add 1 or 10 levels, unlock every outfit, refill Supercharged XP.
   - Set your Build or Zero Build rank from the ladder, set its progress, or reset it to Unranked.
@@ -316,7 +317,7 @@ node tools/island-ranked.mjs                # 12 checks
 node tools/island-supercharged.mjs          # 13 checks
 node tools/island-milestone4.mjs            # 22 checks
 node tools/island-milestone5.mjs            # 17 checks
-node tools/island-admin.mjs                 # 20 checks
+node tools/island-admin.mjs                 # 23 checks (run `npm run island:build` first)
 node tools/island-milestone6.mjs            # 12 checks (the last one needs the relay server)
 node tools/island-milestone7.mjs            # 19 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
