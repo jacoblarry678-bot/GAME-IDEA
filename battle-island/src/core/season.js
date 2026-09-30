@@ -207,6 +207,8 @@ export const ACHIEVEMENTS = [
   { id: 'runover10', name: 'Road Hazard', desc: 'Hit 10 opponents with vehicles', total: 'runovers', goal: 10 },
   { id: 'doors100', name: 'Knock Knock', desc: 'Open 100 doors', total: 'doors', goal: 100 },
   { id: 'carry100', name: 'Good Teammate', desc: 'Carry knocked teammates 100 m', total: 'carried', goal: 100 },
+  { id: 'quest1', name: 'Helping Hand', desc: 'Complete a story quest', total: 'quests', goal: 1 },
+  { id: 'quest15', name: 'Island Hero', desc: 'Complete 15 story quests', total: 'quests', goal: 15 },
   { id: 'gold', name: 'Going for Gold', desc: 'Reach Gold in either ranked mode', total: 'rankPeak', goal: 6 },
   { id: 'level20', name: 'Veteran', desc: 'Reach level 20', total: 'level', goal: 20 },
 ];
@@ -233,7 +235,7 @@ export function applyAchievements(ms, r) {
   const A = achState();
   const T = A.totals;
   const add = (k, v) => (T[k] = (T[k] || 0) + Math.max(0, v || 0));
-  for (const k of ['driven', 'zips', 'chests', 'spent', 'upgrades', 'runovers', 'doors', 'carried', 'bosses', 'vault']) add(k, (ms || {})[k]);
+  for (const k of ['driven', 'zips', 'chests', 'spent', 'upgrades', 'runovers', 'doors', 'carried', 'bosses', 'vault', 'quests']) add(k, (ms || {})[k]);
   add('kills', r.kills);
   if (r.won) {
     add('wins', 1);

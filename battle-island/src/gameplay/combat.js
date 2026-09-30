@@ -201,6 +201,7 @@ export class Combat {
     }
     if (c.harvest && c.material && c.hp !== Infinity && this.game.mode !== 'zerobuild') {
       const got = actor.addItem({ kind: 'mat', id: c.material, count: c.harvest });
+      if (actor.stats) actor.stats.harvest += c.harvest - (got ? got.count : 0);
       if (actor === this.game.player) this.game.hud?.matGain(c.material, c.harvest - (got ? got.count : 0));
     }
     this.game.effects.burst(pos, c.material ? MATS[c.material].color : '#cccccc', 6, 3, 0.12, 0.5);

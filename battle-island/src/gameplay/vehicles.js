@@ -310,7 +310,7 @@ export class Vehicles {
         // simulated on the driver's device; the host burns fuel from the reported speed
         v.fuel = Math.max(0, v.fuel - v.def.burn * (Math.abs(v.speed) / v.def.max) * dt);
       } else if (drv && drv === g.player) this.drive(v, dt, g.controller.drive);
-      else this.drive(v, dt, null);
+      else this.drive(v, dt, drv && drv.brain && !g.admin?.freezeBots ? drv.brain.driveCtl : null);
       if (drv) {
         const moved = Math.hypot(v.pos.x - before.x, v.pos.z - before.z);
         if (moved < 10) drv.stats.driven += moved;

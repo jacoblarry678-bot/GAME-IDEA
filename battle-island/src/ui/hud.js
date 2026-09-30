@@ -30,6 +30,7 @@ export class Hud {
         <div class="counts"><span class="pill"><i class="ico-alive"></i><b class="n-alive">0</b> <span class="alive-label">left</span></span><span class="pill"><i class="ico-kill"></i><b class="n-kills">0</b> elims</span></div>
         <div class="ranked-pill"></div>
         <div class="team"></div>
+        <div class="quests"></div>
       </div>
       <div class="markers"></div>
       <div class="compass"><div class="compass-strip"></div><div class="compass-mark"></div></div>
@@ -81,7 +82,7 @@ export class Hud {
       slots: q('.slots'), ammoList: q('.ammo-list'), build: q('.buildbar'), busHint: q('.bus-hint'), dmg: q('.dmgnums'), stormTint: q('.storm-tint'), hurtTint: q('.hurt-tint'),
       team: q('.team'), markers: q('.markers'), buffs: q('.buffs'), bi: q('.buildinfo'), biBar: q('.buildinfo .bhp div'), biText: q('.buildinfo span'),
       rankedPill: q('.ranked-pill'), boss: q('.bossbar'), bossFill: q('.bb-bar div'), bossSub: q('.bossbar small'),
-      bucks: q('.bucks b'), veh: q('.vehpanel'), vpName: q('.vp-name'), vpSpeed: q('.vp-speed'), vpHp: q('.vp-hp div'), vpFuel: q('.vp-fuel div'), vpHint: q('.vp-hint'),
+      bucks: q('.bucks b'), quests: q('.quests'), veh: q('.vehpanel'), vpName: q('.vp-name'), vpSpeed: q('.vp-speed'), vpHp: q('.vp-hp div'), vpFuel: q('.vp-fuel div'), vpHint: q('.vp-hint'),
       shop: q('.shop'), shopTitle: q('.shop-title'), shopItems: q('.shop-items'), shopHint: q('.shop-hint'),
       downed: q('.downed'), downFill: q('.downed .fill'), aliveLabel: q('.alive-label'), specResults: q('.spec-results'),
       scope: q('.scope'), bigmap: q('.bigmap'), bigCanvas: q('.bigmap canvas'), spec: q('.spectate-bar'), specName: q('.spec-name'), fps: q('.fps'),
@@ -282,6 +283,12 @@ export class Hud {
       this.set('ammo', this.el.ammoList, al, 'innerHTML');
     }
     this.set('bucks', this.el.bucks, String(specA.bucks | 0));
+    if (this.frame % 6 === 0 && game.quests) {
+      // story quest tracker (our own quests)
+      const rows = c.spectating ? [] : game.quests.tracker(p);
+      const html = rows.map((r) => `<div class="qt ${r.done ? 'done' : r.ready ? 'ready' : ''}"><b>${esc(r.title)}</b><span>${esc(r.text)}${r.goal > 1 ? ` <em>${Math.min(r.prog, r.goal)}/${r.goal}</em>` : ''}</span></div>`).join('');
+      this.set('qt', this.el.quests, html, 'innerHTML');
+    }
     const B = game.boss;
     const nearBoss = B && B.alive && !c.spectating && specA.state !== 'bus' && Math.hypot(B.pos.x - specA.pos.x, B.pos.z - specA.pos.z) < 60;
     this.set('bossd', this.el.boss.style, nearBoss ? '' : 'none', 'display');
@@ -354,7 +361,8 @@ export class Hud {
     this.set('bi', this.el.bi.style, showBi ? '' : 'none', 'display');
     if (editing) {
       this.el.biBar.style.width = `${(editing.piece.hp / editing.piece.maxHp) * 100}%`;
-      this.set('bit', this.el.biText, 'EDIT · click/drag tiles to cut · V confirm · R reset · B cancel', 'textContent');
+      const how = { ramp: 'EDIT RAMP · pick the 2 tiles on the side it should climb to', cone: 'EDIT CONE · click corners to raise them' }[editing.piece.type] || 'EDIT · click/drag tiles to cut';
+      this.set('bit', this.el.biText, `${how} · V confirm · R reset · B cancel`, 'textContent');
     } else if (showBi) {
       this.el.biBar.style.width = `${Math.max(0, pc.hp / pc.maxHp) * 100}%`;
       this.set('bit', this.el.biText, `${Math.ceil(pc.hp)}/${pc.maxHp} · ${game.building.editable(pc) ? 'V Edit · ' : ''}U ${c.buildInfo.text}`, 'textContent');
@@ -456,6 +464,7 @@ export class Hud {
       g.beginPath(); g.arc(x, y, 6 * k, 0, 7); g.fill(); g.stroke();
       g.fillStyle = '#fff'; g.fillText('B', x, y + 0.5);
     }
+    if (game.quests) game.quests.mapIcons(g, tm, k);
     for (const b of W.benches) {
       const [x, y] = tm(b.pos.x, b.pos.z);
       g.fillStyle = '#ffae1a'; g.strokeStyle = '#000';

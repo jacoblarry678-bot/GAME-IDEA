@@ -225,12 +225,17 @@ export class PlayerController {
     this.buildInfo = this.aimPiece && canAct && !this.editing ? g.building.repairInfo(p, this.aimPiece) : null;
     if (pressed('KeyV') && canAct) {
       if (this.editing) {
-        if (!g.actions.edit(this.editing.piece, this.editing.tiles)) g.hud.toast('Keep at least one tile!', '#ff8a8a', 1.5);
-        this.exitEdit();
+        const e = this.editing;
+        const why = g.building.editProblem(e.piece, e.tiles.every(Boolean) ? null : e.tiles);
+        if (why) g.hud.toast(why, '#ff8a8a', 2);
+        else {
+          g.actions.edit(e.piece, e.tiles);
+          this.exitEdit();
+        }
       } else if (this.aimPiece && g.mode !== 'zerobuild') {
         const pc = this.aimPiece;
         if (pc.team !== p.team) g.hud.toast("You can only edit your team's builds.", '#ff8a8a', 1.5);
-        else if (!g.building.editable(pc)) g.hud.toast('Only walls and floors can be edited (for now).', '#ffffff', 1.5);
+        else if (!g.building.editable(pc)) g.hud.toast("That can't be edited.", '#ffffff', 1.5);
         else this.startEdit(pc);
       }
     }
@@ -259,9 +264,10 @@ export class PlayerController {
         if (down('Mouse0') && e.hover >= 0 && e.paint !== undefined) e.tiles[e.hover] = e.paint;
         if (!down('Mouse0')) e.paint = undefined;
         if (pressed('KeyR')) e.tiles.fill(true);
+        const pick = e.piece.type === 'ramp' || e.piece.type === 'cone'; // picked tiles glow instead of fading out
         e.overlay.children.forEach((m, i) => {
-          m.material.color.set(e.tiles[i] ? (i === e.hover ? '#ffe066' : '#4fc3ff') : i === e.hover ? '#ff9a9a' : '#ff4f4f');
-          m.material.opacity = e.tiles[i] ? 0.3 : 0.12;
+          m.material.color.set(e.tiles[i] ? (i === e.hover ? '#ffe066' : '#4fc3ff') : pick ? '#7ed957' : i === e.hover ? '#ff9a9a' : '#ff4f4f');
+          m.material.opacity = e.tiles[i] ? 0.3 : pick ? 0.55 : 0.12;
         });
       }
       g.building.hideGhost();
@@ -346,11 +352,12 @@ export class PlayerController {
       const pk = g.loot.nearest(p, 2.4, (k) => k.it.kind !== 'ammo' && k.it.kind !== 'mat' && k.it.kind !== 'card' && k.it.kind !== 'coin');
       const veh = !ch && !pk && g.vehicles.nearest(p);
       const zl = !ch && !pk && !veh && p.grounded && this._nearZip();
-      const vend = !ch && !pk && !veh && !zl && nearVendor(g, p);
-      const bench = !ch && !pk && !veh && !zl && !vend && nearBench(g, p);
+      const npc = !ch && !pk && !veh && !zl && g.quests.near(p);
+      const vend = !ch && !pk && !veh && !zl && !npc && nearVendor(g, p);
+      const bench = !ch && !pk && !veh && !zl && !npc && !vend && nearBench(g, p);
       const V = g.world.vault;
-      const vault = !ch && !pk && !veh && !zl && !vend && !bench && V && !V.open && p.pos.distanceTo(V.pos) < 3.4;
-      const door = !ch && !pk && !veh && !zl && !vend && !bench && !vault && this._nearDoor();
+      const vault = !ch && !pk && !veh && !zl && !npc && !vend && !bench && V && !V.open && p.pos.distanceTo(V.pos) < 3.4;
+      const door = !ch && !pk && !veh && !zl && !npc && !vend && !bench && !vault && this._nearDoor();
       if (veh) {
         const free = veh.seats.indexOf(null);
         if (free < 0) this.prompt = { key: '—', text: `${veh.def.name} is full`, color: '#ff8a8a' };
@@ -361,6 +368,11 @@ export class PlayerController {
       } else if (zl) {
         this.prompt = { key: 'E', text: 'Ride the zipline', color: '#39f0ff', btn: 'ZIP' };
         if (pressed('KeyE')) p.startZip(zl);
+      } else if (npc) {
+        const r = g.quests.rows(p)[npc.i];
+        const verb = !r ? 'Talk to' : r[2] ? 'Say hi to' : npc.def.steps[r[0]].talk ? 'Hand in quest to' : 'Talk to';
+        this.prompt = { key: 'E', text: `${verb} ${npc.def.name}`, color: '#ffd23f', btn: 'TALK' };
+        if (pressed('KeyE')) g.actions.quest(npc.i);
       } else if (vend) {
         this.prompt = this.shop ? { key: 'E', text: 'Close shop', color: '#ffd23f', btn: 'CLOSE' } : { key: 'E', text: `Shop at ${vend.label}`, color: '#ffd23f', btn: 'SHOP' };
         if (pressed('KeyE')) {

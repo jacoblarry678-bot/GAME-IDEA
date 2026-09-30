@@ -93,7 +93,7 @@ export class Actor {
     this.seat = -1;
     this.zip = null; // { line, t, dir }
     this.bucks = 0;
-    this.stats = { driven: 0, zips: 0, chests: 0, spent: 0, upgrades: 0, runovers: 0, bossDmg: 0, bosses: 0, vault: 0, doors: 0, carried: 0 };
+    this.stats = { driven: 0, zips: 0, chests: 0, spent: 0, upgrades: 0, runovers: 0, bossDmg: 0, bosses: 0, vault: 0, doors: 0, carried: 0, harvest: 0, built: 0, quests: 0 };
     this.carrying = null; // knocked teammate on our shoulders
     this.carriedBy = null;
     this.game.scene.add(this.model.root);

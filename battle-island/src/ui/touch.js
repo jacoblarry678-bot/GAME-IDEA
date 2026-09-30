@@ -218,7 +218,7 @@ export class TouchControls {
     const c = game.controller;
     const p = game.player;
     const building = c.building || c.editing;
-    this.btns.fire.textContent = c.editing ? 'CUT' : building ? 'PLACE' : p.item && p.item.kind === 'consumable' ? 'USE' : p.item ? 'FIRE' : 'SWING';
+    this.btns.fire.textContent = c.editing ? { ramp: 'PICK', cone: 'RAISE' }[c.editing.piece.type] || 'CUT' : building ? 'PLACE' : p.item && p.item.kind === 'consumable' ? 'USE' : p.item ? 'FIRE' : 'SWING';
     this.btns.use.textContent = c.prompt ? c.prompt.btn || (c.prompt.key === 'Hold E' ? 'HOLD' : 'GRAB') : 'USE';
     this.btns.use.classList.toggle('hot', !!c.prompt);
     this.btns.edit.textContent = c.editing ? 'DONE' : 'EDIT';

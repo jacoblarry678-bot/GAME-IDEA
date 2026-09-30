@@ -228,6 +228,16 @@ h3.todo { color: var(--cyan); }
 .mate i { width: 10px; height: 10px; border-radius: 50%; }
 .mate span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mate em { grid-column: 2; font-style: normal; font-size: 11px; color: var(--cyan); }
+/* story quest tracker */
+.quests { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.qt { background: rgba(29, 21, 55, 0.72); border-left: 4px solid var(--yellow); border-radius: 8px; padding: 3px 8px; font-size: 12px; line-height: 1.25; }
+.qt b { display: block; color: var(--yellow); font-size: 13px; }
+.qt em { font-style: normal; font-weight: 800; color: var(--cyan); }
+.qt.ready { border-left-color: var(--cyan); }
+.qt.done { border-left-color: #7ed957; opacity: 0.75; }
+.qt.done b { color: #7ed957; }
+body.touch .qt { font-size: 10px; padding: 2px 6px; }
+body.touch .qt b { font-size: 11px; }
 .mate.down em { color: #ff8a8a; }
 .mate.out { opacity: 0.6; }
 .mbar { grid-column: 2; height: 5px; background: rgba(255,255,255,0.15); border-radius: 3px; position: relative; overflow: hidden; }

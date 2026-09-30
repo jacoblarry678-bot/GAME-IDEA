@@ -25,6 +25,8 @@ export const CHALLENGES = {
   boss: { text: 'Deal 500 damage to Crankbolt', goal: 500, stat: (m) => m.bossDmg },
   vault: { text: "Open Crankbolt's Vault", goal: 1, stat: (m) => m.vault },
   doors: { text: 'Open 8 doors', goal: 8, stat: (m) => m.doors },
+  quest: { text: 'Complete a story quest', goal: 1, stat: (m) => m.quests },
+  builder: { text: 'Build 20 pieces', goal: 20, stat: (m) => m.built },
 };
 
 /** Today's three challenges (rolled from the date, so every device agrees). */

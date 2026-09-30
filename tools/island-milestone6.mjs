@@ -122,7 +122,7 @@ await p.click('[data-act=achievements]');
 await p.waitForTimeout(200);
 const achUi = await ev(() => ({ n: document.querySelectorAll('.ach').length, done: document.querySelectorAll('.ach.done').length, head: document.querySelector('.sheet h2').textContent }));
 await p.screenshot({ path: `${shots}/m6-04-achievements.png` });
-check('Achievements screen: 16 medals, the unlocked ones lit', achUi.n === 16 && achUi.done >= 2, JSON.stringify(achUi));
+check('Achievements screen: 18 medals, the unlocked ones lit', achUi.n === 18 && achUi.done >= 2, JSON.stringify(achUi));
 await p.click('[data-act=main]');
 
 // ---- season rollover

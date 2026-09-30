@@ -72,7 +72,7 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 | F | Pickaxe |
 | B or Q | Toggle build mode (1 wall, 2 floor, 3 ramp, 4 cone) |
 | T | Cycle build material (wood / brick / metal) |
-| V | Edit the wall/floor you aim at: click or drag tiles to cut, V confirms, R resets, B cancels |
+| V | Edit the build you aim at: cut wall/floor tiles, pick a ramp's climb side, or raise cone corners. V confirms, R resets, B cancels |
 | U | Repair the build you aim at, or upgrade it wood → brick → metal |
 | Hold E | Revive a knocked teammate · reboot teammates at a reboot van |
 | E (next to a vehicle) | Drive, or ride as a passenger · E again gets out |
@@ -278,13 +278,27 @@ hold a mouse button and drag to look, or turn with the arrow keys.
 - **Benton Bus v2**: a rounded school bus with a grille, headlights, bumpers, a roof rack with luggage and flags, and a stop sign. It hangs by ropes under a striped pink, white and gold balloon and has a spinning rear propeller.
 - All three are built in code like every other model. The uploaded shotgun and pistol files were not used: they look like assets extracted from Fortnite and came with no licence.
 
+## Milestone 7: Quests, Edits & Road Trips
+
+- [x] **Story NPCs and quests:** three islanders with in-match questlines. Walk up and press **E** (**TALK** on touch) to take a quest, do the steps, then go back to hand it in.
+  - **Grandpa Gus** (Farm House), *Fix Up the Farm*: harvest 60 materials, build 6 pieces. Reward: 150 Benton Bucks and an Epic Night Pump.
+  - **Captain Kay** (Fishing Shack), *Lost Tackle*: find 3 of the 6 lost tackle boxes, which appear once you take the quest. Reward: 200 Benton Bucks and an Epic rifle.
+  - **Ranger Rae** (Lookout Cabin), *Scout Report*: visit 3 named places, then eliminate an opponent. Reward: 150 Benton Bucks and an Epic sniper.
+  - A marker above each head shows where you are: **!** new, **…** in progress, **?** ready to hand in, **✓** done. NPCs and tackle boxes appear on the map, and a tracker under the minimap lists your steps.
+  - Each finished quest is worth **750 XP** after the match. New: two achievements (Helping Hand, Island Hero) and two daily challenges (complete a quest, build 20 pieces).
+  - Online, the host tracks every player's quests. Each player sees only their own tracker and tackle boxes.
+- [x] **Editing ramps and cones:** press **V** on your team's ramp or cone.
+  - **Ramps:** pick the 2 tiles on the side it should climb toward, then V to confirm. Any other pick is refused with a hint.
+  - **Cones:** click corners to raise them to the peak. Two raised corners make a half roof you can stand on, and three make a near-flat top. At least one corner must stay down; confirming with nothing raised resets it.
+  - Edits sync online, and touch shows PICK or RAISE on the fire button.
+- [x] **Bots that drive:** on a long trip to the safe zone or across the map, a bot takes a free truck or kart nearby. It steers toward its goal, backs up and retries when stuck, and gets out near the goal, at water, low on fuel or when a fight starts. It gives up on cars it can't reach. Bots only take cars with nobody else inside. Their driving runs on the host, so everyone online sees it.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
-- [ ] Building: editing ramps and cones
 - [ ] Match flow: pre-match warm-up area, match replays
 - [ ] Weapon attachments and scopes as separate items
-- [ ] World: story NPCs and quests, more bosses and vaults; bots that drive
+- [ ] World: more bosses, vaults and questlines
 - [ ] Progression: a shared online leaderboard; new pass rewards each season
 - [ ] Online: more than 4 players, host migration, joining a match in progress, and anti-cheat (the host is trusted)
 - [ ] Benton Kids extras: 3-sibling co-op adventure mode with combo abilities and cooldowns, a customizable clubhouse, garage vehicle customization, hidden family collectibles, and rotating spooky/playground events
@@ -304,11 +318,13 @@ node tools/island-milestone4.mjs            # 22 checks
 node tools/island-milestone5.mjs            # 17 checks
 node tools/island-admin.mjs                 # 20 checks
 node tools/island-milestone6.mjs            # 12 checks (the last one needs the relay server)
+node tools/island-milestone7.mjs            # 19 checks
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
 node tools/island-online-m4.mjs             # 11 checks: a client drives, rides and shops through the host
 node tools/island-online-m5.mjs             # 10 checks: doors, Crankbolt, the vault, carrying and crashes online
+node tools/island-online-m7.mjs             # 9 checks: a client's quest, ramp and cone edits, and a bot driving
 node tools/island-mobile.mjs                # 18 checks: emulated phone with real multi-touch
 ```
 
@@ -356,6 +372,14 @@ node tools/island-mobile.mjs                # 18 checks: emulated phone with rea
   - A match paying out weekly challenges and achievements into the pass, and the achievements screen.
   - Season rollover.
   - A client's equipped emote and glider showing on the host.
+- **`island-milestone7.mjs`:**
+  - NPC placement and hidden tackle boxes.
+  - All three quests with real E presses, real harvesting and building, rewards, markers and the tracker; a quest pays only once.
+  - Ramp editing, including the refused pick, with the surface following the new direction.
+  - Cone corners raised and stood on, plus the all-raised refusal and reset.
+  - A bot taking a truck on a long rotation and getting out near its goal.
+  - Quest XP and the Helping Hand achievement on the result screen.
+- **`island-online-m7.mjs`:** matching NPC spots on host and client; a client's quest from start to hand-in, with bucks and reward; ramp and cone edits through the host; a bot's drive seen from the client; and the client's quest XP.
 - **`island-admin.mjs`:**
   - Who sees the panel: the owner does; anyone else gets no button and the screen won't open.
   - Every progression tool, and the `` ` `` key and pause-menu entry.
@@ -400,6 +424,7 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
 | `src/gameplay/admin.js`, `src/core/owner.js` | Owner check and admin tools |
+| `src/gameplay/quests.js` | Story NPCs, quests, tackle boxes, tracker and map icons |
 | `src/gameplay/boss.js` | Crankbolt: AI, attacks, hitbox, drops, network row |
 | `src/gameplay/vehicles.js` | Trucks and karts: handling, fuel, damage, run-overs, seats, network rows |
 | `src/gameplay/economy.js` | Benton Bucks, vending bot stock, upgrade benches |

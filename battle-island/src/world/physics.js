@@ -42,6 +42,19 @@ export class Heightmap {
   }
 }
 
+/**
+ * Edited cones: `raise` lists the corners pulled up to the peak
+ * ([-x-z, +x-z, -x+z, +x+z]); the surface is the higher of the pyramid and
+ * the slope those corners make. u, v run 0..1 across the footprint.
+ */
+export function coneLift(base, raise, u, v) {
+  if (!raise) return base;
+  u = u < 0 ? 0 : u > 1 ? 1 : u;
+  v = v < 0 ? 0 : v > 1 ? 1 : v;
+  const k = (raise[0] ? (1 - u) * (1 - v) : 0) + (raise[1] ? u * (1 - v) : 0) + (raise[2] ? (1 - u) * v : 0) + (raise[3] ? u * v : 0);
+  return Math.max(base, Math.min(1, k * 2));
+}
+
 let nextId = 1;
 
 export class Collider {
@@ -79,7 +92,7 @@ export class Collider {
       const hx = (this.maxX - this.minX) / 2, hz = (this.maxZ - this.minZ) / 2;
       const cx = this.minX + hx, cz = this.minZ + hz;
       const m = Math.min(1, Math.max(Math.abs(x - cx) / hx, Math.abs(z - cz) / hz));
-      return this.minY + (this.maxY - this.minY) * (1 - m);
+      return this.minY + (this.maxY - this.minY) * coneLift(1 - m, this.raise, (x - this.minX) / (2 * hx), (z - this.minZ) / (2 * hz));
     }
     return this.maxY;
   }

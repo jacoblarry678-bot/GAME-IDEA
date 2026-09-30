@@ -39,12 +39,12 @@ export const ROADMAP = {
     "Milestone 5 — Boss & Vault: Crankbolt, a giant rocket-firing guard robot (drops the Vault Keycard and a Mythic rifle); Crankbolt's Vault on its hilltop; doors on every house; carrying knocked teammates",
     'Admin panel for the owner: progression tools in the lobby, match tools in the pause menu (god mode, teleports, storm, bots, boss, vault); admin matches never count for XP, rank or challenges',
     'New looks: the Night Pump shotgun, the heavy-hitting Hand Cannon pistol, and Benton Bus v2 under a striped balloon',
+    'Milestone 7 — Quests, Edits & Road Trips: story NPCs (Grandpa Gus, Captain Kay, Ranger Rae) with in-match quests and rewards; ramp and cone editing; bots that drive to the safe zone',
   ],
   next: [
-    'Editing ramps and cones',
     'Pre-match warm-up island; match replays',
     'Weapon attachments and scopes as items',
-    'World: story NPCs and quests, more bosses and vaults; bots that drive',
+    'World: more bosses, vaults and questlines',
     'Progression: a shared online leaderboard (ranks and passes are stored per device today); more seasons of pass rewards',
     'Online: more than 4 players, host migration, joining a match already in progress, anti-cheat (the host is trusted)',
     'Benton Kids extras: 3-sibling co-op adventure mode with combo abilities, customizable clubhouse, garage vehicle customization, hidden family collectibles, rotating spooky/playground events',
@@ -607,6 +607,7 @@ export class Menus {
         ${r.admin ? '<p class="adm-note">Admin tools were used in this match, so it doesn\'t count for XP, rank or challenges.</p>' : ''}
         ${r.challenges ? this._challenges(r.challenges) : ''}
         ${r.weekly && r.weekly.length ? `<p class="sx-won">Weekly challenge${r.weekly.length > 1 ? 's' : ''} done: ${r.weekly.map((w) => escAttr(w.text)).join(', ')} (+${r.weeklyXP.toLocaleString()} XP)</p>` : ''}
+        ${r.quests ? `<p class="sx-won">📜 Story quest${r.quests > 1 ? 's' : ''} completed: ${r.quests} (+${r.questXP.toLocaleString()} XP)</p>` : ''}
         ${r.achievements && r.achievements.length ? `<p class="sx-won">★ Achievement${r.achievements.length > 1 ? 's' : ''} unlocked: ${r.achievements.map((a) => escAttr(a.name)).join(', ')} (+${r.achXP.toLocaleString()} XP)</p>` : ''}
         ${r.pass && r.pass.after > r.pass.before ? `<p class="pass-up">Benton Pass tier ${r.pass.after}!${r.pass.got.length ? ' Unlocked: ' + r.pass.got.map((g) => escAttr(season.rewardName(g, CHARACTERS))).join(', ') : ''}</p>` : ''}
         ${r.superXP ? `<p class="sx-won">⚡ +${r.superXP.toLocaleString()} Supercharged XP (included)</p>` : ''}

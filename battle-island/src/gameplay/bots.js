@@ -8,6 +8,8 @@
 import * as THREE from 'three';
 import { newInput } from '../entities/actor.js';
 import { WEAPONS, CONSUMABLES, stackMax } from './items.js';
+import { fwdOf } from './vehicles.js';
+import { WATER_Y } from '../world/physics.js';
 
 export const BOT_NAMES = ['Sprocket', 'Pixel', 'Nugget', 'Biscuit', 'Waffles', 'Turbo', 'Zippy', 'Noodle', 'Gizmo', 'Rocket', 'Dash', 'Bubbles', 'Scooter', 'Muffin', 'Tater', 'Blaze', 'Jellybean', 'Pogo', 'Comet', 'Sparky', 'Taco', 'Ziggy', 'Fuzzy', 'Doodle', 'Marble', 'Chip', 'Rascal', 'Pebble', 'Mango', 'Bolt', 'Nacho', 'Zoom'];
 
@@ -47,6 +49,10 @@ export class BotBrain {
     this.pingGoal = null;
     this.pingT = 0;
     this.buffCd = 0;
+    // driving (bots take free vehicles on long rotations)
+    this.driveCtl = null; // { thr, steer, boost } read by Vehicles.update
+    this.drv = { stuckT: 0, backT: 0, walkT: 0, n: 0, veh: null };
+    this.badVeh = new Set();
   }
 
   onPing(pos, enemy) {
@@ -241,8 +247,10 @@ export class BotBrain {
     inp.dive = 0;
     inp.mx = inp.mz = 0;
     if (!a.alive || a.state === 'bus') return inp;
-    // riding with our human: hop out when they do
-    if (a.vehicle && (!this.leader || this.leader.vehicle !== a.vehicle)) g.vehicles.exit(a);
+    // riding with our human: hop out when they do (or stop driving when something else comes up)
+    const driving = a.vehicle && a.seat === 0 && this.mode === 'drive';
+    if (a.vehicle && !driving && (!this.leader || this.leader.vehicle !== a.vehicle)) g.vehicles.exit(a);
+    if (!driving) this.driveCtl = null;
 
     if (a.state === 'skydive' || a.state === 'glide') {
       if (this.followDrop && this.leader) {
@@ -311,6 +319,7 @@ export class BotBrain {
       case 'card': this._card(dt); break;
       case 'follow': this._follow(dt); break;
       case 'ride': this._ride(dt); break;
+      case 'drive': this._drive(dt); break;
       default: this._roam(dt);
     }
     if (this.mode !== 'revive') a.reviveTarget = null;
@@ -345,9 +354,11 @@ export class BotBrain {
       return;
     }
     if (this._squadDuty(outside)) return;
+    if (this.mode === 'drive' && this._keepDriving()) return;
     if (needRotate) {
-      if (this.mode !== 'rotate' || !this.goal || !this._inSafe(this.goal.x, this.goal.z)) this.goal = this._safePoint();
+      if (!['rotate', 'drive'].includes(this.mode) || !this.goal || !this._inSafe(this.goal.x, this.goal.z)) this.goal = this._safePoint();
       this.mode = 'rotate';
+      this._maybeDrive();
       return;
     }
     if (hasHeal && a.hp + a.shield < 150 && this.hurtT > 2.5 && this.seenT > 2) {
@@ -376,6 +387,7 @@ export class BotBrain {
     if (this.mode === 'harvest' && this.goalObj?.obj?.alive && a.mats.wood < 120) return;
     if (this.mode !== 'roam' || !this.goal || Math.hypot(this.goal.x - a.pos.x, this.goal.z - a.pos.z) < 4) this.goal = this._safePoint();
     this.mode = 'roam';
+    this._maybeDrive();
   }
 
   /** Revive, grab cards, reboot, follow the leader, answer pings. Returns true if it picked a mode. */
@@ -497,6 +509,90 @@ export class BotBrain {
     const d = this._steer(v.pos, dt);
     this.inp.sprint = d > 5;
     if (this.game.vehicles.nearest(a, 2.2) === v) this.game.vehicles.enter(a, v);
+  }
+
+  // ---------------------------------------------------------------- driving
+  /** Switches to driving if a free vehicle makes the trip to `goal` quicker. */
+  _maybeDrive() {
+    const car = this._carFor(this.goal);
+    if (!car) return;
+    this.mode = 'drive';
+    this.drv.veh = car;
+    this.drv.n = 0;
+    this.drv.stuckT = this.drv.backT = this.drv.walkT = 0;
+  }
+
+  /** A free vehicle worth taking to reach `goal` (long trip, car close by), or null. */
+  _carFor(goal) {
+    const a = this.a;
+    if (!goal || this.leader || a.carrying) return null;
+    const trip = Math.hypot(goal.x - a.pos.x, goal.z - a.pos.z);
+    if (trip < 65) return null;
+    let best = null, bd = 35;
+    for (const v of this.game.vehicles.list) {
+      if (!v.alive || v.seats[0] || v.fuel < 15 || v.hp < v.def.hp * 0.3 || this.badVeh.has(v)) continue;
+      if (v.seats.some((o) => o && o.team !== a.team)) continue;
+      const d = v.pos.distanceTo(a.pos);
+      if (d < bd && d < trip * 0.45) { bd = d; best = v; }
+    }
+    return best;
+  }
+
+  /** Still worth being in (or heading to) the vehicle? */
+  _keepDriving() {
+    const a = this.a;
+    const v = this.drv.veh;
+    if (!v || !v.alive || v.fuel <= 1 || v.hp < v.def.hp * 0.25) return false;
+    if (!a.vehicle && v.seats[0]) return false; // someone beat us to it
+    if (a.vehicle && a.vehicle !== v) return false;
+    if (!this.goal || Math.hypot(this.goal.x - a.pos.x, this.goal.z - a.pos.z) < 22) return false;
+    return true;
+  }
+
+  _drive(dt) {
+    const a = this.a;
+    const g = this.game;
+    const v = this.drv.veh;
+    if (!v || !v.alive) { this.mode = 'roam'; return; }
+    if (!a.vehicle) {
+      // walk to the driver's door and hop in (give up on cars we can't reach)
+      if ((this.drv.walkT += dt) > 15) { this._leaveCar(true); return; }
+      const d = this._steer(v.pos, dt);
+      this.inp.sprint = d > 4;
+      if (g.vehicles.nearest(a, 2.2) === v && !v.seats[0]) g.vehicles.enter(a, v);
+      return;
+    }
+    const D = this.drv;
+    const dx = this.goal.x - v.pos.x, dz = this.goal.z - v.pos.z;
+    const want = Math.atan2(-dx, -dz);
+    let diff = want - v.yaw;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    // water ahead: stop and walk the rest
+    const f = fwdOf(v.yaw);
+    if (g.world.height(v.pos.x + f.x * 9, v.pos.z + f.z * 9) < WATER_Y + 0.3) { this._leaveCar(false); return; }
+    if (D.backT > 0) {
+      D.backT -= dt;
+      this.driveCtl = { thr: -1, steer: diff > 0 ? 1 : -1, boost: false };
+      return;
+    }
+    this.driveCtl = { thr: Math.abs(diff) > 1.4 ? 0.45 : 1, steer: Math.max(-1, Math.min(1, -diff * 2.2)), boost: Math.abs(diff) < 0.25 };
+    // stuck against something: back up and try again, then give up on this car
+    if (Math.abs(v.speed) < 1.2) D.stuckT += dt;
+    else D.stuckT = Math.max(0, D.stuckT - dt);
+    if (D.stuckT > 1.6) {
+      D.stuckT = 0;
+      D.backT = 1.1;
+      if (++D.n > 3) this._leaveCar(true);
+    }
+  }
+
+  _leaveCar(bad) {
+    const v = this.drv.veh;
+    if (bad && v) this.badVeh.add(v);
+    if (this.a.vehicle) this.game.vehicles.exit(this.a);
+    this.driveCtl = null;
+    this.drv.veh = null;
+    this.mode = 'rotate';
   }
 
   _follow(dt) {

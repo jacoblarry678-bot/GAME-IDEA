@@ -2,13 +2,14 @@
  * Building: walls, floors, ramps and cones on a world-aligned 4m grid with a
  * 0.8m vertical quantum (so pieces stack cleanly from any terrain height).
  * Pieces cost 10 materials, have per-material health, can be destroyed, and
- * remember their owner. Walls (3x3) and floors (2x2) can be edited; pieces
+ * remember their owner. Walls (3x3) and floors (2x2) can be edited by cutting
+ * tiles, ramps by picking the side they climb to, and cones by raising corners; pieces
  * can be repaired and upgraded (wood → brick → metal); anything no longer
  * connected to the ground collapses.
  */
 
 import * as THREE from 'three';
-import { Collider } from '../world/physics.js';
+import { Collider, coneLift } from '../world/physics.js';
 import { boxGeo, mat } from '../world/island.js';
 import { sfx } from '../core/audio.js';
 import { pieceRow, bitsToTiles } from '../net/sync.js';
@@ -23,7 +24,24 @@ export const BUILD_COST = 10;
 const LOOK = { wood: ['#e0a76a', 'wood'], brick: ['#cf6a4f', 'brick'], metal: ['#a9bccc', 'metal'] };
 const RAMP_LEN = Math.hypot(TILE, LEVEL);
 const RAMP_ANG = Math.atan2(LEVEL, TILE);
+const CONE_H = 1.6;
 let coneGeo = null;
+/** Ramp edits: the two tiles picked (cut) on one side set the side it climbs to. */
+const RAMP_SIDES = [[[1, 3], 0], [[2, 3], 1], [[0, 2], 2], [[0, 1], 3]];
+
+/** Surface mesh for an edited cone (corners raised by the cut tiles). */
+function editedConeGeo(w, d, raise) {
+  const geo = new THREE.PlaneGeometry(w, d, 8, 8);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const u = pos.getX(i) / w + 0.5, v = pos.getZ(i) / d + 0.5;
+    const m = Math.min(1, Math.max(Math.abs(u - 0.5) * 2, Math.abs(v - 0.5) * 2));
+    pos.setY(i, CONE_H * coneLift(1 - m, raise, u, v));
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
 
 export class Building {
   constructor(game) {
@@ -74,7 +92,7 @@ export class Building {
       else if (piece === 'ramp') {
         s.minY = b; s.maxY = b + LEVEL;
         s.dir = axisX ? (sign > 0 ? 0 : 2) : sign > 0 ? 1 : 3;
-      } else { s.minY = b; s.maxY = b + 1.6; }
+      } else { s.minY = b; s.maxY = b + CONE_H; }
       s.key = `${piece[0]}:${cell.ix}:${cell.iz}:${Math.round(b / VQ)}`;
     }
     s.free = !this.occupied.has(s.key);
@@ -97,7 +115,7 @@ export class Building {
         coneGeo.rotateY(Math.PI / 4);
       }
       m = new THREE.Mesh(coneGeo, material);
-      m.position.set((s.minX + s.maxX) / 2, s.b + 0.8, (s.minZ + s.maxZ) / 2);
+      m.position.set((s.minX + s.maxX) / 2, s.b + CONE_H / 2, (s.minZ + s.maxZ) / 2);
     } else {
       m = new THREE.Mesh(boxGeo(s.maxX - s.minX, s.maxY - s.minY, s.maxZ - s.minZ), material);
       m.position.set((s.minX + s.maxX) / 2, (s.minY + s.maxY) / 2, (s.minZ + s.maxZ) / 2);
@@ -126,6 +144,7 @@ export class Building {
   place(actor, s, material) {
     if (!this.canPlace(actor, s, material)) return null;
     actor.mats[material] -= BUILD_COST;
+    if (actor.stats) actor.stats.built++;
     const p = {
       type: s.piece, key: s.key, dir: s.dir, axisX: s.axisX, b: s.b,
       box: { minX: s.minX, maxX: s.maxX, minY: s.minY, maxY: s.maxY, minZ: s.minZ, maxZ: s.maxZ },
@@ -155,7 +174,7 @@ export class Building {
     const [key, type, dir, axisX, b, x0, y0, z0, x1, y1, z1, material, hp, maxHp, bits, team] = r;
     let p = this.occupied.get(key);
     const tiles = bitsToTiles(bits, type === 'wall' ? 9 : 4);
-    if (p && p.material === material && JSON.stringify(p.tiles) === JSON.stringify(tiles)) {
+    if (p && p.material === material && p.dir === dir && JSON.stringify(p.tiles) === JSON.stringify(tiles)) {
       p.hp = hp;
       p.maxHp = maxHp;
       return p;
@@ -167,7 +186,7 @@ export class Building {
       this.pieces.add(p);
       sfx.play('build', new THREE.Vector3(x0 / 10, y0 / 10, z0 / 10));
     }
-    Object.assign(p, { material, hp, maxHp, tiles });
+    Object.assign(p, { material, hp, maxHp, tiles, dir });
     this._rebuild(p);
     return p;
   }
@@ -197,15 +216,35 @@ export class Building {
             : { minX: a, maxX: a + w, minZ: b.minZ, maxZ: b.maxZ, minY: ys[r], maxY: ys[r + 1] });
         }
       }
-    } else if (p.type === 'floor') {
+    } else {
+      // floors: the slab itself; ramps and cones: thin pads on the surface over each quarter
       const h = TILE / 2;
-      for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) out.push({ minX: b.minX + c * h, maxX: b.minX + (c + 1) * h, minZ: b.minZ + r * h, maxZ: b.minZ + (r + 1) * h, minY: b.minY, maxY: b.maxY });
+      const probe = p.type === 'floor' ? null : p.colliders.find((c) => c.type !== 'box') || null;
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 2; c++) {
+          const t = { minX: b.minX + c * h, maxX: b.minX + (c + 1) * h, minZ: b.minZ + r * h, maxZ: b.minZ + (r + 1) * h, minY: b.minY, maxY: b.maxY };
+          if (probe) {
+            const y = probe.surfaceY((t.minX + t.maxX) / 2, (t.minZ + t.maxZ) / 2);
+            t.minY = y - 0.25;
+            t.maxY = y + 0.25;
+          }
+          out.push(t);
+        }
+      }
     }
     return out;
   }
 
   editable(p) {
-    return p.type === 'wall' || p.type === 'floor';
+    return PIECES.includes(p.type);
+  }
+
+  /** Why an edit can't be confirmed (null when it can). `tiles` null = nothing cut. */
+  editProblem(p, tiles) {
+    if (!tiles) return null; // nothing cut: confirming changes nothing
+    if (p.type === 'ramp') return rampDir(tiles) === undefined ? 'Pick the 2 tiles on the side the ramp should climb to.' : null;
+    if (!tiles.some(Boolean)) return p.type === 'cone' ? 'Leave at least one corner down!' : 'Keep at least one tile!';
+    return null;
   }
 
   /** (Re)creates a piece's meshes and colliders from its shape, material and edit tiles. */
@@ -224,6 +263,19 @@ export class Building {
       p.colliders.push(c);
       return c;
     };
+    if (p.tiles && p.type === 'cone') {
+      const raise = p.tiles.map((t) => !t);
+      const b = p.box;
+      const m = new THREE.Mesh(editedConeGeo(b.maxX - b.minX, b.maxZ - b.minZ, raise), mat(color, tex, { side: THREE.DoubleSide }));
+      m.position.set((b.minX + b.maxX) / 2, b.minY, (b.minZ + b.maxZ) / 2);
+      m.castShadow = m.receiveShadow = true;
+      this.game.scene.add(m);
+      p.meshes.push(m);
+      const c = addBox(p.box, 'cone');
+      c.raise = raise;
+      c.mesh = m;
+      return;
+    }
     if (!p.tiles) {
       const s = { piece: p.type, dir: p.dir, b: p.b, ...p.box };
       const m = this._meshFor(s, material);
@@ -259,10 +311,15 @@ export class Building {
     }
   }
 
-  /** Confirms an edit. Returns false if nothing would be left. */
+  /** Confirms an edit. Returns false if the edit isn't allowed (see editProblem). */
   applyEdit(p, tiles) {
-    if (!p.alive || !tiles.some(Boolean)) return false;
-    p.tiles = tiles.every(Boolean) ? null : [...tiles];
+    if (tiles && tiles.every(Boolean)) tiles = null;
+    if (!p.alive || this.editProblem(p, tiles)) return false;
+    if (p.type === 'ramp') {
+      if (!tiles) return true; // nothing picked: unchanged
+      p.dir = rampDir(tiles);
+      p.tiles = null;
+    } else p.tiles = tiles ? [...tiles] : null;
     this._rebuild(p);
     this._net(p);
     sfx.play('build', p.meshes[0]?.position);
@@ -359,6 +416,13 @@ export class Building {
     this.occupied.clear();
     this.hideGhost();
   }
+}
+
+/** Ramp direction from the tiles picked on a ramp (exactly two, on one side), or undefined. */
+export function rampDir(tiles) {
+  const cut = tiles.map((t, i) => (t ? -1 : i)).filter((i) => i >= 0);
+  if (cut.length !== 2) return undefined;
+  return RAMP_SIDES.find(([pair]) => pair[0] === cut[0] && pair[1] === cut[1])?.[1];
 }
 
 export function touch(a, b, e = 0.15) {

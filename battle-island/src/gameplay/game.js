@@ -19,6 +19,7 @@ import { Teams } from './teams.js';
 import { Vehicles } from './vehicles.js';
 import { Boss } from './boss.js';
 import { dropBucks } from './economy.js';
+import { Quests, QUEST_XP } from './quests.js';
 import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
 import { superchargeXP } from '../core/supercharge.js';
@@ -204,6 +205,7 @@ export class Game {
     this.building = new Building(this);
     this.vehicles = new Vehicles(this);
     this.boss = new Boss(this);
+    this.quests = new Quests(this);
     this.storm = new Storm(this, rng);
     this.teamSize = opts.teamSize || 1;
     this.teams = new Teams(this, this.teamSize);
@@ -325,6 +327,7 @@ export class Game {
     this.building.clear();
     this.vehicles.clear();
     this.boss.dispose();
+    this.quests.dispose();
     this.storm.dispose();
     this.effects.clear();
     this.scene.remove(this.world.root);
@@ -604,7 +607,9 @@ export class Game {
     const ch = applyChallenges(st.ms, { kills, damage: st.damage, place });
     const wk = applyWeekly(st.ms, { kills, damage: st.damage, place });
     const ach = applyAchievements(st.ms, { kills, won, team: this.teamSize > 1 });
-    pr.xp += xp + superXP + ch.xp + wk.xp + ach.xp;
+    const questN = (st.ms && st.ms.quests) || 0;
+    const questXP = questN * QUEST_XP; // story quests handed in this match
+    pr.xp += xp + superXP + ch.xp + wk.xp + ach.xp + questXP;
     // reaching a level can itself unlock an achievement (and its XP)
     refreshLevel();
     const ach2 = unlockReached();
@@ -615,11 +620,11 @@ export class Game {
     if (!pr.bestPlace || place < pr.bestPlace) pr.bestPlace = place;
     save.write();
     const after = levelInfo(pr.xp).level;
-    const total = xp + superXP + ch.xp + wk.xp + ach.xp + ach2.xp;
+    const total = xp + superXP + ch.xp + wk.xp + ach.xp + ach2.xp + questXP;
     const passUp = addPassXP(total); // the Benton Pass fills with every XP point earned
     this.result = {
       won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: total, superXP, chalXP: ch.xp, challenges: ch.rows,
-      weeklyXP: wk.xp, weekly: wk.rows.filter((w) => w.justDone), achXP: ach.xp + ach2.xp, achievements: [...ach.got, ...ach2.got], pass: passUp,
+      questXP, quests: questN, weeklyXP: wk.xp, weekly: wk.rows.filter((w) => w.justDone), achXP: ach.xp + ach2.xp, achievements: [...ach.got, ...ach2.got], pass: passUp,
       levelUp: after > before ? after : 0, killer: st.killer,
     };
     if (this.ranked) this.result.ranked = applyRanked(this.mode, { won, place, total: totalTeams, kills }, this.lobbyRating);
@@ -669,6 +674,7 @@ export class Game {
     this.vehicles.checkOccupants();
     this.vehicles.update(dt);
     this.boss.update(dt);
+    this.quests.update(dt);
     this.updateCarry(dt);
     this.teams.update(dt);
     this.combat.update(dt);
@@ -751,6 +757,7 @@ export class Game {
   _present(dt, t) {
     this.world.update(dt, t);
     this.boss.present(dt, t);
+    this.quests.present(dt, t);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const tw = this.tweens[i];
       tw.t += dt;

@@ -248,6 +248,7 @@ export class HostNet {
         if (r) g.notify(a, r.text, r.color);
         break;
       }
+      case 'qt': g.quests.talk(a, c[2] | 0); break;
       default: break;
     }
   }
@@ -283,6 +284,7 @@ export class HostNet {
         mt: MAT_K.map((k) => a.mats[k]),
         bf: Object.entries(a.buffs).map(([k, v]) => [k, r10(v)]),
         cd: a.cards,
+        qs: this.game.quests.rows(a),
         us: a.use ? [a.use.slot, r10(a.use.t), r10(a.use.total)] : 0,
         rl: a.reloadT > 0 ? [r10(a.reloadT), r10(a.reloadTotal)] : 0,
         dh: r10(a.downHp),
@@ -484,6 +486,7 @@ export class ClientNet {
     me.rebootT = P.rb / 10;
     me.canRedeploy = !!P.rd;
     me.bucks = P.bk | 0;
+    if (P.qs) this.game.quests.view = P.qs;
     me.reviveTarget = me.reviveT > 0 ? { name: 'teammate' } : null;
     me.rebootVan = me.rebootT > 0 ? {} : null;
   }
@@ -649,7 +652,7 @@ export class NetActions {
     return true;
   }
   edit(piece, tiles) {
-    if (!tiles.some(Boolean)) return false;
+    if (this.g.building.editProblem(piece, tiles.every(Boolean) ? null : tiles)) return false;
     this.net.cmd('e', piece.key, tilesToBits(tiles.every(Boolean) ? null : tiles));
     return true;
   }
@@ -682,6 +685,9 @@ export class NetActions {
   }
   carry(m) {
     this.net.cmd('cy', m ? m.id : -1);
+  }
+  quest(i) {
+    this.net.cmd('qt', i);
   }
 }
 
@@ -723,6 +729,7 @@ export class LocalActions {
     if (r) this.g.hud.toast(r.text, r.color, 2.5);
   }
   carry(m) { this.g.carry(this.p, m); }
+  quest(i) { this.g.quests.talk(this.p, i); }
 }
 
 export { ST, FL, WEAPONS };
