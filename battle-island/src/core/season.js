@@ -14,6 +14,7 @@ import { rankState, divName, divisionMMR } from './ranked.js';
 import { CHALLENGES } from './challenges.js';
 import { mulberry32 } from '../gameplay/items.js';
 import { badgeCount } from './badges.js';
+import { LOCKER, DEFAULTS } from './cosmetics.js';
 
 // ------------------------------------------------------------ cosmetics
 export const EMOTES = {
@@ -90,7 +91,16 @@ export function owned() {
   // gliders earned by finding Benton Badges
   const n = badgeCount();
   const byBadges = Object.entries(GLIDERS).filter(([, g]) => g.badges && n >= g.badges).map(([id]) => `glider:${id}`);
-  return new Set(['emote:sig', 'glider:classic', ...p.owned, ...byBadges]);
+  const set = new Set(['emote:sig', 'glider:classic', ...p.owned, ...byBadges]);
+  // pickaxes, back blings and wraps unlock by level, achievement or badges
+  const level = levelInfo(save.data.progress.xp).level;
+  for (const [kind, list] of Object.entries(LOCKER)) {
+    for (const [id, c] of Object.entries(list)) {
+      const u = c.unlock;
+      if (!u || (u.level && level >= u.level) || (u.badges && n >= u.badges) || (u.ach && achDone(u.ach))) set.add(`${kind}:${id}`);
+    }
+  }
+  return set;
 }
 
 export function owns(kind, id) {
@@ -272,7 +282,9 @@ export function refreshLevel() {
 // ------------------------------------------------------------ equipping
 export function equipped(charId) {
   const e = pass().equipped;
-  return { emote: owns('emote', e.emote) ? e.emote : 'sig', glider: owns('glider', e.glider) ? e.glider : 'classic' };
+  const out = { emote: owns('emote', e.emote) ? e.emote : 'sig', glider: owns('glider', e.glider) ? e.glider : 'classic' };
+  for (const kind of Object.keys(LOCKER)) out[kind] = e[kind] && owns(kind, e[kind]) ? e[kind] : DEFAULTS[kind];
+  return out;
 }
 
 export function equip(kind, id) {

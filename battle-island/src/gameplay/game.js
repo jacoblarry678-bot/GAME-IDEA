@@ -23,6 +23,7 @@ import { Quests, QUEST_XP } from './quests.js';
 import { BadgeHunt } from './badges.js';
 import { IslandEvent } from './events.js';
 import { EVENTS } from '../core/events.js';
+import { PICKAXES, BACKBLINGS, WRAPS } from '../core/cosmetics.js';
 import { BADGE_XP } from '../core/badges.js';
 import { HostNet, ClientNet, NetActions, LocalActions } from '../net/sync.js';
 import { mulberry32, makeWeapon, BUFFS } from './items.js';
@@ -228,7 +229,7 @@ export class Game {
     const k = this.teamSize;
     const client = this.role === 'client';
     // humans take the first ids (the host is 0), bots fill the rest; teams are k consecutive ids
-    const humans = opts.humans || [{ id: 0, local: true, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin, emote: opts.cos?.emote, glider: opts.cos?.glider }];
+    const humans = opts.humans || [{ id: 0, local: true, name: save.data.profile.name || 'You', charId: opts.charId, outfit: opts.outfit, skin: opts.skin, emote: opts.cos?.emote, glider: opts.cos?.glider, pickaxe: opts.cos?.pickaxe, backbling: opts.cos?.backbling, wrap: opts.cos?.wrap }];
     const rr = mulberry32(this.seed + 1); // roster rng: identical on host and clients
     const names = [...BOT_NAMES].sort(() => rr() - 0.5);
     const total = humans.length + opts.botCount;
@@ -236,11 +237,14 @@ export class Game {
       const h = humans.find((x) => x.id === id);
       let a;
       if (h) {
-        a = new Actor(this, { id, team: Math.floor(id / k), name: h.name || 'Player', charId: h.charId, outfit: h.outfit, skin: h.skin, cos: { emote: h.emote, glider: h.glider }, human: true, remote: h.local ? null : h.peer || null });
+        a = new Actor(this, { id, team: Math.floor(id / k), name: h.name || 'Player', charId: h.charId, outfit: h.outfit, skin: h.skin, cos: { emote: h.emote, glider: h.glider, pickaxe: h.pickaxe, backbling: h.backbling, wrap: h.wrap }, human: true, remote: h.local ? null : h.peer || null });
         if (h.local) this.player = a;
       } else {
         const bi = id - humans.length;
-        a = new Actor(this, { id, team: Math.floor(id / k), name: `${names[bi % names.length]} [BOT]`, isBot: true, charId: CHARACTER_IDS[bi % 3], outfit: Math.floor(rr() * 3), skin: Math.floor(rr() * 5) });
+        // bots wear a random pickaxe, back bling and wrap (same roll on every machine)
+        const pickCos = (list) => { const ids = Object.keys(list); return ids[Math.floor(rr() * ids.length)]; };
+        const bcos = { pickaxe: pickCos(PICKAXES), backbling: pickCos(BACKBLINGS), wrap: pickCos(WRAPS) };
+        a = new Actor(this, { id, team: Math.floor(id / k), name: `${names[bi % names.length]} [BOT]`, isBot: true, charId: CHARACTER_IDS[bi % 3], outfit: Math.floor(rr() * 3), skin: Math.floor(rr() * 5), cos: bcos });
         if (!client) {
           a.brain = new BotBrain(this, a, mulberry32(this.seed + bi * 977));
           a.brain.pickDrop(this.world);

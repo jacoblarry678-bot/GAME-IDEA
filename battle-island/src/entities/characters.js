@@ -6,6 +6,9 @@
 
 import * as THREE from 'three';
 import { weaponModel } from './models.js';
+import { cosmeticModel, applyWrap } from './cosmeticModels.js';
+import { RARITIES, WEAPONS } from '../gameplay/items.js';
+import { LOCKER, DEFAULTS } from '../core/cosmetics.js';
 
 export const SKIN_TONES = ['#ffd9bd', '#f3c29b', '#d9a077', '#b27a52', '#7d5033'];
 
@@ -125,6 +128,10 @@ export class CharacterModel {
   constructor(charId, outfit = 0, skin = 0, cos = {}) {
     this.charId = charId;
     this.emoteId = cos.emote || 'sig';
+    // pickaxe / backbling / wrap ids (see core/cosmetics.js); unknown ids (e.g. from a newer client) fall back to defaults
+    this.cos = { ...cos };
+    for (const [kind, list] of Object.entries(LOCKER)) if (!list[this.cos[kind]]) this.cos[kind] = DEFAULTS[kind];
+    cos = this.cos;
     const def = CHARACTERS[charId];
     const pal = def.outfits[outfit]?.c || def.outfits[0].c;
     this.mats = [];
@@ -200,6 +207,7 @@ export class CharacterModel {
       this.spine.add(stripe);
     }
     // backpack / back bling
+    const packFrom = this.spine.children.length;
     const bp = mesh(geo('pack', () => new THREE.BoxGeometry(0.34, 0.38, 0.16)), pack, 0, 0.32, -0.26);
     this.spine.add(bp);
     if (charId === 'waylon') {
@@ -216,6 +224,14 @@ export class CharacterModel {
       const wr = mesh(geo('wrench', () => new THREE.BoxGeometry(0.06, 0.4, 0.04)), white, 0.1, 0.36, -0.35);
       wr.rotation.z = 0.5;
       this.spine.add(wr);
+    }
+
+    // an equipped back bling (made in Blender) replaces the outfit's backpack
+    if (cos.backbling && cos.backbling !== 'outfit') {
+      for (const o of this.spine.children.slice(packFrom)) o.visible = false;
+      this.bling = cosmeticModel('backbling', cos.backbling);
+      this.bling.position.set(0, 0.2, -0.17);
+      this.spine.add(this.bling);
     }
 
     // head
@@ -342,7 +358,12 @@ export class CharacterModel {
     if (this.held) this.hand.remove(this.held);
     this.held = null;
     if (!key || key === 'none') return;
-    this.held = weaponModel(key, rarity, mods);
+    const cos = this.cos || {};
+    if (key === 'pickaxe' && cos.pickaxe && cos.pickaxe !== 'default') this.held = cosmeticModel('pickaxe', cos.pickaxe);
+    else {
+      this.held = weaponModel(key, rarity, mods);
+      if (WEAPONS[key] && cos.wrap && cos.wrap !== 'none') applyWrap(this.held, cos.wrap, RARITIES[rarity | 0]?.color);
+    }
     if (key === 'pickaxe') this.held.rotation.x = -0.3;
     this.held.traverse((o) => (o.castShadow = true));
     this.hand.add(this.held);

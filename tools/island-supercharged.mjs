@@ -36,9 +36,9 @@ await p.click('[data-act=play]');
 await p.waitForTimeout(600);
 await winMatch();
 await p.waitForTimeout(700);
-const r1 = await ev(() => ({ xp: __bi.game.result.xp, chal: __bi.game.result.chalXP + (__bi.game.result.weeklyXP || 0) + (__bi.game.result.achXP || 0), sup: __bi.game.result.superXP, pool: __bi.supercharge.superXP().pool, saved: __bi.save.data.progress.xp, line: [...document.querySelectorAll('.sx-won')].map((e) => e.textContent).find((t) => /Supercharged XP/.test(t)) }));
+const r1 = await ev(() => ({ xp: __bi.game.result.xp, chal: __bi.game.result.chalXP + (__bi.game.result.weeklyXP || 0) + (__bi.game.result.achXP || 0), sup: __bi.game.result.superXP, pool: __bi.supercharge.superXP().pool, topUp: !!(__bi.game.result.pass?.got || []).some((r) => r.kind === 'super'), saved: __bi.save.data.progress.xp, line: [...document.querySelectorAll('.sx-won')].map((e) => e.textContent).find((t) => /Supercharged XP/.test(t)) }));
 await p.screenshot({ path: `${shots}/sc-01-result.png` });
-check('match XP is doubled from the pool and the result says so', r1.sup > 0 && r1.xp === r1.sup * 2 + r1.chal && r1.pool === 7500 - r1.sup && r1.saved === r1.xp && /Supercharged XP/.test(r1.line || ''), JSON.stringify(r1));
+check('match XP is doubled from the pool and the result says so', r1.sup > 0 && r1.xp === r1.sup * 2 + r1.chal && r1.pool === (r1.topUp ? 7500 : 7500 - r1.sup) /* a pass tier can top the pool back up */ && r1.saved === r1.xp && /Supercharged XP/.test(r1.line || ''), JSON.stringify(r1));
 
 const partial = await ev(() => { __bi.supercharge.superXP().pool = 100; return [__bi.supercharge.superchargeXP(900), __bi.supercharge.superXP().pool, __bi.supercharge.superchargeXP(900)]; });
 check('bonus stops when the pool runs out', partial[0] === 100 && partial[1] === 0 && partial[2] === 0, JSON.stringify(partial));

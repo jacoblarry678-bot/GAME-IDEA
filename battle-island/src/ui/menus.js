@@ -15,6 +15,7 @@ import { matchOp, progressOp, canAdminMatch, PLACES } from '../gameplay/admin.js
 import { sfx } from '../core/audio.js';
 import { BADGES, BADGE_REWARDS, BADGE_XP, hasBadge, badgeCount } from '../core/badges.js';
 import { EVENTS, EVENT_IDS, todaysEvent, matchEvent } from '../core/events.js';
+import { LOCKER, unlockText } from '../core/cosmetics.js';
 
 /** The solo edition (e.g. the itch.io upload) has no online server, so it doesn't offer online play. */
 const SOLO_EDITION = typeof window !== 'undefined' && window.BI_EDITION === 'solo';
@@ -46,6 +47,7 @@ export const ROADMAP = {
     'New looks: the Night Pump shotgun, the heavy-hitting Hand Cannon pistol, and Benton Bus v2 under a striped balloon',
     'Milestone 7 — Quests, Edits & Road Trips: story NPCs (Grandpa Gus, Captain Kay, Ranger Rae) with in-match quests and rewards; ramp and cone editing; bots that drive to the safe zone',
     'Milestone 8 — Gear, Secrets & Events: weapon attachments (red dot, 4x scope, grip, drum mag, choke); 12 hidden Benton Badges with a collection book and gliders; a daily island event (Spooky Night, Low Gravity, Supply Frenzy, Golden Loot, Playground Party)',
+    'Locker: 6 pickaxes, 6 back blings and 6 gun wraps, modelled in Blender, unlocked by level, achievements and Benton Badges',
   ],
   next: [
     'Pre-match warm-up island; match replays',
@@ -106,7 +108,10 @@ export class Menus {
     const P = this.profile;
     switch (a) {
       case 'play': this.app.play(); break;
-      case 'main': this.showMain(); break;
+      case 'main':
+        if (this.current === 'locker') this.app.preview(null); // put the Locker's held item away
+        this.showMain();
+        break;
       case 'chars': this.showChars(); break;
       case 'locker': this.showLocker(); break;
       case 'settings': this.showSettings(d.back || 'main'); break;
@@ -123,7 +128,12 @@ export class Menus {
         this.showLocker();
         break;
       }
-      case 'equip': if (season.equip(d.kind, d.id)) { this.app.preview(); if (d.kind === 'emote') this.app.previewEmote(); } this.showLocker(); break;
+      case 'equip': if (season.equip(d.kind, d.id)) { this.app.preview(d.kind === 'pickaxe' ? 'pickaxe' : d.kind === 'wrap' ? 'ar' : null); if (d.kind === 'emote') this.app.previewEmote(); } this.showLocker(); break;
+      case 'cos-locked': {
+        const def = LOCKER[d.kind]?.[d.id];
+        if (def) this.showLocker(`${def.name}: ${unlockText(def.unlock, (a) => season.ACHIEVEMENTS.find((x) => x.id === a)?.name || a)} to unlock it.`);
+        break;
+      }
       case 'pass': this.showPass(); break;
       case 'achievements': this.showAchievements(); break;
       case 'badges': this.showBadges(); break;
@@ -308,7 +318,16 @@ export class Menus {
     return `<button class="cos ${current === id ? 'on' : ''} ${have ? '' : 'locked'}" data-act="${have ? 'equip' : byBadges ? 'badges' : 'pass'}" data-kind="${kind}" data-id="${id}">${sw}<b>${escAttr(name)}</b><small>${have ? (current === id ? 'Equipped' : 'Tap to equip') : byBadges ? `Find ${byBadges} Benton Badges` : `Pass tier ${tier}`}</small></button>`;
   }
 
-  showLocker() {
+  /** A pickaxe / back bling / wrap button for the Locker. */
+  _lockerItem(kind, id, def, current) {
+    const have = season.owns(kind, id);
+    const how = unlockText(def.unlock, (a) => season.ACHIEVEMENTS.find((x) => x.id === a)?.name || a);
+    const sw = def.swatch ? `<span class="cos-sw" style="background:linear-gradient(90deg,${def.swatch.map((c, i) => `${c} ${(i / def.swatch.length) * 100}% ${((i + 1) / def.swatch.length) * 100}%`).join(',')})"></span>` : '';
+    return `<button class="cos ${current === id ? 'on' : ''} ${have ? '' : 'locked'}" data-act="${have ? 'equip' : 'cos-locked'}" data-kind="${kind}" data-id="${id}" title="${escAttr(def.desc)}">${sw}<b>${escAttr(def.name)}</b><small>${have ? (current === id ? 'Equipped' : 'Tap to equip') : how}</small></button>`;
+  }
+
+  showLocker(msg = '') {
+    this.current = 'locker';
     const P = this.profile;
     const c = CHARACTERS[P.character];
     const eq = season.equipped(P.character);
@@ -316,6 +335,7 @@ export class Menus {
     this.screen(`
       <div class="sheet panel">
         <h2>Locker · ${c.name}</h2>
+        ${msg ? `<p class="adm-msg">${escAttr(msg)}</p>` : ''}
         <h3>Outfits</h3>
         <div class="outfits">${c.outfits.map((o, i) => {
           const locked = !this.outfitUnlocked(P.character, i);
@@ -330,7 +350,13 @@ export class Menus {
         <button class="btn small" data-act="emote">Preview emote</button>
         <h3>Glider</h3>
         <div class="cos-list">${Object.entries(season.GLIDERS).map(([id, gl]) => this._cosItem('glider', id, gl.name, eq.glider, gl.colors)).join('')}</div>
-        <p class="note">Level up to unlock outfits. The free Benton Pass unlocks emotes, gliders and new outfits as you earn XP this season.</p>
+        <h3>Pickaxe</h3>
+        <div class="cos-list">${Object.entries(LOCKER.pickaxe).map(([id, d]) => this._lockerItem('pickaxe', id, d, eq.pickaxe)).join('')}</div>
+        <h3>Back bling</h3>
+        <div class="cos-list">${Object.entries(LOCKER.backbling).map(([id, d]) => this._lockerItem('backbling', id, d, eq.backbling)).join('')}</div>
+        <h3>Wrap <small class="muted">covers your guns</small></h3>
+        <div class="cos-list">${Object.entries(LOCKER.wrap).map(([id, d]) => this._lockerItem('wrap', id, d, eq.wrap)).join('')}</div>
+        <p class="note">Level up to unlock outfits, pickaxes, back blings and wraps; some come from achievements and Benton Badges. The free Benton Pass unlocks emotes, gliders and new outfits as you earn XP this season.</p>
         <div class="row"><button class="btn" data-act="chars">Characters</button><button class="btn play small" data-act="main">Done</button></div>
       </div>`, 'screen right');
   }

@@ -16,6 +16,7 @@ import { CHARACTERS } from '../entities/characters.js';
 import { pass, passTier, addPassXP, TIER_XP, PASS } from '../core/season.js';
 import { setAllBadges } from '../core/badges.js';
 import { EVENTS } from '../core/events.js';
+import { LOCKER } from '../core/cosmetics.js';
 
 export const PLACES = [...POIS.map((p) => ({ id: p.id, name: p.name, x: p.x, z: p.z })), { id: 'vault', name: VAULT.name, x: VAULT.x, z: VAULT.z + 12 }];
 
@@ -181,8 +182,9 @@ export function progressOp(op, arg, mode) {
     case 'cosmetics': {
       const p = pass();
       for (const r of PASS) if (r && r.kind !== 'super' && !p.owned.includes(`${r.kind}:${r.id}`)) p.owned.push(`${r.kind}:${r.id}`);
+      for (const [kind, list] of Object.entries(LOCKER)) for (const id of Object.keys(list)) if (!p.owned.includes(`${kind}:${id}`)) p.owned.push(`${kind}:${id}`);
       save.write();
-      return 'Every emote, glider and pass outfit unlocked';
+      return 'Every emote, glider, pass outfit, pickaxe, back bling and wrap unlocked';
     }
     case 'super':
       superXP().pool = CAP_XP;

@@ -110,7 +110,7 @@ export class Session {
 
   setProfile(pr) {
     this.profile = pr;
-    this.room.presence({ r: this.role === 'host' ? 'h' : 'c', v: PROTO, n: cleanName(pr.name), c: pr.charId, o: pr.outfit, s: pr.skin, e: pr.emote || 'sig', gl: pr.glider || 'classic', rk: pr.rk || null }).catch(() => {});
+    this.room.presence({ r: this.role === 'host' ? 'h' : 'c', v: PROTO, n: cleanName(pr.name), c: pr.charId, o: pr.outfit, s: pr.skin, e: pr.emote || 'sig', gl: pr.glider || 'classic', pk: pr.pickaxe || 'default', bb: pr.backbling || 'outfit', wr: pr.wrap || 'none', rk: pr.rk || null }).catch(() => {});
   }
 
   get myPeer() {
@@ -132,7 +132,7 @@ export class Session {
   players() {
     const list = this.room.peers()
       .filter((p) => p.presence && p.presence.v === PROTO)
-      .map((p) => ({ peer: p.peer, me: p.sameTab, host: p.presence.r === 'h', name: p.presence.n || 'Player', charId: p.presence.c || 'colton', outfit: p.presence.o | 0, skin: p.presence.s | 0, emote: cosId(p.presence.e), glider: cosId(p.presence.gl), rk: Array.isArray(p.presence.rk) ? p.presence.rk : null }));
+      .map((p) => ({ peer: p.peer, me: p.sameTab, host: p.presence.r === 'h', name: p.presence.n || 'Player', charId: p.presence.c || 'colton', outfit: p.presence.o | 0, skin: p.presence.s | 0, emote: cosId(p.presence.e), glider: cosId(p.presence.gl), pickaxe: cosId(p.presence.pk), backbling: cosId(p.presence.bb), wrap: cosId(p.presence.wr), rk: Array.isArray(p.presence.rk) ? p.presence.rk : null }));
     list.sort((a, b) => (b.host ? 1 : 0) - (a.host ? 1 : 0));
     return list;
   }
@@ -151,7 +151,7 @@ export class Session {
       seed: game.seed,
       cfg,
       bus: [...game.busFrom.toArray(), ...game.busTo.toArray()].map((v) => Math.round(v * 10) / 10),
-      humans: humans.map((h) => ({ id: h.id, p: h.peer, n: h.name, c: h.charId, o: h.outfit, s: h.skin, e: h.emote, gl: h.glider })),
+      humans: humans.map((h) => ({ id: h.id, p: h.peer, n: h.name, c: h.charId, o: h.outfit, s: h.skin, e: h.emote, gl: h.glider, pk: h.pickaxe, bb: h.backbling, wr: h.wrap })),
     };
     this.room.presence({ st: 'play', start }).catch(() => {});
     this.online.lobby.presence({ g: null }).catch(() => {});

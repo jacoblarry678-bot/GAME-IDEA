@@ -54,10 +54,12 @@ for (let i = 0; i < 14; i++) {
   menuScene.add(t);
 }
 let previewModel = null;
+let previewHold = null; // the Locker shows the chosen pickaxe or a wrapped rifle in hand
 let previewEmoteT = 0;
 const menuView = { scene: menuScene, camera: menuCam };
 
-function preview() {
+function preview(hold = previewHold) {
+  previewHold = hold;
   if (previewModel) {
     menuScene.remove(previewModel.root);
     previewModel.dispose();
@@ -65,6 +67,7 @@ function preview() {
   const P = save.data.profile;
   previewModel = new CharacterModel(P.character, P.outfits[P.character], P.skin, season.equipped(P.character));
   previewModel.root.position.x = document.querySelector('#menus.right') ? -2.1 : -0.2;
+  if (hold) previewModel.setHeld(hold, 3);
   menuScene.add(previewModel.root);
   previewEmoteT = 2.5;
 }
@@ -138,7 +141,7 @@ function profileInfo() {
   const P = save.data.profile;
   const b = rankState('build'), z = rankState('zerobuild');
   const cos = season.equipped(P.character);
-  return { name: P.name || 'Player', charId: P.character, outfit: P.outfits[P.character], skin: P.skin, emote: cos.emote, glider: cos.glider, rk: [[b.mmr, b.d], [z.mmr, z.d]] };
+  return { name: P.name || 'Player', charId: P.character, outfit: P.outfits[P.character], skin: P.skin, emote: cos.emote, glider: cos.glider, pickaxe: cos.pickaxe, backbling: cos.backbling, wrap: cos.wrap, rk: [[b.mmr, b.d], [z.mmr, z.d]] };
 }
 
 async function openOnline() {
@@ -220,7 +223,7 @@ function startOnline() {
   const s = session;
   if (!s || s.role !== 'host') return;
   const players = s.players().slice(0, MAX_HUMANS);
-  const humans = players.map((p, i) => ({ id: i, local: p.me, peer: p.peer, name: p.name, charId: p.charId, outfit: p.outfit, skin: p.skin, emote: p.emote, glider: p.glider }));
+  const humans = players.map((p, i) => ({ id: i, local: p.me, peer: p.peer, name: p.name, charId: p.charId, outfit: p.outfit, skin: p.skin, emote: p.emote, glider: p.glider, pickaxe: p.pickaxe, backbling: p.backbling, wrap: p.wrap }));
   // ranked lobbies are matched at the average MMR of the humans in them
   const mi = s.cfg.mode === 'zerobuild' ? 1 : 0;
   const rating = Math.round(players.reduce((sum, p) => sum + (p.rk ? p.rk[mi][0] : 1000), 0) / players.length);
@@ -233,7 +236,7 @@ function startOnline() {
 
 function startClient(start) {
   const s = session;
-  const humans = start.humans.map((h) => ({ id: h.id, local: h.p === s.myPeer, peer: h.p, name: h.n, charId: h.c, outfit: h.o, skin: h.s, emote: h.e, glider: h.gl }));
+  const humans = start.humans.map((h) => ({ id: h.id, local: h.p === s.myPeer, peer: h.p, name: h.n, charId: h.c, outfit: h.o, skin: h.s, emote: h.e, glider: h.gl, pickaxe: h.pk, backbling: h.bb, wrap: h.wr }));
   enterGame();
   game.startMatch({ role: 'client', room: s.room, hostPeer: s.hostPeer(), seed: start.seed, mode: start.cfg.mode, teamSize: start.cfg.team, botCount: start.cfg.bots, humans, bus: start.bus, ranked: !!start.cfg.ranked, lobbyRating: start.cfg.rating || 1000, event: start.cfg.event || null });
 }
@@ -326,7 +329,7 @@ engine.add((dt, t) => {
     if (previewModel) {
       previewEmoteT -= dt;
       previewModel.root.rotation.y = Math.sin(t * 0.4) * 0.5;
-      previewModel.animate(dt, { t, speed: 0, state: 'ground', pose: 'none', emote: previewEmoteT > 0 && previewEmoteT < 3.5 });
+      previewModel.animate(dt, { t, speed: 0, state: 'ground', pose: previewHold === 'pickaxe' ? 'pickaxe' : previewHold ? 'gun' : 'none', emote: previewEmoteT > 0 && previewEmoteT < 3.5 });
       if (previewEmoteT < -6) previewEmoteT = 4;
     }
     ring.rotation.z = t * 0.3;

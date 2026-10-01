@@ -34,6 +34,7 @@ const MOUNT = {
 function addMods(g, id, mods) {
   const M = MOUNT[id];
   if (!M || !mods) return;
+  const from = g.children.length;
   for (const mod of mods) {
     if (mod === 'dot') g.add(bx(0.07, 0.07, 0.1, '#1b1f27', 0, M.top + 0.04, M.topZ), bx(0.05, 0.05, 0.012, '#ff5c5c', 0, M.top + 0.045, M.topZ + 0.055, '#ff2030'));
     else if (mod === 'scope') g.add(cyl(0.045, 0.34, '#1b1f27', 0, M.top + 0.08, M.topZ), cyl(0.05, 0.03, '#39f0ff', 0, M.top + 0.08, M.topZ + 0.17), bx(0.03, 0.06, 0.04, '#1b1f27', 0, M.top + 0.03, M.topZ));
@@ -45,6 +46,7 @@ function addMods(g, id, mods) {
       g.add(d, bx(0.095, 0.03, 0.03, '#ffae1a', 0, -0.12, M.mag));
     } else if (mod === 'choke') g.add(cyl(0.05, 0.08, '#b35cff', 0, 0.09, M.muzzle + 0.02));
   }
+  for (const o of g.children.slice(from)) o.traverse((q) => (q.userData.mod = true)); // wraps leave attachments alone
 }
 
 export function weaponModel(id, rarity = 0, mods = null) {

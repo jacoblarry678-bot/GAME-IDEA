@@ -321,6 +321,25 @@ hold a mouse button and drag to look, or turn with the arrow keys.
   - 🛝 **Playground Party:** bounce pads at every named place, with a Bouncy Soda by each.
 - [x] **Admin (owner):** find every badge or forget them; pin any island event or go back to the daily rotation.
 
+## Mini update: Pickaxes, back blings and wraps (made in Blender)
+
+Three new Locker sections, all modelled and textured in **Blender** by `battle-island/blender/cosmetics.py`. The script builds each item from primitives with bevel modifiers, exports them to `src/assets/cosmetics.glb`, and bakes each wrap's procedural shader to a PNG in `src/assets/wraps/` with Cycles. The game loads the GLB with three.js's glTF loader, and the single-file build inlines it.
+
+| Pickaxes | Back blings | Wraps |
+|---|---|---|
+| Trusty Pick (free) | Outfit Backpack (free) | No Wrap (free) |
+| Pickle Pick (level 2) | Pickle Jar (level 3) | Camo Crew (level 2) |
+| Wrench Whacker (level 4) | Dino Buddy (level 5) | Candy Stripe (level 4) |
+| Lollipop Smasher (level 6) | Clubhouse Shield (level 8) | Pickle Skin (level 6) |
+| Raptor Claws (level 9) | Toy Rocket (level 11) | Galaxy (level 10) |
+| Star Scepter (level 12) | Treasure Chest (find 4 Benton Badges) | Lava Rock (level 14) |
+| Bolt Breaker (beat Crankbolt) | Mini Crankbolt (open the vault) | Gold Rush (win a match) |
+
+- **In a match:** the back bling replaces your outfit's backpack, the pickaxe is what you swing, and the wrap covers your guns' bodies. Rarity trim, sights and attachments keep their own look.
+- **In the Locker:** tapping a locked item says how to unlock it, and the preview holds the chosen pickaxe or a wrapped rifle.
+- Bots wear a random mix. Online, everyone sees each other's picks. The owner's "Unlock every cosmetic" covers these too.
+- To change the models, edit the script and re-run it, then rebuild. Use either `blender --background --python battle-island/blender/cosmetics.py` or, with `pip install bpy`, `python battle-island/blender/cosmetics.py`.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
@@ -359,6 +378,7 @@ node tools/island-admin.mjs                 # 24 checks (run `npm run island:bui
 node tools/island-milestone6.mjs            # 12 checks (the last one needs the relay server)
 node tools/island-milestone7.mjs            # 19 checks
 node tools/island-milestone8.mjs            # 21 checks
+node tools/island-cosmetics.mjs             # 7 checks: pickaxes, back blings, wraps (the last needs the relay server)
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
 node tools/island-online-squad.mjs          # 6 checks: desktop host + phone client in Duos
@@ -471,6 +491,8 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/player.js` | Input → actions, camera |
 | `src/gameplay/bots.js` | Bot AI |
 | `src/gameplay/admin.js`, `src/core/owner.js` | Owner check and admin tools |
+| `blender/cosmetics.py`, `src/assets/` | Blender source for the pickaxes, back blings and wraps, and its exported GLB and PNGs |
+| `src/core/cosmetics.js`, `src/entities/cosmeticModels.js` | Cosmetic list and unlocks; loading the GLB and applying wraps |
 | `src/gameplay/badges.js`, `src/core/badges.js` | Benton Badges: placement, collecting, saved collection and rewards |
 | `src/gameplay/events.js`, `src/core/events.js` | Island events: the daily rotation, pumpkins, pads, supply frenzy, low gravity |
 | `src/gameplay/quests.js` | Story NPCs, quests, tackle boxes, tracker and map icons |
