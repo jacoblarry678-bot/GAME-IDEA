@@ -119,6 +119,33 @@ if (online) {
   check("online: the host sees the client's Star Scepter, Toy Rocket and Lava Rock (and the client sees the host's)", seen.cos.pickaxe === 'star' && seen.cos.backbling === 'rocket' && seen.cos.wrap === 'lava' && seen.bling === 'backbling_rocket' && mine.cos.pickaxe === 'pickle' && mine.cos.backbling === 'dino', JSON.stringify({ seen, mine }));
 }
 
+// ---- the built single file under a strict host policy (like claude.ai: no fetching data: URLs) still loads every Blender model
+{
+  const fs = await import('node:fs');
+  const built = new URL('../battle-island/build/battle-island.html', import.meta.url);
+  if (fs.existsSync(built)) {
+    const q = await (await b.newContext({ viewport: { width: 900, height: 560 } })).newPage();
+    const refused = [];
+    q.on('console', (m) => /Refused to connect|Fetch API cannot load/.test(m.text()) && refused.push(m.text().slice(0, 80)));
+    await q.route('http://strict.test/', (r) => r.fulfill({ status: 200, contentType: 'text/html', headers: { 'Content-Security-Policy': "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; connect-src 'self'" }, body: fs.readFileSync(built, 'utf8') }));
+    await q.goto('http://strict.test/', { waitUntil: 'load' });
+    await q.waitForFunction(() => window.__bi, null, { timeout: 20000 });
+    const st = await q.evaluate(async () => {
+      const H = __bi.halloween, P = __bi.save.data.profile;
+      H.setHalloweenForce('on'); H.ownAllHalloween();
+      P.character = 'colton'; P.outfits.colton = 5; __bi.save.data.progress.xp = 60000; __bi.save.write();
+      __bi.season.equip('pickaxe', 'pickle'); __bi.season.equip('backbling', 'dino');
+      __bi.input.lockBlocked = true;
+      __bi.play();
+      const M = __bi.game.player.model;
+      for (let i = 0; i < 60 && !M.costumeHead?.children.length; i++) await new Promise((r) => setTimeout(r, 100));
+      return { head: M.costumeHead?.children[0]?.name, kidHidden: M.head.children.filter((c) => c !== M.costumeHead && c.visible).length, bling: M.bling?.children.length };
+    });
+    check('the built game under a strict host policy (like claude.ai) still loads the Blender models: costume head (kid head swapped out) and back bling', st.head === 'costume_wolfhead' && st.kidHidden === 0 && st.bling === 1 && refused.length === 0, JSON.stringify({ ...st, refused }));
+    await q.close();
+  }
+}
+
 check('no page errors', errors.length === 0, errors.join(' | '));
 console.log(`\n${results.filter(Boolean).length}/${results.length} cosmetics checks passed`);
 await b.close();

@@ -416,10 +416,13 @@ export class CharacterModel {
 
   /** Costumes swap the kid's head for a Blender-made one (and drop the outfit backpack). */
   _costumeHead(id) {
-    for (const o of this.head.children) o.visible = false;
-    if (this.pony) this.pony.visible = false;
+    const kid = [...this.head.children];
     if (!this.bling) for (const o of this._packParts || []) o.visible = false;
-    const h = cosmeticModel('costume', id);
+    // the kid's own head only goes away once the costume head has really loaded (never a headless kid)
+    const h = cosmeticModel('costume', id, () => {
+      for (const o of kid) o.visible = false;
+      if (this.pony) this.pony.visible = false;
+    });
     h.position.y = 0.24;
     this.head.add(h);
     this.costumeHead = h;

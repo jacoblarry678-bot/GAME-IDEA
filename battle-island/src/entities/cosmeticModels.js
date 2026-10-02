@@ -22,9 +22,7 @@ let loaded = false;
 
 /** Starts loading (idempotent). Resolves when every model is ready. */
 export const cosmeticsReady = new Promise((resolve) => {
-  new GLTFLoader().load(
-    glbUrl,
-    (gltf) => {
+  const onLoad = (gltf) => {
       for (const obj of gltf.scene.children) {
         // flat game look: swap PBR for Lambert (same colour and glow)
         obj.traverse((o) => {
@@ -36,27 +34,39 @@ export const cosmeticsReady = new Promise((resolve) => {
         nodes.set(obj.name, obj);
       }
       loaded = true;
-      for (const [g, name] of waiting.splice(0)) fill(g, name);
+      for (const [g, name, cb] of waiting.splice(0)) fill(g, name, cb);
       resolve(true);
-    },
-    undefined,
-    () => resolve(false), // a missing file never breaks the game: defaults stay
-  );
+  };
+  const onError = () => resolve(false); // a missing file never breaks the game: defaults stay
+  const loader = new GLTFLoader();
+  if (glbUrl.startsWith('data:')) {
+    // the single-file build embeds the model; decode it here because hosts like claude.ai don't allow fetching data: URLs
+    try {
+      const bin = atob(glbUrl.slice(glbUrl.indexOf(',') + 1));
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      loader.parse(bytes.buffer, '', onLoad, onError);
+    } catch {
+      onError();
+    }
+  } else loader.load(glbUrl, onLoad, undefined, onError);
 });
 
 export const cosmeticsLoaded = () => loaded;
 
-function fill(g, name) {
+function fill(g, name, cb) {
   const src = nodes.get(name);
-  if (src) g.add(src.clone());
+  if (!src) return;
+  g.add(src.clone());
+  cb?.(g);
 }
 
-/** A pickaxe or back bling model (kind 'pickaxe' | 'backbling'). */
-export function cosmeticModel(kind, id) {
+/** A cosmetic model (kind 'pickaxe' | 'backbling' | 'costume'). onReady runs once it has its mesh (it may never, if loading failed). */
+export function cosmeticModel(kind, id, onReady) {
   const g = new THREE.Group();
   g.name = `${kind}_${id}`;
-  if (loaded) fill(g, g.name);
-  else waiting.push([g, g.name]);
+  if (loaded) fill(g, g.name, onReady);
+  else waiting.push([g, g.name, onReady]);
   return g;
 }
 
