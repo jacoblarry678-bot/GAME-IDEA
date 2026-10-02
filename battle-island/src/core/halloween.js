@@ -18,7 +18,11 @@ export const FRIGHT_SHOP = [
   { kind: 'wrap', id: 'blood', name: 'Blood Wrap', desc: 'Red slime blobs on black', price: 500, color: '#c8102e' },
   { kind: 'backbling', id: 'jackolantern', name: "Jack-o'-Lantern", desc: 'A grinning pumpkin that glows', price: 400, color: '#ff8a1a' },
   { kind: 'glider', id: 'bats', name: 'Bat Swarm', desc: 'Orange bats on a midnight sail', price: 400, color: '#ff8a1a' },
+  // skin drop
+  { kind: 'outfit', id: 'wolf', name: 'Howl Punk', desc: 'A punk werewolf: muzzle cage, glowing red stripes, studs and a bushy tail (any kid)', price: 1200, color: '#ff2a2a', drop: true },
+  { kind: 'outfit', id: 'pig', name: 'Hog Wild', desc: 'A grumpy pig butcher with a ketchup-splattered apron and a sausage chain (any kid)', price: 1200, color: '#f0a3ad', drop: true },
 ];
+export const SKIN_DROP = FRIGHT_SHOP.filter((it) => it.drop);
 
 /** The event window for a given time (local dates): 1 Oct .. 2 Nov inclusive. */
 export function eventWindow(now = Date.now()) {

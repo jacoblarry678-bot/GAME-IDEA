@@ -25,6 +25,8 @@ export const CHARACTERS = {
       { name: 'Storm Chaser', level: 3, c: { top: '#6a3fd0', top2: '#39f0ff', pants: '#1f1f2e', shoes: '#39f0ff', hair: '#5b4330', hat: '#1f1f2e', pack: '#b35cff' } },
       { name: 'Crankbolt Rider', pass: 10, c: { top: '#ff8a3d', top2: '#4a5566', pants: '#3a3f4a', shoes: '#ff8a3d', hair: '#5b4330', hat: '#4a5566', pack: '#9fb2c4', heather: true } },
       { name: 'Blood Slimer', shop: 1500, costume: 'slimer', c: { top: '#2a0d12', top2: '#c8102e', pants: '#1a0a0e', shoes: '#120608', hair: '#1a0a0e', hat: '#1a0a0e', pack: '#c8102e' } },
+      { name: 'Howl Punk', shop: 1200, costume: 'wolf', c: { top: '#2a2a2e', top2: '#ff2a2a', pants: '#18181c', shoes: '#d23a3a', hair: '#1d1a1c', hat: '#1d1a1c', pack: '#2a2a2e' } },
+      { name: 'Hog Wild', shop: 1200, costume: 'pig', c: { top: '#efe6c8', top2: '#efe6c8', pants: '#3f4a2a', shoes: '#1d1d1d', hair: '#f0a3ad', hat: '#f0a3ad', pack: '#9fd0c4' } },
     ],
   },
   emerson: {
@@ -38,6 +40,8 @@ export const CHARACTERS = {
       { name: 'Midnight Glow', level: 5, c: { top: '#1d2a5a', top2: '#39f0ff', pants: '#101828', shoes: '#39f0ff', hair: '#f2c35b', hat: '#39f0ff', pack: '#6a3fd0' } },
       { name: 'Vault Runner', pass: 14, c: { top: '#ffd23f', top2: '#1d2a3a', pants: '#1d2a3a', shoes: '#ffd23f', hair: '#f2c35b', hat: '#1d2a3a', pack: '#ffae1a' } },
       { name: 'Blood Slimer', shop: 1500, costume: 'slimer', c: { top: '#2a0d12', top2: '#c8102e', pants: '#1a0a0e', shoes: '#120608', hair: '#1a0a0e', hat: '#1a0a0e', pack: '#c8102e' } },
+      { name: 'Howl Punk', shop: 1200, costume: 'wolf', c: { top: '#2a2a2e', top2: '#ff2a2a', pants: '#18181c', shoes: '#d23a3a', hair: '#1d1a1c', hat: '#1d1a1c', pack: '#2a2a2e' } },
+      { name: 'Hog Wild', shop: 1200, costume: 'pig', c: { top: '#efe6c8', top2: '#efe6c8', pants: '#3f4a2a', shoes: '#1d1d1d', hair: '#f0a3ad', hat: '#f0a3ad', pack: '#9fd0c4' } },
     ],
   },
   waylon: {
@@ -51,6 +55,8 @@ export const CHARACTERS = {
       { name: 'Golden Ace', level: 6, c: { top: '#ffcf3f', top2: '#ffffff', pants: '#8a5a1a', shoes: '#ffcf3f', hair: '#3b2616', hat: '#ffae1a', pack: '#ff7a1a' } },
       { name: 'Bolt Buddy', pass: 17, c: { top: '#39f0ff', top2: '#1d2a3a', pants: '#4a5566', shoes: '#1d2a3a', hair: '#3b2616', hat: '#39f0ff', pack: '#ff8a3d' } },
       { name: 'Blood Slimer', shop: 1500, costume: 'slimer', c: { top: '#2a0d12', top2: '#c8102e', pants: '#1a0a0e', shoes: '#120608', hair: '#1a0a0e', hat: '#1a0a0e', pack: '#c8102e' } },
+      { name: 'Howl Punk', shop: 1200, costume: 'wolf', c: { top: '#2a2a2e', top2: '#ff2a2a', pants: '#18181c', shoes: '#d23a3a', hair: '#1d1a1c', hat: '#1d1a1c', pack: '#2a2a2e' } },
+      { name: 'Hog Wild', shop: 1200, costume: 'pig', c: { top: '#efe6c8', top2: '#efe6c8', pants: '#3f4a2a', shoes: '#1d1d1d', hair: '#f0a3ad', hat: '#f0a3ad', pack: '#9fd0c4' } },
     ],
   },
 };
@@ -231,6 +237,7 @@ export class CharacterModel {
     }
 
     // an equipped back bling (made in Blender) replaces the outfit's backpack
+    this._packParts = this.spine.children.slice(packFrom);
     if (cos.backbling && cos.backbling !== 'outfit') {
       for (const o of this.spine.children.slice(packFrom)) o.visible = false;
       this.bling = cosmeticModel('backbling', cos.backbling);
@@ -347,7 +354,10 @@ export class CharacterModel {
     this.glider.visible = false;
     this.root.add(this.glider);
 
-    if ((def.outfits[outfit] || def.outfits[0]).costume === 'slimer') this._slimer(M, mesh, skinM);
+    const costume = (def.outfits[outfit] || def.outfits[0]).costume;
+    if (costume === 'slimer') this._slimer(M, mesh, skinM);
+    else if (costume === 'wolf') this._wolf(M, mesh, skinM);
+    else if (costume === 'pig') this._pig(M, mesh, skinM);
 
     this.held = null;
     this.heldKey = '';
@@ -402,6 +412,93 @@ export class CharacterModel {
     }
     // taller and lankier
     this.body.scale.set(0.95, 1.15, 0.95);
+  }
+
+  /** Costumes swap the kid's head for a Blender-made one (and drop the outfit backpack). */
+  _costumeHead(id) {
+    for (const o of this.head.children) o.visible = false;
+    if (this.pony) this.pony.visible = false;
+    if (!this.bling) for (const o of this._packParts || []) o.visible = false;
+    const h = cosmeticModel('costume', id);
+    h.position.y = 0.24;
+    this.head.add(h);
+    this.costumeHead = h;
+  }
+
+  /** Howl Punk (skin drop): a punk werewolf in a studded vest with glowing red stripes, a muzzle cage and a bushy tail. */
+  _wolf(M, mesh, skinM) {
+    skinM.color.set('#2a2426'); // furry hands
+    this._costumeHead('wolfhead');
+    const glow = M('#ff2a2a', '#c00000'), steel = M('#a9b0bb'), red = M('#c8102e');
+    // a glowing red X across the chest and stripes down the arms
+    for (const s of [-1, 1]) {
+      const x = mesh(new THREE.BoxGeometry(0.05, 0.5, 0.02), glow, 0, 0.32, 0.215);
+      x.rotation.z = 0.7 * s;
+      this.spine.add(x);
+    }
+    for (const arm of this.arms) for (const y of [-0.15, -0.3]) arm.add(mesh(new THREE.BoxGeometry(0.17, 0.035, 0.17), glow, 0, y, 0));
+    // studded collar
+    const col = mesh(new THREE.TorusGeometry(0.15, 0.035, 6, 16), M('#1d1a1c'), 0, 0.6, 0);
+    col.rotation.x = Math.PI / 2;
+    this.spine.add(col);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const st = mesh(new THREE.ConeGeometry(0.025, 0.08, 5), steel, Math.cos(a) * 0.18, 0.6, Math.sin(a) * 0.18);
+      st.rotation.set(Math.sin(a) * Math.PI / 2, 0, -Math.cos(a) * Math.PI / 2);
+      this.spine.add(st);
+    }
+    // a red studded belt with a hanging chain
+    const belt = mesh(new THREE.TorusGeometry(0.22, 0.035, 6, 18), red, 0, 0.06, 0);
+    belt.rotation.x = Math.PI / 2;
+    belt.scale.set(1, 0.7, 1);
+    this.hips.add(belt);
+    for (let i = 0; i < 4; i++) {
+      const l = mesh(new THREE.TorusGeometry(0.03, 0.008, 4, 8), steel, 0.2, -0.04 - i * 0.05, 0.1);
+      l.rotation.y = i % 2 ? Math.PI / 2 : 0;
+      this.hips.add(l);
+    }
+    // claws and the tail
+    for (const arm of this.arms) for (let i = -1; i <= 1; i++) {
+      const c = mesh(new THREE.ConeGeometry(0.02, 0.1, 5), steel, i * 0.045, -0.6, 0.03);
+      c.rotation.x = Math.PI;
+      arm.add(c);
+    }
+    const tail = cosmeticModel('costume', 'wolftail');
+    tail.position.set(0, 0.0, -0.12);
+    this.hips.add(tail);
+  }
+
+  /** Hog Wild (skin drop): a grumpy pig butcher in an apron with a sausage chain and ketchup splats. */
+  _pig(M, mesh, skinM) {
+    skinM.color.set('#f0a3ad');
+    this._costumeHead('pighead');
+    const apron = M('#9fd0c4'), ketchup = M('#c8102e'), sausage = M('#c0603a'), steel = M('#a9b0bb'), black = M('#1d1d1d');
+    // the apron: a bib on the chest and a skirt over the legs
+    this.spine.add(mesh(new THREE.BoxGeometry(0.36, 0.42, 0.03), apron, 0, 0.3, 0.205));
+    this.hips.add(mesh(new THREE.BoxGeometry(0.46, 0.5, 0.03), apron, 0, -0.2, 0.16));
+    this.hips.add(mesh(new THREE.BoxGeometry(0.2, 0.12, 0.035), apron, 0.08, -0.08, 0.175)); // pocket
+    for (const [x, y, z, sz] of [[-0.1, 0.36, 0.222, 0.035], [0.08, 0.22, 0.222, 0.025], [-0.12, -0.3, 0.178, 0.04], [0.14, -0.34, 0.178, 0.03], [0.02, -0.12, 0.178, 0.02]]) {
+      const k = mesh(new THREE.SphereGeometry(sz, 8, 6), ketchup, x, y, z);
+      k.scale.z = 0.3;
+      (y > 0 ? this.spine : this.hips).add(k);
+    }
+    // a sausage chain over one shoulder, with a steel chain beside it
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6;
+      const sg = mesh(new THREE.CapsuleGeometry(0.035, 0.06, 4, 8), sausage, 0.2 - t * 0.38, 0.58 - t * 0.5, 0.21);
+      sg.rotation.z = 0.9;
+      this.spine.add(sg);
+      const l = mesh(new THREE.TorusGeometry(0.022, 0.006, 4, 8), steel, 0.24 - t * 0.38, 0.56 - t * 0.5, 0.215);
+      l.rotation.y = i % 2 ? Math.PI / 2 : 0;
+      this.spine.add(l);
+    }
+    // black work gloves and a belt strap
+    for (const arm of this.arms) arm.add(mesh(new THREE.SphereGeometry(0.1, 8, 6), black, 0, -0.5, 0));
+    const strap = mesh(new THREE.TorusGeometry(0.22, 0.025, 6, 18), black, 0, 0.08, 0);
+    strap.rotation.x = Math.PI / 2;
+    strap.scale.set(1, 0.7, 1);
+    this.hips.add(strap);
+    this.body.scale.set(1.08, 1.05, 1.08); // a big, sturdy butcher
   }
 
   setHeld(key, rarity, mods) {

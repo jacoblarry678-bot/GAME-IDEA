@@ -373,6 +373,9 @@ Three new Locker sections, all modelled and textured in **Blender** by `battle-i
   - **Candy Bar:** heals 20, quick to eat.
 - [x] **Decorations:** glowing jack-o'-lanterns at every named place and friendly ghosts drifting over the Hollow and the Manor.
 - [x] **Admin (owner):** force Halloween on or off (or follow the calendar), +500 Candy Corn, own every Halloween item. Also fixed "Unlock every outfit", which had stopped working when pass outfits were added.
+- [x] **Skin drop: Howl Punk and Hog Wild** (Fright Shop, 1,200 Candy Corn each, marked NEW; any kid can wear them). They are original designs inspired by a reference picture, not copies of it. The heads and tail are modelled in Blender (`costume_wolfhead`, `costume_wolftail`, `costume_pighead` in `blender/cosmetics.py`).
+  - **Howl Punk:** a punk werewolf with a spiky mane, glowing red eyes, a steel muzzle cage, a studded collar and belt, a glowing red X and arm stripes, claws, red sneakers and a bushy tail.
+  - **Hog Wild:** a grumpy pig butcher with a big pig head (little tusks), a cream shirt, an apron with ketchup splats, a sausage chain, black gloves and boots. It's kept kid-friendly: no blades or hooks.
 - More Halloween surprises are coming soon.
 
 ## Roadmap: not built yet
@@ -413,7 +416,7 @@ node tools/island-admin.mjs                 # 24 checks (run `npm run island:bui
 node tools/island-milestone6.mjs            # 12 checks (the last one needs the relay server)
 node tools/island-milestone7.mjs            # 19 checks
 node tools/island-milestone8.mjs            # 21 checks
-node tools/island-halloween.mjs             # 13 checks: Manor, Candy Corn, Fright Shop, Blood set, items, online (the last two need the relay server)
+node tools/island-halloween.mjs             # 14 checks: Manor, Candy Corn, Fright Shop, Blood set, items, online (the last two need the relay server)
 node tools/island-cosmetics.mjs             # 7 checks: pickaxes, back blings, wraps (the last needs the relay server)
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client

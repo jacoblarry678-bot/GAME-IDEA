@@ -127,7 +127,7 @@ export class Menus {
       case 'bots': save.data.settings.botCount = +d.id; save.write(); this.showMain(); break;
       case 'outfit': {
         if (this.outfitUnlocked(P.character, +d.id)) { P.outfits[P.character] = +d.id; save.write(); this.app.preview(); }
-        else if (CHARACTERS[P.character].outfits[+d.id]?.shop && halloweenOn()) { this.showFright('The Blood Slimer outfit is in the Fright Shop.'); break; }
+        else if (CHARACTERS[P.character].outfits[+d.id]?.shop && halloweenOn()) { this.showFright(`The ${CHARACTERS[P.character].outfits[+d.id].name} outfit is in the Fright Shop.`); break; }
         this.showLocker();
         break;
       }
@@ -232,6 +232,7 @@ export class Menus {
     if (!halloweenOn()) return '';
     const d = daysLeft();
     return `<div class="hw-card"><div class="hw-head"><b>🎃 Halloween</b><span class="hw-candy"><i class="candy-ico"></i>${candy().toLocaleString()}</span></div>
+      <small class="hw-drop">🆕 Skin drop: Howl Punk &amp; Hog Wild</small>
       <small>Smash pumpkins, grab Candy Corn and explore Grimstone Manor. ${d ? `${d} day${d > 1 ? 's' : ''} left` : 'Last day!'}</small>
       <button class="btn small hw-btn" data-act="fright">Fright Shop</button></div>`;
   }
@@ -246,14 +247,14 @@ export class Menus {
     const items = FRIGHT_SHOP.map((it) => {
       const own = ownsHalloween(it.kind, it.id);
       const kind = { outfit: 'Outfit', pickaxe: 'Pickaxe', backbling: 'Back bling', wrap: 'Wrap', glider: 'Glider' }[it.kind];
-      return `<div class="fs-item ${own ? 'own' : ''}" style="--fc:${it.color}"><div><small>${kind}</small><b>${escAttr(it.name)}</b><small>${escAttr(it.desc)}</small></div>
+      return `<div class="fs-item ${own ? 'own' : ''} ${it.drop ? 'drop' : ''}" style="--fc:${it.color}"><div><small>${kind}${it.drop ? ' <em class="fs-new">NEW</em>' : ''}</small><b>${escAttr(it.name)}</b><small>${escAttr(it.desc)}</small></div>
         ${own ? '<span class="fs-own">Owned</span>' : `<button class="btn small" data-act="fright-buy" data-kind="${it.kind}" data-id="${it.id}"><i class="candy-ico"></i> ${it.price.toLocaleString()}</button>`}</div>`;
     }).join('');
     this.screen(`
       <div class="sheet panel wide fright">
         <h2>🎃 Fright Shop <small><i class="candy-ico"></i> ${candy().toLocaleString()} Candy Corn</small></h2>
         ${msg ? `<p class="adm-msg">${escAttr(msg)}</p>` : ''}
-        <p class="note">Earn Candy Corn in matches while Halloween runs: pick it up, smash pumpkins (+10), get eliminations (+5) and place well. <b>Candy disappears when the event ends on 2 November</b>, but everything you buy is yours for good. The Blood Slimer works on any kid.</p>
+        <p class="note">Earn Candy Corn in matches while Halloween runs: pick it up, smash pumpkins (+10), get eliminations (+5) and place well. <b>Candy disappears when the event ends on 2 November</b>, but everything you buy is yours for good. Outfits work on any kid.</p>
         <div class="fs-items">${items}</div>
         <p class="note">More Halloween surprises coming soon…</p>
         <div class="row"><button class="btn" data-act="locker">Locker</button><button class="btn play small" data-act="main">Done</button></div>

@@ -292,6 +292,79 @@ def bling_jackolantern():
         part(r, 'cube', '#ff8a1a', loc=(x, 0.258, 0.012 if x else -0.014), scale=(0.012, 0.008, 0.012))
 
 
+# ------------------------------------------------------------------ costume heads (skin drop)
+# Origin = the centre of the kid's head; the face looks along -Y (the game's +Z), up is +Z.
+
+def costume_wolfhead():
+    # Howl Punk: a shaggy werewolf head with a spiky mane, glowing red eyes and a steel muzzle cage
+    r = root('costume_wolfhead')
+    fur, dark = '#3a3236', '#1d1a1c'
+    part(r, 'sphere', fur, loc=(0, 0, 0), scale=(0.27, 0.27, 0.28), segments=18, ring_count=12, smooth=True)
+    # snout and jaw
+    part(r, 'sphere', fur, loc=(0, -0.27, -0.06), scale=(0.12, 0.2, 0.1), segments=14, ring_count=10, smooth=True)
+    part(r, 'sphere', '#2a2426', loc=(0, -0.25, -0.13), scale=(0.1, 0.16, 0.05), segments=12, ring_count=8, smooth=True)
+    part(r, 'sphere', '#111111', loc=(0, -0.45, -0.03), scale=(0.045, 0.035, 0.035), segments=10, ring_count=8)
+    for s_ in (-1, 1):
+        part(r, 'cone', '#f4efe6', loc=(0.05 * s_, -0.38, -0.12), rot=(PI, 0, 0), radius1=0.014, radius2=0, depth=0.05, vertices=6)
+    # glowing eyes under heavy brows
+    glow = mat('#ff2a2a', emit=3.0)
+    for s_ in (-1, 1):
+        part(r, 'sphere', glow, loc=(0.1 * s_, -0.22, 0.07), scale=(0.035, 0.02, 0.025), segments=10, ring_count=8)
+        b = part(r, 'cube', dark, loc=(0.1 * s_, -0.22, 0.11), scale=(0.06, 0.02, 0.015))
+        b.rotation_euler = (0, 0.35 * s_, 0)
+    # pointed ears
+    for s_ in (-1, 1):
+        e = part(r, 'cone', fur, loc=(0.15 * s_, 0.02, 0.27), radius1=0.08, radius2=0, depth=0.2, vertices=4)
+        e.rotation_euler = (-0.2, 0.35 * s_, 0)
+        part(r, 'cone', '#8a4a50', loc=(0.15 * s_, -0.02, 0.26), rot=(-0.2, 0.35 * s_, 0), radius1=0.045, radius2=0, depth=0.12, vertices=4)
+    # spiky mane over the top and back
+    for i in range(14):
+        a = i / 14 * PI * 1.6 - PI * 0.3
+        x, z = math.sin(a * 0.6) * 0.18, 0.12 + math.cos(a) * 0.1
+        sp = part(r, 'cone', dark, loc=(x, 0.12 + (i % 3) * 0.04, z + 0.08), radius1=0.06, radius2=0, depth=0.24, vertices=5)
+        sp.rotation_euler = (-1.2 + (i % 4) * 0.15, x * 2.5, 0)
+    # the muzzle cage: steel hoops round the snout and bars along it
+    steel = mat('#a9b0bb', metal=0.6, rough=0.35)
+    for y in (-0.22, -0.32, -0.42):
+        part(r, 'torus', steel, loc=(0, y, -0.06), rot=(PI / 2, 0, 0), major_radius=0.13, minor_radius=0.01, major_segments=20, minor_segments=4)
+    for a in (0, 0.7, -0.7, PI / 2, -PI / 2):
+        x, z = math.sin(a) * 0.13, math.cos(a) * 0.12 - 0.06
+        part(r, 'cyl', steel, loc=(x, -0.32, z), rot=(PI / 2, 0, 0), radius=0.008, depth=0.22, vertices=6)
+    part(r, 'cube', '#2a2426', loc=(0, -0.05, 0.02), scale=(0.29, 0.01, 0.012))  # the strap round the head
+
+
+def costume_wolftail():
+    # a bushy tail: origin at the base, it swoops back (+Y) and down
+    r = root('costume_wolftail')
+    for i in range(6):
+        t = i / 5
+        part(r, 'sphere', '#2a2426' if i < 5 else '#1d1a1c', loc=(0, 0.06 + t * 0.42, -0.05 - t * t * 0.35), scale=(0.07 + 0.03 * math.sin(t * PI), 0.1, 0.07 + 0.03 * math.sin(t * PI)), segments=10, ring_count=8, smooth=True)
+
+
+def costume_pighead():
+    # Hog Wild: a big friendly-grumpy pig mask with a round snout, floppy ears and little tusks
+    r = root('costume_pighead')
+    pink, deep = '#f0a3ad', '#d97a88'
+    part(r, 'sphere', pink, loc=(0, 0, 0), scale=(0.28, 0.27, 0.29), segments=20, ring_count=14, smooth=True)
+    part(r, 'sphere', pink, loc=(0, -0.05, -0.08), scale=(0.24, 0.22, 0.18), segments=16, ring_count=10, smooth=True)  # jowls
+    part(r, 'cyl', deep, loc=(0, -0.29, -0.04), rot=(PI / 2, 0, 0), radius=0.11, depth=0.12, vertices=20, bevel=0.02)
+    for s_ in (-1, 1):
+        part(r, 'sphere', '#5a2a34', loc=(0.04 * s_, -0.355, -0.04), scale=(0.022, 0.01, 0.034), segments=10, ring_count=6)
+        part(r, 'cone', '#f4efe6', loc=(0.09 * s_, -0.27, -0.12), radius1=0.018, radius2=0, depth=0.07, vertices=6)  # tusks
+        # eyes and grumpy brows
+        part(r, 'sphere', '#1d1d24', loc=(0.11 * s_, -0.23, 0.08), scale=(0.03, 0.015, 0.032), segments=10, ring_count=8)
+        part(r, 'sphere', '#ffffff', loc=(0.115 * s_, -0.245, 0.09), scale=(0.008, 0.004, 0.008), segments=6, ring_count=4)
+        b = part(r, 'cube', '#7a3a44', loc=(0.11 * s_, -0.23, 0.13), scale=(0.055, 0.015, 0.012))
+        b.rotation_euler = (0, -0.3 * s_, 0)
+        # floppy ears
+        e = part(r, 'cone', pink, loc=(0.2 * s_, 0.0, 0.25), radius1=0.09, radius2=0.01, depth=0.2, vertices=8)
+        e.rotation_euler = (-0.5, 0.6 * s_, 0)
+        e.scale = (1, 0.35, 1)
+        part(r, 'cone', deep, loc=(0.2 * s_, -0.03, 0.24), rot=(-0.5, 0.6 * s_, 0), radius1=0.055, radius2=0.005, depth=0.14, vertices=8).scale = (1, 0.3, 1)
+    # a grumpy mouth line
+    part(r, 'torus', '#7a3a44', loc=(0, -0.24, -0.16), rot=(PI / 2 - 0.3, 0, 0), major_radius=0.07, minor_radius=0.008, major_segments=12, minor_segments=4)
+
+
 # ------------------------------------------------------------------ wraps (baked textures)
 def wrap_material(name, build):
     """A material whose Emission is a procedural pattern, with an image node to bake into."""
@@ -414,7 +487,8 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     for fn in (pickaxe_pickle, pickaxe_wrench, pickaxe_lollipop, pickaxe_dino, pickaxe_crankbolt, pickaxe_star,
                bling_dino, bling_picklejar, bling_minibolt, bling_chest, bling_rocket, bling_shield,
-               pickaxe_bloodsmasher, bling_bloodshield, bling_jackolantern):
+               pickaxe_bloodsmasher, bling_bloodshield, bling_jackolantern,
+               costume_wolfhead, costume_wolftail, costume_pighead):
         fn()
     os.makedirs(os.path.dirname(OUT_GLB), exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=OUT_GLB, export_format='GLB', export_apply=True, export_yup=True, export_texcoords=False, export_normals=True, export_materials='EXPORT', export_cameras=False, export_lights=False)

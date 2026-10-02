@@ -132,7 +132,7 @@ await ev(() => __bi.toLobby());
 // ---- the Fright Shop
 await p.click('[data-act=fright]');
 await p.waitForTimeout(300);
-const shop0 = await ev(() => ({ items: document.querySelectorAll('.fs-item').length, names: [...document.querySelectorAll('.fs-item b')].map((e) => e.textContent).join(', '), soon: /coming soon/.test(document.querySelector('.fright').textContent) }));
+const shop0 = await ev(() => ({ items: document.querySelectorAll('.fs-item').length, news: [...document.querySelectorAll('.fs-item.drop b')].map((e) => e.textContent).join(', '), card: null, names: [...document.querySelectorAll('.fs-item b')].map((e) => e.textContent).join(', '), soon: /coming soon/.test(document.querySelector('.fright').textContent) }));
 await p.click('[data-act=fright-buy][data-kind=outfit][data-id=slimer]');
 const poor = await ev(() => ({ msg: document.querySelector('.adm-msg')?.textContent, owns: __bi.halloween.ownsHalloween('outfit', 'slimer') }));
 await ev(() => { __bi.halloween.adminCandy(4000); __bi.menus.showFright(); });
@@ -143,7 +143,7 @@ await p.click('[data-act=fright-buy][data-kind=backbling][data-id=bloodshield]')
 await p.click('[data-act=fright-buy][data-kind=wrap][data-id=blood]');
 const shop1 = await ev(() => ({ owned: document.querySelectorAll('.fs-item.own').length, candy: __bi.halloween.candy(), msg: document.querySelector('.adm-msg')?.textContent }));
 await p.screenshot({ path: `${shots}/hw-02-shop.png` });
-check('the Fright Shop sells the Blood set and more (with a "coming soon" note); too little candy is refused; buying spends it', shop0.items === 6 && /Blood Slimer/.test(shop0.names) && /Blood Smasher/.test(shop0.names) && /Blood Shield/.test(shop0.names) && /Blood Wrap/.test(shop0.names) && shop0.soon && /Not enough Candy Corn/.test(poor.msg || '') && !poor.owns && shop1.owned === 4 && shop1.candy === c0 - 3300, JSON.stringify({ shop0, poor, c0, shop1 }));
+check('the Fright Shop sells the Blood set and more (with a "coming soon" note); too little candy is refused; buying spends it', shop0.items === 8 && /Blood Slimer/.test(shop0.names) && /Blood Smasher/.test(shop0.names) && /Blood Shield/.test(shop0.names) && /Blood Wrap/.test(shop0.names) && shop0.soon && /Not enough Candy Corn/.test(poor.msg || '') && !poor.owns && shop1.owned === 4 && shop1.candy === c0 - 3300, JSON.stringify({ shop0, poor, c0, shop1 }));
 
 // ---- the Locker: the Blood Slimer works on every kid; the Blood set equips
 await p.click('[data-act=locker]');
@@ -172,6 +172,28 @@ const look = await ev(() => {
 });
 check('in a match you are the tall Blood Slimer (kid head hidden) with the Blood Shield; bots never wear Fright Shop items', look.tall > 1.1 && look.hidden >= 5 && look.bling === 'backbling_bloodshield' && look.shopOnBots === 0, JSON.stringify(look));
 await ev(() => __bi.toLobby());
+
+// ---- the skin drop: Howl Punk and Hog Wild, marked NEW, wearable by every kid
+const drop0 = await ev(() => { __bi.menus.showMain(); return document.querySelector('.hw-drop')?.textContent; });
+await ev(() => { __bi.halloween.adminCandy(2400); __bi.menus.showFright(); });
+const c1 = await ev(() => __bi.halloween.candy());
+await p.click('[data-act=fright-buy][data-kind=outfit][data-id=wolf]');
+await p.click('[data-act=fright-buy][data-kind=outfit][data-id=pig]');
+const drop1 = await ev(() => {
+  const H = __bi.halloween;
+  const kids = ['colton', 'emerson', 'waylon'];
+  return { spent: H.candy(), wolf: H.ownsHalloween('outfit', 'wolf'), pig: H.ownsHalloween('outfit', 'pig'), all: kids.every((c) => __bi.menus.outfitUnlocked(c, 5) && __bi.menus.outfitUnlocked(c, 6)) };
+});
+await ev(() => { const P = __bi.save.data.profile; P.character = 'waylon'; P.outfits.waylon = 5; __bi.save.write(); __bi.menus.showMain(); __bi.play(); });
+await p.waitForTimeout(800);
+const wolfLook = await ev(() => { const M = __bi.game.player.model; return { head: M.costumeHead?.children[0]?.name, kidHead: M.head.children.filter((c) => c.visible).length, tail: M.hips.children.some((c) => c.name === 'costume_wolftail') }; });
+await ev(() => { __bi.toLobby(); const P = __bi.save.data.profile; P.character = 'emerson'; P.outfits.emerson = 6; __bi.save.write(); __bi.play(); });
+await p.waitForTimeout(800);
+const pigLook = await ev(() => { const M = __bi.game.player.model; return { head: M.costumeHead?.children[0]?.name, name: __bi.save.data.profile.outfits.emerson }; });
+await p.screenshot({ path: `${shots}/hw-04-pig.png` });
+await ev(() => __bi.toLobby());
+await ev(() => { const P = __bi.save.data.profile; P.character = 'colton'; __bi.save.write(); });
+check('skin drop: Howl Punk and Hog Wild are NEW in the Fright Shop (1,200 each), work on every kid, and wear their Blender heads (and the wolf tail) in a match', /Howl Punk/.test(shop0.news) && /Hog Wild/.test(shop0.news) && /Skin drop/.test(drop0 || '') && drop1.spent === c1 - 2400 && drop1.wolf && drop1.pig && drop1.all && wolfLook.head === 'costume_wolfhead' && wolfLook.kidHead === 1 && wolfLook.tail && pigLook.head === 'costume_pighead', JSON.stringify({ news: shop0.news, drop0, c1, drop1, wolfLook, pigLook }));
 
 // ---- candy is temporary: gone after the event (or next year); purchases stay
 const exp = await ev(() => {
