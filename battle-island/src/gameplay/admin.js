@@ -17,6 +17,7 @@ import { pass, passTier, addPassXP, TIER_XP, PASS } from '../core/season.js';
 import { setAllBadges } from '../core/badges.js';
 import { EVENTS } from '../core/events.js';
 import { LOCKER } from '../core/cosmetics.js';
+import { setHalloweenForce, adminCandy, ownAllHalloween } from '../core/halloween.js';
 
 export const PLACES = [...POIS.map((p) => ({ id: p.id, name: p.name, x: p.x, z: p.z })), { id: 'vault', name: VAULT.name, x: VAULT.x, z: VAULT.z + 12 }];
 
@@ -159,7 +160,7 @@ export function progressOp(op, arg, mode) {
       return `Now level ${levelInfo(pr.xp).level}`;
     }
     case 'outfits': {
-      const need = Math.max(...Object.values(CHARACTERS).flatMap((c) => c.outfits.map((o) => o.level)));
+      const need = Math.max(...Object.values(CHARACTERS).flatMap((c) => c.outfits.map((o) => o.level || 0))); // pass/shop outfits have no level
       while (levelInfo(pr.xp).level < need) pr.xp += xpForLevel(levelInfo(pr.xp).level);
       save.write();
       return `Every outfit unlocked (level ${levelInfo(pr.xp).level})`;
@@ -176,6 +177,11 @@ export function progressOp(op, arg, mode) {
       save.write();
       return P.eventPick ? `Island event pinned: ${EVENTS[arg].name}` : "Island event back to today's rotation";
     }
+    case 'hw':
+      if (arg === 'candy') { adminCandy(500); return '+500 Candy Corn'; }
+      if (arg === 'all') { ownAllHalloween(); return 'Every Fright Shop item unlocked'; }
+      setHalloweenForce(arg);
+      return arg === 'on' ? 'Halloween forced on' : arg === 'off' ? 'Halloween forced off' : 'Halloween follows the calendar (1 Oct – 2 Nov)';
     case 'badges':
       setAllBadges(+arg === 1);
       return +arg === 1 ? 'Every Benton Badge found (and their gliders unlocked)' : 'Found badges forgotten: hunt them again';

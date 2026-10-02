@@ -192,6 +192,7 @@ export class Loot {
     const rng = Math.random;
     let items = ch.supply ? rollSupply(rng) : rollChest(rng);
     if (ch.legendary && items[0].kind === 'weapon') items[0].rarity = 4;
+    items = this.game.halloweenFx ? this.game.halloweenFx.chestBonus(items) : items;
     if (this.game.eventFx?.golden && items[0].kind === 'weapon') items[0].rarity = Math.min(4, items[0].rarity + 1);
     const base = ch.pos.clone().add(new THREE.Vector3(0, 0.9, 0));
     items.forEach((it, i) => {

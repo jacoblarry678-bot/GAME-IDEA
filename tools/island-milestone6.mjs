@@ -48,7 +48,7 @@ check('3 tiers of XP unlock the Pickle Parachute glider, the Big Wave emote and 
 // ---- locker: equip / refuse locked
 await p.click('[data-act=locker]');
 await p.waitForTimeout(200);
-const lk = await ev(() => ({ emotes: document.querySelectorAll('.cos[data-kind=emote]').length, gliders: document.querySelectorAll('.cos[data-kind=glider]').length, lockedRobo: document.querySelector('.cos[data-kind=emote][data-id=robo]').classList.contains('locked'), passOutfit: [...document.querySelectorAll('.outfit')].pop().textContent }));
+const lk = await ev(() => ({ emotes: document.querySelectorAll('.cos[data-kind=emote]').length, gliders: document.querySelectorAll('.cos[data-kind=glider]').length, lockedRobo: document.querySelector('.cos[data-kind=emote][data-id=robo]').classList.contains('locked'), passOutfit: [...document.querySelectorAll('.outfit')].find((o) => /Crankbolt Rider|Vault Runner|Bolt Buddy/.test(o.textContent)).textContent }));
 await p.click('.cos[data-kind=emote][data-id=wave]');
 await p.waitForTimeout(150);
 await p.click('.cos[data-kind=glider][data-id=pickle]');
@@ -59,7 +59,7 @@ const refused = await ev(() => __bi.season.equip('emote', 'robo'));
 await p.click('.cos[data-kind=emote][data-id=robo]'); // a locked one opens the pass
 await p.waitForTimeout(150);
 const toPass = await ev(() => __bi.menus.current === 'pass');
-check('Locker lists 6 emotes and 9 gliders (7 pass + 2 badge); equipping owned ones works, locked ones are refused and link to the pass; pass outfits show their tier', lk.emotes === 6 && lk.gliders === 9 && lk.lockedRobo && /Pass tier 10/.test(lk.passOutfit) && eq.emote === 'wave' && eq.glider === 'pickle' && !refused && toPass, JSON.stringify({ lk, eq, refused, toPass }));
+check('Locker lists 6 emotes and 10 gliders (7 pass + 2 badge + 1 Fright Shop); equipping owned ones works, locked ones are refused and link to the pass; pass outfits show their tier', lk.emotes === 6 && lk.gliders === 10 && lk.lockedRobo && /Pass tier 10/.test(lk.passOutfit) && eq.emote === 'wave' && eq.glider === 'pickle' && !refused && toPass, JSON.stringify({ lk, eq, refused, toPass }));
 
 // ---- pass outfits
 const outfit = await ev(() => {

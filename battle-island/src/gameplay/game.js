@@ -22,6 +22,8 @@ import { dropBucks } from './economy.js';
 import { Quests, QUEST_XP } from './quests.js';
 import { BadgeHunt } from './badges.js';
 import { IslandEvent } from './events.js';
+import { HalloweenFx } from './halloween.js';
+import { matchCandy, addCandy } from '../core/halloween.js';
 import { EVENTS } from '../core/events.js';
 import { PICKAXES, BACKBLINGS, WRAPS } from '../core/cosmetics.js';
 import { BADGE_XP } from '../core/badges.js';
@@ -206,11 +208,14 @@ export class Game {
     this.scene.add(this.world.root);
     this.eventFx = new IslandEvent(this, opts.event); // today's island event (null: classic)
     this.event = this.eventFx.id;
+    this.halloween = !!opts.halloween; // Halloween event: candy pumpkins, decorations, Halloween loot
+    this.halloweenFx = new HalloweenFx(this, this.halloween);
     this.combat = new Combat(this);
     this.loot = new Loot(this);
     if (this.role !== 'client') {
       this.loot.spawnInitial(rng);
       this.eventFx.spawnLoot();
+      this.halloweenFx.spawnLoot(mulberry32(this.seed + 31)); // its own rng: the match rng stays as it was
     }
     this.building = new Building(this);
     this.vehicles = new Vehicles(this);
@@ -242,7 +247,7 @@ export class Game {
       } else {
         const bi = id - humans.length;
         // bots wear a random pickaxe, back bling and wrap (same roll on every machine)
-        const pickCos = (list) => { const ids = Object.keys(list); return ids[Math.floor(rr() * ids.length)]; };
+        const pickCos = (list) => { const ids = Object.keys(list).filter((id) => !list[id].unlock?.shop); return ids[Math.floor(rr() * ids.length)]; }; // Fright Shop items stay exclusive
         const bcos = { pickaxe: pickCos(PICKAXES), backbling: pickCos(BACKBLINGS), wrap: pickCos(WRAPS) };
         a = new Actor(this, { id, team: Math.floor(id / k), name: `${names[bi % names.length]} [BOT]`, isBot: true, charId: CHARACTER_IDS[bi % 3], outfit: Math.floor(rr() * 3), skin: Math.floor(rr() * 5), cos: bcos });
         if (!client) {
@@ -345,6 +350,7 @@ export class Game {
     this.quests.dispose();
     this.badges.dispose();
     this.eventFx.dispose();
+    this.halloweenFx.dispose();
     this.storm.dispose();
     this.effects.clear();
     this.scene.remove(this.world.root);
@@ -628,6 +634,7 @@ export class Game {
     const questXP = questN * QUEST_XP; // story quests handed in this match
     const badgeN = this.badges.foundNow.length; // Benton Badges found on this device
     const badgeXP = badgeN * BADGE_XP;
+    const candyN = this.halloween ? addCandy(matchCandy(st.ms, { kills, won, place })) : 0; // temporary Halloween currency
     pr.xp += xp + superXP + ch.xp + wk.xp + ach.xp + questXP + badgeXP;
     // reaching a level can itself unlock an achievement (and its XP)
     refreshLevel();
@@ -643,7 +650,7 @@ export class Game {
     const passUp = addPassXP(total); // the Benton Pass fills with every XP point earned
     this.result = {
       won, place, total: totalTeams, team: this.teamSize > 1, kills, damage: st.damage, time: survive, xp: total, superXP, chalXP: ch.xp, challenges: ch.rows,
-      questXP, quests: questN, badgeXP, badges: badgeN, weeklyXP: wk.xp, weekly: wk.rows.filter((w) => w.justDone), achXP: ach.xp + ach2.xp, achievements: [...ach.got, ...ach2.got], pass: passUp,
+      questXP, quests: questN, badgeXP, badges: badgeN, candy: candyN, weeklyXP: wk.xp, weekly: wk.rows.filter((w) => w.justDone), achXP: ach.xp + ach2.xp, achievements: [...ach.got, ...ach2.got], pass: passUp,
       levelUp: after > before ? after : 0, killer: st.killer,
     };
     if (this.ranked) this.result.ranked = applyRanked(this.mode, { won, place, total: totalTeams, kills }, this.lobbyRating);
@@ -779,6 +786,7 @@ export class Game {
     this.boss.present(dt, t);
     this.quests.present(dt, t);
     this.badges.update(dt, t);
+    this.halloweenFx.update(dt, t);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const tw = this.tweens[i];
       tw.t += dt;

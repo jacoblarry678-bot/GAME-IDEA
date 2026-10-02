@@ -340,6 +340,41 @@ Three new Locker sections, all modelled and textured in **Blender** by `battle-i
 - Bots wear a random mix. Online, everyone sees each other's picks. The owner's "Unlock every cosmetic" covers these too.
 - To change the models, edit the script and re-run it, then rebuild. Use either `blender --background --python battle-island/blender/cosmetics.py` or, with `pip install bpy`, `python battle-island/blender/cosmetics.py`.
 
+## Halloween update (1 October – 2 November)
+
+- [x] **Haunt Hollow expansion: Grimstone Manor.** The coast now bulges out southwest of Haunt Hollow onto new land, joined to the Hollow by a road. The new named place (on the map, the minimap and for bot drops) has:
+  - a three-story haunted manor with a stone tower, a legendary chest on the roof deck and doors front and back;
+  - an iron fence with pumpkin-topped posts and two gates;
+  - a bubbling green cauldron, lantern posts and dead trees;
+  - a pumpkin patch outside the gate.
+
+  The new land is there all year; the decorations below are Halloween-only.
+- [x] **Candy Corn (temporary currency).** It's earned only while Halloween runs:
+  - Candy Corn pickups on the floor and in chests.
+  - Smashing candy pumpkins: +10 each. There are 24 in the Manor's patch and more around the Hollow; the Spooky Night event's pumpkins count too.
+  - Eliminations: +5 each. Winning: +25; finishing top 10: +10.
+
+  The HUD shows the match's candy, and it's banked after the match. **Candy disappears when the event ends**, but everything bought with it is kept for good. Online, the host tracks every player's candy, and each player banks their own.
+- [x] **The Fright Shop** (lobby → Halloween card). The Blood set comes from a fan drawing:
+
+  | Item | Type | Price |
+  |---|---|---|
+  | **Blood Slimer** (works on any kid): a tall, shaggy shadow with a round grey head, slit eyes, a wide grin, claws and red slime drips | Outfit | 1,500 |
+  | **Blood Smasher** | Pickaxe | 700 |
+  | **Blood Shield** | Back bling | 600 |
+  | **Blood Wrap** | Wrap | 500 |
+  | **Jack-o'-Lantern** | Back bling | 400 |
+  | **Bat Swarm** | Glider | 400 |
+
+  The new pickaxe, back blings and wrap are modelled in Blender (`blender/cosmetics.py`). Bots never wear Fright Shop items.
+- [x] **Halloween loot:**
+  - **Pumpkin Launcher:** lobs exploding jack-o'-lanterns, 2 shots, uses rockets.
+  - **Ghost Potion:** 10 s see-through, 25% faster, and bots can't spot you from more than 10 m unless you hit them.
+  - **Candy Bar:** heals 20, quick to eat.
+- [x] **Decorations:** glowing jack-o'-lanterns at every named place and friendly ghosts drifting over the Hollow and the Manor.
+- [x] **Admin (owner):** force Halloween on or off (or follow the calendar), +500 Candy Corn, own every Halloween item. Also fixed "Unlock every outfit", which had stopped working when pass outfits were added.
+- More Halloween surprises are coming soon.
+
 ## Roadmap: not built yet
 
 - [ ] Ranked: seasons with resets and rewards, and a shared online leaderboard
@@ -378,6 +413,7 @@ node tools/island-admin.mjs                 # 24 checks (run `npm run island:bui
 node tools/island-milestone6.mjs            # 12 checks (the last one needs the relay server)
 node tools/island-milestone7.mjs            # 19 checks
 node tools/island-milestone8.mjs            # 21 checks
+node tools/island-halloween.mjs             # 13 checks: Manor, Candy Corn, Fright Shop, Blood set, items, online (the last two need the relay server)
 node tools/island-cosmetics.mjs             # 7 checks: pickaxes, back blings, wraps (the last needs the relay server)
 npm run island:server &                     # relay on :3100 (the dev server proxies to it)
 node tools/island-online.mjs                # 22 checks: two browsers, host + client
@@ -445,7 +481,7 @@ node tools/island-mobile.mjs                # 18 checks: emulated phone with rea
   - Badges: placement, finding one (saved, toast, ghost), the Treasure Map unlock at 6, result XP, the book and the locker.
   - Events: the lobby card, its toggle and ranked staying classic; each of the five events in a real match; a classic match afterwards.
 - **`island-online-m8.mjs`:** the host's Spooky Night on a client whose events are off, a pumpkin smashed on the host, a client attaching a scope through the host, a client-only badge find, and the client's badge XP.
-- Automated browsers start with island events off so the older suites stay predictable; the Milestone 8 suites switch them on.
+- Automated browsers start with island events and Halloween off so the older suites stay predictable; the Milestone 8 and Halloween suites switch them on.
 - **`island-online-m7.mjs`:** matching NPC spots on host and client; a client's quest from start to hand-in, with bucks and reward; ramp and cone edits through the host; a bot's drive seen from the client; and the client's quest XP.
 - **`island-admin.mjs`:**
   - Who sees the panel: the owner does; anyone else gets no button and the screen won't open.
@@ -493,6 +529,7 @@ Known limits: the tests use software rendering, so they check behaviour, not fra
 | `src/gameplay/admin.js`, `src/core/owner.js` | Owner check and admin tools |
 | `blender/cosmetics.py`, `src/assets/` | Blender source for the pickaxes, back blings and wraps, and its exported GLB and PNGs |
 | `src/core/cosmetics.js`, `src/entities/cosmeticModels.js` | Cosmetic list and unlocks; loading the GLB and applying wraps |
+| `src/gameplay/halloween.js`, `src/core/halloween.js` | Halloween: candy pumpkins, decorations and loot; Candy Corn, the event window and the Fright Shop |
 | `src/gameplay/badges.js`, `src/core/badges.js` | Benton Badges: placement, collecting, saved collection and rewards |
 | `src/gameplay/events.js`, `src/core/events.js` | Island events: the daily rotation, pumpkins, pads, supply frenzy, low gravity |
 | `src/gameplay/quests.js` | Story NPCs, quests, tackle boxes, tracker and map icons |

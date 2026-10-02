@@ -141,7 +141,10 @@ export class Combat {
   _spawnProjectile(actor, origin, dir, w, rar) {
     const P = w.projectile;
     let mesh = null;
-    if (P.radius) {
+    if (P.pumpkin) {
+      mesh = new THREE.Mesh(this.pumpkinGeo || (this.pumpkinGeo = new THREE.SphereGeometry(0.32, 10, 8)), this.pumpkinMat || (this.pumpkinMat = new THREE.MeshLambertMaterial({ color: '#ff8a1a', emissive: '#7a3000' })));
+      this.game.scene.add(mesh);
+    } else if (P.radius) {
       mesh = new THREE.Mesh(this.rocketGeo, this.rocketMat);
       this.game.scene.add(mesh);
     }

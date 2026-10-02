@@ -102,7 +102,7 @@ check('the client hands in: +200 Benton Bucks, "Complete!", a ✓ over Captain K
 await H.evaluate(() => {
   const g = __bi.game, c = g.actors[1], B = g.building;
   let f = null;
-  for (let x = -100; x <= 100 && !f; x += 3) for (let z = -100; z <= 100 && !f; z += 3) { const h = g.world.height(x, z); if (h > 2 && !g.world.physics.query(x - 10, z - 10, x + 10, z + 10).length) f = { x, z }; }
+  for (let x = -100; x <= 100 && !f; x += 3) for (let z = -100; z <= 100 && !f; z += 3) { const h = g.world.height(x, z); if (h > 2 && !g.world.physics.query(x - 10, z - 10, x + 10, z + 10).length && Math.abs(g.world.height(x + 6, z) - h) + Math.abs(g.world.height(x, z + 6) - h) < 0.6) f = { x, z }; } // open and flat
   tp(c, f.x, f.z);
   c.mats.wood = 200;
   window.RK = B.place(c, B.spot(c, 'ramp', 0, 0), 'wood').key;

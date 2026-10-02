@@ -16,6 +16,7 @@ import { sfx } from '../core/audio.js';
 import { BADGES, BADGE_REWARDS, BADGE_XP, hasBadge, badgeCount } from '../core/badges.js';
 import { EVENTS, EVENT_IDS, todaysEvent, matchEvent } from '../core/events.js';
 import { LOCKER, unlockText } from '../core/cosmetics.js';
+import { FRIGHT_SHOP, halloweenOn, candy, daysLeft, buyHalloween, ownsHalloween, setHalloweenForce, adminCandy, ownAllHalloween } from '../core/halloween.js';
 
 /** The solo edition (e.g. the itch.io upload) has no online server, so it doesn't offer online play. */
 const SOLO_EDITION = typeof window !== 'undefined' && window.BI_EDITION === 'solo';
@@ -48,6 +49,7 @@ export const ROADMAP = {
     'Milestone 7 — Quests, Edits & Road Trips: story NPCs (Grandpa Gus, Captain Kay, Ranger Rae) with in-match quests and rewards; ramp and cone editing; bots that drive to the safe zone',
     'Milestone 8 — Gear, Secrets & Events: weapon attachments (red dot, 4x scope, grip, drum mag, choke); 12 hidden Benton Badges with a collection book and gliders; a daily island event (Spooky Night, Low Gravity, Supply Frenzy, Golden Loot, Playground Party)',
     'Locker: 6 pickaxes, 6 back blings and 6 gun wraps, modelled in Blender, unlocked by level, achievements and Benton Badges',
+    "Halloween update: Haunt Hollow expands with Grimstone Manor; Candy Corn (a temporary currency) buys the Blood set and more in the Fright Shop; Pumpkin Launcher, Ghost Potions and Candy Bars; jack-o'-lanterns and ghosts",
   ],
   next: [
     'Pre-match warm-up island; match replays',
@@ -125,11 +127,15 @@ export class Menus {
       case 'bots': save.data.settings.botCount = +d.id; save.write(); this.showMain(); break;
       case 'outfit': {
         if (this.outfitUnlocked(P.character, +d.id)) { P.outfits[P.character] = +d.id; save.write(); this.app.preview(); }
+        else if (CHARACTERS[P.character].outfits[+d.id]?.shop && halloweenOn()) { this.showFright('The Blood Slimer outfit is in the Fright Shop.'); break; }
         this.showLocker();
         break;
       }
       case 'equip': if (season.equip(d.kind, d.id)) { this.app.preview(d.kind === 'pickaxe' ? 'pickaxe' : d.kind === 'wrap' ? 'ar' : null); if (d.kind === 'emote') this.app.previewEmote(); } this.showLocker(); break;
       case 'cos-locked': {
+        const shopItem = FRIGHT_SHOP.find((x) => x.kind === d.kind && x.id === d.id);
+        if (shopItem && halloweenOn()) { this.showFright(`${shopItem.name} is in the Fright Shop for ${shopItem.price.toLocaleString()} Candy Corn.`); break; }
+        if (shopItem) { this.showLocker(`${shopItem.name}: the Fright Shop is closed until next Halloween.`); break; }
         const def = LOCKER[d.kind]?.[d.id];
         if (def) this.showLocker(`${def.name}: ${unlockText(def.unlock, (a) => season.ACHIEVEMENTS.find((x) => x.id === a)?.name || a)} to unlock it.`);
         break;
@@ -137,6 +143,13 @@ export class Menus {
       case 'pass': this.showPass(); break;
       case 'achievements': this.showAchievements(); break;
       case 'badges': this.showBadges(); break;
+      case 'fright': this.showFright(); break;
+      case 'fright-buy': {
+        const r = buyHalloween(d.kind, d.id);
+        if (r.ok) sfx.play('buy');
+        this.showFright(r.text);
+        break;
+      }
       case 'event-toggle': P.event = !matchEvent(P, false); save.write(); this.showMain(); break;
       case 'skin': P.skin = +d.id; save.write(); this.app.preview(); this.showLocker(); break;
       case 'emote': this.app.previewEmote(); break;
@@ -214,6 +227,39 @@ export class Menus {
     return `<div class="chal-card ${rows ? 'chal-result' : ''}"><h4>Daily challenges <small>${rows ? '' : `+${CHALLENGE_XP.toLocaleString()} XP each · new in ${refillIn()}`}</small></h4>${list.map(row).join('')}</div>`;
   }
 
+  /** The Halloween event card: Candy Corn balance and the Fright Shop. */
+  _halloweenCard() {
+    if (!halloweenOn()) return '';
+    const d = daysLeft();
+    return `<div class="hw-card"><div class="hw-head"><b>🎃 Halloween</b><span class="hw-candy"><i class="candy-ico"></i>${candy().toLocaleString()}</span></div>
+      <small>Smash pumpkins, grab Candy Corn and explore Grimstone Manor. ${d ? `${d} day${d > 1 ? 's' : ''} left` : 'Last day!'}</small>
+      <button class="btn small hw-btn" data-act="fright">Fright Shop</button></div>`;
+  }
+
+  /** The Fright Shop: Halloween items bought with Candy Corn. */
+  showFright(msg = '') {
+    this.current = 'fright';
+    if (!halloweenOn()) {
+      this.showMain();
+      return;
+    }
+    const items = FRIGHT_SHOP.map((it) => {
+      const own = ownsHalloween(it.kind, it.id);
+      const kind = { outfit: 'Outfit', pickaxe: 'Pickaxe', backbling: 'Back bling', wrap: 'Wrap', glider: 'Glider' }[it.kind];
+      return `<div class="fs-item ${own ? 'own' : ''}" style="--fc:${it.color}"><div><small>${kind}</small><b>${escAttr(it.name)}</b><small>${escAttr(it.desc)}</small></div>
+        ${own ? '<span class="fs-own">Owned</span>' : `<button class="btn small" data-act="fright-buy" data-kind="${it.kind}" data-id="${it.id}"><i class="candy-ico"></i> ${it.price.toLocaleString()}</button>`}</div>`;
+    }).join('');
+    this.screen(`
+      <div class="sheet panel wide fright">
+        <h2>🎃 Fright Shop <small><i class="candy-ico"></i> ${candy().toLocaleString()} Candy Corn</small></h2>
+        ${msg ? `<p class="adm-msg">${escAttr(msg)}</p>` : ''}
+        <p class="note">Earn Candy Corn in matches while Halloween runs: pick it up, smash pumpkins (+10), get eliminations (+5) and place well. <b>Candy disappears when the event ends on 2 November</b>, but everything you buy is yours for good. The Blood Slimer works on any kid.</p>
+        <div class="fs-items">${items}</div>
+        <p class="note">More Halloween surprises coming soon…</p>
+        <div class="row"><button class="btn" data-act="locker">Locker</button><button class="btn play small" data-act="main">Done</button></div>
+      </div>`, 'screen right');
+  }
+
   /** Today's island event, with an on/off switch (ranked is always classic). */
   _eventCard() {
     const P = this.profile;
@@ -276,6 +322,7 @@ export class Menus {
             <button class="btn ${!P.ranked ? 'on' : ''}" data-act="queue" data-id="casual">Casual</button>
             <button class="btn ${P.ranked ? 'on' : ''}" data-act="queue" data-id="ranked">Ranked</button>
           </div>
+          ${this._halloweenCard()}
           ${this._eventCard()}
           <h3>Bots</h3>
           <div class="seg">${[9, 19, 29].map((n) => `<button class="btn ${S.botCount === n ? 'on' : ''}" data-act="bots" data-id="${n}">${n}</button>`).join('')}</div>
@@ -307,6 +354,7 @@ export class Menus {
   outfitUnlocked(charId, i) {
     const o = CHARACTERS[charId].outfits[i];
     if (!o) return false;
+    if (o.shop) return ownsHalloween('outfit', o.costume); // bought in the Fright Shop (works for every kid)
     return o.pass ? season.owns('outfit', `${charId}:${i}`) : o.level <= levelInfo(save.data.progress.xp).level;
   }
 
@@ -314,8 +362,9 @@ export class Menus {
     const have = season.owns(kind, id);
     const tier = season.PASS.findIndex((r) => r && r.kind === kind && r.id === id);
     const byBadges = kind === 'glider' && season.GLIDERS[id].badges; // earned by finding Benton Badges
+    const byShop = kind === 'glider' && season.GLIDERS[id].shop; // bought in the Fright Shop
     const sw = colors ? `<span class="cos-sw" style="background:linear-gradient(90deg,${colors.map((c, i) => `${c} ${(i / colors.length) * 100}% ${((i + 1) / colors.length) * 100}%`).join(',')})"></span>` : '';
-    return `<button class="cos ${current === id ? 'on' : ''} ${have ? '' : 'locked'}" data-act="${have ? 'equip' : byBadges ? 'badges' : 'pass'}" data-kind="${kind}" data-id="${id}">${sw}<b>${escAttr(name)}</b><small>${have ? (current === id ? 'Equipped' : 'Tap to equip') : byBadges ? `Find ${byBadges} Benton Badges` : `Pass tier ${tier}`}</small></button>`;
+    return `<button class="cos ${current === id ? 'on' : ''} ${have ? '' : 'locked'}" data-act="${have ? 'equip' : byBadges ? 'badges' : byShop ? 'cos-locked' : 'pass'}" data-kind="${kind}" data-id="${id}">${sw}<b>${escAttr(name)}</b><small>${have ? (current === id ? 'Equipped' : 'Tap to equip') : byBadges ? `Find ${byBadges} Benton Badges` : byShop ? `Fright Shop · ${byShop} Candy Corn` : `Pass tier ${tier}`}</small></button>`;
   }
 
   /** A pickaxe / back bling / wrap button for the Locker. */
@@ -339,7 +388,7 @@ export class Menus {
         <h3>Outfits</h3>
         <div class="outfits">${c.outfits.map((o, i) => {
           const locked = !this.outfitUnlocked(P.character, i);
-          const how = o.pass ? `Benton Pass tier ${o.pass}` : `Unlocks at level ${o.level}`;
+          const how = o.shop ? `Fright Shop · ${o.shop.toLocaleString()} Candy Corn` : o.pass ? `Benton Pass tier ${o.pass}` : `Unlocks at level ${o.level}`;
           return `<button class="outfit ${P.outfits[P.character] === i ? 'on' : ''} ${locked ? 'locked' : ''}" data-act="outfit" data-id="${i}" style="--a:${o.c.top};--b:${o.c.top2};--c:${o.c.pants}">
             <span class="sw"></span><b>${o.name}</b><small>${locked ? how : P.outfits[P.character] === i ? 'Equipped' : 'Unlocked'}</small></button>`;
         }).join('')}</div>
@@ -599,6 +648,8 @@ export class Menus {
           <div>
             <h3>Level & XP <small>level ${L.level} · ${save.data.progress.xp.toLocaleString()} XP</small></h3>
             <div class="adm-grid">${b('level', '+1 level', 1)}${b('level', '+10 levels', 10)}${b('outfits', 'Unlock every outfit')}${b('super', 'Refill Supercharged XP')}${b('pass', '+1 pass tier')}${b('cosmetics', 'Unlock every cosmetic')}${b('badges', 'Find every badge', 1)}${b('badges', 'Forget found badges', 0)}</div>
+            <h3>Halloween <small>${halloweenOn() ? `on · ${candy().toLocaleString()} Candy Corn` : 'off'}</small></h3>
+            <div class="adm-grid">${b('hw', 'Force on', 'on')}${b('hw', 'Force off', 'off')}${b('hw', 'Follow the calendar', '')}${b('hw', '+500 Candy Corn', 'candy')}${b('hw', 'Own every Halloween item', 'all')}</div>
             <h3>Island event <small>${P.eventPick && EVENTS[P.eventPick] ? `pinned: ${EVENTS[P.eventPick].name}` : `today's: ${EVENTS[todaysEvent()].name}`}</small></h3>
             <div class="adm-grid">${b('event', "Use today's", '')}${EVENT_IDS.map((id) => b('event', `${EVENTS[id].icon} ${EVENTS[id].name}`, id)).join('')}</div>
             <h3>Daily challenges <small>${c.list.filter((x) => x.done).length}/3 done</small></h3>
@@ -677,6 +728,7 @@ export class Menus {
         ${r.admin ? '<p class="adm-note">Admin tools were used in this match, so it doesn\'t count for XP, rank or challenges.</p>' : ''}
         ${r.challenges ? this._challenges(r.challenges) : ''}
         ${r.weekly && r.weekly.length ? `<p class="sx-won">Weekly challenge${r.weekly.length > 1 ? 's' : ''} done: ${r.weekly.map((w) => escAttr(w.text)).join(', ')} (+${r.weeklyXP.toLocaleString()} XP)</p>` : ''}
+        ${r.candy ? `<p class="sx-won">🎃 +${r.candy.toLocaleString()} Candy Corn for the Fright Shop</p>` : ''}
         ${r.badges ? `<p class="sx-won">🏅 Benton Badge${r.badges > 1 ? 's' : ''} found: ${r.badges} (+${r.badgeXP.toLocaleString()} XP)</p>` : ''}
         ${r.quests ? `<p class="sx-won">📜 Story quest${r.quests > 1 ? 's' : ''} completed: ${r.quests} (+${r.questXP.toLocaleString()} XP)</p>` : ''}
         ${r.achievements && r.achievements.length ? `<p class="sx-won">★ Achievement${r.achievements.length > 1 ? 's' : ''} unlocked: ${r.achievements.map((a) => escAttr(a.name)).join(', ')} (+${r.achXP.toLocaleString()} XP)</p>` : ''}

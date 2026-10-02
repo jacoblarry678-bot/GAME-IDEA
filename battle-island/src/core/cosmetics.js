@@ -13,6 +13,7 @@ export const PICKAXES = {
   dino: { name: 'Raptor Claws', desc: 'Bone handle, twin dino claws', unlock: { level: 9 } },
   star: { name: 'Star Scepter', desc: 'A golden star with a pink gem', unlock: { level: 12 } },
   crankbolt: { name: 'Bolt Breaker', desc: "Crankbolt's own claw arm", unlock: { ach: 'boss1' } },
+  bloodsmasher: { name: 'Blood Smasher', desc: 'A dripping hammer with a goofy face', unlock: { shop: 700 } },
 };
 
 export const BACKBLINGS = {
@@ -23,6 +24,8 @@ export const BACKBLINGS = {
   rocket: { name: 'Toy Rocket', desc: 'With a glowing booster', unlock: { level: 11 } },
   chest: { name: 'Treasure Chest', desc: 'For your Benton Badges', unlock: { badges: 4 } },
   minibolt: { name: 'Mini Crankbolt', desc: 'A tiny robot friend', unlock: { ach: 'vault1' } },
+  bloodshield: { name: 'Blood Shield', desc: 'A dark shield with a slime splat', unlock: { shop: 600 } },
+  jackolantern: { name: "Jack-o'-Lantern", desc: 'A grinning pumpkin that glows', unlock: { shop: 400 } },
 };
 
 export const WRAPS = {
@@ -33,6 +36,7 @@ export const WRAPS = {
   galaxy: { name: 'Galaxy', desc: 'Stars and nebula', unlock: { level: 10 }, swatch: ['#0b0b2a', '#3a1d6a', '#ff5ca8'] },
   lava: { name: 'Lava Rock', desc: 'Glowing cracks', unlock: { level: 14 }, swatch: ['#1d1414', '#ff5a1a', '#ffe45c'] },
   gold: { name: 'Gold Rush', desc: 'Win a match to earn it', unlock: { ach: 'first_win' }, swatch: ['#ffae1a', '#ffe45c'] },
+  blood: { name: 'Blood Wrap', desc: 'Red slime blobs on black', unlock: { shop: 500 }, swatch: ['#140306', '#c8102e', '#140306'] },
 };
 
 /** kind → its list (kinds match the save keys and the Locker sections). */
@@ -45,5 +49,6 @@ export function unlockText(u, achName = (id) => id) {
   if (u.level) return `Reach level ${u.level}`;
   if (u.badges) return `Find ${u.badges} Benton Badges`;
   if (u.ach) return `Achievement: ${achName(u.ach)}`;
+  if (u.shop) return `Fright Shop · ${u.shop.toLocaleString()} Candy Corn`;
   return 'Locked';
 }

@@ -51,6 +51,8 @@ await ev(() => {
   };
   window.F = window.field();
   window.put = (a, x, z, y = 60) => { a.pos.set(x, g.world.physics.groundAt(x, z, y).y + 0.05, z); a.vel.set(0, 0, 0); a.state = 'ground'; a.grounded = true; };
+  // park every other vehicle well off the test strip (earlier real-time drives leave them anywhere)
+  window.clearStrip = (keep) => { for (const o of g.vehicles.list) if (o !== keep && o.alive && Math.abs(o.pos.x - F.x) < 12 && o.pos.z < F.z + 10 && o.pos.z > F.z - 45) { const x = F.x + 40 + o.id * 6; o.pos.set(x, g.world.physics.groundAt(x, F.z, 60).y, F.z); o.speed = 0; g.vehicles._sync(o, true); } };
   window.freshFoe = (not) => { const P = g.player; const f = g.actors.find((a) => a.brain && a.team !== P.team && a.alive && !a.downed && a !== not && !a.vehicle); f.hp = 100; f.shield = 0; return f; };
 });
 
@@ -127,6 +129,7 @@ check('out of fuel: the throttle does nothing; parked at a pump it refuels', fue
 // ---- run over an opponent (teammates are safe)
 const run = await ev(() => {
   const g = __bi.game, P = g.player, v = g.vehicles.list[2];
+  clearStrip(v);
   v.pos.set(F.x, F.y, F.z); v.yaw = 0; v.speed = 0; g.vehicles._sync(v, true);
   g.vehicles.enter(P, v);
   const foe = g.actors.find((a) => a.brain && a.team !== P.team);
@@ -137,7 +140,7 @@ const run = await ev(() => {
   __bi.input.keys.add('KeyW');
   step(1.4);
   __bi.input.keys.delete('KeyW');
-  const r = { foeHp: foe.hp, mateHp: mate.hp, runovers: P.stats.runovers };
+  const r = { foeHp: foe.hp, mateHp: mate.hp, runovers: P.stats.runovers, why: { inside: P.vehicle === v, seat: P.seat, alive: P.alive, pstate: P.state, vAlive: v.alive, moved: +(F.z - v.pos.z).toFixed(1), fuel: Math.round(v.fuel), occupants: v.seats.map((o) => (o ? o.name : 0)).join('|'), paused: g.paused, menu: __bi.menus.current, spec: g.controller.spectating, gstate: g.state } };
   v.speed = 0;
   g.vehicles.exit(P);
   mate.pos.set(-150, 0, 150);
@@ -221,6 +224,7 @@ check('the driver cannot shoot; a passenger can (and never hits their own truck)
 // ---- trucks climb build ramps
 const ramp = await ev(() => {
   const g = __bi.game, P = g.player, v = g.vehicles.list[1];
+  clearStrip(v);
   v.pos.set(F.x, F.y, F.z); v.yaw = 0; v.speed = 0; g.vehicles._sync(v, true);
   // two ramps in a row ahead, built by the player
   P.mats.wood = 200;

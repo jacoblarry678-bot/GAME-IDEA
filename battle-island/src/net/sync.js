@@ -21,9 +21,9 @@ import { buy, upgrade } from '../gameplay/economy.js';
 export const PROTO = 1;
 export const MAX_HUMANS = 4;
 const ST = ['bus', 'skydive', 'glide', 'ground', 'air', 'swim', 'mantle', 'drive', 'zip'];
-export const HELD = ['none', 'pickaxe', 'ar', 'smg', 'shotgun', 'pistol', 'sniper', 'launcher', 'boomball'];
+export const HELD = ['none', 'pickaxe', 'ar', 'smg', 'shotgun', 'pistol', 'sniper', 'launcher', 'boomball', 'pumpkin'];
 const POSE = ['none', 'gun', 'pickaxe', 'build', 'heal', 'throw'];
-const FL = { alive: 1, downed: 2, crouch: 4, emote: 8, ads: 16, build: 32, sprint: 64, slide: 128, holdE: 256 };
+const FL = { alive: 1, downed: 2, crouch: 4, emote: 8, ads: 16, build: 32, sprint: 64, slide: 128, holdE: 256, ghost: 512 };
 const KIND = ['weapon', 'consumable', 'throwable', 'ammo', 'mat', 'card', 'coin', 'key', 'mod'];
 const AMMO_K = ['light', 'medium', 'heavy', 'shells', 'rockets'];
 const MAT_K = ['wood', 'brick', 'metal'];
@@ -36,6 +36,7 @@ function flagsOf(a) {
   let f = 0;
   if (a.alive) f |= FL.alive;
   if (a.downed) f |= FL.downed;
+  if (a.buffs.ghost) f |= FL.ghost;
   if (a.crouch) f |= FL.crouch;
   if (a.emote) f |= FL.emote;
   if (a.ads) f |= FL.ads;
@@ -285,6 +286,7 @@ export class HostNet {
         bf: Object.entries(a.buffs).map(([k, v]) => [k, r10(v)]),
         cd: a.cards,
         qs: this.game.quests.rows(a),
+        cy: a.stats.candy | 0,
         us: a.use ? [a.use.slot, r10(a.use.t), r10(a.use.total)] : 0,
         rl: a.reloadT > 0 ? [r10(a.reloadT), r10(a.reloadTotal)] : 0,
         dh: r10(a.downHp),
@@ -425,6 +427,7 @@ export class ClientNet {
         continue;
       }
       a.downed = !!(f & FL.downed);
+      a.netGhost = !!(f & FL.ghost);
       a.hp = r[12];
       a.shield = r[13];
       a.overshield = r[14];
@@ -486,6 +489,7 @@ export class ClientNet {
     me.rebootT = P.rb / 10;
     me.canRedeploy = !!P.rd;
     me.bucks = P.bk | 0;
+    me.stats.candy = P.cy | 0;
     if (P.qs) this.game.quests.view = P.qs;
     me.reviveTarget = me.reviveT > 0 ? { name: 'teammate' } : null;
     me.rebootVan = me.rebootT > 0 ? {} : null;

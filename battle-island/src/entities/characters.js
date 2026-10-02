@@ -24,6 +24,7 @@ export const CHARACTERS = {
       { name: 'Haunt Hunter', level: 2, c: { top: '#3a3548', top2: '#ff8a1a', pants: '#5d3f80', shoes: '#1f1f2e', hair: '#5b4330', hat: '#ff8a1a', pack: '#ff8a1a', heather: true } },
       { name: 'Storm Chaser', level: 3, c: { top: '#6a3fd0', top2: '#39f0ff', pants: '#1f1f2e', shoes: '#39f0ff', hair: '#5b4330', hat: '#1f1f2e', pack: '#b35cff' } },
       { name: 'Crankbolt Rider', pass: 10, c: { top: '#ff8a3d', top2: '#4a5566', pants: '#3a3f4a', shoes: '#ff8a3d', hair: '#5b4330', hat: '#4a5566', pack: '#9fb2c4', heather: true } },
+      { name: 'Blood Slimer', shop: 1500, costume: 'slimer', c: { top: '#2a0d12', top2: '#c8102e', pants: '#1a0a0e', shoes: '#120608', hair: '#1a0a0e', hat: '#1a0a0e', pack: '#c8102e' } },
     ],
   },
   emerson: {
@@ -36,6 +37,7 @@ export const CHARACTERS = {
       { name: 'Pickle Pop', level: 2, c: { top: '#7ed957', top2: '#ffffff', pants: '#ff7ac8', shoes: '#ffffff', hair: '#f2c35b', hat: '#7ed957', pack: '#ff7ac8' } },
       { name: 'Midnight Glow', level: 5, c: { top: '#1d2a5a', top2: '#39f0ff', pants: '#101828', shoes: '#39f0ff', hair: '#f2c35b', hat: '#39f0ff', pack: '#6a3fd0' } },
       { name: 'Vault Runner', pass: 14, c: { top: '#ffd23f', top2: '#1d2a3a', pants: '#1d2a3a', shoes: '#ffd23f', hair: '#f2c35b', hat: '#1d2a3a', pack: '#ffae1a' } },
+      { name: 'Blood Slimer', shop: 1500, costume: 'slimer', c: { top: '#2a0d12', top2: '#c8102e', pants: '#1a0a0e', shoes: '#120608', hair: '#1a0a0e', hat: '#1a0a0e', pack: '#c8102e' } },
     ],
   },
   waylon: {
@@ -48,6 +50,7 @@ export const CHARACTERS = {
       { name: 'Clubhouse Captain', level: 4, c: { top: '#e8453c', top2: '#ffffff', pants: '#1f3f7a', shoes: '#ffffff', hair: '#3b2616', hat: '#ffcf3f', pack: '#e8453c' } },
       { name: 'Golden Ace', level: 6, c: { top: '#ffcf3f', top2: '#ffffff', pants: '#8a5a1a', shoes: '#ffcf3f', hair: '#3b2616', hat: '#ffae1a', pack: '#ff7a1a' } },
       { name: 'Bolt Buddy', pass: 17, c: { top: '#39f0ff', top2: '#1d2a3a', pants: '#4a5566', shoes: '#1d2a3a', hair: '#3b2616', hat: '#39f0ff', pack: '#ff8a3d' } },
+      { name: 'Blood Slimer', shop: 1500, costume: 'slimer', c: { top: '#2a0d12', top2: '#c8102e', pants: '#1a0a0e', shoes: '#120608', hair: '#1a0a0e', hat: '#1a0a0e', pack: '#c8102e' } },
     ],
   },
 };
@@ -94,7 +97,7 @@ function gliderTexture(style, pal) {
   const G = {
     pickle: ['#5bbf3a', '#3f9a2a', 'dots'], storm: ['#6a3fd0', '#39f0ff', 'bolt'], night: ['#1d2a5a', '#ffe45c', 'stars'],
     crankbolt: ['#ff8a3d', '#4a5566', 'stripes'], golden: ['#ffcf3f', '#ffae1a', 'stripes'], champion: [null, null, 'rainbow'],
-    treasure: ['#e8d3a0', '#b0472f', 'map'], medal: ['#1d2a5a', '#ffcf3f', 'medals'],
+    treasure: ['#e8d3a0', '#b0472f', 'map'], medal: ['#1d2a5a', '#ffcf3f', 'medals'], bats: ['#1d1430', '#ff8a1a', 'bats'],
   }[style];
   if (!G) return stripeTexture(pal.top, pal.top2);
   const [a, b, pat] = G;
@@ -113,6 +116,7 @@ function gliderTexture(style, pal) {
       if (pat === 'dots') { g.beginPath(); g.arc(x, 10 + (i % 2) * 12, 4, 0, 7); g.fill(); }
       else if (pat === 'stars') { g.font = '12px sans-serif'; g.fillText('★', x - 5, 14 + (i % 2) * 12); }
       else if (pat === 'map') { g.fillRect(x - 6, 15, 4, 2); g.fillRect(x + 1, 15, 4, 2); if (i % 4 === 3) { g.lineWidth = 2; g.strokeStyle = b; g.beginPath(); g.moveTo(x - 4, 8); g.lineTo(x + 4, 24); g.moveTo(x + 4, 8); g.lineTo(x - 4, 24); g.stroke(); } }
+      else if (pat === 'bats') { const yy = 12 + (i % 2) * 9; g.beginPath(); g.moveTo(x - 7, yy - 3); g.quadraticCurveTo(x - 3, yy, x, yy + 3); g.quadraticCurveTo(x + 3, yy, x + 7, yy - 3); g.lineTo(x + 3, yy + 1); g.lineTo(x, yy - 1); g.lineTo(x - 3, yy + 1); g.closePath(); g.fill(); }
       else if (pat === 'medals') { g.beginPath(); g.arc(x, 16, 6, 0, 7); g.fill(); g.fillStyle = a; g.beginPath(); g.arc(x, 16, 3, 0, 7); g.fill(); g.fillStyle = b; }
       else if (pat === 'bolt') { g.beginPath(); g.moveTo(x, 3); g.lineTo(x - 4, 16); g.lineTo(x + 1, 16); g.lineTo(x - 2, 29); g.lineTo(x + 5, 13); g.lineTo(x, 13); g.closePath(); g.fill(); }
       else if (i % 2) g.fillRect(i * 16, 0, 16, 32);
@@ -343,12 +347,61 @@ export class CharacterModel {
     this.glider.visible = false;
     this.root.add(this.glider);
 
+    if ((def.outfits[outfit] || def.outfits[0]).costume === 'slimer') this._slimer(M, mesh, skinM);
+
     this.held = null;
     this.heldKey = '';
     this.phase = 0;
     this.flash = 0;
     this.swing = 0;
     this.kick = 0;
+  }
+
+  /**
+   * The Blood Slimer costume (from a fan drawing): a tall, shaggy, slimy shadow
+   * with a round grey head, two slit eyes, a wide grin, claws and red drips.
+   */
+  _slimer(M, mesh, skinM) {
+    skinM.color.set('#2a1a20'); // no skin showing: dark slimy hands
+    for (const o of this.head.children) o.visible = false;
+    if (this.pony) this.pony.visible = false;
+    const grey = M('#8d8a93'), dark = M('#120608'), slime = M('#c8102e', '#3a0008'), shag = M('#1d0a10');
+    // a long neck and a big round head
+    this.spine.add(mesh(new THREE.CylinderGeometry(0.09, 0.12, 0.34, 10), shag, 0, 0.66, 0));
+    this.head.position.y = 0.8;
+    const head = mesh(new THREE.SphereGeometry(0.31, 18, 14), grey, 0, 0.28, 0);
+    this.head.add(head);
+    for (const s of [-1, 1]) {
+      const eye = mesh(new THREE.CapsuleGeometry(0.03, 0.12, 4, 8), dark, 0.09 * s, 0.33, 0.27);
+      eye.rotation.x = -0.25;
+      this.head.add(eye);
+    }
+    const grin = mesh(new THREE.TorusGeometry(0.12, 0.018, 6, 16, Math.PI), dark, 0, 0.2, 0.27);
+    grin.rotation.z = Math.PI;
+    grin.rotation.x = -0.35;
+    this.head.add(grin);
+    // shaggy strands down the body, and slime drips
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const st = mesh(new THREE.BoxGeometry(0.06, 0.42, 0.04), shag, Math.cos(a) * 0.26, 0.18, Math.sin(a) * 0.22);
+      st.rotation.set(Math.sin(a) * 0.15, 0, Math.cos(a) * 0.15);
+      this.spine.add(st);
+    }
+    for (const [x, y, z] of [[0.15, 0.05, 0.2], [-0.12, 0.12, 0.21], [0.02, -0.02, 0.22], [-0.2, 0.0, -0.15], [0.18, 0.08, -0.17]]) {
+      const d = mesh(new THREE.SphereGeometry(0.045, 8, 6), slime, x, y, z);
+      d.scale.y = 1.8;
+      this.spine.add(d);
+    }
+    // claws
+    for (const arm of this.arms) {
+      for (let i = -1; i <= 1; i++) {
+        const c = mesh(new THREE.ConeGeometry(0.025, 0.14, 5), M('#e8e2d6'), i * 0.05, -0.62, 0.03);
+        c.rotation.x = Math.PI;
+        arm.add(c);
+      }
+    }
+    // taller and lankier
+    this.body.scale.set(0.95, 1.15, 0.95);
   }
 
   setHeld(key, rarity, mods) {

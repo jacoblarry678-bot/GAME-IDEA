@@ -31,7 +31,7 @@ const lk = await ev(() => {
 await p.click('.cos[data-kind=wrap][data-id=gold]');
 const lockedMsg = await ev(() => document.querySelector('.adm-msg')?.textContent);
 await p.screenshot({ path: `${shots}/cos-01-locker.png` });
-check('Locker has 7 pickaxes, 7 back blings and 7 wraps; defaults equipped; locked ones say how to unlock (and say it when tapped)', lk.pk === 7 && lk.bb === 7 && lk.wr === 7 && lk.on === 'default,outfit,none' && lk.locked === 6 && /Reach level 12/.test(lk.star) && /Achievement: Bolt Breaker/.test(lk.bolt) && /Find 4 Benton Badges/.test(lk.chest) && /Gold Rush: Achievement: Benton Champion to unlock it/.test(lockedMsg || ''), JSON.stringify({ ...lk, lockedMsg }));
+check('Locker has 8 pickaxes, 9 back blings and 8 wraps (with the Fright Shop ones); defaults equipped; locked ones say how to unlock (and say it when tapped)', lk.pk === 8 && lk.bb === 9 && lk.wr === 8 && lk.on === 'default,outfit,none' && lk.locked === 7 && /Reach level 12/.test(lk.star) && /Achievement: Bolt Breaker/.test(lk.bolt) && /Find 4 Benton Badges/.test(lk.chest) && /Gold Rush: Achievement: Benton Champion to unlock it/.test(lockedMsg || ''), JSON.stringify({ ...lk, lockedMsg }));
 
 // ---- unlocks: by level, by achievement, by badges
 const un = await ev(() => {

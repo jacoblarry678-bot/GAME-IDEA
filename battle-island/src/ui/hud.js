@@ -14,7 +14,7 @@ import { ISLAND_SIZE } from '../world/island.js';
 import { save } from '../core/save.js';
 import { VENDOR_STOCK, stockName } from '../gameplay/economy.js';
 
-const SHORT = { vault: 'KEYCARD', ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'CANNON', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
+const SHORT = { vault: 'KEYCARD', ar: 'RIFLE', smg: 'SMG', shotgun: 'PUMP', pistol: 'CANNON', pumpkin: 'PUMPKIN', ghost: 'GHOST', candybar: 'CANDY', sniper: 'SNIPER', launcher: 'BOOM', boomball: 'BOOM BALL', bandage: 'BAND-AID', medkit: 'MEDKIT', minishield: 'JUICE', bigshield: 'BIG SHIELD', pickle: 'PICKLE', zoom: 'ZOOM', bounce: 'BOUNCE', spicy: 'SPICY', snack: 'SNACK' };
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const _v = new THREE.Vector3();
 export const TEAM_COLORS = ['#ffd23f', '#39f0ff', '#ff7ac8', '#7ed957'];
@@ -55,6 +55,7 @@ export class Hud {
         </div>
       </div>
       <div class="hud-br">
+        <div class="candy-pill"><i class="candy-ico"></i><b>0</b></div>
         <div class="bucks"><i class="coin"></i><b>0</b></div>
         <div class="mats"></div>
         <div class="ammo-big"><b class="mag">-</b><span class="reserve"></span></div>
@@ -82,7 +83,7 @@ export class Hud {
       slots: q('.slots'), ammoList: q('.ammo-list'), build: q('.buildbar'), busHint: q('.bus-hint'), dmg: q('.dmgnums'), stormTint: q('.storm-tint'), hurtTint: q('.hurt-tint'),
       team: q('.team'), markers: q('.markers'), buffs: q('.buffs'), bi: q('.buildinfo'), biBar: q('.buildinfo .bhp div'), biText: q('.buildinfo span'),
       rankedPill: q('.ranked-pill'), boss: q('.bossbar'), bossFill: q('.bb-bar div'), bossSub: q('.bossbar small'),
-      bucks: q('.bucks b'), quests: q('.quests'), veh: q('.vehpanel'), vpName: q('.vp-name'), vpSpeed: q('.vp-speed'), vpHp: q('.vp-hp div'), vpFuel: q('.vp-fuel div'), vpHint: q('.vp-hint'),
+      bucks: q('.bucks b'), quests: q('.quests'), candyPill: q('.candy-pill'), candy: q('.candy-pill b'), veh: q('.vehpanel'), vpName: q('.vp-name'), vpSpeed: q('.vp-speed'), vpHp: q('.vp-hp div'), vpFuel: q('.vp-fuel div'), vpHint: q('.vp-hint'),
       shop: q('.shop'), shopTitle: q('.shop-title'), shopItems: q('.shop-items'), shopHint: q('.shop-hint'),
       downed: q('.downed'), downFill: q('.downed .fill'), aliveLabel: q('.alive-label'), specResults: q('.spec-results'),
       scope: q('.scope'), bigmap: q('.bigmap'), bigCanvas: q('.bigmap canvas'), spec: q('.spectate-bar'), specName: q('.spec-name'), fps: q('.fps'),
@@ -284,6 +285,8 @@ export class Hud {
       this.set('ammo', this.el.ammoList, al, 'innerHTML');
     }
     this.set('bucks', this.el.bucks, String(specA.bucks | 0));
+    this.set('candyd', this.el.candyPill.style, game.halloween ? '' : 'none', 'display');
+    if (game.halloween) this.set('candy', this.el.candy, String(specA.stats.candy | 0));
     if (this.frame % 6 === 0 && game.quests) {
       // story quest tracker (our own quests)
       const rows = c.spectating ? [] : game.quests.tracker(p);

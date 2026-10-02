@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { Collider, WATER_Y } from '../world/physics.js';
 import { EVENTS } from '../core/events.js';
 import { rollConsumable, mulberry32 } from './items.js';
+import { CANDY_PER_PUMPKIN } from '../core/halloween.js';
 
 const SUPPLY_EVERY = 45;
 
@@ -100,7 +101,13 @@ export class IslandEvent {
     g.effects.burst(at, '#ff8a1a', 20, 4, 0.12, 0.8);
     g.loot.drop({ kind: 'coin', id: 'bucks', count: 20 }, at.clone(), new THREE.Vector3(1.5, 4, 0));
     if (Math.random() < 0.6) g.loot.drop(rollConsumable(Math.random), at.clone(), new THREE.Vector3(-1.5, 4, 0.5));
-    if (c.lastDamager && c.lastDamager.stats) c.lastDamager.stats.pumpkins = (c.lastDamager.stats.pumpkins || 0) + 1;
+    if (c.lastDamager && c.lastDamager.stats) {
+      c.lastDamager.stats.pumpkins = (c.lastDamager.stats.pumpkins || 0) + 1;
+      if (g.halloween) {
+        c.lastDamager.stats.candy = (c.lastDamager.stats.candy || 0) + CANDY_PER_PUMPKIN;
+        g.notify(c.lastDamager, `+${CANDY_PER_PUMPKIN} Candy Corn`, '#ff8a1a', 1.2);
+      }
+    }
   }
 
   // ------------------------------------------------------------ playground party

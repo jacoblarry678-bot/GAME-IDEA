@@ -23,7 +23,11 @@ export const POIS = [
   { id: 'park', name: 'Pickles Park', x: 72, z: 68, r: 32, h: 4, color: '#7ed957' },
   { id: 'hollow', name: 'Haunt Hollow', x: -70, z: -70, r: 30, h: 7, color: '#b07cff' },
   { id: 'depot', name: 'Boom Co. Depot', x: 78, z: -62, r: 30, h: 5, color: '#ff5c7a' },
+  // Halloween update: Haunt Hollow's new land to the southwest
+  { id: 'manor', name: 'Grimstone Manor', x: -114, z: -114, r: 24, h: 6, color: '#ff8a1a' },
 ];
+/** The Hollow expansion: the coast bulges out to the southwest to make room for Grimstone Manor. */
+const HOLLOW_ANGLE = Math.atan2(-1, -1);
 const MINOR = [
   { name: 'Lookout Cabin', x: -12, z: 98, h: 6 },
   { name: 'Fishing Shack', x: 24, z: -104, h: 3 },
@@ -34,14 +38,21 @@ const POND = { x: 90, z: 84, r: 10 };
 /** Crankbolt's Vault: a sealed bunker on a hilltop plateau, guarded by the boss. */
 export const VAULT = { name: "Crankbolt's Vault", x: 42, z: -30, h: 17, r: 16 };
 
-function coastRadius(a) {
+/** The original coastline (trees and rocks are scattered inside it, so the old island stays as it was). */
+function baseCoast(a) {
   return 132 + 11 * Math.sin(3 * a + 1) + 7 * Math.sin(5 * a + 2) + 4 * Math.sin(9 * a + 0.5);
 }
 
-function rawHeight(x, z) {
+function coastRadius(a) {
+  const da = Math.atan2(Math.sin(a - HOLLOW_ANGLE), Math.cos(a - HOLLOW_ANGLE));
+  return baseCoast(a) + 52 * Math.exp(-(da * da) / 0.1);
+}
+
+/** legacy: the island as it was before the Halloween expansion (used so trees, rocks and loot stay put). */
+function rawHeight(x, z, legacy = false) {
   const d = Math.hypot(x, z);
   const a = Math.atan2(z, x);
-  const inland = coastRadius(a) - d;
+  const inland = (legacy ? baseCoast(a) : coastRadius(a)) - d;
   const land = smooth(-6, 22, inland);
   let hills = 4.5 + 3.2 * Math.sin(x * 0.031 + 1.3) * Math.cos(z * 0.027 - 0.4) + 1.6 * Math.sin(x * 0.071 + z * 0.052) + 1.1 * Math.cos(x * 0.11 - z * 0.09);
   hills += 9 * Math.exp(-((x - 40) ** 2 + (z + 28) ** 2) / 900) + 7 * Math.exp(-((x + 30) ** 2 + (z - 40) ** 2) / 700);
@@ -49,6 +60,7 @@ function rawHeight(x, z) {
   hills += 12 * Math.exp(-((x - 5) ** 2 + z ** 2) / 1400);
   let h = -7 + (hills + 7) * land;
   for (const p of POIS) {
+    if (legacy && p.id === 'manor') continue;
     const w = smooth(p.r + 20, p.r, Math.hypot(x - p.x, z - p.z));
     h += (p.h - h) * w;
   }
@@ -174,6 +186,7 @@ export class World {
     for (const m of MINOR) this._rebootVan(m.x + 9, m.z + 1.5);
     this._buildWheelsAndDeals();
     this._buildVault();
+    this._buildManor(); // Halloween expansion: built last so everything older keeps its order
     this._scatterNature();
     this.mapCanvas = this._renderMap();
     this.baseWid = this.physics.nextWid;
@@ -238,7 +251,7 @@ export class World {
         else if (y < 1.4) c.copy(sand);
         else c.copy(grass).lerp(grass2, 0.5 + 0.5 * Math.sin(x * 0.13) * Math.cos(z * 0.11));
         if (y > 1.4 && sl > 2.2) c.lerp(rock, Math.min(1, (sl - 2.2) / 2));
-        const hol = smooth(40, 22, Math.hypot(x - POIS[3].x, z - POIS[3].z));
+        const hol = Math.max(smooth(40, 22, Math.hypot(x - POIS[3].x, z - POIS[3].z)), smooth(44, 26, Math.hypot(x - POIS[5].x, z - POIS[5].z)) * (y > 1.4 ? 1 : 0.4));
         c.lerp(haunt, hol * 0.85);
         const pk = smooth(38, 26, Math.hypot(x - POIS[2].x, z - POIS[2].z));
         if (y > 1.4) c.lerp(park, pk * 0.6);
@@ -821,6 +834,81 @@ export class World {
     this.lootSpots.push(new THREE.Vector3(gx, y + 0.1, gz), new THREE.Vector3(p.x - 10, y + 0.1, p.z + 12));
   }
 
+  /** Grimstone Manor: a three-story haunted house with a tower, an iron fence, a pumpkin patch and a cauldron. */
+  _buildManor() {
+    const p = POIS[5];
+    const rng = mulberry32(this.seed + 1031); // its own randomness: the rest of the island is laid out exactly as before
+    const shared = this.rng;
+    this.rng = rng; // helpers like chest() draw from this.rng
+    const y = p.h;
+    const cx = p.x, cz = p.z;
+    const h = this.house(cx, cz, 14, 12, 3, { y, wall: '#4a3a5a', tex: 'wood', material: 'wood', roof: '#1d1830', floor: '#3a2a2a', furniture: '#6a1a2a' });
+    // the tower on the west corner (solid stone, a pointy roof and a glowing window)
+    const stone = { color: '#5d5f75', tex: 'brick', material: 'brick', hp: 900 };
+    const tx0 = h.x0 - 3.6, tz0 = h.z1 - 3.6;
+    this.box(tx0, y - 0.5, tz0, tx0 + 3.6, h.top + 4, tz0 + 3.6, stone);
+    this.roof(tx0 - 0.3, tz0 - 0.3, tx0 + 3.9, tz0 + 3.9, h.top + 4, 3.4, '#1d1830');
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(1, 1.4), mat('#ffb23f', null, { emissive: '#ff8a1a', side: THREE.DoubleSide }));
+    win.position.set(tx0 + 1.8, h.top + 1.5, tz0 + 3.62);
+    this.root.add(win);
+    this.footprints.push({ x0: tx0, z0: tz0, x1: tx0 + 3.6, z1: tz0 + 3.6, color: '#5d5f75' });
+    // iron fence with gates facing Haunt Hollow (north-east)
+    const iron = { color: '#22202e', material: 'metal', hp: 160, thick: 0.1 };
+    const fx0 = cx - 17, fx1 = cx + 17, fz0 = cz - 16, fz1 = cz + 16;
+    this.wall(false, fz1, fx0, fx1, y, 1.4, [{ a: cx + 4, b: cx + 9, bottom: 0, top: 1.4 }], iron);
+    this.wall(false, fz0, fx0, fx1, y, 1.4, [], iron);
+    this.wall(true, fx1, fz0, fz1, y, 1.4, [{ a: cz - 2, b: cz + 3, bottom: 0, top: 1.4 }], iron);
+    this.wall(true, fx0, fz0, fz1, y, 1.4, [{ a: cz - 3, b: cz + 1, bottom: 0, top: 1.4 }], iron);
+    for (const [x, z] of [[fx0, fz0], [fx0, fz1], [fx1, fz0], [fx1, fz1], [cx + 4, fz1], [cx + 9, fz1]]) {
+      this.box(x - 0.2, y, z - 0.2, x + 0.2, y + 1.9, z + 0.2, { color: '#22202e' });
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), mat('#ff8a1a', null, { emissive: '#b04a00' }));
+      ball.position.set(x, y + 2.1, z);
+      this.root.add(ball);
+    }
+    // a bubbling green cauldron in the front yard
+    const kx = cx + 10, kz = cz + 10;
+    this.box(kx - 0.8, y, kz - 0.8, kx + 0.8, y + 1.0, kz + 0.8, { color: '#1d1d24', material: 'metal', hp: 300 });
+    const brew = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.68, 0.1, 14), mat('#7ed957', null, { emissive: '#2f8a1a' }));
+    brew.position.set(kx, y + 1.02, kz);
+    this.root.add(brew);
+    const bubbles = [];
+    for (let i = 0; i < 4; i++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), mat('#a8ff7a', null, { emissive: '#3fa02a' }));
+      this.root.add(b);
+      bubbles.push(b);
+    }
+    this.animated.push((t) => bubbles.forEach((b, i) => {
+      const k = (t * 0.7 + i / 4) % 1;
+      b.position.set(kx + Math.cos(i * 1.7) * 0.35, y + 1.05 + k * 0.9, kz + Math.sin(i * 1.7) * 0.35);
+      b.scale.setScalar(1 - k);
+    }));
+    // the pumpkin patch: dirt rows outside the gate (the Halloween event fills it with pumpkins)
+    this.pumpkinPatch = { x: cx + 6, z: cz + 25, w: 14, d: 8, y };
+    for (let r = 0; r < 4; r++) this.box(cx - 1, y - 0.3, cz + 21.5 + r * 2, cx + 13, y + 0.12, cz + 22.5 + r * 2, { color: '#4a3424' });
+    this.footprints.push({ x0: cx - 1, z0: cz + 21.5, x1: cx + 13, z1: cz + 29.5, color: '#4a3424' });
+    // lanterns along the path to the gate
+    for (let i = 0; i < 4; i++) {
+      const x = cx + 6.5 + (i % 2 ? 2.4 : -2.4), z = cz + 18 + Math.floor(i / 2) * 9;
+      const gy = this.hm.get(x, z);
+      this.box(x - 0.08, gy, z - 0.08, x + 0.08, gy + 1.8, z + 0.08, { color: '#22202e' });
+      const l = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.36, 0.3), mat('#ffcf3f', null, { emissive: '#ff8a1a' }));
+      l.position.set(x, gy + 1.95, z);
+      this.root.add(l);
+    }
+    this.chest(cx - 4, h.top + 0.05, cz + 2, 0, true); // a legendary chest on the roof deck
+    // kept apart from this.exclude / this._trees so the older island's trees and rocks are laid out exactly as before
+    this.manorExclude = [{ x: cx, z: cz, r: 19 }, { x: cx + 6, z: cz + 25, r: 10 }];
+    this._extraTrees = [];
+    for (let i = 0; i < 12; i++) {
+      const a = rng() * Math.PI * 2, r = 20 + rng() * 14;
+      const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
+      this._extraTrees.push({ x, z, kind: 'dead', scale: 1 + rng() * 0.6, y: this.hm.get(x, z) });
+    }
+    this.manorRng = rng;
+    this.rng = shared;
+    this.lootSpots.push(new THREE.Vector3(cx + 10, y + 0.1, cz + 6), new THREE.Vector3(cx - 12, y + 0.1, cz - 10), new THREE.Vector3(cx + 6, y + 0.1, cz + 20));
+  }
+
   _buildDepot() {
     const p = POIS[4];
     const y = p.h;
@@ -1087,6 +1175,7 @@ export class World {
       [{ x: 5, z: -24 }, { x: 22, z: -100 }],
       [{ x: -24, z: 4 }, { x: -108, z: -6 }],
       [{ x: 18, z: 18 }, P.park],
+      [P.hollow, { x: -92, z: -96 }, { x: P.manor.x + 10, z: P.manor.z + 22 }], // Halloween expansion (last: older roads keep their order)
     ];
     const mRoad = new THREE.MeshLambertMaterial({ color: '#56565e', polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
     const mLine = new THREE.MeshLambertMaterial({ color: '#ffe066', polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 });
@@ -1124,8 +1213,8 @@ export class World {
     }
   }
 
-  onRoad(x, z, pad = 4) {
-    for (const pts of this.roads) {
+  onRoad(x, z, pad = 4, roads = this.roads) {
+    for (const pts of roads) {
       for (let i = 0; i < pts.length; i += 2) if (Math.abs(pts[i].x - x) < pad && Math.abs(pts[i].z - z) < pad) return true;
     }
     return false;
@@ -1134,23 +1223,30 @@ export class World {
   // ---------------------------------------------------------------- nature
   _scatterNature() {
     const rng = this.rng;
-    const blocked = (x, z, extra = 0) => this.exclude.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + extra) || this.onRoad(x, z);
+    // every decision uses the pre-expansion island (terrain, exclusions, roads) so the same random numbers
+    // give the same trees, rocks and loot as before; anything landing on the Manor grounds is just left out
+    const old = new Heightmap(ISLAND_SIZE + 80, 200, (x, z) => rawHeight(x, z, true));
+    const oldRoads = this.roads.slice(0, 7);
+    const blocked = (x, z, extra = 0) => this.exclude.some((e) => Math.hypot(x - e.x, z - e.z) < e.r + extra) || this.onRoad(x, z, 4, oldRoads);
+    const manor = (x, z) => (this.manorExclude || []).some((e) => Math.hypot(x - e.x, z - e.z) < e.r + 2) || this.onRoad(x, z, 4, this.roads.slice(7));
     let tries = 0;
     while ((this._trees?.length || 0) < 230 && tries++ < 5000) {
       const x = (rng() - 0.5) * 290, z = (rng() - 0.5) * 290;
-      const h = this.hm.get(x, z);
+      const h = old.get(x, z);
       if (h < 1.8 || blocked(x, z, 2)) continue;
       const hol = Math.hypot(x - POIS[3].x, z - POIS[3].z) < 45;
       this.tree(x, z, hol ? 'dead' : rng() < 0.45 ? 'pine' : 'round', 0.8 + rng() * 0.6);
+      if (manor(x, z)) this._trees[this._trees.length - 1].skip = true;
     }
     this._placeTrees();
+    if (this._extraTrees) this._placeTrees(this._extraTrees, this.manorRng);
     const rocks = [];
     tries = 0;
     while (rocks.length < 55 && tries++ < 3000) {
       const x = (rng() - 0.5) * 290, z = (rng() - 0.5) * 290;
-      const h = this.hm.get(x, z);
+      const h = old.get(x, z);
       if (h < 0.5 || blocked(x, z, 2)) continue;
-      rocks.push({ x, z, y: h, s: 0.8 + rng() * 1.6 });
+      rocks.push({ x, z, y: this.hm.get(x, z), s: 0.8 + rng() * 1.6, skip: manor(x, z) });
     }
     const rg = new THREE.IcosahedronGeometry(1, 0);
     const rm = new THREE.InstancedMesh(rg, new THREE.MeshLambertMaterial({ color: '#a7a9b4', flatShading: true }), rocks.length);
@@ -1159,8 +1255,10 @@ export class World {
       o.position.set(r.x, r.y + r.s * 0.4, r.z);
       o.rotation.set(rng(), rng() * 6, rng());
       o.scale.set(r.s * 1.3, r.s, r.s * 1.1);
+      if (r.skip) o.scale.set(0, 0, 0);
       o.updateMatrix();
       rm.setMatrixAt(i, o.matrix);
+      if (r.skip) return;
       const c = new Collider({ minX: r.x - r.s, maxX: r.x + r.s, minZ: r.z - r.s * 0.9, maxZ: r.z + r.s * 0.9, minY: r.y - 0.5, maxY: r.y + r.s * 1.2, hp: 200 + r.s * 100, kind: 'rock', material: 'brick', harvest: 12 });
       c.maxHp = c.hp;
       c.inst = [{ mesh: rm, index: i }];
@@ -1171,13 +1269,11 @@ export class World {
     // loose floor loot around the island
     for (let i = 0; i < 16; i++) {
       const x = (rng() - 0.5) * 240, z = (rng() - 0.5) * 240;
-      const h = this.hm.get(x, z);
-      if (h > 1.5) this.lootSpots.push(new THREE.Vector3(x, h + 0.1, z));
+      if (old.get(x, z) > 1.5 && !manor(x, z)) this.lootSpots.push(new THREE.Vector3(x, this.hm.get(x, z) + 0.1, z));
     }
   }
 
-  _placeTrees() {
-    const T = this._trees;
+  _placeTrees(T = this._trees, rng = this.rng) {
     const kinds = { round: [], pine: [], dead: [] };
     for (const t of T) kinds[t.kind].push(t);
     const o = new THREE.Object3D();
@@ -1200,8 +1296,16 @@ export class World {
       list.forEach((t, i) => {
         const th = (kind === 'pine' ? 3 : kind === 'dead' ? 5 : 3.6) * t.scale;
         o.position.set(t.x, t.y - 0.2, t.z);
-        o.rotation.set(0, this.rng() * 6, kind === 'dead' ? (this.rng() - 0.5) * 0.3 : 0);
+        o.rotation.set(0, rng() * 6, kind === 'dead' ? (rng() - 0.5) * 0.3 : 0);
         o.scale.set(t.scale, th, t.scale);
+        if (t.skip) {
+          // landed on the Manor grounds: same random numbers used, nothing placed
+          o.scale.set(0, 0, 0);
+          o.updateMatrix();
+          trunks.setMatrixAt(i, o.matrix);
+          leaves.setMatrixAt(i, o.matrix);
+          return;
+        }
         o.updateMatrix();
         trunks.setMatrixAt(i, o.matrix);
         o.position.y = t.y + th + (kind === 'pine' ? 2.2 : 1.2) * t.scale;

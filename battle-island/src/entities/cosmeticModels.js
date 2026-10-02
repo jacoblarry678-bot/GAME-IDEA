@@ -13,8 +13,9 @@ import pickle from '../assets/wraps/pickle.png?url';
 import galaxy from '../assets/wraps/galaxy.png?url';
 import lava from '../assets/wraps/lava.png?url';
 import gold from '../assets/wraps/gold.png?url';
+import blood from '../assets/wraps/blood.png?url';
 
-const WRAP_URLS = { camo, candy, pickle, galaxy, lava, gold };
+const WRAP_URLS = { camo, candy, pickle, galaxy, lava, gold, blood };
 const nodes = new Map(); // 'pickaxe_pickle' → Object3D (toon-shaded)
 const waiting = []; // [group, name] filled once loaded
 let loaded = false;

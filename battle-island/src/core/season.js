@@ -15,6 +15,7 @@ import { CHALLENGES } from './challenges.js';
 import { mulberry32 } from '../gameplay/items.js';
 import { badgeCount } from './badges.js';
 import { LOCKER, DEFAULTS } from './cosmetics.js';
+import { ownsHalloween } from './halloween.js';
 
 // ------------------------------------------------------------ cosmetics
 export const EMOTES = {
@@ -36,6 +37,7 @@ export const GLIDERS = {
   champion: { name: 'Champion Rainbow', colors: ['#ff5c7a', '#ffcf3f', '#7ed957', '#39f0ff', '#b35cff'], pattern: 'rainbow' },
   treasure: { name: 'Treasure Map', colors: ['#e8d3a0', '#b0472f'], pattern: 'map', badges: 6 },
   medal: { name: 'Badge Collector', colors: ['#1d2a5a', '#ffcf3f'], pattern: 'medals', badges: 12 },
+  bats: { name: 'Bat Swarm', colors: ['#1d1430', '#ff8a1a'], pattern: 'bats', shop: 400 },
 };
 
 // ------------------------------------------------------------ seasons
@@ -91,13 +93,14 @@ export function owned() {
   // gliders earned by finding Benton Badges
   const n = badgeCount();
   const byBadges = Object.entries(GLIDERS).filter(([, g]) => g.badges && n >= g.badges).map(([id]) => `glider:${id}`);
-  const set = new Set(['emote:sig', 'glider:classic', ...p.owned, ...byBadges]);
+  const byShop = Object.entries(GLIDERS).filter(([id, g]) => g.shop && ownsHalloween('glider', id)).map(([id]) => `glider:${id}`);
+  const set = new Set(['emote:sig', 'glider:classic', ...p.owned, ...byBadges, ...byShop]);
   // pickaxes, back blings and wraps unlock by level, achievement or badges
   const level = levelInfo(save.data.progress.xp).level;
   for (const [kind, list] of Object.entries(LOCKER)) {
     for (const [id, c] of Object.entries(list)) {
       const u = c.unlock;
-      if (!u || (u.level && level >= u.level) || (u.badges && n >= u.badges) || (u.ach && achDone(u.ach))) set.add(`${kind}:${id}`);
+      if (!u || (u.level && level >= u.level) || (u.badges && n >= u.badges) || (u.ach && achDone(u.ach)) || (u.shop && ownsHalloween(kind, id))) set.add(`${kind}:${id}`);
     }
   }
   return set;

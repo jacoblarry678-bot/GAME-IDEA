@@ -93,7 +93,7 @@ export class Actor {
     this.seat = -1;
     this.zip = null; // { line, t, dir }
     this.bucks = 0;
-    this.stats = { driven: 0, zips: 0, chests: 0, spent: 0, upgrades: 0, runovers: 0, bossDmg: 0, bosses: 0, vault: 0, doors: 0, carried: 0, harvest: 0, built: 0, quests: 0 };
+    this.stats = { driven: 0, zips: 0, chests: 0, spent: 0, upgrades: 0, runovers: 0, bossDmg: 0, bosses: 0, vault: 0, doors: 0, carried: 0, harvest: 0, built: 0, quests: 0, candy: 0 };
     this.carrying = null; // knocked teammate on our shoulders
     this.carriedBy = null;
     this.game.scene.add(this.model.root);
@@ -161,6 +161,10 @@ export class Actor {
       const take = Math.min(room, it.count);
       this.ammo[it.id] += take;
       return it.count - take > 0 ? { ...it, count: it.count - take } : null;
+    }
+    if (it.kind === 'coin' && it.id === 'candy') {
+      this.stats.candy = (this.stats.candy || 0) + it.count; // Halloween Candy Corn: banked after the match
+      return null;
     }
     if (it.kind === 'coin') {
       this.bucks += it.count;
@@ -361,7 +365,7 @@ export class Actor {
         else if (gl && this.canRedeploy) this.state = 'skydive';
       }
     } else if (this.state === 'swim') {
-      const sp = (inp.sprint ? 5.2 : 3.8) * (this.buffs.zoom ? 1.3 : 1);
+      const sp = (inp.sprint ? 5.2 : 3.8) * (this.buffs.zoom ? 1.3 : 1) * (this.buffs.ghost ? 1.25 : 1);
       this.vel.x = dirX * mag * sp;
       this.vel.z = dirZ * mag * sp;
       this.vel.y = 0;
@@ -388,6 +392,7 @@ export class Actor {
         if (inp.ads) speed = Math.min(speed, ADS);
         if (this.use) speed = Math.min(speed, USE);
         if (this.buffs.zoom) speed *= 1.3;
+        if (this.buffs.ghost) speed *= 1.25;
         if (this.carrying) speed *= 0.72;
         if (this.downed) {
           // crawling: slow, no sprint, no jumps
@@ -648,6 +653,12 @@ export class Actor {
     const { pose, key: held } = h;
     const rar = h.rarity;
     m.setHeld(held, rar, h.mods);
+    // Ghost Potion: see-through
+    const ghost = !!(this.buffs.ghost || this.netGhost);
+    if (ghost !== !!m.ghosted) {
+      m.ghosted = ghost;
+      for (const mt of m.mats) { mt.transparent = ghost; mt.opacity = ghost ? 0.3 : 1; }
+    }
     m.animate(dt, {
       t,
       speed: this.state === 'drive' || this.state === 'zip' ? 0 : Math.hypot(this.vel.x, this.vel.z),

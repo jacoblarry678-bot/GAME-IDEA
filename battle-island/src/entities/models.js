@@ -110,6 +110,16 @@ export function weaponModel(id, rarity = 0, mods = null) {
     case 'sniper':
       g.add(bx(0.09, 0.13, 0.9, '#3b4f3a', 0, 0.05, 0.2), cyl(0.028, 0.6, '#1a1a1a', 0, 0.07, 0.95), cyl(0.05, 0.36, '#111', 0, 0.2, 0.25), bx(0.09, 0.18, 0.32, rc, 0, 0.0, -0.3));
       break;
+    case 'pumpkin': {
+      // a stubby black cannon with a jack-o'-lantern drum
+      const pk = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), m('#ff8a1a', '#5a2400'));
+      pk.scale.set(1, 0.85, 1);
+      pk.position.set(0, 0.14, 0.12);
+      g.add(pk, cyl(0.09, 0.55, '#1d1430', 0, 0.12, 0.5), cyl(0.11, 0.06, rc, 0, 0.12, 0.78), bx(0.07, 0.2, 0.1, '#1d1430', 0, -0.06, 0.05), cyl(0.03, 0.08, '#4f7a3a', 0, 0.33, 0.12, false));
+      for (const s of [-1, 1]) g.add(bx(0.05, 0.05, 0.02, '#ffe45c', 0.07 * s, 0.18, 0.31, '#ffae1a'));
+      g.add(bx(0.13, 0.03, 0.02, '#ffe45c', 0, 0.08, 0.31, '#ffae1a'));
+      break;
+    }
     case 'launcher':
       g.add(cyl(0.13, 1.1, '#4a6b3a', 0, 0.12, 0.25), cyl(0.15, 0.1, rc, 0, 0.12, 0.8), bx(0.07, 0.2, 0.1, dark, 0, -0.06, 0.1), bx(0.12, 0.1, 0.16, rc, 0, 0.28, 0.1));
       break;
@@ -161,6 +171,19 @@ export function consumableModel(id) {
       g.add(p);
       break;
     }
+    case 'ghost': {
+      // a round flask with a little ghost floating inside
+      const fl = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), new THREE.MeshLambertMaterial({ color: c, transparent: true, opacity: 0.55, emissive: '#2a5a66' }));
+      fl.position.y = 0.17;
+      const gh = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), m('#ffffff', '#8aa8b0'));
+      gh.scale.y = 1.3;
+      gh.position.y = 0.17;
+      g.add(fl, gh, cyl(0.05, 0.1, '#8a5a33', 0, 0.36, 0, false));
+      break;
+    }
+    case 'candybar':
+      g.add(bx(0.42, 0.06, 0.18, '#5a2a14'), bx(0.26, 0.065, 0.185, '#ff8a1a'), bx(0.08, 0.066, 0.186, '#ffffff'));
+      break;
     case 'zoom': case 'bounce': case 'spicy': case 'snack': {
       // soda-can style buff drinks
       const can = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.32, 12), m(c, '#222222'));
@@ -184,6 +207,25 @@ export function cardModel() {
 export function keyModel() {
   const g = new THREE.Group();
   g.add(bx(0.55, 0.36, 0.05, '#ffd23f', 0, 0.3, 0, '#7a5a00'), bx(0.4, 0.08, 0.06, '#1d2a3a', 0, 0.36, 0), bx(0.12, 0.12, 0.06, '#ff4b4b', 0.17, 0.22, 0, '#661111'));
+  return g;
+}
+
+/** Candy Corn: a little pile of striped kernels. */
+export function candyModel() {
+  const g = new THREE.Group();
+  for (let i = 0; i < 3; i++) {
+    const k = new THREE.Group();
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.08, 8), m('#ffffff'));
+    tip.position.y = 0.16;
+    const mid = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.11, 0.1, 8), m('#ff8a1a', '#5a2400'));
+    mid.position.y = 0.07;
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.06, 8), m('#ffd23f', '#5a4200'));
+    base.position.y = -0.01;
+    k.add(tip, mid, base);
+    k.position.set((i - 1) * 0.17, 0, (i % 2) * 0.08);
+    k.rotation.z = (i - 1) * 0.3;
+    g.add(k);
+  }
   return g;
 }
 
@@ -234,7 +276,7 @@ export function itemModel(it) {
   if (it.kind === 'consumable') return consumableModel(it.id);
   if (it.kind === 'ammo') return ammoModel(it.id);
   if (it.kind === 'card') return cardModel();
-  if (it.kind === 'coin') return coinModel();
+  if (it.kind === 'coin') return it.id === 'candy' ? candyModel() : coinModel();
   if (it.kind === 'key') return keyModel();
   return matModel(it.id);
 }

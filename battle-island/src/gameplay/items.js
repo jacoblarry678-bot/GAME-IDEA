@@ -54,6 +54,12 @@ export const WEAPONS = {
     hip: 0.09, ads: 0.0, bloom: 0, maxBloom: 0, recoil: 0.09, auto: false, zoom: 4.5, scope: true,
     head: 2.5, range: 600, projectile: { speed: 320, gravity: 9, radius: 0 }, sound: 'sniper',
   },
+  pumpkin: {
+    // Halloween: lobs exploding jack-o'-lanterns in an arc
+    name: 'Pumpkin Launcher', cls: 'Launcher', ammo: 'rockets', mag: 2, dmg: 70, rate: 1.1, reload: 2.6,
+    hip: 0.012, ads: 0.005, bloom: 0, maxBloom: 0, recoil: 0.06, auto: false, zoom: 1.25,
+    head: 1, range: 300, projectile: { speed: 42, gravity: 14, radius: 4.5, structDmg: 300, pumpkin: true }, sound: 'rocket',
+  },
   launcher: {
     name: 'Boom Launcher', cls: 'Launcher', ammo: 'rockets', mag: 1, dmg: 95, rate: 0.9, reload: 2.8,
     hip: 0.01, ads: 0.004, bloom: 0, maxBloom: 0, recoil: 0.07, auto: false, zoom: 1.3,
@@ -77,6 +83,9 @@ export const CONSUMABLES = {
   bounce: { name: 'Bouncy Soda', time: 1.2, buff: 'bounce', max: 3, color: '#ff7ac8' },
   spicy: { name: 'Spicy Pickle', time: 1.2, buff: 'spicy', max: 3, color: '#ff4b2b' },
   snack: { name: 'Shield Snack', time: 1.2, buff: 'snack', max: 3, color: '#39f0ff' },
+  // Halloween
+  ghost: { name: 'Ghost Potion', time: 1.2, buff: 'ghost', max: 2, color: '#bff3ff' },
+  candybar: { name: 'Candy Bar', time: 1.0, hp: 20, hpCap: 100, max: 6, color: '#8a4a2a' },
 };
 
 /** Temporary effects granted by buff consumables. */
@@ -85,6 +94,7 @@ export const BUFFS = {
   bounce: { name: 'Bounce', dur: 20, color: '#ff7ac8', desc: 'Higher jumps, no fall damage' },
   spicy: { name: 'Spicy', dur: 12, color: '#ff4b2b', desc: '+20% damage' },
   snack: { name: 'Snack', dur: 15, color: '#39f0ff', desc: 'Regenerate 4 shield/s' },
+  ghost: { name: 'Ghost', dur: 10, color: '#d9f6ff', desc: 'See-through and 25% faster; bots lose you from afar' },
 };
 
 /**
@@ -145,7 +155,7 @@ export function itemName(it) {
   if (it.kind === 'ammo') return AMMO[it.id].name;
   if (it.kind === 'mat') return MATS[it.id].name;
   if (it.kind === 'card') return `${it.name}'s Reboot Card`;
-  if (it.kind === 'coin') return 'Benton Bucks';
+  if (it.kind === 'coin') return it.id === 'candy' ? 'Candy Corn' : 'Benton Bucks';
   if (it.kind === 'key') return 'Vault Keycard';
   if (it.kind === 'mod') return MODS[it.id].name;
   return '?';
@@ -180,6 +190,16 @@ export function rollWeapon(rng, chest) {
   let rarity = pick(rng, chest ? CHEST_RARITY : FLOOR_RARITY);
   if (id === 'launcher' || id === 'sniper') rarity = Math.max(2, rarity);
   return makeWeapon(id, rarity);
+}
+
+/** Halloween floor loot (added on top of the normal roll while the event runs). */
+export function rollHalloween(rng) {
+  const r = rng();
+  if (r < 0.45) return [{ kind: 'coin', id: 'candy', count: 5 + Math.floor(rng() * 3) * 5 }];
+  if (r < 0.65) return [{ kind: 'consumable', id: 'candybar', count: 2 }];
+  if (r < 0.82) return [{ kind: 'consumable', id: 'ghost', count: 1 }];
+  const w = makeWeapon('pumpkin', rng() < 0.6 ? 2 : 3);
+  return [w, { kind: 'ammo', id: 'rockets', count: 4 }];
 }
 
 export function rollMod(rng) {

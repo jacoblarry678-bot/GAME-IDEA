@@ -179,6 +179,7 @@ export class BotBrain {
     for (const o of g.actors) {
       if (o === a || !o.alive || o.state === 'bus' || o.team === a.team) continue;
       const d = o.pos.distanceTo(a.pos);
+      if (o.buffs.ghost && d > 10 && a.lastHitBy !== o) continue; // Ghost Potion: hard to spot from afar
       if (d < bd) cands.push([d, o]);
     }
     cands.sort((p, q) => p[0] - q[0]);

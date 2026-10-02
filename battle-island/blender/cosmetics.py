@@ -171,6 +171,25 @@ def pickaxe_star():
     part(r, 'ico', mat('#ff7ac8', emit=0.6), loc=(0, centre[1] - 0.035, centre[2]), scale=(0.035, 0.035, 0.035), subdivisions=1)
 
 
+def pickaxe_bloodsmasher():
+    # Halloween: from a fan drawing - a block hammer dripping red slime, with a goofy face
+    r = root('pickaxe_bloodsmasher')
+    part(r, 'cone', '#3a0a10', loc=(0, -0.42, 0), rot=(PI / 2, 0, 0), radius1=0.028, radius2=0.05, depth=0.84, vertices=10)
+    part(r, 'cyl', '#120608', loc=(0, -0.08, 0), rot=(PI / 2, 0, 0), radius=0.04, depth=0.18, vertices=10)
+    head = part(r, 'cube', '#4a0d16', loc=(0, HEAD_Y, 0.04), scale=(0.1, 0.12, 0.22), bevel=0.02)
+    slime = mat('#c8102e', emit=0.25, rough=0.3)
+    part(r, 'cube', slime, loc=(0, HEAD_Y, 0.25), scale=(0.105, 0.125, 0.025), bevel=0.01)  # slime cap on top
+    for x, z, ln in ((-0.06, 0.2, 0.09), (0.05, 0.18, 0.13), (0.0, 0.19, 0.07)):
+        part(r, 'sphere', slime, loc=(x, HEAD_Y - 0.125, z - ln / 2), scale=(0.022, 0.012, ln / 2), segments=8, ring_count=6, smooth=True)
+        part(r, 'sphere', slime, loc=(x, HEAD_Y - 0.128, z - ln - 0.01), scale=(0.028, 0.016, 0.028), segments=8, ring_count=6, smooth=True)
+    # the face (both sides)
+    for side in (-1, 1):
+        for x in (-0.035, 0.035):
+            part(r, 'sphere', '#f4efe6', loc=(x, HEAD_Y + 0.12 * side, 0.08), scale=(0.028, 0.012, 0.034), segments=10, ring_count=8)
+            part(r, 'sphere', '#120608', loc=(x + 0.006, HEAD_Y + 0.13 * side, 0.08), scale=(0.012, 0.006, 0.014), segments=8, ring_count=6)
+        part(r, 'torus', '#120608', loc=(0, HEAD_Y + 0.122 * side, 0.0), rot=(PI / 2, 0, 0), major_radius=0.04, minor_radius=0.008, major_segments=12, minor_segments=4)
+
+
 # ------------------------------------------------------------------ back blings
 def bling_dino():
     r = root('backbling_dino')
@@ -245,6 +264,34 @@ def bling_shield():
         sp.rotation_euler = (0, -(a - PI / 2), 0)
 
 
+def bling_bloodshield():
+    # Halloween: from a fan drawing - a dark rectangular shield with a red slime splat
+    r = root('backbling_bloodshield')
+    part(r, 'cube', '#2a0d12', loc=(0, 0.06, 0.04), scale=(0.17, 0.03, 0.22), bevel=0.02)
+    part(r, 'cube', '#120608', loc=(0, 0.065, 0.04), scale=(0.18, 0.026, 0.23))
+    slime = mat('#c8102e', emit=0.3, rough=0.3)
+    for x, z, s_ in ((0.0, 0.06, 0.07), (0.06, 0.1, 0.04), (-0.05, 0.0, 0.045), (0.05, -0.03, 0.03), (-0.07, 0.11, 0.03)):
+        b = part(r, 'sphere', slime, loc=(x, 0.095, z), scale=(s_, 0.012, s_ * 1.1), segments=12, ring_count=8, smooth=True)
+    for x, ln in ((-0.03, 0.08), (0.04, 0.12)):
+        part(r, 'sphere', slime, loc=(x, 0.095, -0.02 - ln / 2), scale=(0.014, 0.01, ln / 2), segments=8, ring_count=6, smooth=True)
+
+
+def bling_jackolantern():
+    r = root('backbling_jackolantern')
+    orange = mat('#ff8a1a', rough=0.6)
+    for i in range(6):
+        a = i * PI / 3
+        part(r, 'sphere', orange, loc=(math.cos(a) * 0.07, 0.14 + math.sin(a) * 0.03, 0.06), scale=(0.1, 0.11, 0.13), segments=14, ring_count=10, smooth=True)
+    part(r, 'cyl', '#4f7a3a', loc=(0, 0.14, 0.2), radius=0.025, depth=0.08, vertices=8)
+    glow = mat('#ffe45c', emit=2.0)
+    for x in (-0.06, 0.06):
+        t = part(r, 'cone', glow, loc=(x, 0.255, 0.1), rot=(-PI / 2, 0, 0), radius1=0.035, radius2=0, depth=0.02, vertices=3)
+        t.rotation_euler[1] = PI
+    part(r, 'cube', glow, loc=(0, 0.255, 0.0), scale=(0.08, 0.008, 0.018))
+    for x in (-0.05, 0.0, 0.05):
+        part(r, 'cube', '#ff8a1a', loc=(x, 0.258, 0.012 if x else -0.014), scale=(0.012, 0.008, 0.012))
+
+
 # ------------------------------------------------------------------ wraps (baked textures)
 def wrap_material(name, build):
     """A material whose Emission is a procedural pattern, with an image node to bake into."""
@@ -317,6 +364,7 @@ WRAPS = {
                                   ramp(nt, noise(nt, uv, 5.0, 3), [(0.0, '#3f9a2a'), (1.0, '#6fd04a')]),
                                   ramp(nt, noise(nt, uv, 9.0, 1), [(0.0, '#2f7a20'), (1.0, '#2f7a20')])),
     'gold': lambda nt, uv: ramp(nt, noise(nt, uv, 6.0, 8), [(0.0, '#8a5a12'), (0.35, '#ffae1a'), (0.6, '#ffe45c'), (0.8, '#fff6c2'), (1.0, '#ffae1a')]),
+    'blood': lambda nt, uv: ramp(nt, noise(nt, uv, 5.0, 2), [(0.0, '#140306'), (0.5, '#140306'), (0.52, '#000000'), (0.545, '#000000'), (0.55, '#8a0a1a'), (0.62, '#c8102e'), (0.72, '#e8304a'), (0.76, '#c8102e'), (1.0, '#a00c22')]),
     'lava': lambda nt, uv: ramp(nt, voronoi(nt, uv, 7.0, 'DISTANCE_TO_EDGE'), [(0.0, '#ffe45c'), (0.04, '#ff5a1a'), (0.09, '#5a1a0a'), (0.14, '#1d1414'), (1.0, '#2a1d1d')]),
 }
 
@@ -365,7 +413,8 @@ def bake_wraps():
 def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     for fn in (pickaxe_pickle, pickaxe_wrench, pickaxe_lollipop, pickaxe_dino, pickaxe_crankbolt, pickaxe_star,
-               bling_dino, bling_picklejar, bling_minibolt, bling_chest, bling_rocket, bling_shield):
+               bling_dino, bling_picklejar, bling_minibolt, bling_chest, bling_rocket, bling_shield,
+               pickaxe_bloodsmasher, bling_bloodshield, bling_jackolantern):
         fn()
     os.makedirs(os.path.dirname(OUT_GLB), exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=OUT_GLB, export_format='GLB', export_apply=True, export_yup=True, export_texcoords=False, export_normals=True, export_materials='EXPORT', export_cameras=False, export_lights=False)
