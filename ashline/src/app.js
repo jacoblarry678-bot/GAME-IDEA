@@ -13,6 +13,7 @@ import { MapBuilder } from './world/mapBuilder.js';
 import { NavGrid } from './world/navgrid.js';
 import { createSky } from './world/sky.js';
 import { CINDER_YARD } from './world/maps/cinderYard.js';
+import { MAPS } from './world/maps/index.js';
 import { FIRING_RANGE } from './world/maps/firingRange.js';
 import { weaponMaterials, buildWeapon, buildCharm } from './fx/weaponModels.js';
 import { buildKey } from './data/attachments.js';
@@ -117,6 +118,17 @@ export class App {
     this.activeMap = rt;
   }
 
+  /** Overhead thumbnail for a map (headless build, cached). */
+  mapThumb(id) {
+    this.mapThumbs = this.mapThumbs || {};
+    if (this.mapThumbs[id]) return this.mapThumbs[id];
+    if (this.maps[id]) return (this.mapThumbs[id] = this.maps[id].minimap.img);
+    const def = MAPS[id];
+    const b = new MapBuilder({ headless: true });
+    def.build(b);
+    return (this.mapThumbs[id] = makeMinimap(def, b).img);
+  }
+
   bindGlobal() {
     // audio needs a user gesture
     const unlock = () => {
@@ -159,15 +171,30 @@ export class App {
     this.setMenuCamera('orbit');
   }
 
+  /** Start a match on the selected map (builds the map on first use). */
   startMatch() {
     const setup = { ...this.profile.data.matchSetup };
+    const def = MAPS[setup.map] || CINDER_YARD;
+    if (!this.maps[def.id]) {
+      if (this._building) return this._building;
+      this.screens.loading?.(`Building ${def.name}…`);
+      this._building = (async () => {
+        await nextFrame(); await nextFrame();
+        await this.buildMap(def);
+        this._building = null;
+        this.screens.loading?.(null);
+        this.startMatch();
+      })();
+      return this._building;
+    }
+    const rt = this.maps[def.id];
     this.screens.clear();
     if (this.game) { this.game.dispose(); this.game = null; }
-    this.activateMap(this.mapRuntime);
+    this.activateMap(rt);
     this.audio.init();
     this.audio.music(false);
     this.preview.hide();
-    this.game = new Game(this, setup);
+    this.game = new Game(this, setup, rt);
     this.game.start();
     this.state = 'match-live';
     this.input.enabled = true;

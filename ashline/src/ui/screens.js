@@ -15,6 +15,7 @@ import { SEASON } from '../data/season.js';
 import { ATTACHMENTS, ATTACH_SLOTS, SLOT_LABELS, MAX_ATTACHMENTS, attachmentsFor, applyAttachments } from '../data/attachments.js';
 import { PERKS, PERK_SLOTS, perksForSlot } from '../data/perks.js';
 import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
+import { MAPS, MAP_IDS } from '../world/maps/index.js';
 
 export const VERSION = 'M3 · build 0.3.0';
 
@@ -89,6 +90,16 @@ export class Screens {
     e.node.className = 'screen';
     e.onBack = null; e.cleanup = null;
     SCREENS[e.name](this.app, e.node, e.params, e);
+  }
+
+  /** Blocking loading overlay (null hides it). */
+  loading(text) {
+    this._loading?.remove();
+    this._loading = null;
+    if (!text) return;
+    this._loading = el('div', { class: 'loading-ov' });
+    this._loading.innerHTML = `<div class="ld"><div class="spin"></div><div>${esc(text)}</div></div>`;
+    this.root.appendChild(this._loading);
   }
 
   toast(text, ms = 2200) {
@@ -218,11 +229,12 @@ const SCREENS = {
               </div>
               <div class="muted small">${esc(MODES[setup.mode].blurb)}</div>
             </div>
-            <div class="field map-card" style="grid-row: span 2">
-              <canvas width="220" height="165"></canvas>
-              <div class="kicker">Map</div>
-              <div class="title">${esc(app.mapRuntime.def.name)}</div>
-              <div class="muted small" style="position:relative">${esc(app.mapRuntime.def.blurb)}</div>
+            <div class="field" style="grid-row: span 2">
+              <label>Map</label>
+              <div class="map-pick">
+                ${MAP_IDS.map((id) => `<button class="map-card ${setup.map === id ? 'sel' : ''}" data-map="${id}"><canvas width="220" height="150"></canvas><div class="title">${esc(MAPS[id].name)}</div></button>`).join('')}
+              </div>
+              <div class="muted small">${esc((MAPS[setup.map] || MAPS.cinder_yard).blurb)}</div>
             </div>
             ${MODES[setup.mode].teams ? `<div class="field"><label>Bots on your team (${TEAMS[0].name})</label><div data-k="botsAllies"></div></div>
             <div class="field"><label>Enemy bots (${TEAMS[1].name})</label><div data-k="botsEnemies"></div></div>` : '<div class="field" style="grid-column: span 2"><label>Opponents (bots, everyone for themselves)</label><div data-k="botsEnemies"></div></div>'}
@@ -247,9 +259,12 @@ const SCREENS = {
           <button class="btn primary" data-a="start" style="padding:12px 40px">Start Match</button>
         </div>
       </div>`;
-      // map thumb
-      const cv = node.querySelector('.map-card canvas');
-      if (cv && app.mapRuntime.minimap) { const ctx = cv.getContext('2d'); ctx.drawImage(app.mapRuntime.minimap.img, 0, 0, 220, 165); }
+      // map thumbnails
+      node.querySelectorAll('.map-card[data-map]').forEach((card) => {
+        const cv = card.querySelector('canvas');
+        try { const img = app.mapThumb(card.dataset.map); const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, 220, 150); } catch (e) { /* thumbnail is cosmetic */ }
+        card.onclick = () => { setup.map = card.dataset.map; app.profile.save(); render(); };
+      });
       const st = (k, min, max, step, fmt) => {
         const box = node.querySelector(`[data-k=${k}]`);
         const s = stepper(setup[k], fmt);

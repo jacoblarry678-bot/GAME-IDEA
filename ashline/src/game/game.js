@@ -332,7 +332,7 @@ export class Game {
     for (const b of list) if (b.maxY <= c.y + 0.05 && (!best || b.maxY > best.maxY)) best = b;
     if (!best) return 'concrete';
     // rail bed ballast is visual-only; detect by position
-    if (best.maxY <= 0.001 && (Math.abs(Math.abs(c.z) - 7) < 1.7) && Math.abs(c.x) < 37) return 'gravel';
+    if (this.map.def.id === 'cinder_yard' && best.maxY <= 0.001 && (Math.abs(Math.abs(c.z) - 7) < 1.7) && Math.abs(c.x) < 37) return 'gravel';
     return best.mat;
   }
 

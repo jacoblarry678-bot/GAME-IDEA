@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "OPERATION ASHLINE — original browser 3D military FPS (bots, offline).",
+  "description": "OPERATION ASHLINE \u2014 original browser 3D military FPS (bots, offline).",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
@@ -11,7 +11,8 @@
     "sim": "node tools/sim.mjs",
     "test": "node tools/test.mjs",
     "e2e": "node tools/e2e.mjs",
-    "build:single": "vite build && node tools/build-single.mjs"
+    "build:single": "vite build && node tools/build-single.mjs",
+    "maps": "node tools/mapcheck.mjs"
   },
   "dependencies": {
     "three": "0.169.0"
@@ -19,5 +20,7 @@
   "devDependencies": {
     "vite": "^5.4.8"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

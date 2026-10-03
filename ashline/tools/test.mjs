@@ -477,5 +477,29 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('Flak Lining reduces explosive damage', p4.health === 56, `${p4.health}`);
 }
 
+// ---------------- M4 maps ----------------
+{
+  const { MAPS } = await import('../src/world/maps/index.js');
+  t('three maps registered (Cinder Yard, Old Quarter, Signal Station)', Object.keys(MAPS).join() === 'cinder_yard,old_quarter,signal_station');
+  for (const def of Object.values(MAPS)) {
+    const mb = new MapBuilder({ headless: true });
+    def.build(mb);
+    const mnav = new NavGrid(mb.world, def.bounds, 1);
+    const mmap = { world: mb.world, nav: mnav, spawns: mb.spawns, hotspots: mb.hotspots, def };
+    t(`${def.name}: ≥10 spawns per team, 3 flags, 6 hardpoints`, mb.spawns.filter((s) => s.team === 0).length >= 10 && mb.spawns.filter((s) => s.team === 1).length >= 10 && def.objectives.dom.length === 3 && def.objectives.hp.length === 6);
+    const spawnsClear = mb.spawns.every((s) => !mb.world.overlaps(s.x - 0.36, s.y + 0.05, s.z - 0.36, s.x + 0.36, s.y + 1.8, s.z + 0.36));
+    t(`${def.name}: all spawns clear of geometry`, spawnsClear);
+    for (const mode of ['tdm', 'ffa', 'dom', 'hp', 'elim', 'gun']) {
+      const m = new Match(mmap, { mode, scoreLimit: mode === 'elim' ? 3 : 9999, timeLimit: 2, botsAllies: 4, botsEnemies: 5, difficulty: 'regular', friendlyFire: false, includePlayer: false, countdown: 0 });
+      m.start();
+      let kills = 0;
+      m.on((e) => { if (e.type === 'kill') kills++; });
+      let err = null;
+      try { for (let i = 0; i < 60 * 45; i++) m.tick(1 / 60); } catch (e) { err = e; }
+      t(`${def.name}: ${mode} runs 45 s with bots fighting`, !err && kills > 0, err ? err.message : `${kills} kills`);
+    }
+  }
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

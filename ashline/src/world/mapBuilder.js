@@ -91,6 +91,8 @@ export class MapBuilder {
 
   _addGeom(key, geom) {
     if (this.headless) return;
+    // merging needs every geometry in a bucket to be indexed (or none)
+    if (!geom.index) { const n = geom.attributes.position.count; const idx = new Array(n); for (let i = 0; i < n; i++) idx[i] = i; geom.setIndex(idx); }
     let arr = this.buckets.get(key);
     if (!arr) { arr = []; this.buckets.set(key, arr); }
     arr.push(geom);
@@ -233,5 +235,7 @@ export function matCategory(mat) {
   if (mat.includes('metal') || mat.includes('corrugated') || mat.includes('rust') || mat.includes('steel') || mat.includes('container') || mat.includes('diamond') || mat.includes('tank') || mat.includes('roof')) return 'metal';
   if (mat.includes('gravel')) return 'gravel';
   if (mat.includes('brick')) return 'brick';
+  if (mat.includes('dirt') || mat.includes('hedge')) return 'gravel';
+  if (mat.includes('fence') || mat.includes('dish')) return 'metal';
   return 'concrete';
 }

@@ -275,6 +275,96 @@ const GEN = {
       }
     }, { normalStrength: 1.2 });
   },
+  cobble(S) {
+    // rounded setts in rows with dark joints
+    return generate(S, (u, v, o) => {
+      const rows = 10, cols = 8;
+      const ry = v * rows, row = Math.floor(ry);
+      const rx = u * cols + (row % 2 ? 0.5 : 0), col = ((Math.floor(rx) % cols) + cols) % cols;
+      const fy = ry - row, fx = rx - Math.floor(rx);
+      const id = hash(col, row, 91);
+      const ex = Math.min(fx, 1 - fx) * 2, ey = Math.min(fy, 1 - fy) * 2;
+      const round = Math.min(1, Math.min(ex * 1.6, ey * 1.6));
+      const n = fbm(u, v, 93, 4, 16);
+      const joint = round < 0.18;
+      const c = joint ? 58 + n * 16 : (104 + id * 34 + n * 26) * (0.8 + 0.2 * round);
+      const warm = id > 0.55 ? [1.08, 1.0, 0.9] : [1.02, 0.98, 0.93];
+      setRGB(o, c * warm[0], c * warm[1], c * warm[2]);
+      o.h = joint ? 0 : 0.4 + round * 0.6 + n * 0.1;
+      o.rough = joint ? 0.95 : 0.7 - id * 0.15;
+    }, { normalStrength: 3 });
+  },
+  plaster(S, color = [200, 186, 160]) {
+    return generate(S, (u, v, o) => {
+      const n = fbm(u, v, 101, 5, 4);
+      const fine = hash((u * S) | 0, (v * S) | 0, 103);
+      const stain = Math.max(0, fbm(u * 0.6, v, 107, 3, 2) - 0.5) * 1.6;
+      const chip = fbm(u, v, 109, 4, 8) > 0.8; // exposed stone under the render
+      const k = 0.86 + n * 0.22 + fine * 0.05 - stain * 0.3;
+      if (chip) setRGB(o, 150 * k, 128 * k, 108 * k);
+      else setRGB(o, color[0] * k, color[1] * k, color[2] * k);
+      o.h = chip ? -0.4 : n * 0.4 + fine * 0.1;
+      o.rough = 0.92;
+    }, { normalStrength: 1.2 });
+  },
+  stone(S) {
+    // cut stone blocks (ashlar)
+    return generate(S, (u, v, o) => {
+      const rows = 6, ry = v * rows, row = Math.floor(ry);
+      const cols = 3 + (row % 2), rx = u * cols + (row % 3) * 0.33, col = Math.floor(rx);
+      const fy = ry - row, fx = rx - col;
+      const joint = fy < 0.05 || fx < 0.025;
+      const id = hash(((col % cols) + cols) % cols, row, 121);
+      const n = fbm(u, v, 123, 5, 8);
+      const c = joint ? 96 : 150 + id * 40 + n * 30;
+      setRGB(o, c * 1.02, c * 0.97, c * 0.88);
+      o.h = joint ? 0 : 0.7 + n * 0.3;
+      o.rough = 0.9;
+    }, { normalStrength: 2.2 });
+  },
+  dirt(S) {
+    return generate(S, (u, v, o) => {
+      const n = fbm(u, v, 131, 5, 4);
+      const p = hash((u * S) | 0, (v * S) | 0, 133);
+      const tracks = Math.max(0, fbm(u, v * 0.3, 137, 3, 2) - 0.6) * 2;
+      const c = 92 + n * 52 - tracks * 30 + (p > 0.97 ? 40 : 0);
+      setRGB(o, c * 1.05, c * 0.9, c * 0.7);
+      o.h = n * 0.6 + (p > 0.97 ? 0.5 : 0);
+      o.rough = 0.95;
+    }, { normalStrength: 1.8 });
+  },
+  rock(S) {
+    return generate(S, (u, v, o) => {
+      const n = fbm(u, v, 141, 6, 3);
+      const cr = Math.abs(fbm(u, v, 143, 4, 6) - 0.5) < 0.02;
+      const c = 84 + n * 70 - (cr ? 40 : 0);
+      setRGB(o, c * 0.98, c * 0.97, c * 0.94);
+      o.h = n + (cr ? -0.6 : 0);
+      o.rough = 0.92;
+    }, { normalStrength: 2.6 });
+  },
+  hedge(S) {
+    return generate(S, (u, v, o) => {
+      const n = fbm(u, v, 151, 5, 16);
+      const leaf = hash((u * S / 2) | 0, (v * S / 2) | 0, 153);
+      const c = 40 + n * 60 + leaf * 25;
+      setRGB(o, c * 0.6, c * 1.05, c * 0.45);
+      o.h = n + leaf * 0.3;
+      o.rough = 0.85;
+    }, { normalStrength: 2.5 });
+  },
+  awning(S, color = [150, 40, 36]) {
+    return generate(S, (u, v, o) => {
+      const stripe = Math.floor(u * 8) % 2 === 0;
+      const n = fbm(u, v, 161, 3, 8);
+      const weave = (((u * S) | 0) + ((v * S) | 0)) % 2 ? 4 : -4;
+      const base = stripe ? color : [214, 206, 188];
+      const k = 0.85 + n * 0.2;
+      setRGB(o, base[0] * k + weave, base[1] * k + weave, base[2] * k + weave);
+      o.h = n * 0.2 + (weave > 0 ? 0.05 : 0);
+      o.rough = 0.95;
+    }, { normalStrength: 0.8 });
+  },
   floorpaint(S) {
     return generate(S, (u, v, o) => {
       const n = fbm(u, v, 43, 5, 4);
@@ -556,6 +646,21 @@ export class MaterialLibrary {
       case 'ballast': e = { mat: this._std(GEN.gravel(S), { extra: { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 } }), scale: 2.5 }; break;
       case 'floor_in': e = { mat: this._std(GEN.floorpaint(S), { extra: { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 } }), scale: 6 }; break;
       case 'backdrop': e = { mat: this._std(GEN.facade(256)), scale: 12 }; break;
+      case 'cobble': e = { mat: this._std(GEN.cobble(S)), scale: 3 }; break;
+      case 'plaster_cream': e = { mat: this._std(GEN.plaster(S, [206, 194, 168])), scale: 4 }; break;
+      case 'plaster_ochre': e = { mat: this._std(GEN.plaster(S, [198, 158, 96])), scale: 4 }; break;
+      case 'plaster_rose': e = { mat: this._std(GEN.plaster(S, [186, 136, 122])), scale: 4 }; break;
+      case 'plaster_grey': e = { mat: this._std(GEN.plaster(S, [168, 170, 166])), scale: 4 }; break;
+      case 'stone': e = { mat: this._std(GEN.stone(S)), scale: 3 }; break;
+      case 'dirt': e = { mat: this._std(GEN.dirt(S)), scale: 6 }; break;
+      case 'rock': e = { mat: this._std(GEN.rock(S)), scale: 5 }; break;
+      case 'hedge': e = { mat: this._std(GEN.hedge(S)), scale: 1.5 }; break;
+      case 'awning_red': e = { mat: this._std(GEN.awning(S, [150, 40, 36]), { extra: { side: THREE.DoubleSide } }), scale: 2 }; break;
+      case 'awning_green': e = { mat: this._std(GEN.awning(S, [40, 96, 64]), { extra: { side: THREE.DoubleSide } }), scale: 2 }; break;
+      case 'tile_roof': e = { mat: this._std(GEN.brick(S), { color: 0xc07a5a }), scale: 2 }; break;
+      case 'fence': e = { mat: fenceMaterial(), scale: 2 }; break;
+      case 'dish': e = { mat: new THREE.MeshStandardMaterial({ color: 0xe4e4de, roughness: 0.45, metalness: 0.2, side: THREE.DoubleSide }), scale: 1 }; break;
+      case 'water': e = { mat: new THREE.MeshStandardMaterial({ color: 0x2c4a52, roughness: 0.08, metalness: 0.3 }), scale: 1 }; break;
       case 'backdrop2': e = { mat: this._std(GEN.facade(256, 0.75)), scale: 10 }; break;
       default:
         if (base.startsWith('container_')) {
@@ -620,4 +725,20 @@ export class MaterialLibrary {
     this.cache.set(key, { mat: m });
     return m;
   }
+}
+
+/** Chain-link fence: alpha-tested diamond mesh. */
+function fenceMaterial() {
+  const c = makeCanvas(128, 128), ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.strokeStyle = '#b4b8b8';
+  ctx.lineWidth = 5;
+  for (let i = -128; i <= 256; i += 32) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 128, 128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i + 128, 0); ctx.lineTo(i, 128); ctx.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, metalness: 0.6, roughness: 0.5, side: THREE.DoubleSide });
 }

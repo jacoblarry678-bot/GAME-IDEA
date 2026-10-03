@@ -11,6 +11,7 @@ import { load, save, mergeDefaults } from './storage.js';
 import { WEAPONS, EQUIPMENT, PRIMARY_IDS } from '../data/weapons.js';
 import { sanitizeBuild, attachmentsFor, ATTACHMENTS, ATTACH_SLOTS, MAX_ATTACHMENTS } from '../data/attachments.js';
 import { PERKS, DEFAULT_PERKS } from '../data/perks.js';
+import { MAP_IDS } from '../world/maps/index.js';
 import { COSMETICS, COSMETIC_LIST, DEFAULT_ITEMS, RARITY } from '../data/cosmetics.js';
 import { SEASON, PASS_TIERS } from '../data/season.js';
 import { DAILY_POOL, WEEKLY_POOL, DAILY_SLOTS, WEEKLY_SLOTS, periodKeys, pickChallenges } from '../data/challenges.js';
@@ -95,6 +96,7 @@ export class Profile {
     if (!(d.activeLoadout >= 0 && d.activeLoadout < d.loadouts.length)) d.activeLoadout = 0;
     const ms = d.matchSetup;
     if (!MODES[ms.mode]?.playable) { ms.mode = 'tdm'; ms.scoreLimit = 75; ms.timeLimit = 10; }
+    if (!MAP_IDS.includes(ms.map)) ms.map = 'cinder_yard';
     ms.botsEnemies = Math.max(1, Math.min(MODES[ms.mode].teams ? 5 : 9, ms.botsEnemies | 0));
     ms.botsAllies = Math.max(0, Math.min(4, ms.botsAllies | 0));
     d.level = clampInt(d.level, 1, MAX_LEVEL);
