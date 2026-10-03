@@ -101,7 +101,8 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
     let shots = 0, time = 0;
     while (time < 1.0) { if (w.fire(time)) shots++; w.update(1 / 240); time += 1 / 240; }
     const expect = Math.min(d.mag, Math.floor(d.rpm / 60) + 1);
-    t(`${d.name}: fire rate ${d.rpm} rpm`, Math.abs(shots - expect) <= 1, `${shots} shots/s`);
+    if (!d.melee && !d.burst) t(`${d.name}: fire rate ${d.rpm} rpm`, Math.abs(shots - expect) <= 1, `${shots} shots/s`);
+    if (d.melee) { t(`${d.name}: melee weapon never reloads`, !new WeaponState(d).canReload); continue; }
     // reload timing
     const w2 = new WeaponState(d); w2.mag = d.tube ? d.mag - 2 : 0;
     w2.startReload();
@@ -368,7 +369,38 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   store['ashline.profile'] = JSON.stringify({ version: 1, name: 'Old', owned: { bogus_item: { t: 1 } }, equipped: { operator: 'bogus', weapons: { ar_kv7: { finish: 'fn_gold' } } }, loadouts: [{ primary: 'nope' }] });
   const pr4 = new Profile();
   t('v1 / invalid data migrates safely', pr4.data.version === 2 && pr4.data.name === 'Old' && !pr4.owns('bogus_item') && pr4.data.equipped.operator === 'op_voss' && pr4.data.equipped.weapons.ar_kv7.finish === 'fn_factory' && pr4.data.loadouts[0].primary === 'ar_kv7');
+  // weapon unlock gating
+  store['ashline.profile'] = JSON.stringify({ version: 2, level: 3, loadouts: [{ name: 'X', primary: 'lmg_anvil', secondary: 'melee_axe' }, { name: 'Y', primary: 'ar_tarn', secondary: 'pistol_grizzly' }] });
+  const pr5 = new Profile();
+  t('locked weapons in a save revert to defaults', pr5.data.loadouts[0].primary === 'ar_kv7' && pr5.data.loadouts[0].secondary === 'pistol_warden' && pr5.data.loadouts[1].primary === 'ar_tarn' && pr5.data.loadouts[1].secondary === 'pistol_warden', JSON.stringify(pr5.data.loadouts.slice(0, 2)));
+  t('weapon unlock levels', !pr5.weaponUnlocked('lmg_anvil') && pr5.weaponUnlocked('ar_tarn') && pr5.weaponsUnlockedBetween(1, 6).length === 5, pr5.weaponsUnlockedBetween(1, 6).join());
   t('catalog meets content targets (≥4 operators, ≥8 outfits, ≥20 finishes)', ['operator', 'outfit', 'finish'].map((k) => Object.values(COSMETICS).filter((i) => i.type === k).length).join() === '4,12,25');
+}
+
+// ---------------- M4 weapons ----------------
+{
+  t('16 weapons: 4 AR, 3 SMG, 2 SG, 2 sniper/DMR, 2 LMG, 2 pistols, 1 melee', (() => { const c = {}; for (const w of Object.values(WEAPONS)) c[w.class] = (c[w.class] || 0) + 1; return Object.keys(WEAPONS).length === 16 && c.assault === 4 && c.smg === 3 && c.shotgun === 2 && c.sniper === 2 && c.lmg === 2 && c.pistol === 2 && c.melee === 1; })());
+  // burst: one trigger pull fires exactly three rounds
+  const m = mkMatch({ playerLoadout: { ...LO, primary: 'ar_meridian' } }); const p = m.player;
+  place(p, 12, 0, -1.5, -Math.PI / 2);
+  const mag0 = p.weapon.mag;
+  run(m, 0.6, (i) => { p.cmd.fire = i < 2; });
+  t('Meridian: one trigger pull = 3-round burst', mag0 - p.weapon.mag === 3, `${mag0 - p.weapon.mag} rounds`);
+  run(m, 1.0, () => { p.cmd.fire = true; });
+  const held = mag0 - p.weapon.mag;
+  run(m, 1.0, (i) => { p.cmd.fire = i % 30 < 3; });
+  t('Meridian: held trigger = one burst, each re-pull = another', held === 6 && mag0 - p.weapon.mag === 9, `held ${held}, total ${mag0 - p.weapon.mag}`);
+  // axe: one swing downs a full-health enemy at 2 m; no ADS
+  const m2 = mkMatch({ playerLoadout: { ...LO, secondary: 'melee_axe' } }); const p2 = m2.player;
+  place(p2, 12, 0, -1.5, -Math.PI / 2);
+  const e = addEnemy(m2); place(e, 14, 0, -1.5, Math.PI / 2);
+  run(m2, 0.8, (i) => { p2.cmd.swapTo = i === 0 ? 1 : -1; });
+  t('axe equipped', p2.weapon.def.id === 'melee_axe');
+  run(m2, 1.0, (i) => { p2.cmd.fire = i < 2; p2.cmd.ads = true; });
+  t('axe: one swing kills at 2 m', !e.alive, `hp=${e.health}`);
+  t('axe: cannot aim down sights', p2.adsT === 0);
+  // suppressed SMG makes less noise than an unsuppressed one
+  t('Hollow is suppressed (no radar ping)', WEAPONS.smg_hollow.suppressed === true);
 }
 
 console.log(`\n${pass}/${pass + fail} passed`);

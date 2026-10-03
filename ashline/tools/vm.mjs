@@ -11,16 +11,17 @@ await p.addInitScript(() => localStorage.setItem('ashline.settings', JSON.string
 await p.goto(url, { waitUntil: 'load', timeout: 120000 });
 await p.waitForFunction(() => window.__ashline?.state === 'menu', null, { timeout: 120000 });
 await p.evaluate(() => { const a = window.__ashline; a.startMatch(); a.game.debugAdvance(3.4); a.game.hud.root.style.display = 'none'; a.input.enabled = true; a.input.lastLockFail = performance.now(); });
-const ids = only ? [only] : ['ar_kv7', 'smg_vesper', 'sg_brakk', 'sr_longreach', 'pistol_warden'];
+const SEC = ['pistol_warden', 'pistol_grizzly', 'melee_axe'];
+const ids = only ? only.split(',') : ['ar_kv7', 'ar_tarn', 'ar_meridian', 'ar_bastion', 'smg_vesper', 'smg_wasp', 'smg_hollow', 'sg_brakk', 'sg_rook', 'sr_longreach', 'dmr_sentinel', 'lmg_drover', 'lmg_anvil', ...SEC];
 for (const id of ids) {
   for (const ads of [0, 1]) {
-    await p.evaluate(([id]) => {
+    await p.evaluate(([id, sec]) => {
       const a = window.__ashline, g = a.game, pl = g.player;
-      pl.applyLoadout({ ...pl.loadout, primary: id === 'pistol_warden' ? 'ar_kv7' : id });
-      pl.cur = id === 'pistol_warden' ? 1 : 0;
+      pl.applyLoadout(sec ? { ...pl.loadout, primary: 'ar_kv7', secondary: id } : { ...pl.loadout, primary: id });
+      pl.cur = sec ? 1 : 0;
       pl.x = 12; pl.y = 0; pl.z = -1.5; pl.vx = pl.vz = 0; pl.spawnProtectT = 99;
       g.look.yaw = -Math.PI / 2; g.look.pitch = 0.05;
-    }, [id]);
+    }, [id, SEC.includes(id)]);
     if (ads) await p.mouse.down({ button: 'right' });
     await p.evaluate(() => { const a = window.__ashline; for (let i = 0; i < 40; i++) { a.input.poll(); a.game.update(1 / 60); } });
     await p.waitForTimeout(700);

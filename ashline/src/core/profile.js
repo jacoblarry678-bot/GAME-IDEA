@@ -74,12 +74,14 @@ export class Profile {
   validate() {
     const d = this.data;
     d.version = PROFILE_VERSION; // v1 saves (M1/M2) migrate by filling the new fields with defaults
+    d.level = clampInt(d.level, 1, MAX_LEVEL);
+    const ok = (id, slot) => WEAPONS[id]?.slot === slot && this.weaponUnlocked(id);
     d.loadouts = DEFAULT_PROFILE.loadouts.map((def, i) => {
       const s = d.loadouts?.[i] || {};
       return {
         name: typeof s.name === 'string' && s.name.length <= 16 ? s.name : def.name,
-        primary: WEAPONS[s.primary]?.slot === 'primary' ? s.primary : def.primary,
-        secondary: WEAPONS[s.secondary]?.slot === 'secondary' ? s.secondary : def.secondary,
+        primary: ok(s.primary, 'primary') ? s.primary : def.primary,
+        secondary: ok(s.secondary, 'secondary') ? s.secondary : def.secondary,
         lethal: EQUIPMENT[s.lethal]?.slot === 'lethal' ? s.lethal : def.lethal,
         tactical: EQUIPMENT[s.tactical]?.slot === 'tactical' ? s.tactical : def.tactical,
       };
@@ -118,6 +120,10 @@ export class Profile {
   }
 
   get loadout() { return this.data.loadouts[this.data.activeLoadout]; }
+  /** Weapons unlock by player level (data-driven `unlockLevel`); starters are level 1. */
+  weaponUnlocked(id) { return (this.data.level | 0 || 1) >= (WEAPONS[id]?.unlockLevel || 1); }
+  /** Weapons that unlocked between two player levels. */
+  weaponsUnlockedBetween(a, b) { return WEAPON_IDS.filter((id) => { const u = WEAPONS[id].unlockLevel || 1; return u > a && u <= b; }); }
   save() { save('profile', this.data); }
   owns(id) { return !!(id && this.data.owned[id]); }
 
@@ -437,7 +443,7 @@ export class Profile {
     const weaponUnlocks = this.grantEarnedUnlocks();
     return {
       xp: lines, total, levelBefore, xpBefore, levelAfter: this.data.level, xpAfter: this.data.xp,
-      unlocks: [...lv.unlocks, ...weaponUnlocks], weapons, challenges: completed,
+      unlocks: [...lv.unlocks, ...weaponUnlocks], weapons, challenges: completed, newWeapons: this.weaponsUnlockedBetween(levelBefore, this.data.level),
       pass: { from: passBefore, to: pass.to, xp: this.data.pass.xp },
     };
   }

@@ -126,7 +126,7 @@ export class Hud {
     this.set('wname', s.weaponName, (v) => { $.wname.textContent = v; });
     this.set('mag', s.mag, (v) => { $.mag.textContent = v; });
     this.set('magLow', s.mag <= s.magSize * 0.25, (v) => $.mag.classList.toggle('low', v));
-    this.set('res', s.reserve, (v) => { $.res.textContent = '/ ' + v; });
+    this.set('res', s.reserve, (v) => { $.res.textContent = v === '' ? '' : '/ ' + v; });
     this.set('lc', s.lethal, (v) => { $.lc.textContent = '×' + v; $.lethal.classList.toggle('empty', v === 0); });
     this.set('tc', s.tactical, (v) => { $.tc.textContent = '×' + v; $.tactical.classList.toggle('empty', v === 0); });
     this.set('lk', s.keys.lethal, (v) => { $.lk.innerHTML = `<span class="key">${esc(v)}</span>`; });

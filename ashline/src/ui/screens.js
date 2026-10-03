@@ -157,7 +157,7 @@ const SCREENS = {
           <h1 class="title" style="font-size:calc(22px * var(--text-scale));letter-spacing:0.5em;color:var(--muted);margin-top:18px">OPERATION</h1>
           <h1 class="title" style="font-size:calc(76px * var(--text-scale));letter-spacing:0.08em">ASH<span style="color:var(--accent)">LINE</span></h1>
           <nav class="menu-nav compact">
-            <button class="menu-btn" data-go="play">Play<span class="sub">Team Deathmatch vs bots · offline</span></button>
+            <button class="menu-btn" data-go="play">Play<span class="sub">${esc(MODES[app.profile.data.matchSetup.mode]?.name || "Team Deathmatch")} vs bots · offline</span></button>
             <button class="menu-btn" data-act="range">Firing Range<span class="sub">Test weapons on training targets</span></button>
             <button class="menu-btn" data-go="loadouts">Loadouts<span class="sub">Active: ${esc(app.profile.loadout.name)} — ${esc(WEAPONS[app.profile.loadout.primary].name)}</span></button>
             <button class="menu-btn" data-go="armory">Armory${app.profile.unseenCount() ? ` <span class="newdot">${app.profile.unseenCount()}</span>` : ''}<span class="sub">Operators, outfits, finishes, charms, cards</span></button>
@@ -298,10 +298,10 @@ const SCREENS = {
           <div class="lo-edit scroll">
             <div class="slot"><div class="lab">Preset name</div><input class="name-in" maxlength="16" value="${esc(lo.name)}" style="width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:8px;font-family:var(--font-head);font-size:18px;letter-spacing:0.08em" /></div>
             <div class="slot"><div class="lab">Primary</div><div class="wpn-opts">
-              ${PRIMARY_IDS.map((id) => `<button class="wpn-opt ${lo.primary === id ? 'sel' : ''}" data-slot="primary" data-id="${id}"><div class="wn">${esc(WEAPONS[id].name)}</div><div class="wc">${esc(WEAPONS[id].classLabel)} · LV ${prof.data.weaponProgress[id].level}</div></button>`).join('')}
+              ${PRIMARY_IDS.map((id) => wpnOpt(prof, lo, 'primary', id)).join('')}
             </div></div>
             <div class="slot"><div class="lab">Secondary</div><div class="wpn-opts">
-              ${SECONDARY_IDS.map((id) => `<button class="wpn-opt ${lo.secondary === id ? 'sel' : ''}" data-slot="secondary" data-id="${id}"><div class="wn">${esc(WEAPONS[id].name)}</div><div class="wc">${esc(WEAPONS[id].classLabel)} · LV ${prof.data.weaponProgress[id].level}</div></button>`).join('')}
+              ${SECONDARY_IDS.map((id) => wpnOpt(prof, lo, 'secondary', id)).join('')}
             </div></div>
             <div class="slot"><div class="lab">Lethal</div><div class="wpn-opts">
               ${LETHAL_IDS.map((id) => `<button class="wpn-opt ${lo.lethal === id ? 'sel' : ''}" data-slot="lethal" data-id="${id}"><div class="wn">${esc(EQUIPMENT[id].name)}</div><div class="wc">${esc(EQUIPMENT[id].blurb)}</div></button>`).join('')}
@@ -310,7 +310,6 @@ const SCREENS = {
               ${TACTICAL_IDS.map((id) => `<button class="wpn-opt ${lo.tactical === id ? 'sel' : ''}" data-slot="tactical" data-id="${id}"><div class="wn">${esc(EQUIPMENT[id].name)}</div><div class="wc">${esc(EQUIPMENT[id].blurb)}</div></button>`).join('')}
             </div></div>
             <div class="row"><button class="btn" data-a="armory">Finishes &amp; charms for ${esc(WEAPONS[previewId || lo.primary].name)}</button></div>
-            <div class="muted small">More weapons, attachments and perks are on the roadmap (Milestone 4).</div>
           </div>
         </div>
         <div class="panel wpn-info">${weaponStatsHtml(previewId)}</div>
@@ -325,6 +324,7 @@ const SCREENS = {
       node.querySelectorAll('.lo-item').forEach((b) => { b.onclick = () => { sel = Number(b.dataset.i); previewId = null; render(); }; });
       node.querySelectorAll('.wpn-opt').forEach((b) => {
         b.onclick = () => {
+          if (b.classList.contains('locked')) { app.screens.toast(`${WEAPONS[b.dataset.id].name} unlocks at level ${WEAPONS[b.dataset.id].unlockLevel}`); return; }
           lo[b.dataset.slot] = b.dataset.id;
           prof.save();
           if (WEAPONS[b.dataset.id]) previewId = b.dataset.id;
@@ -529,6 +529,7 @@ function rewardsHtml(app, rw, recorded) {
     <div class="row small" style="margin-top:8px"><span>Battle pass tier ${rw.pass.from} → <b>${rw.pass.to}</b></span>${rw.pass.to > rw.pass.from ? '<span class="pill on">Rewards ready to claim</span>' : ''}</div>
     ${rw.weapons.length ? `<div class="small" style="margin-top:8px">${rw.weapons.map((w) => `<div class="row"><span class="muted">${esc(WEAPONS[w.id].name)}</span><div class="spacer"></div>+${w.xp} XP · LV ${w.to}${w.to > w.from ? ' <span class="pill on">Level up</span>' : ''}</div>`).join('')}</div>` : ''}
     ${rw.challenges.length ? `<div class="small" style="margin-top:8px">${rw.challenges.map((c) => `<div class="row"><span class="pill on">Challenge complete</span><span>${esc(c.text)}</span></div>`).join('')}</div>` : ''}
+    ${rw.newWeapons?.length ? `<h3 class="title" style="margin-top:12px">New weapons</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.newWeapons.map((id) => `<div class="pill on">${esc(WEAPONS[id].name)} · ${esc(WEAPONS[id].classLabel)}</div>`).join('')}</div>` : ''}
     ${rw.unlocks.length ? `<h3 class="title" style="margin-top:12px">Unlocked</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.unlocks.map((i) => `<div class="row small" style="gap:6px;border:1px solid ${RARITY[i.rarity].color};padding:4px 8px">${itemThumb(i)}<span>${esc(i.name)}</span></div>`).join('')}</div>` : ''}
     <div class="muted small" style="margin-top:10px">Saved to your local profile.</div>`;
 }
@@ -623,4 +624,10 @@ function renderBindings(app, rerender) {
   foot.appendChild(el('span', { class: 'muted small' }, 'Right-click a slot to clear it.'));
   wrap.appendChild(foot);
   return wrap;
+}
+
+function wpnOpt(prof, lo, slot, id) {
+  const w = WEAPONS[id], open = prof.weaponUnlocked(id);
+  const sub = open ? `${esc(w.classLabel)} · LV ${prof.data.weaponProgress[id].level}` : `🔒 Unlocks at level ${w.unlockLevel}`;
+  return `<button class="wpn-opt ${lo[slot] === id ? 'sel' : ''} ${open ? '' : 'locked'}" data-slot="${slot}" data-id="${id}"><div class="wn">${esc(w.name)}</div><div class="wc">${sub}</div></button>`;
 }

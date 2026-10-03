@@ -18,6 +18,17 @@ const POSES = {
   shotgun: { hip: [0.15, -0.17, -0.38], eye: 0.3, rotY: -0.03 },
   sniper: { hip: [0.15, -0.18, -0.4], eye: 0.1, rotY: -0.03 },
   pistol: { hip: [0.13, -0.15, -0.42], eye: 0.34, rotY: -0.05 },
+  bullpup: { hip: [0.15, -0.16, -0.36], eye: 0.17, rotY: -0.03 },
+  battle: { hip: [0.15, -0.165, -0.4], eye: 0.3, rotY: -0.03 },
+  carbine: { hip: [0.15, -0.165, -0.38], eye: 0.17, rotY: -0.03 },
+  mp: { hip: [0.13, -0.14, -0.38], eye: 0.3, rotY: -0.04 },
+  suppressed: { hip: [0.145, -0.16, -0.38], eye: 0.2, rotY: -0.03 },
+  autoshotgun: { hip: [0.15, -0.17, -0.38], eye: 0.2, rotY: -0.03 },
+  dmr: { hip: [0.15, -0.19, -0.4], eye: 0.12, rotY: -0.03 },
+  lmg: { hip: [0.16, -0.19, -0.42], eye: 0.2, rotY: -0.04 },
+  lmgdrum: { hip: [0.155, -0.18, -0.42], eye: 0.17, rotY: -0.04 },
+  revolver: { hip: [0.13, -0.15, -0.42], eye: 0.36, rotY: -0.05 },
+  axe: { hip: [0.2, -0.27, -0.34], eye: 0.4, rotY: 0.1 },
 };
 
 const Z = new THREE.Vector3(0, 0, 1);

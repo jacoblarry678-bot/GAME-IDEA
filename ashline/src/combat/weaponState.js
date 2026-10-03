@@ -15,12 +15,13 @@ export class WeaponState {
     this.bloom = 0; // degrees
     this.cycleT = 0; // bolt/pump animation timer (visual + blocks fire)
     this.lastShot = -10;
+    this.burstLeft = 0;
     this.events = [];
   }
 
   get id() { return this.def.id; }
   get empty() { return this.mag <= 0; }
-  get canReload() { return !this.reloading && this.mag < this.def.mag && this.reserve > 0; }
+  get canReload() { return !this.def.melee && !this.reloading && this.mag < this.def.mag && this.reserve > 0; }
   get interval() { return 60 / this.def.rpm; }
   /** Fraction of reload complete (for UI/animation). */
   get reloadProgress() {

@@ -14,6 +14,8 @@ const PREF_RANGE = {
   assault: [6, 22, 40],
   sniper: [22, 40, 90],
   pistol: [0, 10, 20],
+  lmg: [8, 25, 45],
+  melee: [0, 1, 1.5],
 };
 
 export class BotBrain {
@@ -295,7 +297,7 @@ export class BotBrain {
     this.lookPitch = Math.atan2(ey, Math.hypot(ex, ez));
 
     // ADS decision
-    const wantAds = cls === 'sniper' || (cls !== 'shotgun' && dist > 9) || (cls === 'shotgun' && dist > 5 && dist < 11);
+    const wantAds = cls !== 'melee' && (cls === 'sniper' || (cls !== 'shotgun' && dist > 9) || (cls === 'shotgun' && dist > 5 && dist < 11));
     cmd.ads = wantAds;
 
     // fire decision: aim close enough to the true target and clear line
@@ -306,7 +308,8 @@ export class BotBrain {
     let fire = yawErr < tol * 1.5 && pitchErr < tol * 2;
     if (cls === 'sniper' && (c.adsT < 0.95 || this.trackT < this.d.settle * 0.8)) fire = false;
     if (cls === 'shotgun' && dist > 18) fire = false;
-    if (dist > 60 && cls !== 'sniper' && cls !== 'assault') fire = false;
+    if (dist > 60 && cls !== 'sniper' && cls !== 'assault' && cls !== 'lmg') fire = false;
+    if (def.melee) fire = dist < def.melee.range * 0.9 && yawErr < 0.6;
     // burst discipline at range
     if (fire && def.auto && dist > 18) {
       if (this.pauseT > 0) { this.pauseT -= dt; fire = false; }
@@ -328,11 +331,13 @@ export class BotBrain {
     cmd.fire = fire;
 
     // ammo management
-    if (w.mag === 0) {
+    if (w.mag === 0 && !def.melee) {
       if (c.cur === 0 && dist < 14 && c.weapons[1].mag > 0 && this.d.burst > 0.6) cmd.swap = true;
       else cmd.reload = true;
     }
     if (c.cur === 1 && w.mag === 0 && c.weapons[0].mag > 0) cmd.swap = true;
+    // an axe carrier swaps back to the gun when the target is not close
+    if (def.melee && dist > 8 && c.weapons.length > 1 && c.weapons[0].mag + c.weapons[0].reserve > 0 && c.cur === 1) cmd.swap = true;
 
     // melee when very close
     if (dist < 1.6 && Math.random() < 0.08 * this.d.burst) cmd.melee = true;

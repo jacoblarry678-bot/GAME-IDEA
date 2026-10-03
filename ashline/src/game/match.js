@@ -223,7 +223,7 @@ export class Match {
     for (const [victim, h] of hitsByVictim) {
       this.applyDamage(victim, c, h.dmg, { weapon: def.id, zone: h.zone, kind: 'bullet', fromX: c.x, fromZ: c.z, dist: h.t });
     }
-    this.noise(c.x, c.z, def.class === 'sniper' || def.class === 'shotgun' ? 60 : 48, c);
+    this.noise(c.x, c.z, def.suppressed ? 14 : def.class === 'sniper' || def.class === 'shotgun' || def.class === 'lmg' ? 60 : 48, c);
   }
 
   /** Trace a bullet: nearest of world geometry and combatant hitboxes. */
@@ -247,21 +247,22 @@ export class Match {
     };
   }
 
-  doMelee(c) {
+  doMelee(c, weaponDef = null) {
+    const M = weaponDef?.melee || MELEE;
     const fx = -Math.sin(c.yaw), fz = -Math.cos(c.yaw);
     let best = null, bd = Infinity;
     for (const o of this.combatants) {
       if (o === c || !o.alive) continue;
       const dx = o.x - c.x, dz = o.z - c.z, dy = o.y - c.y;
       const d = Math.hypot(dx, dz);
-      if (d > MELEE.range + 0.3 || Math.abs(dy) > 1.2) continue;
+      if (d > M.range + 0.3 || Math.abs(dy) > 1.2) continue;
       const ang = Math.acos(Math.max(-1, Math.min(1, (dx * fx + dz * fz) / (d || 1))));
-      if (ang > MELEE.arcDeg * DEG && d > 0.6) continue;
+      if (ang > M.arcDeg * DEG && d > 0.6) continue;
       if (!this.canSee(c.x, c.eyeY, c.z, o.x, o.y + 1.1, o.z)) continue;
       if (d < bd) { bd = d; best = o; }
     }
-    this.emit({ type: 'melee', c, hit: !!best });
-    if (best) this.applyDamage(best, c, MELEE.damage, { weapon: 'melee', zone: 'torso', kind: 'melee', fromX: c.x, fromZ: c.z });
+    this.emit({ type: 'melee', c, hit: !!best, heavy: !!weaponDef });
+    if (best) this.applyDamage(best, c, M.damage, { weapon: weaponDef ? weaponDef.id : 'melee', zone: 'torso', kind: 'melee', fromX: c.x, fromZ: c.z });
   }
 
   throwEquipment(c, kind) { this.projectiles.throw(c, kind); }
@@ -375,9 +376,14 @@ export class Match {
 }
 
 function randomBotLoadout(rng) {
-  const roll = rng();
-  const primary = roll < 0.42 ? 'ar_kv7' : roll < 0.72 ? 'smg_vesper' : roll < 0.86 ? 'sg_brakk' : 'sr_longreach';
-  return { primary, secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke' };
+  // weighted toward the mainstays so lobbies feel like real loadout choices
+  const pool = [['ar_kv7', 14], ['ar_tarn', 9], ['ar_meridian', 7], ['ar_bastion', 7], ['smg_vesper', 11], ['smg_wasp', 8], ['smg_hollow', 7],
+    ['sg_brakk', 6], ['sg_rook', 5], ['sr_longreach', 6], ['dmr_sentinel', 6], ['lmg_drover', 5], ['lmg_anvil', 4]];
+  const total = pool.reduce((a, [, w]) => a + w, 0);
+  let r = rng() * total, primary = pool[0][0];
+  for (const [id, w] of pool) { r -= w; if (r <= 0) { primary = id; break; } }
+  const secondary = rng() < 0.75 ? 'pistol_warden' : 'pistol_grizzly';
+  return { primary, secondary, lethal: 'frag', tactical: 'smoke' };
 }
 
 /** Random direction inside a cone around yaw/pitch (uniform on disk). */

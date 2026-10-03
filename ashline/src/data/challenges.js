@@ -6,7 +6,7 @@
  *
  * stat keys come from the per-match summary built in progression.js:
  *   kills, headshots, assists, score, matches, wins, grenadeKills, meleeKills,
- *   longshots, multikills, bestStreak (max), class:<assault|smg|shotgun|sniper|pistol>
+ *   longshots, multikills, bestStreak (max), class:<assault|smg|shotgun|sniper|lmg|pistol|melee>
  */
 export const DAILY_POOL = [
   { id: 'd_kills15', text: 'Get 15 eliminations', stat: 'kills', goal: 15, xp: 1500 },
@@ -15,6 +15,7 @@ export const DAILY_POOL = [
   { id: 'd_smg8', text: 'Get 8 eliminations with an SMG', stat: 'class:smg', goal: 8, xp: 1500 },
   { id: 'd_sg3', text: 'Get 3 eliminations with a Shotgun', stat: 'class:shotgun', goal: 3, xp: 1500 },
   { id: 'd_sr3', text: 'Get 3 eliminations with a Sniper Rifle', stat: 'class:sniper', goal: 3, xp: 1500 },
+  { id: 'd_lmg6', text: 'Get 6 eliminations with a Light Machine Gun', stat: 'class:lmg', goal: 6, xp: 1500 },
   { id: 'd_pistol3', text: 'Get 3 eliminations with a Pistol', stat: 'class:pistol', goal: 3, xp: 1500 },
   { id: 'd_frag2', text: 'Get 2 grenade eliminations', stat: 'grenadeKills', goal: 2, xp: 2000 },
   { id: 'd_melee1', text: 'Get 1 melee elimination', stat: 'meleeKills', goal: 1, xp: 2000 },
@@ -34,6 +35,7 @@ export const WEEKLY_POOL = [
   { id: 'w_multi10', text: 'Earn 10 multi-kill medals', stat: 'multikills', goal: 10, xp: 7000 },
   { id: 'w_smg40', text: 'Get 40 eliminations with an SMG', stat: 'class:smg', goal: 40, xp: 6000 },
   { id: 'w_ar40', text: 'Get 40 eliminations with an Assault Rifle', stat: 'class:assault', goal: 40, xp: 6000 },
+  { id: 'w_lmg30', text: 'Get 30 eliminations with a Light Machine Gun', stat: 'class:lmg', goal: 30, xp: 6000 },
   { id: 'w_sr15', text: 'Get 15 eliminations with a Sniper Rifle', stat: 'class:sniper', goal: 15, xp: 7000 },
   { id: 'w_score25k', text: 'Earn 25,000 score', stat: 'score', goal: 25000, xp: 6000 },
   { id: 'w_streak10', text: 'Reach a 10-elimination streak in one match', stat: 'bestStreak', goal: 10, xp: 8000, max: true },

@@ -10,7 +10,7 @@
  *   loadoutFor(match, c)       forced loadout (Gun Game)
  * Only modes whose rules are implemented here are offered as playable.
  */
-import { WEAPONS } from '../data/weapons.js';
+import { WEAPONS, GUN_LADDER } from '../data/weapons.js';
 
 export const TEAMS = [
   { id: 0, name: 'WARDEN', full: 'Warden Security Directorate' },
@@ -257,7 +257,7 @@ export const MODES = {
     defaults: { scoreLimit: 0, timeLimit: 10 },
     limits: { timeLimit: [3, 20, 1] },
     respawnDelay: 2,
-    ladder: ['ar_kv7', 'smg_vesper', 'sg_brakk', 'sr_longreach', 'pistol_warden', 'melee'],
+    ladder: GUN_LADDER,
     setup(match) {
       match.ladder = (match.map.def.gunLadder || this.ladder).filter((id) => id === 'melee' || WEAPONS[id]);
       for (const c of match.combatants) { c.gunLevel = 0; c.applyLoadout(this.loadoutFor(match, c)); }

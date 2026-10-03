@@ -359,7 +359,7 @@ export class Game {
           const cam = app.engine.camera.position;
           const occluded = !this.match.canSee(cam.x, cam.y, cam.z, c.x, c.eyeY, c.z);
           a.play3D('shot_' + def.audio.kind, c.x, c.eyeY, c.z, { vol: 1.0, rate: def.audio.pitch, occluded, ref: 6, echo: true });
-          if (c.team !== p.team) this.radar.set(c.id, this.match.time);
+          if (c.team !== p.team && !def.suppressed) this.radar.set(c.id, this.match.time);
         }
         for (const end of e.ends) {
           if (e.tracer || (!me && Math.random() < 0.5)) fx.tracer(mx, my, mz, end.x, end.y, end.z);
@@ -688,7 +688,7 @@ export class Game {
     const nades = [];
     for (const g of m.projectiles.list) if (g.kind === 'frag' && p.alive && Math.hypot(g.x - p.x, g.z - p.z) < 8) nades.push(g);
     hud.update(dt, {
-      alive: p.alive, health: p.health, weaponName: w.def.name, mag: w.mag, magSize: w.def.mag, reserve: w.reserve,
+      alive: p.alive, health: p.health, weaponName: w.def.name, mag: w.def.melee ? '—' : w.mag, magSize: w.def.melee ? 0 : w.def.mag, reserve: w.def.melee ? '' : w.reserve,
       lethal: p.lethal.count, tactical: p.tactical.count, scores: this.hudScores(), timeLeft: m.timeLeft, scoreLimit: m.settings.scoreLimit, limitText: this.limitText(),
       sprinting: p.sprinting, adsT: p.adsT, busy: p.swapT > 0 || p.throwT > 0 || p.meleeT > 0, scoped: this.scoped,
       spreadDeg: p.spreadDeg(), vfov: app.engine.camera.fov * Math.PI / 180, reloading: w.reloading, protect: p.spawnProtectT,

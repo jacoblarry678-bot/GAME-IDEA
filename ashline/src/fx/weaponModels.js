@@ -249,6 +249,275 @@ const BUILDERS = {
   },
 };
 
+
+function holoSight(b, y, z) {
+  // larger rectangular holographic window
+  b.add(rbox(0.032, 0.012, 0.07, 0.003), 'polymer', 0, y + 0.006, z);
+  b.add(rbox(0.004, 0.034, 0.05, 0.0015), 'polymer', 0.017, y + 0.027, z - 0.008);
+  b.add(rbox(0.004, 0.034, 0.05, 0.0015), 'polymer', -0.017, y + 0.027, z - 0.008);
+  b.add(rbox(0.038, 0.005, 0.05, 0.0015), 'polymer', 0, y + 0.045, z - 0.008);
+  const glass = b.add(new THREE.PlaneGeometry(0.03, 0.03), 'glass', 0, y + 0.027, z - 0.03);
+  glass.renderOrder = 2;
+  const ring = b.add(new THREE.RingGeometry(0.0022, 0.0028, 16), 'reddot', 0, y + 0.027, z - 0.031);
+  ring.renderOrder = 3;
+  const dot = b.add(new THREE.CircleGeometry(0.0006, 8), 'reddot', 0, y + 0.027, z - 0.031);
+  dot.renderOrder = 3;
+  b.marker('sight', 0, y + 0.027, z + 0.03);
+}
+
+function scope3x(b, y, z) {
+  // open-ended tube: from the eye you look through it and see the housing as a ring
+  const tube = (r1, r2, len, zz) => {
+    const g = new THREE.CylinderGeometry(r2, r1, len, 16, 1, true);
+    g.rotateX(Math.PI / 2);
+    return b.add(g, 'polymer', 0, y + 0.012, zz);
+  };
+  b.add(rbox(0.016, 0.062, 0.02), 'metal', 0, y - 0.03, z - 0.06);
+  b.add(rbox(0.016, 0.062, 0.02), 'metal', 0, y - 0.03, z + 0.05);
+  tube(0.014, 0.014, 0.17, z);
+  tube(0.014, 0.019, 0.05, z - 0.105);
+  tube(0.017, 0.014, 0.04, z + 0.1);
+  b.add(new THREE.RingGeometry(0.0095, 0.019, 24), 'polymer', 0, y + 0.012, z + 0.12);
+  b.add(new THREE.RingGeometry(0.0175, 0.0195, 20), 'polymer', 0, y + 0.012, z - 0.13);
+  const r = b.add(new THREE.RingGeometry(0.0004, 0.0009, 3), 'reddot', 0, y + 0.0115, z + 0.118);
+  r.rotation.z = Math.PI / 2;
+  r.renderOrder = 3;
+  b.marker('sight', 0, y + 0.012, z + 0.12);
+}
+
+function bipod(b, y, z) {
+  b.add(rbox(0.008, 0.008, 0.18), 'metal', 0.014, y, z);
+  b.add(rbox(0.008, 0.008, 0.18), 'metal', -0.014, y, z);
+}
+
+Object.assign(BUILDERS, {
+  bullpup(b) {
+    b.add(rbox(0.05, 0.085, 0.56, 0.012), 'olive', 0, 0.055, 0.0);
+    b.add(rbox(0.054, 0.05, 0.2, 0.012), 'polymer', 0, 0.06, -0.3);
+    b.add(cyl(0.011, 0.16), 'metal', 0, 0.075, -0.46);
+    b.add(cyl(0.016, 0.05, 8), 'metal', 0, 0.075, -0.56);
+    rail(b, 0.104, 0.06, -0.32);
+    b.add(rbox(0.03, 0.09, 0.042, 0.008), 'polymer', 0, -0.03, 0.0, 0.25, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.07), 'metal', 0, -0.0, -0.04);
+    b.add(rbox(0.048, 0.1, 0.03, 0.01), 'polymer', 0, 0.045, 0.28);
+    const mag = b.sub('mag', 0, 0.01, 0.14);
+    b.add(rbox(0.026, 0.12, 0.06, 0.006), 'polymer', 0, -0.06, 0, -0.18, 0, 0, mag);
+    reflexSight(b, 0.112, -0.08);
+    b.marker('muzzle', 0, 0.075, -0.6);
+    b.marker('leftHand', 0, 0.03, -0.27);
+    b.marker('eject', 0.03, 0.07, 0.12);
+    b.marker('magWell', 0, 0.01, 0.14);
+    b.marker('charm', -0.026, 0.04, 0.2);
+  },
+  battle(b) {
+    b.add(rbox(0.05, 0.06, 0.3, 0.006), 'metal', 0, 0.07, -0.06);
+    b.add(rbox(0.052, 0.024, 0.3, 0.004), 'metal', 0, 0.104, -0.06);
+    b.add(rbox(0.056, 0.06, 0.22, 0.014), 'wood', 0, 0.064, -0.33);
+    b.add(rbox(0.04, 0.03, 0.2, 0.01), 'wood', 0, 0.104, -0.33);
+    b.add(cyl(0.012, 0.24), 'metal', 0, 0.075, -0.55);
+    b.add(rbox(0.024, 0.03, 0.03), 'metal', 0, 0.075, -0.66);
+    b.add(rbox(0.03, 0.09, 0.044, 0.008), 'polymer', 0, -0.028, 0.03, 0.3, 0, 0);
+    b.add(rbox(0.04, 0.085, 0.27, 0.012), 'wood', 0, 0.05, 0.22, -0.1, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.06), 'metal', 0, 0.0, -0.03);
+    const mag = b.sub('mag', 0, 0.035, -0.12);
+    b.add(rbox(0.028, 0.09, 0.07, 0.005), 'metal', 0, -0.04, 0, -0.15, 0, 0, mag);
+    b.add(rbox(0.028, 0.08, 0.068, 0.005), 'metal', 0, -0.11, -0.03, -0.5, 0, 0, mag);
+    ironSights(b, 0.116, -0.12, 0.094, -0.63);
+    b.marker('muzzle', 0, 0.075, -0.69);
+    b.marker('leftHand', 0, 0.03, -0.33);
+    b.marker('eject', 0.03, 0.08, -0.04);
+    b.marker('magWell', 0, 0.035, -0.12);
+    b.marker('charm', -0.026, 0.06, 0.04);
+  },
+  carbine(b) {
+    b.add(rbox(0.048, 0.05, 0.28, 0.006), 'metal', 0, 0.075, -0.06);
+    b.add(rbox(0.046, 0.04, 0.2, 0.006), 'tan', 0, 0.035, -0.04);
+    b.add(rbox(0.054, 0.06, 0.2, 0.012), 'tan', 0, 0.068, -0.3);
+    rail(b, 0.104, 0.07, -0.4);
+    b.add(cyl(0.011, 0.12), 'metal', 0, 0.072, -0.46);
+    b.add(cyl(0.016, 0.045, 10), 'metal', 0, 0.072, -0.53);
+    b.add(rbox(0.03, 0.095, 0.042, 0.008), 'polymer', 0, -0.025, 0.035, 0.28, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.06), 'metal', 0, 0.0, -0.025);
+    b.add(rbox(0.024, 0.03, 0.12, 0.004), 'metal', 0, 0.072, 0.13);
+    b.add(rbox(0.04, 0.075, 0.15, 0.01), 'tan', 0, 0.06, 0.22);
+    b.add(rbox(0.026, 0.05, 0.05, 0.008), 'polymer', 0, 0.02, -0.3, -0.5, 0, 0);
+    const mag = b.sub('mag', 0, 0.03, -0.11);
+    b.add(rbox(0.026, 0.1, 0.068, 0.006), 'tan', 0, -0.045, 0, -0.12, 0, 0, mag);
+    b.add(rbox(0.026, 0.07, 0.066, 0.006), 'tan', 0, -0.12, -0.02, -0.4, 0, 0, mag);
+    holoSight(b, 0.112, -0.04);
+    b.marker('muzzle', 0, 0.072, -0.56);
+    b.marker('leftHand', 0, 0.03, -0.3);
+    b.marker('eject', 0.03, 0.08, -0.04);
+    b.marker('magWell', 0, 0.03, -0.11);
+    b.marker('charm', -0.026, 0.06, 0.04);
+  },
+  mp(b) {
+    b.add(rbox(0.046, 0.07, 0.2, 0.008), 'polymer', 0, 0.065, -0.07);
+    b.add(cyl(0.011, 0.05), 'metal', 0, 0.075, -0.19);
+    b.add(rbox(0.03, 0.1, 0.045, 0.008), 'polymer', 0, -0.02, 0.0, 0.12, 0, 0);
+    const mag = b.sub('mag', 0, -0.06, 0.0);
+    b.add(rbox(0.024, 0.2, 0.034, 0.004), 'metal', 0, -0.09, 0.006, 0.12, 0, 0, mag);
+    b.add(rbox(0.024, 0.04, 0.03, 0.006), 'polymer', 0, 0.02, -0.15, -0.3, 0, 0);
+    b.add(rbox(0.008, 0.008, 0.12), 'metal', 0.016, 0.075, 0.09);
+    b.add(rbox(0.008, 0.008, 0.12), 'metal', -0.016, 0.075, 0.09);
+    b.add(rbox(0.04, 0.05, 0.012, 0.004), 'polymer', 0, 0.065, 0.15);
+    ironSights(b, 0.104, 0.0, 0.1, -0.15);
+    b.marker('muzzle', 0, 0.075, -0.22);
+    b.marker('leftHand', 0, 0.01, -0.15);
+    b.marker('eject', 0.026, 0.08, -0.06);
+    b.marker('magWell', 0, -0.06, 0.0);
+    b.marker('charm', -0.024, 0.05, 0.0);
+  },
+  suppressed(b) {
+    b.add(rbox(0.05, 0.065, 0.24, 0.008), 'metal', 0, 0.07, -0.06);
+    b.add(rbox(0.046, 0.034, 0.16, 0.006), 'polymer', 0, 0.03, -0.05);
+    b.add(cyl(0.024, 0.32, 16), 'polymer', 0, 0.07, -0.34);
+    for (let z = -0.22; z > -0.48; z -= 0.05) b.add(cyl(0.0245, 0.006, 16), 'metal', 0, 0.07, z);
+    rail(b, 0.104, 0.04, -0.17);
+    b.add(rbox(0.03, 0.09, 0.04, 0.008), 'polymer', 0, -0.025, 0.03, 0.22, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.05), 'metal', 0, 0.002, -0.02);
+    const mag = b.sub('mag', 0, 0.03, -0.11);
+    b.add(rbox(0.024, 0.13, 0.04, 0.005), 'polymer', 0, -0.065, 0, -0.18, 0, 0, mag);
+    b.add(rbox(0.012, 0.06, 0.16, 0.004), 'polymer', 0.0, 0.06, 0.13);
+    b.add(rbox(0.04, 0.08, 0.016, 0.006), 'polymer', 0, 0.055, 0.215);
+    reflexSight(b, 0.112, -0.04);
+    b.marker('muzzle', 0, 0.07, -0.5);
+    b.marker('leftHand', 0, 0.04, -0.24);
+    b.marker('eject', 0.03, 0.08, -0.05);
+    b.marker('magWell', 0, 0.03, -0.11);
+    b.marker('charm', -0.027, 0.05, 0.03);
+  },
+  autoshotgun(b) {
+    b.add(rbox(0.054, 0.08, 0.3, 0.008), 'polymer', 0, 0.065, -0.08);
+    b.add(rbox(0.05, 0.06, 0.18, 0.01), 'polymer', 0, 0.065, -0.32);
+    for (let z = -0.25; z > -0.4; z -= 0.03) b.add(rbox(0.052, 0.008, 0.012), 'metal', 0, 0.085, z);
+    b.add(cyl(0.014, 0.12), 'metal', 0, 0.075, -0.47);
+    b.add(cyl(0.019, 0.04, 10), 'metal', 0, 0.075, -0.54);
+    rail(b, 0.11, 0.04, -0.2);
+    b.add(rbox(0.03, 0.095, 0.045, 0.01), 'polymer', 0, -0.03, 0.05, 0.3, 0, 0);
+    b.add(rbox(0.04, 0.08, 0.2, 0.012), 'polymer', 0, 0.05, 0.2, -0.08, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.06), 'metal', 0, 0.004, -0.01);
+    const mag = b.sub('mag', 0, 0.025, -0.13);
+    b.add(rbox(0.04, 0.1, 0.06, 0.006), 'polymer', 0, -0.05, 0, -0.08, 0, 0, mag);
+    reflexSight(b, 0.118, -0.06);
+    b.marker('muzzle', 0, 0.075, -0.57);
+    b.marker('leftHand', 0, 0.03, -0.32);
+    b.marker('eject', 0.03, 0.08, -0.06);
+    b.marker('magWell', 0, 0.025, -0.13);
+    b.marker('charm', -0.028, 0.05, 0.03);
+  },
+  dmr(b) {
+    b.add(rbox(0.048, 0.055, 0.3, 0.006), 'metal', 0, 0.075, -0.06);
+    b.add(rbox(0.046, 0.04, 0.22, 0.006), 'polymer', 0, 0.035, -0.04);
+    b.add(rbox(0.054, 0.058, 0.32, 0.01), 'tan', 0, 0.068, -0.37);
+    rail(b, 0.106, 0.08, -0.5);
+    b.add(cyl(0.012, 0.22), 'metal', 0, 0.072, -0.63);
+    b.add(cyl(0.017, 0.06, 8), 'metal', 0, 0.072, -0.76);
+    b.add(rbox(0.03, 0.095, 0.042, 0.008), 'polymer', 0, -0.025, 0.035, 0.28, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.06), 'metal', 0, 0.0, -0.025);
+    b.add(rbox(0.042, 0.09, 0.2, 0.01), 'tan', 0, 0.05, 0.22);
+    b.add(rbox(0.03, 0.025, 0.1, 0.006), 'polymer', 0, 0.105, 0.2);
+    const mag = b.sub('mag', 0, 0.03, -0.11);
+    b.add(rbox(0.028, 0.085, 0.07, 0.006), 'polymer', 0, -0.04, 0, -0.08, 0, 0, mag);
+    bipod(b, 0.03, -0.42);
+    scope3x(b, 0.17, -0.04);
+    b.marker('muzzle', 0, 0.072, -0.8);
+    b.marker('leftHand', 0, 0.03, -0.34);
+    b.marker('eject', 0.03, 0.08, -0.04);
+    b.marker('magWell', 0, 0.03, -0.11);
+    b.marker('charm', -0.026, 0.06, 0.04);
+  },
+  lmg(b) {
+    b.add(rbox(0.06, 0.085, 0.36, 0.008), 'metal', 0, 0.075, -0.06);
+    b.add(rbox(0.064, 0.02, 0.24, 0.004), 'polymer', 0, 0.126, -0.02);
+    b.add(rbox(0.06, 0.06, 0.22, 0.01), 'polymer', 0, 0.07, -0.34);
+    b.add(cyl(0.016, 0.36), 'metal', 0, 0.075, -0.56);
+    b.add(cyl(0.021, 0.06, 10), 'metal', 0, 0.075, -0.76);
+    b.add(rbox(0.012, 0.05, 0.12, 0.004), 'metal', 0, 0.14, -0.36); // carry handle
+    b.add(rbox(0.03, 0.095, 0.044, 0.008), 'polymer', 0, -0.03, 0.05, 0.28, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.06), 'metal', 0, 0.0, -0.01);
+    b.add(rbox(0.046, 0.1, 0.24, 0.012), 'polymer', 0, 0.05, 0.25, -0.08, 0, 0);
+    const mag = b.sub('mag', -0.0, 0.0, -0.1);
+    b.add(rbox(0.07, 0.12, 0.13, 0.008), 'olive', -0.01, -0.06, 0, 0, 0, 0, mag);
+    b.add(rbox(0.02, 0.04, 0.03, 0.004), 'metal', 0.03, 0.01, 0, 0, 0, 0, mag);
+    bipod(b, 0.035, -0.5);
+    reflexSight(b, 0.136, -0.1);
+    b.marker('muzzle', 0, 0.075, -0.8);
+    b.marker('leftHand', 0, 0.035, -0.34);
+    b.marker('eject', 0.034, 0.07, -0.06);
+    b.marker('magWell', 0, 0.0, -0.1);
+    b.marker('charm', -0.032, 0.06, 0.06);
+  },
+  lmgdrum(b) {
+    b.add(rbox(0.052, 0.06, 0.32, 0.006), 'metal', 0, 0.075, -0.06);
+    b.add(rbox(0.06, 0.064, 0.26, 0.012), 'olive', 0, 0.07, -0.36);
+    rail(b, 0.106, 0.08, -0.46);
+    b.add(cyl(0.015, 0.28), 'metal', 0, 0.075, -0.62);
+    b.add(cyl(0.02, 0.05, 10), 'metal', 0, 0.075, -0.78);
+    b.add(rbox(0.03, 0.095, 0.044, 0.008), 'polymer', 0, -0.028, 0.04, 0.28, 0, 0);
+    b.add(rbox(0.006, 0.004, 0.06), 'metal', 0, 0.0, -0.02);
+    b.add(rbox(0.044, 0.09, 0.22, 0.012), 'olive', 0, 0.055, 0.22);
+    const mag = b.sub('mag', 0, 0.02, -0.12);
+    const drum = new THREE.CylinderGeometry(0.065, 0.065, 0.06, 18);
+    drum.rotateZ(Math.PI / 2);
+    b.add(drum, 'polymer', 0, -0.075, 0, 0, 0, 0, mag);
+    b.add(rbox(0.03, 0.05, 0.05, 0.005), 'polymer', 0, -0.01, 0, 0, 0, 0, mag);
+    bipod(b, 0.03, -0.46);
+    holoSight(b, 0.112, -0.06);
+    b.marker('muzzle', 0, 0.075, -0.81);
+    b.marker('leftHand', 0, 0.035, -0.36);
+    b.marker('eject', 0.03, 0.08, -0.05);
+    b.marker('magWell', 0, 0.02, -0.12);
+    b.marker('charm', -0.028, 0.06, 0.05);
+  },
+  revolver(b) {
+    b.add(rbox(0.028, 0.04, 0.11, 0.006), 'metal', 0, 0.06, -0.04);
+    const cylg = new THREE.CylinderGeometry(0.02, 0.02, 0.045, 12);
+    cylg.rotateX(Math.PI / 2);
+    b.add(cylg, 'metal', 0, 0.055, -0.04);
+    b.add(cyl(0.009, 0.16), 'metal', 0, 0.072, -0.17);
+    b.add(rbox(0.012, 0.012, 0.16), 'metal', 0, 0.084, -0.17);
+    b.add(rbox(0.004, 0.012, 0.008), 'metal', 0, 0.096, -0.24);
+    b.add(rbox(0.006, 0.014, 0.012), 'metal', 0, 0.09, 0.02);
+    b.add(rbox(0.032, 0.1, 0.045, 0.012), 'wood', 0, -0.015, 0.03, 0.32, 0, 0);
+    b.add(rbox(0.005, 0.004, 0.035), 'metal', 0, 0.025, -0.03);
+    b.marker('sight', 0, 0.1, 0.02);
+    b.marker('muzzle', 0, 0.072, -0.255);
+    b.marker('leftHand', -0.012, -0.015, 0.0);
+    b.marker('eject', 0.02, 0.06, -0.04);
+    b.marker('magWell', 0, 0.055, -0.04);
+    b.marker('charm', -0.016, 0.02, 0.05);
+  },
+  axe(b) {
+    // haft rises up and forward from the grip; the head sits at the top
+    const tilt = 0.55, L = 0.46;
+    const dy = Math.cos(tilt), dz = -Math.sin(tilt);
+    const at = (t) => [0, 0.0 + dy * t, -0.02 + dz * t];
+    const haft = new THREE.CylinderGeometry(0.011, 0.013, L, 10);
+    haft.rotateX(-tilt);
+    const [, hy, hz] = at(L / 2 - 0.05);
+    b.add(haft, 'wood', 0, hy, hz);
+    const grip = new THREE.CylinderGeometry(0.0145, 0.0145, 0.12, 10);
+    grip.rotateX(-tilt);
+    const [, gy, gz] = at(0.0);
+    b.add(grip, 'polymer', 0, gy, gz);
+    const [, ty, tz] = at(L - 0.08);
+    b.add(rbox(0.026, 0.05, 0.05, 0.006), 'metal', 0, ty, tz, -tilt, 0, 0);
+    const fy = -Math.sin(tilt), fz = -Math.cos(tilt); // forward, perpendicular to the haft
+    b.add(rbox(0.007, 0.09, 0.11, 0.003), 'metal', 0, ty + fy * 0.07, tz + fz * 0.07, -tilt, 0, 0);
+    b.add(rbox(0.0035, 0.1, 0.012, 0.001), 'metal', 0, ty + fy * 0.128, tz + fz * 0.128, -tilt, 0, 0);
+    b.add(new THREE.ConeGeometry(0.011, 0.08, 6), 'metal', 0, ty - fy * 0.06, tz - fz * 0.06, Math.PI / 2 - tilt, 0, 0);
+    b.add(rbox(0.028, 0.016, 0.054, 0.004), 'tan', 0, ty - 0.03, tz + 0.02, -tilt, 0, 0);
+    b.marker('sight', 0, 0.1, 0.0);
+    b.marker('muzzle', 0, ty, tz - 0.1);
+    const [, ly, lz] = at(0.11);
+    b.marker('leftHand', -0.005, ly - 0.02, lz);
+    b.marker('eject', 0, 0, 0);
+    b.marker('magWell', 0, 0, 0);
+    b.marker('charm', -0.018, -0.03, 0.0);
+  },
+});
+
 /**
  * Build a weapon model. options.merge collapses static parts into one mesh
  * per material (third-person use) while keeping markers.

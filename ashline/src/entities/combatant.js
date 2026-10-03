@@ -223,7 +223,7 @@ export class Combatant {
     if (this.sprintOutT > 0) this.sprintOutT -= dt;
 
     // ---- ADS ----
-    const wantAds = cmd.ads && !this.sprinting && !this.mantle && this.meleeT <= 0 && this.throwT <= 0 && this.stance !== 'slide';
+    const wantAds = cmd.ads && !def.melee && !this.sprinting && !this.mantle && this.meleeT <= 0 && this.throwT <= 0 && this.stance !== 'slide';
     const adsRate = 1 / def.handling.adsTime;
     this.adsT = Math.max(0, Math.min(1, this.adsT + (wantAds ? adsRate : -adsRate * 1.3) * dt));
 
@@ -323,15 +323,19 @@ export class Combatant {
     cmd.swapTo = -1;
 
     // ---- melee ----
+    const wm = def.melee; // dedicated melee weapon: fire swings it
     if (this.meleeT > 0) {
       const before = this.meleeT;
       this.meleeT -= dt;
-      if (before > 0.25 && this.meleeT <= 0.25) ctx.doMelee(this);
-    } else if (cmd.melee && !prev.melee && this.meleeCd <= 0 && !this.mantle && this.throwT <= 0) {
+      const hitAt = this.meleeDur * 0.6;
+      if (before > hitAt && this.meleeT <= hitAt) ctx.doMelee(this, this.meleeWeapon);
+    } else if (((cmd.melee && !prev.melee) || (wm && cmd.fire && this.swapT <= 0)) && this.meleeCd <= 0 && !this.mantle && this.throwT <= 0) {
       this.weapon.cancelReload();
-      this.meleeT = 0.42; this.meleeCd = MELEE.cooldown;
+      this.meleeWeapon = wm ? def : null;
+      this.meleeDur = wm ? wm.swing : 0.42;
+      this.meleeT = this.meleeDur; this.meleeCd = wm ? wm.swing + 0.05 : MELEE.cooldown;
       this.sprinting = false;
-      this.events.push({ type: 'melee' });
+      this.events.push({ type: 'melee', heavy: !!wm });
     }
 
     // ---- equipment ----
@@ -357,13 +361,20 @@ export class Combatant {
       if (wpn.startReload()) { this.sprinting = this.sprinting && true; }
     }
     // ---- fire ----
-    const trigger = def.auto ? cmd.fire : (cmd.fire && !prev.fire);
-    const canShoot = !this.busy && this.sprintOutT <= 0 && !this.sprinting && this.stance !== 'slide';
+    let trigger = def.auto ? cmd.fire : (cmd.fire && !prev.fire);
+    if (def.burst) {
+      // a trigger pull queues a burst; the burst finishes on its own
+      if (trigger && !wpn.burstLeft && wpn.ready()) wpn.burstLeft = Math.min(def.burst.count, wpn.mag);
+      trigger = wpn.burstLeft > 0;
+    }
+    const canShoot = !this.busy && this.sprintOutT <= 0 && !this.sprinting && this.stance !== 'slide' && !def.melee;
+    if (def.melee) trigger = false;
     if (trigger && canShoot) {
       if (wpn.mag <= 0) {
         if (cmd.fire && !prev.fire) this.events.push({ type: 'dry' });
         if (wpn.canReload) wpn.startReload();
       } else if (wpn.fire(ctx.time)) {
+        if (def.burst) { wpn.burstLeft--; if (wpn.burstLeft <= 0 || wpn.mag <= 0) { wpn.burstLeft = 0; wpn.cool = def.burst.delay; } }
         this.stats.shots++;
         ctx.fireWeapon(this, wpn);
         // recoil kick
@@ -376,7 +387,9 @@ export class Combatant {
         this.recoilImpulse = { v: kv, h: kh };
         if (wpn.mag === 0 && wpn.canReload && !this.isBot) wpn.startReload();
       }
-    } else if (cmd.fire && !prev.fire && wpn.mag <= 0 && !this.busy) {
+    } else if (def.burst && wpn.burstLeft && !canShoot) {
+      wpn.burstLeft = 0;
+    } else if (cmd.fire && !prev.fire && wpn.mag <= 0 && !this.busy && !def.melee) {
       this.events.push({ type: 'dry' });
       if (wpn.canReload) wpn.startReload();
     }

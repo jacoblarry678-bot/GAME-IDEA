@@ -45,6 +45,10 @@ const GUN = {
   shotgun: { crack: 0.5, crackK: 60, body: 1.0, bodyK: 15, bodyLP: 1500, f0: 85, f1: 38, thumpK: 12, thump: 1.0, tail: 0.9, tailLvl: 0.38, mech: 0.2 },
   sniper: { crack: 1.0, crackK: 70, body: 1.0, bodyK: 13, bodyLP: 1800, f0: 75, f1: 32, thumpK: 10, thump: 1.0, tail: 1.3, tailLvl: 0.42, mech: 0.15 },
   pistol: { crack: 0.65, crackK: 120, body: 0.7, bodyK: 48, bodyLP: 2800, f0: 210, f1: 90, thumpK: 40, thump: 0.55, tail: 0.32, tailLvl: 0.2, mech: 0.35 },
+  suppressed: { crack: 0.12, crackK: 160, body: 0.4, bodyK: 70, bodyLP: 1100, f0: 140, f1: 80, thumpK: 60, thump: 0.3, tail: 0.12, tailLvl: 0.06, mech: 0.55 },
+  dmr: { crack: 0.85, crackK: 80, body: 1.0, bodyK: 20, bodyLP: 2000, f0: 95, f1: 40, thumpK: 16, thump: 0.95, tail: 0.95, tailLvl: 0.36, mech: 0.22 },
+  lmg: { crack: 0.6, crackK: 85, body: 1.0, bodyK: 28, bodyLP: 1900, f0: 105, f1: 42, thumpK: 22, thump: 1.0, tail: 0.6, tailLvl: 0.32, mech: 0.2 },
+  magnum: { crack: 0.85, crackK: 75, body: 1.0, bodyK: 22, bodyLP: 2100, f0: 110, f1: 45, thumpK: 18, thump: 0.9, tail: 0.75, tailLvl: 0.34, mech: 0.25 },
 };
 
 function gunshot(ctx, p, seed) {

@@ -117,6 +117,8 @@ h3.title { font-size: calc(17px * var(--text-scale)); margin: 0 0 8px; color: va
 .wpn-opt .wc { font-size: 11px; color: var(--muted); }
 .wpn-opt.sel { border-color: var(--accent); background: rgba(255,138,61,0.1); }
 .wpn-opt:hover, .wpn-opt:focus-visible, .wpn-opt.focus { border-color: var(--accent-2); outline: none; }
+.wpn-opt.locked { opacity: 0.45; }
+.wpn-opt.locked .wc { color: var(--warn, #e0b050); }
 .stats { display: grid; grid-template-columns: 90px 1fr 34px; gap: 5px 10px; align-items: center; font-size: 12px; color: var(--muted); }
 .bar { height: 6px; background: rgba(255,255,255,0.08); position: relative; }
 .bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--text); }
