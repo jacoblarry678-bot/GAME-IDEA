@@ -5,6 +5,7 @@
  * difficulty scales reaction, turn speed, aim error and tactics.
  */
 import { EQUIPMENT } from '../data/weapons.js';
+import { inZone } from '../game/modes.js';
 
 const DEG = Math.PI / 180;
 const PREF_RANGE = {
@@ -219,6 +220,26 @@ export class BotBrain {
         const age = now - mem.t;
         if (age < (mem.heard ? 5 : 8) && (!recent || mem.t > recent.t)) recent = mem;
       }
+      const holding = m.mode.holding?.(m, c);
+      // inside a contested objective: everyone else in it is known (you can hear them on the point)
+      const zone = m.mode.zoneOf?.(m, c);
+      if (zone) {
+        for (const e of m.combatants) {
+          if (e.team === c.team || !e.alive || !inZone(e, zone)) continue;
+          const mem = this.known.get(e.id);
+          if (!mem || !mem.visible) this.known.set(e.id, { c: e, x: e.x, y: e.y, z: e.z, t: now, visible: false, seenSince: null, heard: true });
+        }
+      }
+      // objective went stale (hardpoint moved / flag captured): re-pick
+      if (this.state === 'roam' && this.objGoal && m.mode.botGoal && now > (this.objCheckT || 0)) {
+        this.objCheckT = now + 2.5;
+        const g = this.goalName || '';
+        if ((g.startsWith('hp ') && m.hp && g !== 'hp ' + m.hp.idx) || (g.startsWith('flag ') && !holding && m.flags?.find((f) => 'flag ' + f.id === g)?.owner === c.team && this.waitT <= 0)) this.pickRoamGoal();
+      }
+      if (recent && holding && now - recent.t > 1 && !(zone && inZone(recent.c, zone))) recent = null; // stay on the objective unless the threat is fresh or on it
+      // objective players only chase unseen threats that are close; slayers hunt everything
+      if (this.role === undefined) this.role = m.mode.botGoal ? (Math.random() < 0.72 ? 'objective' : 'slayer') : 'slayer';
+      if (recent && this.role === 'objective' && Math.hypot(recent.x - c.x, recent.z - c.z) > 16 && !(zone && inZone(recent.c, zone))) recent = null;
       if (recent) {
         if (this.state !== 'hunt' || !this.goal || Math.hypot(this.goal.x - recent.x, this.goal.z - recent.z) > 4) {
           this.state = 'hunt';
@@ -381,7 +402,10 @@ export class BotBrain {
         this.waitT -= dt;
         cmd.moveX = cmd.moveZ = 0;
         this.glance(dt);
-        if (this.waitT <= 0) this.pickRoamGoal();
+        if (this.waitT <= 0) {
+          if (this.m.mode.holding?.(this.m, c)) this.waitT = 1.5; // keep capturing / holding the zone
+          else this.pickRoamGoal();
+        }
         return;
       }
       if (this.state === 'hunt') { this.state = 'roam'; this.waitT = 1 + Math.random() * 1.5; this.path = null; return; }
@@ -493,6 +517,12 @@ export class BotBrain {
 
   pickRoamGoal() {
     const m = this.m, c = this.c;
+    // objective modes: most of the time head for the objective
+    if (m.mode.botGoal && Math.random() < 0.8) {
+      const g = m.mode.botGoal(m, this);
+      if (g && this.setGoal(g.x, 0, g.z, g.name)) { this.waitT = g.hold ?? 4; this.objGoal = true; return; }
+    }
+    this.objGoal = false;
     const hs = m.map.hotspots;
     // avoid sending the whole team to the same place
     const taken = new Map();

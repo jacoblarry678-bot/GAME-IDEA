@@ -13,10 +13,19 @@ export function chooseSpawn(match, c, initial) {
   for (let i = 0; i < spawns.length; i++) {
     const sp = spawns[i];
     let score = match.rng() * 15;
-    // side preference
-    if (sp.team === c.team) score += initial ? 1000 : 60;
+    const teams = match.mode.teams;
+    // side preference (team modes only)
+    if (!teams) score += 0;
+    else if (sp.team === c.team) score += initial ? 1000 : 60;
     else if (sp.team === -1) score += initial ? -2000 : 20;
     else score += initial ? -5000 : -120;
+    if (match.mode.spawnScore && !initial) score += match.mode.spawnScore(match, c, sp);
+    if (!teams && initial) {
+      // spread everyone out at the start of a free-for-all
+      let minD = Infinity;
+      for (const o of match.combatants) if (o !== c && o.alive) minD = Math.min(minD, Math.hypot(o.x - sp.x, o.z - sp.z));
+      score += Math.min(minD, 40) * 10;
+    }
     // occupied?
     let blocked = false;
     for (const o of match.combatants) {

@@ -13,6 +13,7 @@ import { COSMETICS, COSMETIC_LIST, DEFAULT_ITEMS, RARITY } from '../data/cosmeti
 import { SEASON, PASS_TIERS } from '../data/season.js';
 import { DAILY_POOL, WEEKLY_POOL, DAILY_SLOTS, WEEKLY_SLOTS, periodKeys, pickChallenges } from '../data/challenges.js';
 import { BUNDLES, itemPrice, bundlePrice } from '../data/shop.js';
+import { MODES } from '../game/modes.js';
 
 export const PROFILE_VERSION = 2;
 export const MAX_LEVEL = 55;
@@ -84,6 +85,10 @@ export class Profile {
       };
     });
     if (!(d.activeLoadout >= 0 && d.activeLoadout < d.loadouts.length)) d.activeLoadout = 0;
+    const ms = d.matchSetup;
+    if (!MODES[ms.mode]?.playable) { ms.mode = 'tdm'; ms.scoreLimit = 75; ms.timeLimit = 10; }
+    ms.botsEnemies = Math.max(1, Math.min(MODES[ms.mode].teams ? 5 : 9, ms.botsEnemies | 0));
+    ms.botsAllies = Math.max(0, Math.min(4, ms.botsAllies | 0));
     d.level = clampInt(d.level, 1, MAX_LEVEL);
     d.xp = Math.max(0, d.xp | 0);
     d.credits = Math.max(0, d.credits | 0);

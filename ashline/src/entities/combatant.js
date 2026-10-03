@@ -118,8 +118,8 @@ export class Combatant {
     this.kickPitch = this.kickYaw = 0;
     this.cur = 0;
     for (const w of this.weapons) w.refill();
-    this.lethal.count = EQUIPMENT[this.lethal.id].count;
-    this.tactical.count = EQUIPMENT[this.tactical.id].count;
+    this.lethal.count = this.loadout.noEquipment ? 0 : EQUIPMENT[this.lethal.id].count;
+    this.tactical.count = this.loadout.noEquipment ? 0 : EQUIPMENT[this.tactical.id].count;
     this.damageLog.clear();
     this.lastDamageT = -99;
     this.events.push({ type: 'spawn' });

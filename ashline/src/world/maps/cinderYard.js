@@ -21,6 +21,21 @@ export const CINDER_YARD = {
   sky: { top: 0x5d86b5, horizon: 0xd9c6a8, ground: 0x5a5146 },
   fog: { color: 0xc4b8a4, density: 0.0065 },
   build,
+  objectives: {
+    dom: [
+      { id: 'A', x: -27, z: 4.5, r: 4.2 },
+      { id: 'B', x: 0, z: -4.2, r: 4.2 },
+      { id: 'C', x: 27, z: -4.5, r: 4.2 },
+    ],
+    hp: [
+      { name: 'Control Booth', x: 0, z: 0, w: 11, d: 7 },
+      { name: 'Warehouse Floor', x: 0, z: 24, w: 10, d: 8 },
+      { name: 'East Containers', x: 21.5, z: -18.5, w: 8, d: 5 },
+      { name: 'Maintenance', x: -4.2, z: -23.5, w: 9, d: 7.5 },
+      { name: 'West Yard', x: -27, z: 21.5, w: 9, d: 7 },
+      { name: 'East Rail', x: 22, z: 0.5, w: 10, d: 6 },
+    ],
+  },
   minimapUnderlay(ctx, X, Y, scale) {
     ctx.fillStyle = '#3a3a36'; // rail beds
     for (const tz of [-7, 7]) ctx.fillRect(X(-37), Y(tz - 1.7), 74 * scale, 3.4 * scale);

@@ -229,6 +229,59 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('time limit with tied score is a draw', m2.state === 'ended' && m2.winner === -1 && m2.endReason === 'time');
 }
 
+// ---------------- modes ----------------
+{
+  const mk = (mode, extra = {}) => { const m = new Match(map, { mode, scoreLimit: 50, timeLimit: 10, botsAllies: 0, botsEnemies: 0, difficulty: 'regular', friendlyFire: false, includePlayer: true, playerLoadout: LO, countdown: 0, ...extra }); m.start(); m.state = 'live'; return m; };
+  // Domination: capture alone takes ~8 s, then scores every 2 s
+  const d = mk('dom');
+  const A = d.flags[0];
+  place(d.player, A.x, 0, A.z);
+  run(d, 4);
+  t('dom: half-captured after 4 s alone', A.owner === -1 && A.progress > 0.4 && A.progress < 0.6, A.progress.toFixed(2));
+  run(d, 4.5);
+  t('dom: captured after ~8 s', A.owner === 0);
+  const s0 = d.teamScores[0]; run(d, 4.1);
+  t('dom: held flag scores 1 point / 2 s', d.teamScores[0] - s0 === 2, String(d.teamScores[0] - s0));
+  const e = addEnemy(d); place(e, A.x + 1, 0, A.z); e.spawnProtectT = 0;
+  run(d, 1);
+  t('dom: enemy on the flag contests it', A.contested && A.owner === 0);
+  // Hardpoint
+  const h = mk('hp', { scoreLimit: 999 });
+  const z = h.zones[0];
+  place(h.player, z.x + z.w / 2 - 0.6, 0, z.z + z.d / 2 - 0.6);
+  run(h, 5.05);
+  t('hp: holding the zone scores 1 / s', h.teamScores[0] === 5, String(h.teamScores[0]));
+  run(h, 60);
+  t('hp: zone rotates after 60 s', h.hp.idx === 1);
+  // Elimination
+  const el = mk('elim', { scoreLimit: 2, timeLimit: 2 });
+  const foe = addEnemy(el); place(foe, 20, 0, 0); foe.spawnProtectT = 0;
+  el.applyDamage(foe, el.player, 200, { kind: 'bullet', zone: 'torso' });
+  t('elim: wiping the enemy team wins the round', el.teamScores[0] === 1 && el.round.phase === 'post');
+  run(el, 2);
+  t('elim: no respawn during the round', !foe.alive);
+  run(el, 3);
+  t('elim: next round respawns everyone', foe.alive && el.round.n === 2);
+  // Gun Game
+  const g = mk('gun', { scoreLimit: 0 });
+  const v = addEnemy(g, 1); v.gunLevel = 0; place(v, 20, 0, 0); v.spawnProtectT = 0;
+  const lv0 = g.player.weapon.def.id;
+  g.applyDamage(v, g.player, 200, { kind: 'bullet', zone: 'torso', weapon: lv0 });
+  t('gun: a kill advances to the next weapon', g.player.gunLevel === 1 && g.player.weapon.def.id === g.ladder[1], g.player.weapon.def.id);
+  g.respawn(v); v.spawnProtectT = 0; v.gunLevel = 2;
+  g.applyDamage(g.player, v, 200, { kind: 'melee', zone: 'torso', weapon: 'melee' });
+  t('gun: melee kill sets the victim back', g.player.gunLevel === 0 && v.gunLevel === 2);
+  g.respawn(g.player); g.player.spawnProtectT = 0;
+  for (let i = 0; i < g.ladder.length; i++) { g.respawn(v); v.spawnProtectT = 0; g.applyDamage(v, g.player, 200, { kind: 'bullet', zone: 'torso' }); }
+  t('gun: finishing the ladder wins', g.state === 'ended' && g.winner === g.player.team);
+  // FFA
+  const f = mk('ffa', { scoreLimit: 2, botsEnemies: 3 });
+  t('ffa: everyone on their own team', new Set(f.combatants.map((c) => c.team)).size === 4 && f.teamScores.length === 4);
+  const bots = f.combatants.filter((c) => c.isBot);
+  for (const bt of bots.slice(0, 2)) { bt.spawnProtectT = 0; f.applyDamage(bt, f.player, 200, { kind: 'bullet', zone: 'torso' }); }
+  t('ffa: first to the limit wins', f.state === 'ended' && f.winner === 0);
+}
+
 // ---------------- progression & economy (local profile) ----------------
 {
   const store = {};

@@ -212,16 +212,16 @@ const SCREENS = {
               <div class="title">${esc(app.mapRuntime.def.name)}</div>
               <div class="muted small" style="position:relative">${esc(app.mapRuntime.def.blurb)}</div>
             </div>
-            <div class="field"><label>Bots on your team (${TEAMS[0].name})</label><div data-k="botsAllies"></div></div>
-            <div class="field"><label>Enemy bots (${TEAMS[1].name})</label><div data-k="botsEnemies"></div></div>
+            ${MODES[setup.mode].teams ? `<div class="field"><label>Bots on your team (${TEAMS[0].name})</label><div data-k="botsAllies"></div></div>
+            <div class="field"><label>Enemy bots (${TEAMS[1].name})</label><div data-k="botsEnemies"></div></div>` : '<div class="field" style="grid-column: span 2"><label>Opponents (bots, everyone for themselves)</label><div data-k="botsEnemies"></div></div>'}
             <div class="field"><label>Bot difficulty</label><div class="choice" data-k="difficulty">
               ${Object.values(DIFFICULTIES).map((d) => `<button data-v="${d.id}" class="${setup.difficulty === d.id ? 'sel' : ''}">${esc(d.name)}</button>`).join('')}
             </div></div>
-            <div class="field"><label>Score limit</label><div data-k="scoreLimit"></div></div>
-            <div class="field"><label>Time limit</label><div data-k="timeLimit"></div></div>
-            <div class="field"><label>Friendly fire</label><div class="choice" data-k="friendlyFire">
+            ${MODES[setup.mode].limits.scoreLimit ? `<div class="field"><label>${setup.mode === 'elim' ? 'Rounds to win' : 'Score limit'}</label><div data-k="scoreLimit"></div></div>` : ''}
+            <div class="field"><label>${setup.mode === 'elim' ? 'Round time' : 'Time limit'}</label><div data-k="timeLimit"></div></div>
+            ${MODES[setup.mode].teams ? `<div class="field"><label>Friendly fire</label><div class="choice" data-k="friendlyFire">
               <button data-v="false" class="${!setup.friendlyFire ? 'sel' : ''}">Off</button><button data-v="true" class="${setup.friendlyFire ? 'sel' : ''}">On</button>
-            </div></div>
+            </div></div>` : ''}
             <div class="field" style="grid-column: span 2"><label>Loadout</label><div class="choice" data-k="loadout">
               ${app.profile.data.loadouts.map((l, i) => `<button data-v="${i}" class="${app.profile.data.activeLoadout === i ? 'sel' : ''}">${esc(l.name)} · ${esc(WEAPONS[l.primary].name)}</button>`).join('')}
             </div><div class="muted small">${esc(WEAPONS[lo.primary].name)} + ${esc(WEAPONS[lo.secondary].name)} · ${esc(EQUIPMENT[lo.lethal].name)} · ${esc(EQUIPMENT[lo.tactical].name)}</div></div>
@@ -250,16 +250,22 @@ const SCREENS = {
           };
         });
       };
-      st('botsAllies', 0, 4, 1, (v) => `${v} bot${v === 1 ? '' : 's'} + you`);
-      st('botsEnemies', 1, 5, 1, (v) => `${v} bot${v === 1 ? '' : 's'}`);
-      st('scoreLimit', 10, 200, 5, (v) => `${v} kills`);
-      st('timeLimit', 3, 30, 1, (v) => `${v} min`);
+      const md = MODES[setup.mode];
+      const unit = { kills: 'kills', points: 'points', rounds: 'rounds' }[md.scoreLabel] || '';
+      if (md.teams) {
+        setup.botsEnemies = Math.min(5, setup.botsEnemies);
+        st('botsAllies', 0, 4, 1, (v) => `${v} bot${v === 1 ? '' : 's'} + you`);
+        st('botsEnemies', 1, 5, 1, (v) => `${v} bot${v === 1 ? '' : 's'}`);
+      } else st('botsEnemies', 1, 9, 1, (v) => `${v} bot${v === 1 ? '' : 's'}`);
+      if (md.limits.scoreLimit) st('scoreLimit', ...md.limits.scoreLimit, (v) => `${v} ${unit}`);
+      st('timeLimit', ...md.limits.timeLimit, (v) => `${v} min`);
       node.querySelectorAll('.choice[data-k]').forEach((c) => {
         c.querySelectorAll('button[data-v]').forEach((b) => {
           b.onclick = () => {
             const k = c.dataset.k, v = b.dataset.v;
             if (k === 'loadout') { app.profile.data.activeLoadout = Number(v); }
             else if (k === 'friendlyFire') setup.friendlyFire = v === 'true';
+            else if (k === 'mode') { setup.mode = v; setup.scoreLimit = MODES[v].defaults.scoreLimit; setup.timeLimit = MODES[v].defaults.timeLimit; }
             else setup[k] = v;
             app.profile.save();
             render();
@@ -465,9 +471,13 @@ const SCREENS = {
   results(app, node, p) {
     node.classList.add('shade-full');
     const r = p.result;
-    const banner = r.outcome === 'win' ? 'VICTORY' : r.outcome === 'loss' ? 'DEFEAT' : 'DRAW';
+    const banner = r.outcome === 'win' ? 'VICTORY' : r.outcome === 'loss' ? (r.ffa ? `#${r.placing} PLACE` : 'DEFEAT') : 'DRAW';
     const cls = r.outcome;
-    const reason = r.reason === 'score' ? 'Score limit reached' : 'Time limit reached';
+    const reason = r.reason === 'score' ? (r.mode === 'gun' ? 'Ladder completed' : r.mode === 'elim' ? 'Round limit reached' : 'Score limit reached') : 'Time limit reached';
+    const ffaTable = (rr) => `<div class="team-head"><span>STANDINGS</span><span class="small muted" style="font-family:var(--font-body);font-weight:400">You placed #${rr.placing} of ${rr.rows[0].length}</span></div>
+      <table class="sb"><thead><tr><th>#</th><th>Player</th>${rr.mode === 'gun' ? '<th class="num">Level</th>' : ''}<th class="num">Score</th><th class="num">K</th><th class="num">D</th><th class="num">Acc</th></tr></thead><tbody>
+      ${rr.rows[0].map((x, i) => `<tr class="${x.me ? 'me' : ''}"><td>${i + 1}</td><td>${x.bot ? '<span class="bot-tag">BOT</span>' : ''}${esc(x.name)}</td>${rr.mode === 'gun' ? `<td class="num">${Math.min(x.level + 1, rr.ladder)}/${rr.ladder}</td>` : ''}<td class="num">${x.score}</td><td class="num">${x.kills}</td><td class="num">${x.deaths}</td><td class="num">${x.acc}</td></tr>`).join('')}
+      </tbody></table>`;
     const table = (rows, team) => `
       <div class="team-head" style="color:${team === 0 ? 'var(--friendly)' : 'var(--enemy)'}"><span>${esc(TEAMS[team].name)}</span><span class="small muted" style="font-family:var(--font-body);letter-spacing:0.05em;font-weight:400">${esc(TEAMS[team].full)}</span><span class="score">${r.scores[team]}</span></div>
       <table class="sb"><thead><tr><th>Player</th><th class="num">Score</th><th class="num">K</th><th class="num">D</th><th class="num">A</th><th class="num">Acc</th></tr></thead><tbody>
@@ -480,7 +490,7 @@ const SCREENS = {
         <img class="res-card" src="${cardArt(app.profile.data.equipped.card, 384, 96)}" alt="">
         <div class="title" style="font-size:44px"><span style="color:var(--friendly)">${r.scores[0]}</span> <span class="dim">—</span> <span style="color:var(--enemy)">${r.scores[1]}</span></div></div>
       <div class="page-body scroll" style="gap:18px;flex-wrap:wrap">
-        <div style="flex:1.4;min-width:340px" class="col">${table(r.rows[0], 0)}<div style="height:14px"></div>${table(r.rows[1], 1)}</div>
+        <div style="flex:1.4;min-width:340px" class="col">${r.ffa ? ffaTable(r) : `${table(r.rows[0], 0)}<div style="height:14px"></div>${table(r.rows[1], 1)}`}</div>
         <div style="flex:1;min-width:280px" class="col">
           <h3 class="title">Your performance</h3>
           <div class="stat-tiles">${tiles.map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>

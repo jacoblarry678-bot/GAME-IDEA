@@ -11,19 +11,22 @@ import { Match } from '../src/game/match.js';
 const minutes = Number(process.argv[2] || 3);
 const difficulty = process.argv[3] || 'regular';
 const per = Number(process.argv[4] || 5);
+const mode = process.argv[5] || 'tdm';
 
 const b = new MapBuilder({ headless: true });
 CINDER_YARD.build(b);
 const nav = new NavGrid(b.world, CINDER_YARD.bounds, 1);
 const map = { world: b.world, nav, spawns: b.spawns, hotspots: b.hotspots, def: CINDER_YARD };
 const match = new Match(map, {
-  mode: 'tdm', scoreLimit: 999, timeLimit: minutes, botsAllies: per, botsEnemies: per,
+  mode, scoreLimit: mode === 'tdm' || mode === 'ffa' ? 999 : mode === 'elim' ? 99 : mode === 'gun' ? 0 : 9999, timeLimit: mode === 'elim' ? 1.5 : minutes, botsAllies: per, botsEnemies: per,
   difficulty, friendlyFire: false, includePlayer: false, countdown: 0.1,
 });
-const counts = { kill: 0, shot: 0, damage: 0, grenadeThrown: 0, explosion: 0, melee: 0, smoke: 0 };
+const counts = { objective: 0, roundEnd: 0, kill: 0, shot: 0, damage: 0, grenadeThrown: 0, explosion: 0, melee: 0, smoke: 0 };
 const kinds = {};
 const weaponsK = {};
+const objK = {};
 match.on((e) => {
+  if (e.type === 'objective') objK[e.kind] = (objK[e.kind] || 0) + 1;
   if (counts[e.type] !== undefined) counts[e.type]++;
   if (e.type === 'kill') { kinds[e.kind] = (kinds[e.kind] || 0) + 1; weaponsK[e.weapon] = (weaponsK[e.weapon] || 0) + 1; }
 });
@@ -56,10 +59,15 @@ while (match.state !== 'ended' && steps < minutes * 60 * 60 + 600) {
 }
 const ms = performance.now() - t0;
 console.log(`sim ${minutes} min @${difficulty} ${per}v${per}: ${(ms / 1000).toFixed(2)}s real (${(steps / (ms / 1000)).toFixed(0)} ticks/s)`);
-console.log('team scores', match.teamScores, 'state', match.state, 'winner', match.winner);
+console.log('mode', mode, 'team scores', match.teamScores.join(','), 'state', match.state, 'winner', match.winner, 'reason', match.endReason);
+if (match.flags) console.log('flags', match.flags.map((f) => `${f.id}:${f.owner}`).join(' '));
+if (match.hp) console.log('hardpoint zone', match.hp.idx);
+if (match.round) console.log('round', match.round.n);
+const objKinds = {};
+match.on(() => {});
 console.log('events', counts, 'kill kinds', kinds, 'by weapon', weaponsK);
-const [A, B] = match.scoreboard();
-for (const rows of [A, B]) for (const r of rows) console.log(`  t${r.c.team} ${r.c.name.padEnd(10)} ${r.c.loadout.primary.padEnd(13)} K${r.kills} D${r.deaths} A${r.assists} acc ${(r.shots ? r.hits / r.shots * 100 : 0).toFixed(0)}% hs ${r.headshots} score ${r.score}`);
-console.log('stuck reports', stuckReports);
+const groups = match.scoreboard();
+for (const rows of groups) for (const r of rows) console.log(`  t${r.c.team} ${r.c.name.padEnd(10)} ${r.c.loadout.primary.padEnd(13)} K${r.kills} D${r.deaths} A${r.assists} acc ${(r.shots ? r.hits / r.shots * 100 : 0).toFixed(0)}% hs ${r.headshots} score ${r.score}`);
+console.log('stuck reports', stuckReports, 'objective events', JSON.stringify(objK));
 const cells = [...heat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
 console.log('hot cells (8m grid):', cells.map(([k, v]) => `${k}:${v}`).join(' '));

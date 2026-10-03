@@ -362,3 +362,16 @@ table.sb tr.me td { background: rgba(255,138,61,0.12); color: #fff; }
 .sb-emblem { width: 18px; height: 18px; vertical-align: -4px; margin-right: 6px; }
 .xp-lines { display: flex; flex-direction: column; gap: 3px; max-width: 420px; }
 @media (max-width: 900px) { .menu-side { display: none; } }
+
+/* ---------- M4: objectives ---------- */
+.obj-markers { position: absolute; inset: 0; pointer-events: none; }
+.om { position: absolute; left: 0; top: 0; margin: -18px 0 0 -16px; display: flex; flex-direction: column; align-items: center; }
+.om-ic { width: 32px; height: 32px; border: 2px solid; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-head); font-weight: 700; font-size: 17px; background: rgba(0,0,0,0.45); text-shadow: 0 1px 2px #000; }
+.om-sub { font-family: var(--font-mono); font-size: 10px; color: #fff; text-shadow: 0 1px 2px #000; margin-top: 2px; white-space: nowrap; }
+.obj-strip { position: absolute; left: 50%; top: 72px; transform: translateX(-50%) scale(var(--hud-scale)); transform-origin: center top; display: none; gap: 6px; align-items: center; font-family: var(--font-head); }
+.obj-strip .fl { width: 30px; height: 30px; border: 2px solid; display: grid; place-items: center; font-weight: 700; font-size: 16px; background: rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+.obj-strip .fl i { position: absolute; left: 0; bottom: 0; width: 100%; opacity: 0.45; }
+.obj-strip .tag { padding: 3px 10px; background: rgba(0,0,0,0.6); font-size: 13px; letter-spacing: 0.14em; font-weight: 600; }
+.obj-strip .pips { display: flex; gap: 3px; padding: 4px 8px; background: rgba(0,0,0,0.5); }
+.obj-strip .pip { width: 8px; height: 16px; border: 1px solid currentColor; }
+.obj-strip .pip.on { background: currentColor; }

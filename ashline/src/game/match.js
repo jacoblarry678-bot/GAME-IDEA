@@ -67,9 +67,19 @@ export class Match {
       }
       return;
     }
+    if (!this.mode.teams) {
+      // free-for-all: everyone is their own team (player = team 0)
+      const n = Math.min(9, s.botsEnemies + (s.botsAllies || 0) * 0);
+      for (let i = 0; i < n; i++) mk(i + 1);
+      this.teamScores = new Array(n + 1).fill(0);
+      return;
+    }
     for (let i = 0; i < s.botsAllies; i++) mk(0);
     for (let i = 0; i < s.botsEnemies; i++) mk(1);
   }
+
+  /** Number of score slots (2 for team modes, one per combatant in FFA modes). */
+  get teamCount() { return this.teamScores.length; }
 
   add(c) {
     c._world = this.world;
@@ -86,12 +96,14 @@ export class Match {
 
   /** Initial spawn of everyone. */
   start() {
+    this.mode.setup?.(this);
     for (const c of this.combatants) this.respawn(c, true);
     this.emit({ type: 'matchStart' });
   }
 
   respawn(c, initial = false) {
     const sp = c.dummy ? { x: c.dummy.baseX, y: 0, z: c.dummy.z, yaw: Math.PI } : chooseSpawn(this, c, initial);
+    if (this.mode.loadoutFor) c.applyLoadout(this.mode.loadoutFor(this, c));
     c.spawnAt(sp);
     c.spawnProtectT = initial ? 0 : 2.0;
     if (c.brain) c.brain.onSpawn();
@@ -138,10 +150,11 @@ export class Match {
       if (c.dummy) this._dummy(c, dt);
       if (!c.alive) {
         c.respawnT -= dt;
-        if (c.isBot && c.respawnT <= 0) this.respawn(c);
+        if (c.isBot && c.respawnT <= 0 && this.canRespawn(c)) this.respawn(c);
       }
     }
     this.projectiles.update(dt);
+    this.mode.update?.(this, dt);
     if (this.timeLeft <= 0 && this.state === 'live') {
       this.timeLeft = 0;
       this.mode.onTimeUp(this);
@@ -162,6 +175,8 @@ export class Match {
       for (const w of this.player.weapons) if (w.reserve < w.def.mag) w.reserve = w.def.reserve;
     }
   }
+
+  canRespawn(c) { return this.state !== 'ended' && (this.mode.canRespawn ? this.mode.canRespawn(this, c) : true); }
 
   end(winner, reason) {
     if (this.state === 'ended') return;
@@ -343,12 +358,17 @@ export class Match {
     victim.damageLog.clear();
     this.emit({ type: 'kill', killer: attacker, victim, weapon: info.weapon, headshot: info.zone === 'head' && info.kind === 'bullet', kind: info.kind, medals, assisters, score: attacker?._lastScore || 0, dist: info.dist || 0 });
     if (victim.brain) victim.brain.onDeath();
-    this.mode.onKill(this, attacker, victim);
+    this.mode.onKill(this, attacker, victim, info);
   }
 
   /** Sorted scoreboard rows per team. */
+  /** Sorted rows: [team0, team1] for team modes, [everyone] for free-for-all modes. */
   scoreboard() {
-    const rows = this.combatants.map((c) => ({ c, ...c.stats }));
+    const rows = this.combatants.map((c) => ({ c, ...c.stats, level: c.gunLevel || 0 }));
+    if (!this.mode.teams) {
+      rows.sort((a, b) => (b.level - a.level) || b.kills - a.kills || b.score - a.score);
+      return [rows];
+    }
     rows.sort((a, b) => b.score - a.score || b.kills - a.kills);
     return [rows.filter((r) => r.c.team === 0), rows.filter((r) => r.c.team === 1)];
   }

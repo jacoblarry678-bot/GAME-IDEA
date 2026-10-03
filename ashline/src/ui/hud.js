@@ -39,6 +39,8 @@ export class Hud {
       <div class="captions"></div>
       <div class="scoreboard"></div>
       <div class="range-panel"></div>
+      <div class="obj-markers"></div>
+      <div class="obj-strip"></div>
     `;
     const q = (s) => this.root.querySelector(s);
     this.$ = {
@@ -47,7 +49,7 @@ export class Hud {
       hp: q('.hp'), hpv: q('.hpv'), hpfill: q('.hp .fill'), wname: q('.wname'), mag: q('.mag'), res: q('.res'),
       lethal: q('.lethal'), tactical: q('.tactical'), lk: q('.lk'), lc: q('.lc'), tk: q('.tk'), tc: q('.tc'),
       popups: q('.popups'), prompt: q('.prompt'), protect: q('.protect'), center: q('.center-msg'), death: q('.death'),
-      captions: q('.captions'), sb: q('.scoreboard'), np: q('.nameplates'), rp: q('.range-panel'), topc: q('.hud-tc'),
+      captions: q('.captions'), sb: q('.scoreboard'), np: q('.nameplates'), rp: q('.range-panel'), topc: q('.hud-tc'), om: q('.obj-markers'), os: q('.obj-strip'),
     };
     this.miniCtx = this.$.mini.getContext('2d');
     this.hitT = 0; this.indicators = []; this.nadeInds = [];
@@ -77,6 +79,31 @@ export class Hud {
     if (this.cache[key] === value) return;
     this.cache[key] = value;
     fn(value);
+  }
+
+  /** Free-for-all style score bar: you vs. the leader. */
+  setFfa(on) {
+    if (!on) return;
+    this.$.t0.querySelector('.n').textContent = 'YOU';
+    this.$.t1.querySelector('.n').textContent = 'LEADER';
+    this.$.t0.style.color = 'var(--friendly)'; this.$.t1.style.color = 'var(--enemy)';
+  }
+
+  /** Objective strip under the score bar (flags, zone state, round info). */
+  objStrip(html) { this.set('os', html, (v) => { this.$.os.innerHTML = v; this.$.os.style.display = v ? 'flex' : 'none'; }); }
+
+  /** Screen-space objective markers: [{ x, y, label, color, sub, edge }]. */
+  objMarkers(list) {
+    const om = this.$.om;
+    while (om.children.length < list.length) { const e = document.createElement('div'); e.className = 'om'; om.appendChild(e); }
+    for (let i = 0; i < om.children.length; i++) {
+      const e = om.children[i], m = list[i];
+      if (!m) { e.style.display = 'none'; continue; }
+      e.style.display = '';
+      e.style.transform = `translate(${Math.round(m.x)}px, ${Math.round(m.y)}px)`;
+      const html = `<div class="om-ic" style="border-color:${m.color};color:${m.color}${m.pulse ? ';animation:blink 0.6s infinite' : ''}">${m.label}</div><div class="om-sub">${m.sub || ''}</div>`;
+      if (e._h !== html) { e.innerHTML = html; e._h = html; }
+    }
   }
 
   setTeams(playerTeam) {
@@ -109,7 +136,7 @@ export class Hud {
     this.set('s1', s.scores[1], (v) => { $.t1.querySelector('.s').textContent = v; });
     const t = Math.max(0, Math.ceil(s.timeLeft));
     this.set('time', t, (v) => { $.time.textContent = `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`; $.time.style.color = v <= 30 ? 'var(--bad)' : ''; });
-    this.set('lim', s.scoreLimit, (v) => { $.lim.textContent = `FIRST TO ${v}`; });
+    this.set('lim', s.limitText || `FIRST TO ${s.scoreLimit}`, (v) => { $.lim.textContent = v; });
     // crosshair
     const hideXh = !s.alive || s.sprinting || s.adsT > 0.6 || s.busy || s.scoped;
     this.set('xhHide', hideXh, (v) => { $.xh.style.opacity = v ? '0' : '1'; });

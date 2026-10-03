@@ -14,6 +14,7 @@ import { WEAPONS, PRIMARY_IDS, damageAt } from '../data/weapons.js';
 import { MODES, TEAMS } from './modes.js';
 import { esc } from '../ui/dom.js';
 import { PAD } from '../core/input.js';
+import { ObjectiveView } from '../fx/objectives.js';
 
 const v3 = new THREE.Vector3(), v3b = new THREE.Vector3();
 
@@ -40,11 +41,14 @@ export class Game {
     this.views = new Map();
     let seed = 1;
     this.isRange = !!m.mode.range;
+    this.ffa = !m.mode.teams;
+    // free-for-all: everyone except you wears enemy colours
+    this.visTeam = (c) => (this.ffa ? (c === this.player ? 0 : 1) : c.team);
     for (const c of m.combatants) {
       let v;
       if (c.dummy) v = new SoldierModel(app.dummyMats, app.wmats, 1, seed++, { unarmed: true });
-      else if (c === this.player) v = new SoldierModel(outfitMaterials(app.materials, app.soldierMats, this.cosm.outfit, this.cosm.operator), app.wmats, c.team, seed++);
-      else v = new SoldierModel(app.soldierMats, app.wmats, c.team, seed++);
+      else if (c === this.player) v = new SoldierModel(outfitMaterials(app.materials, app.soldierMats, this.cosm.outfit, this.cosm.operator), app.wmats, 0, seed++);
+      else v = new SoldierModel(app.soldierMats, app.wmats, this.visTeam(c), seed++);
       v.setWeapon(c.weapon.def.id);
       app.engine.scene.add(v.root);
       this.views.set(c.id, v);
@@ -52,6 +56,7 @@ export class Game {
     this.updateTeamColors();
     this.hud = new Hud(document.getElementById('ui'), app);
     this.hud.setTeams(0);
+    this.hud.setFfa(this.ffa && !this.isRange);
     this.vm = app.viewmodel;
     this.vm.visible = true;
     this.vm.setOutfit(this.cosm.outfit, app.materials);
@@ -80,7 +85,7 @@ export class Game {
     this.lastLanded = 0;
     m.on((e) => this.onEvent(e));
     this.unsubSettings = () => {};
-    const onSet = () => { this.hud.applySettings(); this.updateTeamColors(); };
+    const onSet = () => { this.hud.applySettings(); this.updateTeamColors(); this.objView?.setColors(app.settings.teamColors()); };
     app.settings.onChange(onSet);
     this.unsubSettings = () => { const i = app.settings.listeners.indexOf(onSet); if (i >= 0) app.settings.listeners.splice(i, 1); };
   }
@@ -106,8 +111,10 @@ export class Game {
       this.match.movingTargets = true;
       return;
     }
-    this.hud.center(mode.name.toUpperCase(), `${this.map.def.name} · first to ${this.setup.scoreLimit}`, 3.2);
-    this.app.audio.announce('Team deathmatch. Eliminate the enemy team.');
+    this.objView = new ObjectiveView(this.app.engine.scene, this.match, 0, this.app.settings.teamColors());
+    const goal = { tdm: `first to ${this.setup.scoreLimit}`, ffa: `first to ${this.setup.scoreLimit} eliminations`, dom: `capture flags A · B · C — ${this.setup.scoreLimit} points`, hp: `hold the zone — ${this.setup.scoreLimit} points`, elim: `no respawns — first to ${this.setup.scoreLimit} rounds`, gun: `${this.match.ladder?.length || 0} weapons to win` }[mode.id];
+    this.hud.center(mode.name.toUpperCase(), `${this.map.def.name} · ${goal}`, 3.4);
+    this.app.audio.announce({ tdm: 'Team deathmatch. Eliminate the enemy team.', ffa: 'Free for all. Trust no one.', dom: 'Domination. Capture the flags.', hp: 'Hardpoint. Secure the zone.', elim: 'Elimination. Round one. No respawns.', gun: 'Gun game. Every kill upgrades your weapon.' }[mode.id]);
   }
 
   // ------------------------------------------------------------------ input
@@ -211,7 +218,7 @@ export class Game {
       else if (!this.ended && p.alive && m.state !== 'ended') this.readInput(dt);
       else this.clearInput();
       // respawn request
-      if (!p.alive && m.state === 'live') {
+      if (!p.alive && m.state === 'live' && m.canRespawn(p)) {
         if (p.respawnT <= 0 && (inp.pressed('jump') || inp.pressed('fire') || p.respawnT < -2.5)) m.respawn(p);
       }
       const wasAlive = p.alive;
@@ -232,6 +239,7 @@ export class Game {
     this.updateViews(dt);
     this.updateViewmodel(dt);
     app.effects.update(this.paused ? 0 : dt, m.projectiles);
+    this.objView?.update(this.paused ? 0 : dt);
     this.updateHud(dt);
     // audio listener
     const cam = app.engine.camera;
@@ -463,6 +471,18 @@ export class Game {
         hud.center('ENGAGE', '', 1.2, 'var(--accent)');
         a.play('horn', { bus: 'sfx', vol: 0.5 });
         break;
+      case 'objective': this.onObjective(e); break;
+      case 'roundEnd': {
+        const me = e.winner === p.team;
+        hud.center(e.winner < 0 ? 'ROUND DRAW' : me ? 'ROUND WON' : 'ROUND LOST', `${TEAMS[0].name} ${e.scores[0]} — ${e.scores[1]} ${TEAMS[1].name}${e.reason === 'time' ? ' · time' : ''}`, 4, e.winner < 0 ? 'var(--accent-2)' : me ? 'var(--good)' : 'var(--bad)');
+        a.announce(e.winner < 0 ? 'Round draw.' : me ? 'Round won.' : 'Round lost.');
+        break;
+      }
+      case 'roundStart':
+        hud.center(`ROUND ${e.n}`, 'No respawns', 2.5);
+        a.play('horn', { bus: 'sfx', vol: 0.4 });
+        this.deathCam = null; this.deathInfo = null; hud.death(null);
+        break;
       case 'matchEnd': {
         this.ended = true;
         const w = e.winner;
@@ -480,20 +500,47 @@ export class Game {
   checkAnnouncements() {
     const m = this.match, a = this.app.audio;
     if (m.state !== 'live' || this.isRange) return;
-    const [s0, s1] = m.teamScores;
-    const lead = s0 > s1 ? 0 : s1 > s0 ? 1 : -1;
-    if (lead !== this.leader && lead !== -1 && s0 + s1 > 2) {
-      a.announce(lead === this.player.team ? 'We have taken the lead.' : 'We have lost the lead.');
+    let lead = -1, total = 0;
+    if (this.ffa) {
+      const me = m.teamScores[0], top = Math.max(...m.teamScores.slice(1));
+      lead = me > top ? 0 : top > me ? 1 : -1; total = me + top;
+    } else {
+      const [s0, s1] = m.teamScores;
+      lead = s0 > s1 ? 0 : s1 > s0 ? 1 : -1; total = s0 + s1;
+    }
+    if (!m.mode.rounds && m.mode.id !== 'gun' && lead !== this.leader && lead !== -1 && total > 2) {
+      a.announce(this.ffa ? (lead === 0 ? 'You are in the lead.' : 'You have lost the lead.') : lead === this.player.team ? 'We have taken the lead.' : 'We have lost the lead.');
     }
     if (lead !== -1) this.leader = lead;
-    if (m.timeLeft < 60 && !this.announced.min) { this.announced.min = 1; a.announce('One minute remaining.'); }
-    if (m.timeLeft < 30 && !this.announced.s30) { this.announced.s30 = 1; a.announce('Thirty seconds.'); }
+    if (!m.mode.rounds) {
+      if (m.timeLeft < 60 && !this.announced.min) { this.announced.min = 1; a.announce('One minute remaining.'); }
+      if (m.timeLeft < 30 && !this.announced.s30) { this.announced.s30 = 1; a.announce('Thirty seconds.'); }
+    }
     const lim = m.settings.scoreLimit;
-    for (const t of [0, 1]) {
-      if (m.teamScores[t] === lim - 5 && !this.announced['near' + t]) {
-        this.announced['near' + t] = 1;
-        a.announce(t === this.player.team ? 'Five eliminations to victory.' : 'Enemy is five eliminations from victory.');
+    const near = { tdm: 5, ffa: 3, dom: 25, hp: 25 }[m.mode.id];
+    if (near && !this.ffa) {
+      for (const t of [0, 1]) {
+        if (m.teamScores[t] >= lim - near && !this.announced['near' + t]) {
+          this.announced['near' + t] = 1;
+          a.announce(t === this.player.team ? 'We are close to victory.' : 'The enemy is close to victory.');
+        }
       }
+    }
+  }
+
+  onObjective(e) {
+    const hud = this.hud, a = this.app.audio, p = this.player;
+    const ours = (t) => t === p.team;
+    switch (e.kind) {
+      case 'capture': if (e.c === p) hud.popup(`FLAG ${e.flag} CAPTURED`, 150); break;
+      case 'defend': if (e.c === p) hud.popup('FLAG DEFENDED', 50); break;
+      case 'flagCaptured': a.announce(ours(e.team) ? `We have captured ${e.flag}.` : `The enemy has captured ${e.flag}.`); break;
+      case 'flagLost': if (ours(e.team)) a.announce(`We are losing ${e.flag}.`); break;
+      case 'zoneMoved': hud.center('HARDPOINT MOVED', this.match.zones[e.idx]?.name || '', 2.2, 'var(--accent)'); a.announce(e.idx === 0 && this.match.time < 1 ? 'Hardpoint online.' : 'The hardpoint has moved.'); break;
+      case 'zoneHeld': a.announce(ours(e.team) ? 'We control the hardpoint.' : 'The enemy controls the hardpoint.'); break;
+      case 'gunUp': if (e.c === p) { hud.popup(`LEVEL ${e.level + 1} · ${(WEAPONS[e.weapon]?.name || 'MELEE').toUpperCase()}`, 0, 'medal'); a.play('kill', { vol: 0.5, rate: 1.3 }); } break;
+      case 'setBack': if (e.c === p) { hud.center('SET BACK', `by ${e.by.displayName}`, 2, 'var(--bad)'); a.announce('Set back.'); } else if (e.by === p) hud.popup('SET BACK AN ENEMY', 0, 'medal'); break;
+      default: break;
     }
   }
 
@@ -541,6 +588,24 @@ export class Game {
       // death cam: rise behind the body and look toward the killer
       const dc = this.deathCam;
       dc.t += dt;
+      this.spectating = null;
+      if (this.match.mode.rounds && dc.t > 3) {
+        const mate = this.match.combatants.find((c) => c.alive && c.team === p.team && c !== p);
+        if (mate) {
+          this.spectating = mate;
+          // over-the-shoulder, pulled in if a wall is behind them
+          const hx = mate.x, hy = mate.y + 1.7, hz = mate.z;
+          let dx = Math.sin(mate.yaw) * 3.2, dy = 0.6, dz = Math.cos(mate.yaw) * 3.2;
+          const L = Math.hypot(dx, dy, dz);
+          const hit = this.match.world.raycast(hx, hy, hz, dx / L, dy / L, dz / L, L, 'solid');
+          const d = hit ? Math.max(0.4, hit.t - 0.3) : L;
+          cam.position.lerp(v3.set(hx + dx / L * d, hy + dy / L * d, hz + dz / L * d), Math.min(1, dt * 6));
+          cam.rotation.set(-0.25, mate.yaw, 0);
+          this.app.engine.setZoom(1);
+          cam.updateMatrixWorld();
+          return;
+        }
+      }
       const kk = Math.min(1, dc.t / 1.2);
       const killer = this.deathInfo?.killer;
       let tyaw = dc.yaw, tpitch = -0.5;
@@ -624,17 +689,19 @@ export class Game {
     for (const g of m.projectiles.list) if (g.kind === 'frag' && p.alive && Math.hypot(g.x - p.x, g.z - p.z) < 8) nades.push(g);
     hud.update(dt, {
       alive: p.alive, health: p.health, weaponName: w.def.name, mag: w.mag, magSize: w.def.mag, reserve: w.reserve,
-      lethal: p.lethal.count, tactical: p.tactical.count, scores: m.teamScores, timeLeft: m.timeLeft, scoreLimit: m.settings.scoreLimit,
+      lethal: p.lethal.count, tactical: p.tactical.count, scores: this.hudScores(), timeLeft: m.timeLeft, scoreLimit: m.settings.scoreLimit, limitText: this.limitText(),
       sprinting: p.sprinting, adsT: p.adsT, busy: p.swapT > 0 || p.throwT > 0 || p.meleeT > 0, scoped: this.scoped,
       spreadDeg: p.spreadDeg(), vfov: app.engine.camera.fov * Math.PI / 180, reloading: w.reloading, protect: p.spawnProtectT,
       x: p.x, z: p.z, yaw: this.look.yaw, nades,
       keys: { lethal: inp.label('lethal'), tactical: inp.label('tactical'), reload: inp.label('reload') },
     });
     if (this.isRange) hud.rangePanel(this.rangeHtml());
+    else { hud.objStrip(this.objStripHtml()); hud.objMarkers(this.objMarkerList()); }
     // death overlay
     if (!p.alive && this.deathInfo && m.state === 'live') {
       const rt = Math.max(0, p.respawnT);
-      this.deathInfo.respawn = rt > 0 ? `Respawning in ${rt.toFixed(1)}` : `Press <span class="key">${esc(inp.label('jump'))}</span> to respawn`;
+      if (!m.canRespawn(p)) this.deathInfo.respawn = this.spectating ? `Spectating ${esc(this.spectating.displayName)} · respawn next round` : 'Eliminated · respawn next round';
+      else this.deathInfo.respawn = rt > 0 ? `Respawning in ${rt.toFixed(1)}` : `Press <span class="key">${esc(inp.label('jump'))}</span> to respawn`;
       hud.death(this.deathInfo);
     } else if (p.alive || m.state !== 'live') hud.death(null);
     // scoreboard
@@ -659,6 +726,73 @@ export class Game {
       }
     }
     hud.minimap(this.map.minimap, { x: p.alive ? p.x : p.x, z: p.z, yaw: this.look.yaw }, dots);
+  }
+
+  hudScores() {
+    const m = this.match;
+    if (!this.ffa) return m.teamScores;
+    return [m.teamScores[0], Math.max(0, ...m.teamScores.slice(1))];
+  }
+
+  limitText() {
+    const m = this.match, id = m.mode.id, lim = m.settings.scoreLimit;
+    if (id === 'gun') return `LEVEL ${Math.min((this.player.gunLevel || 0) + 1, m.ladder.length)} / ${m.ladder.length}`;
+    if (id === 'elim') return `ROUND ${m.round?.n || 1} · FIRST TO ${lim}`;
+    return `FIRST TO ${lim}`;
+  }
+
+  objStripHtml() {
+    const m = this.match, p = this.player;
+    const [fc, ec] = this.app.settings.teamColors();
+    const col = (t) => (t < 0 ? '#d8d8d0' : t === p.team ? fc : ec);
+    if (m.flags) {
+      return m.flags.map((f) => {
+        const lead = f.progress > 0 ? 0 : 1, pct = Math.round(Math.abs(f.progress) * 100);
+        return `<div class="fl" style="border-color:${f.contested ? '#ff3b30' : col(f.owner)};color:${col(f.owner)}"><i style="height:${pct}%;background:${col(pct ? lead : -1)}"></i><span style="position:relative">${f.id}</span></div>`;
+      }).join('');
+    }
+    if (m.hp && m.zones?.length) {
+      const h = m.hp, z = m.zones[h.idx];
+      const st = h.contested ? '<span style="color:#ff3b30">CONTESTED</span>' : h.owner < 0 ? 'NEUTRAL' : h.owner === p.team ? `<span style="color:${fc}">SECURED</span>` : `<span style="color:${ec}">ENEMY HELD</span>`;
+      return `<div class="tag">${esc((z.name || 'ZONE').toUpperCase())} · ${st} · MOVES IN ${Math.ceil(h.t)}s</div>`;
+    }
+    if (m.round) {
+      const pips = (t) => m.combatants.filter((c) => c.team === t).map((c) => `<span class="pip ${c.alive ? 'on' : ''}"></span>`).join('');
+      return `<div class="pips" style="color:${fc}">${pips(p.team)}</div><div class="tag">ROUND ${m.round.n}${m.round.phase === 'post' ? ' · OVER' : ''}</div><div class="pips" style="color:${ec}">${pips(1 - p.team)}</div>`;
+    }
+    if (m.ladder) {
+      const lv = p.gunLevel || 0, next = m.ladder[lv + 1];
+      const name = (id) => (id === 'melee' ? 'MELEE' : WEAPONS[id]?.name || id);
+      return `<div class="tag">NEXT: ${next ? esc(name(next)) : 'WIN'}</div>`;
+    }
+    return '';
+  }
+
+  objMarkerList() {
+    const m = this.match, p = this.player, out = [];
+    const [fc, ec] = this.app.settings.teamColors();
+    const col = (t) => (t < 0 ? '#d8d8d0' : t === p.team ? fc : ec);
+    const cam = this.app.engine.camera.position;
+    const add = (x, y, z, label, color, pulse) => {
+      const sp = this.projectEdge(x, y, z);
+      out.push({ x: sp.x, y: sp.y, label, color, pulse, sub: `${Math.round(Math.hypot(x - cam.x, z - cam.z))}m` });
+    };
+    if (m.flags) for (const f of m.flags) add(f.x, 3.4, f.z, f.id, f.contested ? '#ff3b30' : col(f.owner), f.contested);
+    if (m.hp && m.zones?.length && m.state !== 'ended') { const z = m.zones[m.hp.idx]; add(z.x, 2.6, z.z, 'HP', m.hp.contested ? '#ff3b30' : col(m.hp.owner), m.hp.contested); }
+    return out;
+  }
+
+  /** Project a world point to the screen, clamped to the edges when off-screen or behind. */
+  projectEdge(x, y, z) {
+    const cam = this.app.engine.camera;
+    v3b.set(x, y, z).project(cam);
+    const W = window.innerWidth, H = window.innerHeight;
+    let sx = v3b.x, sy = v3b.y;
+    const behind = v3b.z > 1;
+    if (behind) { sx = -sx; sy = -sy; }
+    const off = behind || Math.abs(sx) > 0.95 || Math.abs(sy) > 0.9;
+    if (off) { const k = Math.max(Math.abs(sx) / 0.92, Math.abs(sy) / 0.86, 1e-3); sx /= k; sy /= k; if (behind && Math.abs(sy) < 0.86) sy = -0.86; }
+    return { x: (sx * 0.5 + 0.5) * W, y: (-sy * 0.5 + 0.5) * H };
   }
 
   nameplates() {
@@ -713,27 +847,31 @@ export class Game {
 
   scoreboardHtml() {
     const m = this.match;
-    const [A, B] = m.scoreboard();
+    const groups = m.scoreboard();
     const [fc, ec] = this.app.settings.teamColors();
-    const tbl = (rows, team, col) => `
-      <div class="team-head" style="color:${col}"><span>${esc(TEAMS[team].name)}</span><span class="score">${m.teamScores[team]}</span></div>
-      <table class="sb"><thead><tr><th>Player</th><th class="num">Score</th><th class="num">K</th><th class="num">D</th><th class="num">A</th><th class="num">Streak</th></tr></thead><tbody>
-      ${rows.map((r) => `<tr class="${r.c === this.player ? 'me' : ''}" style="${r.c.alive ? '' : 'opacity:0.55'}"><td>${r.c.isBot ? '<span class="bot-tag">BOT</span>' : `<img class="sb-emblem" src="${emblemArt(this.cosm.emblem.id, 32)}" alt="">`}${esc(r.c.name)}</td><td class="num">${r.score}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td><td class="num">${r.assists}</td><td class="num">${r.streak}</td></tr>`).join('')}
+    const gun = m.mode.id === 'gun';
+    const name = (r) => `${r.c.isBot ? '<span class="bot-tag">BOT</span>' : `<img class="sb-emblem" src="${emblemArt(this.cosm.emblem.id, 32)}" alt="">`}${esc(r.c.name)}`;
+    const tbl = (rows, head) => `${head}
+      <table class="sb"><thead><tr><th>Player</th>${gun ? '<th class="num">Level</th>' : ''}<th class="num">Score</th><th class="num">K</th><th class="num">D</th><th class="num">A</th><th class="num">Streak</th></tr></thead><tbody>
+      ${rows.map((r) => `<tr class="${r.c === this.player ? 'me' : ''}" style="${r.c.alive ? '' : 'opacity:0.55'}"><td>${name(r)}</td>${gun ? `<td class="num">${Math.min(r.level + 1, m.ladder.length)}/${m.ladder.length}</td>` : ''}<td class="num">${r.score}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td><td class="num">${r.assists}</td><td class="num">${r.streak}</td></tr>`).join('')}
       </tbody></table>`;
     const t = Math.max(0, Math.ceil(m.timeLeft));
-    return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="kicker">${esc(MODES[m.settings.mode].name)} · ${esc(this.map.def.name)}</span><span class="muted small">${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} remaining · first to ${m.settings.scoreLimit}</span></div>${tbl(A, 0, fc)}<div style="height:10px"></div>${tbl(B, 1, ec)}`;
+    const header = `<div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="kicker">${esc(MODES[m.settings.mode].name)} · ${esc(this.map.def.name)}</span><span class="muted small">${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} ${m.mode.rounds ? 'left in round' : 'remaining'} · ${esc(this.limitText().toLowerCase())}</span></div>`;
+    if (groups.length === 1) return header + tbl(groups[0], '');
+    const th = (team, col) => `<div class="team-head" style="color:${col}"><span>${esc(TEAMS[team].name)}</span><span class="score">${m.teamScores[team]}</span></div>`;
+    return `${header}${tbl(groups[0], th(0, fc))}<div style="height:10px"></div>${tbl(groups[1], th(1, ec))}`;
   }
 
   buildResult() {
     const m = this.match, p = this.player;
     const outcome = m.winner === -1 ? 'draw' : m.winner === p.team ? 'win' : 'loss';
-    const [A, B] = m.scoreboard();
-    const row = (r) => ({ name: r.c.name, bot: r.c.isBot, me: r.c === p, score: r.score, kills: r.kills, deaths: r.deaths, assists: r.assists, acc: r.shots ? Math.round(r.hits / r.shots * 100) + '%' : '—' });
+    const groups = m.scoreboard();
+    const row = (r) => ({ name: r.c.name, bot: r.c.isBot, me: r.c === p, score: r.score, kills: r.kills, deaths: r.deaths, assists: r.assists, level: r.level, acc: r.shots ? Math.round(r.hits / r.shots * 100) + '%' : '—' });
     const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed] };
     const rewards = this.app.profile.recordMatch(this.id, outcome, p.stats, m.time, summary);
     return {
-      outcome, reason: m.endReason, scores: [...m.teamScores], mode: m.settings.mode,
-      rows: [A.map(row), B.map(row)], me: { ...p.stats }, medals: [...this.medals.values()], recorded: !!rewards, rewards,
+      outcome, reason: m.endReason, scores: this.hudScores(), mode: m.settings.mode,
+      rows: groups.map((g) => g.map(row)), ffa: this.ffa, placing: this.ffa ? groups[0].findIndex((r) => r.c === p) + 1 : 0, ladder: m.ladder?.length || 0, me: { ...p.stats }, medals: [...this.medals.values()], recorded: !!rewards, rewards,
     };
   }
 
@@ -743,7 +881,7 @@ export class Game {
     const n = Math.round(seconds * 60);
     for (let i = 0; i < n && this.match.state !== 'ended'; i++) {
       const p = this.player;
-      if (!p.alive && this.match.state === 'live' && p.respawnT < -1) this.match.respawn(p);
+      if (!p.alive && this.match.state === 'live' && p.respawnT < -1 && this.match.canRespawn(p)) this.match.respawn(p);
       const wasAlive = p.alive;
       this.match.tick(1 / 60);
       if (wasAlive && !p.alive) this.onPlayerDeath();
@@ -766,6 +904,7 @@ export class Game {
     for (const v of this.views.values()) this.app.engine.scene.remove(v.root);
     this.views.clear();
     this.hud.destroy();
+    this.objView?.dispose();
     this.unsubSettings();
     this.app.audio.ambience(false);
     this.vm.visible = false;
