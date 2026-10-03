@@ -7,8 +7,13 @@ import { SETTINGS_SCHEMA, ACTION_LABELS, DEFAULT_BINDINGS } from '../core/settin
 import { codeLabel } from '../core/input.js';
 import { WEAPONS, EQUIPMENT, PRIMARY_IDS, SECONDARY_IDS, LETHAL_IDS, TACTICAL_IDS, weaponStats, damageAt } from '../data/weapons.js';
 import { MODES, ROADMAP_MODES, DIFFICULTIES, TEAMS } from '../game/modes.js';
+import { SCREENS2, profileCard, creditsChip } from './screens2.js';
+import { COSMETICS, RARITY } from '../data/cosmetics.js';
+import { itemThumb, cardArt } from './art.js';
+import { xpToNext, MAX_LEVEL } from '../core/profile.js';
+import { SEASON } from '../data/season.js';
 
-export const VERSION = 'M1 · build 0.1.0';
+export const VERSION = 'M3 · build 0.3.0';
 
 export class Screens {
   constructor(app) {
@@ -42,6 +47,7 @@ export class Screens {
   push(name, params = {}) {
     const fn = SCREENS[name];
     const node = el('div', { class: 'screen', 'data-screen': name });
+    if (this.top) this.top.node.style.visibility = 'hidden'; // only the top screen is shown
     this.root.appendChild(node);
     const entry = { name, node, params, onBack: null, cleanup: null };
     this.stack.push(entry);
@@ -55,6 +61,7 @@ export class Screens {
     if (!e) return;
     e.cleanup?.();
     e.node.remove();
+    if (this.top) this.top.node.style.visibility = '';
     this.app.nav?.reset();
   }
 
@@ -149,10 +156,14 @@ const SCREENS = {
           <div class="kicker">${esc(VERSION)}</div>
           <h1 class="title" style="font-size:calc(22px * var(--text-scale));letter-spacing:0.5em;color:var(--muted);margin-top:18px">OPERATION</h1>
           <h1 class="title" style="font-size:calc(76px * var(--text-scale));letter-spacing:0.08em">ASH<span style="color:var(--accent)">LINE</span></h1>
-          <nav class="menu-nav">
+          <nav class="menu-nav compact">
             <button class="menu-btn" data-go="play">Play<span class="sub">Team Deathmatch vs bots · offline</span></button>
             <button class="menu-btn" data-act="range">Firing Range<span class="sub">Test weapons on training targets</span></button>
             <button class="menu-btn" data-go="loadouts">Loadouts<span class="sub">Active: ${esc(app.profile.loadout.name)} — ${esc(WEAPONS[app.profile.loadout.primary].name)}</span></button>
+            <button class="menu-btn" data-go="armory">Armory${app.profile.unseenCount() ? ` <span class="newdot">${app.profile.unseenCount()}</span>` : ''}<span class="sub">Operators, outfits, finishes, charms, cards</span></button>
+            <button class="menu-btn" data-go="pass">Battle Pass<span class="sub">Season ${SEASON.number} · tier ${app.profile.passTier} / ${SEASON.tiers}${app.profile.data.pass.premium ? ' · Premium' : ''}</span></button>
+            <button class="menu-btn" data-go="challenges">Challenges<span class="sub">${app.profile.challengeDefs().daily.filter((c) => c.done).length}/5 daily · ${app.profile.challengeDefs().weekly.filter((c) => c.done).length}/3 weekly</span></button>
+            <button class="menu-btn" data-go="store">Store<span class="sub">Cosmetics · test credits only</span></button>
             <button class="menu-btn" data-go="settings">Settings<span class="sub">Graphics, controls, audio, interface, accessibility</span></button>
             <button class="menu-btn" data-go="career">Career<span class="sub">${prof.career.matches} matches · ${prof.career.kills} eliminations</span></button>
             <button class="menu-btn" data-go="about">About &amp; Controls<span class="sub">What's in this build and what's next</span></button>
@@ -167,6 +178,11 @@ const SCREENS = {
       </div>`;
     node.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => app.screens.push(b.dataset.go); });
     node.querySelector('[data-act=range]').onclick = () => app.startRange();
+    const side = document.createElement('div');
+    side.className = 'menu-side';
+    side.innerHTML = `${profileCard(app)}<div class="row" style="justify-content:flex-end;margin-top:8px">${creditsChip(app)}</div>`;
+    node.appendChild(side);
+    for (const n of app.profile.data.notices.splice(0)) app.screens.toast(n, 5000);
     const hint = node.querySelector('#device-hint');
     hint.textContent = app.input.device === 'pad' ? 'Controller detected — D-pad to navigate, A to select, B to go back.' : 'Mouse & keyboard. Controllers are supported.';
     entry.onBack = () => {};
@@ -276,10 +292,10 @@ const SCREENS = {
           <div class="lo-edit scroll">
             <div class="slot"><div class="lab">Preset name</div><input class="name-in" maxlength="16" value="${esc(lo.name)}" style="width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:8px;font-family:var(--font-head);font-size:18px;letter-spacing:0.08em" /></div>
             <div class="slot"><div class="lab">Primary</div><div class="wpn-opts">
-              ${PRIMARY_IDS.map((id) => `<button class="wpn-opt ${lo.primary === id ? 'sel' : ''}" data-slot="primary" data-id="${id}"><div class="wn">${esc(WEAPONS[id].name)}</div><div class="wc">${esc(WEAPONS[id].classLabel)}</div></button>`).join('')}
+              ${PRIMARY_IDS.map((id) => `<button class="wpn-opt ${lo.primary === id ? 'sel' : ''}" data-slot="primary" data-id="${id}"><div class="wn">${esc(WEAPONS[id].name)}</div><div class="wc">${esc(WEAPONS[id].classLabel)} · LV ${prof.data.weaponProgress[id].level}</div></button>`).join('')}
             </div></div>
             <div class="slot"><div class="lab">Secondary</div><div class="wpn-opts">
-              ${SECONDARY_IDS.map((id) => `<button class="wpn-opt ${lo.secondary === id ? 'sel' : ''}" data-slot="secondary" data-id="${id}"><div class="wn">${esc(WEAPONS[id].name)}</div><div class="wc">${esc(WEAPONS[id].classLabel)}</div></button>`).join('')}
+              ${SECONDARY_IDS.map((id) => `<button class="wpn-opt ${lo.secondary === id ? 'sel' : ''}" data-slot="secondary" data-id="${id}"><div class="wn">${esc(WEAPONS[id].name)}</div><div class="wc">${esc(WEAPONS[id].classLabel)} · LV ${prof.data.weaponProgress[id].level}</div></button>`).join('')}
             </div></div>
             <div class="slot"><div class="lab">Lethal</div><div class="wpn-opts">
               ${LETHAL_IDS.map((id) => `<button class="wpn-opt ${lo.lethal === id ? 'sel' : ''}" data-slot="lethal" data-id="${id}"><div class="wn">${esc(EQUIPMENT[id].name)}</div><div class="wc">${esc(EQUIPMENT[id].blurb)}</div></button>`).join('')}
@@ -287,7 +303,8 @@ const SCREENS = {
             <div class="slot"><div class="lab">Tactical</div><div class="wpn-opts">
               ${TACTICAL_IDS.map((id) => `<button class="wpn-opt ${lo.tactical === id ? 'sel' : ''}" data-slot="tactical" data-id="${id}"><div class="wn">${esc(EQUIPMENT[id].name)}</div><div class="wc">${esc(EQUIPMENT[id].blurb)}</div></button>`).join('')}
             </div></div>
-            <div class="muted small">More weapons, attachments, perks and a firing range are on the roadmap (Milestones 2–4).</div>
+            <div class="row"><button class="btn" data-a="armory">Finishes &amp; charms for ${esc(WEAPONS[previewId || lo.primary].name)}</button></div>
+            <div class="muted small">More weapons, attachments and perks are on the roadmap (Milestone 4).</div>
           </div>
         </div>
         <div class="panel wpn-info">${weaponStatsHtml(previewId)}</div>
@@ -298,7 +315,7 @@ const SCREENS = {
           <button class="btn primary" data-a="active" ${sel === prof.data.activeLoadout ? 'disabled' : ''}>Set as Active</button>
         </div>
       </div>`;
-      app.preview.show(previewId);
+      app.preview.show(previewId, app.profile.data.equipped.weapons[previewId]);
       node.querySelectorAll('.lo-item').forEach((b) => { b.onclick = () => { sel = Number(b.dataset.i); previewId = null; render(); }; });
       node.querySelectorAll('.wpn-opt').forEach((b) => {
         b.onclick = () => {
@@ -307,14 +324,15 @@ const SCREENS = {
           if (WEAPONS[b.dataset.id]) previewId = b.dataset.id;
           render();
         };
-        b.onmouseenter = () => { if (WEAPONS[b.dataset.id]) { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(b.dataset.id); app.preview.show(b.dataset.id); } };
-        b.onmouseleave = () => { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(previewId); app.preview.show(previewId); };
+        b.onmouseenter = () => { if (WEAPONS[b.dataset.id]) { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(b.dataset.id); app.preview.show(b.dataset.id, app.profile.data.equipped.weapons[b.dataset.id]); } };
+        b.onmouseleave = () => { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(previewId); app.preview.show(previewId, app.profile.data.equipped.weapons[previewId]); };
       });
       const nameIn = node.querySelector('.name-in');
       nameIn.onchange = () => { lo.name = (nameIn.value || 'LOADOUT').toUpperCase().slice(0, 16); prof.save(); render(); };
       nameIn.onkeydown = (e) => e.stopPropagation();
       node.querySelector('[data-a=back]').onclick = () => app.screens.back();
       node.querySelector('[data-a=range]').onclick = () => { prof.data.activeLoadout = sel; prof.save(); app.startRange(); };
+      node.querySelector('[data-a=armory]').onclick = () => app.screens.push('armory', { tab: 'finish', weapon: previewId || lo.primary });
       node.querySelector('[data-a=active]').onclick = () => { prof.data.activeLoadout = sel; prof.save(); app.screens.toast(`${lo.name} is now your active loadout`); render(); };
     };
     render();
@@ -459,6 +477,7 @@ const SCREENS = {
     const tiles = [['Score', me.score], ['Eliminations', me.kills], ['Deaths', me.deaths], ['Assists', me.assists], ['K/D', me.deaths ? (me.kills / me.deaths).toFixed(2) : me.kills.toFixed(2)], ['Accuracy', me.shots ? Math.round(me.hits / me.shots * 100) + '%' : '—'], ['Headshots', me.headshots], ['Best Streak', me.bestStreak]];
     node.innerHTML = `<div class="page">
       <div class="page-head"><div><div class="kicker">${esc(reason)} · ${esc(app.mapRuntime.def.name)} · ${esc(MODES[r.mode].name)}</div><div class="res-banner ${cls}">${banner}</div></div><div class="spacer"></div>
+        <img class="res-card" src="${cardArt(app.profile.data.equipped.card, 384, 96)}" alt="">
         <div class="title" style="font-size:44px"><span style="color:var(--friendly)">${r.scores[0]}</span> <span class="dim">—</span> <span style="color:var(--enemy)">${r.scores[1]}</span></div></div>
       <div class="page-body scroll" style="gap:18px;flex-wrap:wrap">
         <div style="flex:1.4;min-width:340px" class="col">${table(r.rows[0], 0)}<div style="height:14px"></div>${table(r.rows[1], 1)}</div>
@@ -467,20 +486,42 @@ const SCREENS = {
           <div class="stat-tiles">${tiles.map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
           <h3 class="title" style="margin-top:16px">Medals</h3>
           <div class="medal-list">${r.medals.length ? r.medals.map((m) => `<span class="medal">${esc(m.name)}<b>×${m.count}</b></span>`).join('') : '<span class="muted small">None this match</span>'}</div>
-          <div class="muted small" style="margin-top:16px">${r.recorded ? 'Result added to your local career stats.' : 'Result already recorded.'} XP, levels and unlocks are planned for Milestone 3.</div>
+          ${rewardsHtml(app, r.rewards, r.recorded)}
         </div>
       </div>
       <div class="page-foot">
         <button class="btn" data-a="menu">Main Menu</button>
         <button class="btn" data-a="loadouts">Loadouts</button>
+        <button class="btn" data-a="pass">Battle Pass</button>
         <div class="spacer"></div>
         <button class="btn primary" data-a="again" style="padding:12px 40px">Play Again</button>
       </div></div>`;
     node.querySelector('[data-a=menu]').onclick = () => app.toMenu();
     node.querySelector('[data-a=loadouts]').onclick = () => { app.toMenu(); app.screens.push('play'); app.screens.push('loadouts'); };
     node.querySelector('[data-a=again]').onclick = () => app.startMatch();
+    node.querySelector('[data-a=pass]').onclick = () => { app.toMenu(); app.screens.push('pass'); };
   },
 };
+
+Object.assign(SCREENS, SCREENS2);
+
+function rewardsHtml(app, rw, recorded) {
+  if (!recorded || !rw) return '<div class="muted small" style="margin-top:16px">Result already recorded.</div>';
+  const d = app.profile.data;
+  const need = xpToNext(d.level);
+  const pct = d.level >= MAX_LEVEL ? 100 : Math.round((d.xp / need) * 100);
+  const lvUp = rw.levelAfter > rw.levelBefore;
+  return `<h3 class="title" style="margin-top:16px">Rewards</h3>
+    <div class="xp-lines">${rw.xp.map(([k, v]) => `<div class="row small"><span class="muted">${esc(k)}</span><div class="spacer"></div><b>+${Number(v).toLocaleString('en-US')}</b></div>`).join('')}
+      <div class="row"><b>Total XP</b><div class="spacer"></div><b style="color:var(--accent)">+${rw.total.toLocaleString('en-US')}</b></div></div>
+    <div class="row small" style="margin-top:8px"><b>LEVEL ${d.level}</b>${lvUp ? `<span class="pill on">Level up! ${rw.levelBefore} → ${rw.levelAfter}</span>` : ''}<div class="spacer"></div><span class="muted">${d.level >= MAX_LEVEL ? 'Max' : `${d.xp.toLocaleString('en-US')} / ${need.toLocaleString('en-US')}`}</span></div>
+    <div class="xpbar"><i style="width:${pct}%"></i></div>
+    <div class="row small" style="margin-top:8px"><span>Battle pass tier ${rw.pass.from} → <b>${rw.pass.to}</b></span>${rw.pass.to > rw.pass.from ? '<span class="pill on">Rewards ready to claim</span>' : ''}</div>
+    ${rw.weapons.length ? `<div class="small" style="margin-top:8px">${rw.weapons.map((w) => `<div class="row"><span class="muted">${esc(WEAPONS[w.id].name)}</span><div class="spacer"></div>+${w.xp} XP · LV ${w.to}${w.to > w.from ? ' <span class="pill on">Level up</span>' : ''}</div>`).join('')}</div>` : ''}
+    ${rw.challenges.length ? `<div class="small" style="margin-top:8px">${rw.challenges.map((c) => `<div class="row"><span class="pill on">Challenge complete</span><span>${esc(c.text)}</span></div>`).join('')}</div>` : ''}
+    ${rw.unlocks.length ? `<h3 class="title" style="margin-top:12px">Unlocked</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.unlocks.map((i) => `<div class="row small" style="gap:6px;border:1px solid ${RARITY[i.rarity].color};padding:4px 8px">${itemThumb(i)}<span>${esc(i.name)}</span></div>`).join('')}</div>` : ''}
+    <div class="muted small" style="margin-top:10px">Saved to your local profile.</div>`;
+}
 
 // ---------------------------------------------------------------- settings rows
 function renderItem(app, item, rerender) {

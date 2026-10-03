@@ -284,13 +284,18 @@ const GEN = {
       o.h = n * 0.2; o.rough = 0.6 + (scuff > 0.6 ? 0.25 : 0);
     }, { normalStrength: 0.8 });
   },
-  camo(S, palette) {
+  camo(S, palette, stripes = false) {
     return generate(S, (u, v, o) => {
       const a = fbm(u, v, 101, 4, 3), b = fbm(u, v, 131, 4, 5);
       let c = palette[0];
-      if (a > 0.55) c = palette[1];
-      if (b > 0.6) c = palette[2];
-      if (a < 0.38) c = palette[3];
+      if (stripes) {
+        const w = Math.sin((u * 5 + fbm(u, v, 141, 3, 3) * 2.4) * Math.PI * 2);
+        c = w > 0.5 ? palette[1] : w < -0.7 ? palette[3] : (b > 0.62 ? palette[2] : palette[0]);
+      } else {
+        if (a > 0.55) c = palette[1];
+        if (b > 0.6) c = palette[2];
+        if (a < 0.38) c = palette[3];
+      }
       const weave = (hash((u * S) | 0, (v * S) | 0, 4) - 0.5) * 12;
       setRGB(o, c[0] + weave, c[1] + weave, c[2] + weave);
       o.h = weave / 30 + (((u * S) | 0) % 2) * 0.05;
@@ -582,6 +587,15 @@ export class MaterialLibrary {
       : [[104, 92, 72], [128, 112, 86], [76, 66, 54], [60, 56, 48]];
     const m = this._std(GEN.camo(256, pal));
     this.cache.set(key, { mat: m });
+    return m;
+  }
+
+  /** Camo material from an explicit palette (outfits). */
+  camoPalette(key, palette, stripes = false) {
+    const k = 'camoP_' + key;
+    if (this.cache.has(k)) return this.cache.get(k).mat;
+    const m = this._std(GEN.camo(256, palette, stripes));
+    this.cache.set(k, { mat: m });
     return m;
   }
 

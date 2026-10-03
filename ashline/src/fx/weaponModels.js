@@ -134,6 +134,7 @@ const BUILDERS = {
     b.marker('leftHand', 0, 0.035, -0.36);
     b.marker('eject', 0.03, 0.08, -0.04);
     b.marker('magWell', 0, 0.03, -0.11);
+    b.marker('charm', -0.026, 0.06, 0.04);
   },
   smg(b) {
     b.add(rbox(0.05, 0.06, 0.25, 0.008), 'metal', 0, 0.07, -0.08);
@@ -163,6 +164,7 @@ const BUILDERS = {
     b.marker('leftHand', 0, 0.03, -0.25);
     b.marker('eject', 0.03, 0.08, -0.06);
     b.marker('magWell', 0, 0.03, -0.12);
+    b.marker('charm', -0.027, 0.05, 0.02);
   },
   shotgun(b) {
     b.add(rbox(0.05, 0.07, 0.22, 0.008), 'metal', 0, 0.065, -0.05);
@@ -186,6 +188,7 @@ const BUILDERS = {
     b.marker('leftHand', 0, 0.03, -0.32);
     b.marker('eject', 0.03, 0.075, -0.06);
     b.marker('magWell', 0, 0.03, -0.12);
+    b.marker('charm', -0.027, 0.045, 0.02);
   },
   sniper(b) {
     b.add(rbox(0.05, 0.06, 0.28, 0.008), 'metal', 0, 0.07, -0.06);
@@ -223,6 +226,7 @@ const BUILDERS = {
     b.marker('leftHand', 0, 0.02, -0.26);
     b.marker('eject', 0.03, 0.08, -0.04);
     b.marker('magWell', 0, 0.02, -0.1);
+    b.marker('charm', -0.027, 0.05, 0.08);
   },
   pistol(b) {
     const slide = b.sub('slide', 0, 0.075, -0.06);
@@ -241,6 +245,7 @@ const BUILDERS = {
     b.marker('leftHand', -0.012, -0.015, 0.0);
     b.marker('eject', 0.02, 0.085, -0.04);
     b.marker('magWell', 0, -0.02, 0.022);
+    b.marker('charm', -0.016, 0.035, 0.0);
   },
 };
 
@@ -307,4 +312,64 @@ export function buildGrenade(kind, mats) {
     ring.position.set(-0.016, 0.056, 0); g.add(ring);
   }
   return g;
+}
+
+/**
+ * Weapon charm: split ring + short chain + pendant, pivoting at the top so the
+ * viewmodel can swing it. Returns { group, pendulum } (pendulum is the swinging part).
+ */
+export function buildCharm(shape, color, mats) {
+  const group = new THREE.Group();
+  if (!shape || shape === 'none') return { group, pendulum: null };
+  const chainMat = new THREE.MeshStandardMaterial({ color: 0xb8bcc0, metalness: 0.9, roughness: 0.3 });
+  const m = new THREE.MeshStandardMaterial({ color, metalness: ['tag', 'star', 'cog', 'compass', 'spike'].includes(shape) ? 0.8 : 0.1, roughness: 0.35 });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.006, 0.0012, 6, 12), chainMat);
+  ring.rotation.y = Math.PI / 2;
+  group.add(ring);
+  const pendulum = new THREE.Group();
+  pendulum.position.y = -0.004;
+  group.add(pendulum);
+  for (let i = 0; i < 3; i++) {
+    const link = new THREE.Mesh(new THREE.TorusGeometry(0.0028, 0.0008, 4, 8), chainMat);
+    link.position.y = -0.006 - i * 0.0055;
+    link.rotation.y = i % 2 ? Math.PI / 2 : 0;
+    pendulum.add(link);
+  }
+  const p = new THREE.Group();
+  p.position.y = -0.03;
+  pendulum.add(p);
+  const add = (g, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, mat = m) => { const o = new THREE.Mesh(g, mat); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); p.add(o); return o; };
+  switch (shape) {
+    case 'tag': add(new RoundedBoxGeometry(0.003, 0.03, 0.019, 1, 0.0012)); break;
+    case 'die': {
+      add(new RoundedBoxGeometry(0.016, 0.016, 0.016, 2, 0.003));
+      const dot = new THREE.MeshBasicMaterial({ color: 0x111111 });
+      for (const [x, y] of [[0, 0], [0.0045, 0.0045], [-0.0045, -0.0045]]) add(new THREE.CircleGeometry(0.0016, 8), 0.0081, y, x, 0, Math.PI / 2, 0, dot);
+      break;
+    }
+    case 'frag': add(new THREE.SphereGeometry(0.009, 10, 8)); add(new THREE.CylinderGeometry(0.003, 0.0035, 0.006, 8), 0, 0.011, 0, 0, 0, 0, chainMat); break;
+    case 'star': {
+      const sh = new THREE.Shape();
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.0055 : 0.013, a = (i / 10) * Math.PI * 2 - Math.PI / 2; const x = Math.cos(a) * r, y = -Math.sin(a) * r; if (i) sh.lineTo(x, y); else sh.moveTo(x, y); }
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 0.003, bevelEnabled: false });
+      g.center();
+      add(g, 0, 0, 0, 0, Math.PI / 2, 0);
+      break;
+    }
+    case 'spike': add(new THREE.BoxGeometry(0.006, 0.034, 0.006)); add(new THREE.BoxGeometry(0.012, 0.004, 0.009), 0, 0.017, 0); break;
+    case 'duck': add(new THREE.SphereGeometry(0.009, 10, 8)); add(new THREE.SphereGeometry(0.0062, 10, 8), 0, 0.009, -0.005); add(new THREE.ConeGeometry(0.0025, 0.006, 6), 0, 0.0085, -0.0115, -Math.PI / 2, 0, 0, new THREE.MeshStandardMaterial({ color: 0xff7a1a })); break;
+    case 'cog': {
+      add(new THREE.CylinderGeometry(0.01, 0.01, 0.004, 12), 0, 0, 0, 0, 0, Math.PI / 2);
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; add(new THREE.BoxGeometry(0.004, 0.004, 0.004), 0, Math.cos(a) * 0.012, Math.sin(a) * 0.012); }
+      break;
+    }
+    case 'compass': {
+      add(new THREE.CylinderGeometry(0.011, 0.011, 0.005, 16), 0, 0, 0, 0, 0, Math.PI / 2);
+      add(new THREE.CircleGeometry(0.009, 16), 0.0026, 0, 0, 0, Math.PI / 2, 0, new THREE.MeshStandardMaterial({ color: 0xf2eee4 }));
+      add(new THREE.BoxGeometry(0.0008, 0.014, 0.002), 0.003, 0, 0, 0, 0, 0, new THREE.MeshBasicMaterial({ color: 0xc8302a }));
+      break;
+    }
+    default: add(new THREE.SphereGeometry(0.008, 8, 6));
+  }
+  return { group, pendulum };
 }

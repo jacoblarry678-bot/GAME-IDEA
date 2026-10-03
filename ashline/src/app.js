@@ -14,10 +14,12 @@ import { NavGrid } from './world/navgrid.js';
 import { createSky } from './world/sky.js';
 import { CINDER_YARD } from './world/maps/cinderYard.js';
 import { FIRING_RANGE } from './world/maps/firingRange.js';
-import { weaponMaterials, buildWeapon } from './fx/weaponModels.js';
+import { weaponMaterials, buildWeapon, buildCharm } from './fx/weaponModels.js';
+import { finishMaterials } from './world/finishes.js';
+import { COSMETICS } from './data/cosmetics.js';
 import { Viewmodel } from './fx/viewmodel.js';
 import { Effects } from './fx/effects.js';
-import { SoldierMaterials, dummyMaterials } from './entities/soldierModel.js';
+import { SoldierMaterials, SoldierModel, dummyMaterials, outfitMaterials } from './entities/soldierModel.js';
 import { Screens } from './ui/screens.js';
 import { MenuNav } from './ui/nav.js';
 import { Game } from './game/game.js';
@@ -303,7 +305,10 @@ export class App {
   }
 }
 
-/** Rotating 3D weapon preview for the loadout screen (drawn in the viewmodel scene). */
+/**
+ * 3D preview stage for menus (drawn in the viewmodel overlay scene):
+ * weapons with their finish and charm, or an operator in an outfit.
+ */
 class WeaponPreview {
   constructor(app) {
     this.app = app;
@@ -312,18 +317,49 @@ class WeaponPreview {
     app.engine.vmScene.add(this.group);
     this.models = new Map();
     this.cur = null;
+    this.kind = 'weapon';
     this.t = 0;
   }
-  show(id) {
+  /** look: { finish, charm } (optional) */
+  show(id, look = null) {
     if (!WEAPONS[id]) return;
+    const finish = look?.finish || 'fn_factory', charm = look?.charm || 'ch_none';
+    const key = `w|${id}|${finish}|${charm}`;
+    this.kind = 'weapon';
     this.group.visible = true;
-    if (this.cur === id) return;
-    this.cur = id;
+    if (this.cur === key) return;
+    this.cur = key;
     for (const m of this.models.values()) m.visible = false;
-    let m = this.models.get(id);
+    let m = this.models.get(key);
     if (!m) {
-      m = buildWeapon(WEAPONS[id].model, this.app.wmats).group;
-      this.models.set(id, m);
+      const built = buildWeapon(WEAPONS[id].model, finishMaterials(this.app.wmats, finish));
+      m = built.group;
+      const c = COSMETICS[charm]?.charm;
+      if (c && built.markers.charm) {
+        const ch = buildCharm(c.shape, c.color);
+        ch.group.position.copy(built.markers.charm.position);
+        ch.group.scale.setScalar(1.6);
+        m.add(ch.group);
+      }
+      this.models.set(key, m);
+      this.group.add(m);
+    }
+    m.visible = true;
+  }
+  showOperator(opItem, outfitItem) {
+    const key = `o|${outfitItem.id}`;
+    this.kind = 'operator';
+    this.group.visible = true;
+    if (this.cur === key) return;
+    this.cur = key;
+    for (const m of this.models.values()) m.visible = false;
+    let m = this.models.get(key);
+    if (!m) {
+      const sm = new SoldierModel(outfitMaterials(this.app.materials, this.app.soldierMats, outfitItem, opItem), this.app.wmats, 0, 1);
+      sm.setWeapon('ar_kv7');
+      m = sm.root;
+      m.userData.model = sm;
+      this.models.set(key, m);
       this.group.add(m);
     }
     m.visible = true;
@@ -332,10 +368,18 @@ class WeaponPreview {
   update(dt) {
     if (!this.group.visible) return;
     this.t += dt;
-    // place the weapon in the free area above the stats panel (right column)
     const aspect = this.app.engine.aspect;
     const halfW = Math.tan((26 * Math.PI) / 180) * 1.25 * aspect;
     const x = aspect > 1.2 ? halfW * 0.63 : 0;
+    if (this.kind === 'operator') {
+      const z = -3.6, hw = Math.tan((26 * Math.PI) / 180) * -z * aspect;
+      this.group.position.set(aspect > 1.2 ? hw * 0.55 : 0, -1.0, z);
+      this.group.rotation.set(0, Math.PI + 0.5 + Math.sin(this.t * 0.4) * 0.6, 0);
+      this.group.scale.setScalar(1);
+      for (const m of this.models.values()) if (m.visible && m.userData.model) m.userData.model.update({ speed: 0, sprinting: false, stance: 'stand', grounded: true, pitch: 0, adsT: 0, reloading: false, alive: true }, dt);
+      return;
+    }
+    // place the weapon in the free area above the stats panel (right column)
     this.group.position.set(x, aspect > 1.2 ? 0.3 : 0.32, -1.25);
     this.group.rotation.set(0.1 + Math.sin(this.t * 0.6) * 0.04, Math.PI / 2 + Math.sin(this.t * 0.35) * 0.5, 0);
     this.group.scale.setScalar(Math.min(0.75, halfW * 0.55));

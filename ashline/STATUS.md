@@ -49,12 +49,30 @@ incomplete or still a known issue, and what comes next.
 - GPU performance is still unmeasured, for the reason given under M1. On Ultra, GTAO adds a full extra geometry pass (~400 draw calls in the yard).
 - Weapon attachments are not in yet (planned for M4). The range currently tests base weapons.
 
-## Next: Milestone 3 (progression & cosmetics)
-- Persistent profile with player level and XP from matches. Weapon levels unlock camos.
-- Inventory, with cosmetic equip and a live preview on the operator or weapon.
-- A 50-tier battle pass (free and premium tracks) with daily and weekly challenges.
-- A demonstration item shop using clearly labelled test currency.
+## Milestone 3: Progression and cosmetics (complete)
+
+**Added**
+- **Player level** (1–55) and **weapon levels** (1–20 per weapon), both earned by finishing matches. Level and weapon-level milestones unlock cosmetics.
+- **Cosmetic catalog**: 80 items with stable IDs, all generated in code. That's 4 operators (Voss, Marek, Sol, Kestrel), 12 outfits, 25 weapon finishes (5 of them emissive, metallic or iridescent), 9 charms (3D, they swing as the weapon moves), 12 calling cards, 12 emblems and 6 banners. Each item has a rarity, a description and its unlock requirement.
+- **Armory** (inventory): owned and locked items, a NEW badge on recent unlocks, a live 3D preview on the operator or weapon, equip per weapon (or on all weapons), and equipping an operator from its outfit.
+- **In the match**: your finish and charm show on your first-person weapon, and your outfit on your sleeves and gloves. Your operator model wears its outfit, headgear and weapon finish in the death cam. Your emblem appears on the scoreboard and your calling card on the results screen. Team colour bands always stay on top, and cosmetics never change hitboxes or gameplay.
+- **Battle Pass, Season 1 ASHFALL**: 50 tiers with free and premium tracks. Every match XP point counts as pass XP. Rewards are claimed per tile or with Claim all, and can't be claimed twice. A duplicate converts to credits. Premium unlocks with **950 test credits**; you start with 1,500. A season-end notice explains that tiers reset and owned items are kept.
+- **Challenges**: 5 daily and 3 weekly, picked deterministically from pools. They reset at 00:00 UTC (daily) and Monday 00:00 UTC (weekly), track progress from real match stats, and pay XP once.
+- **Store (demo)**: daily featured items and weekly bundles, generated on the device from the date and labelled that way. The flow is preview → buy → confirm → added to Armory → equip. Owned items are excluded from bundle prices. You can't buy something you already own. Insufficient funds shows a clear message. There's a purchase history and a clearly labelled **+1,000 test credits** demo button.
+- **Results**: an XP breakdown (score, completion, win, time, difficulty, challenges), level progress, weapon XP, unlocks and pass tier gains, all awarded exactly once per match.
+- **Profile v2** save with migration from v1, plus validation that drops unknown or invalid IDs and recovers from corrupt data.
+
+**Verification run**
+- `npm test`: 83/83. The 34 new tests cover levels, unlocks, duplicates, equip rules, pass claims and premium, store purchases and bundles, funds, daily/weekly resets, challenge completion, match rewards paid once, persistence, and corrupt-save or v1 migration.
+- `node tools/m3.mjs`: 15/15 browser checks. The full flow is Armory → Store purchase → confirm → equip → premium pass + claim all → challenges → match with the cosmetics visible → rewards applied once → reload persistence.
+- `npm run e2e`: 31/31 (no regressions).
+
+**Not a real economy**: all currency is TEST credits. Purchases are simulated and stored in this browser's local storage, which a user can edit. A release would need server-side validation of balances, purchases and entitlements, and no real payment processing exists in this build.
+
+## Next: Milestone 4 (more content)
+- Expand the arsenal to 16 weapons, adding attachments, perks and support abilities.
+- New maps: Old Quarter and Signal Station.
+- New modes: Free-for-All, Domination, Hardpoint, Elimination and Gun Game.
 
 ## Later milestones
-- M4: more weapons and attachments, maps (Old Quarter, Signal Station), modes (FFA, Domination, Hardpoint, Elimination, Gun Game), support abilities.
 - M5: real online play needs a server-authoritative game server, accounts and a backend. Until then, online features stay labelled unavailable.

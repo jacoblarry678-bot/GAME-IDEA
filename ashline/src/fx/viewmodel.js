@@ -6,7 +6,9 @@
  */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { buildWeapon, buildGrenade } from './weaponModels.js';
+import { buildWeapon, buildGrenade, buildCharm } from './weaponModels.js';
+import { finishMaterials } from '../world/finishes.js';
+import { COSMETICS } from '../data/cosmetics.js';
 import { WEAPONS } from '../data/weapons.js';
 import { spriteTexture } from '../world/textures.js';
 
@@ -143,22 +145,52 @@ export class Viewmodel {
   get visible() { return this._visible; }
   set visible(v) { this._visible = v; this.root.visible = v; }
 
-  setWeapon(id) {
-    if (this.curId === id) return;
-    if (this.cur) this.cur.group.visible = false;
-    let m = this.models.get(id);
+  /**
+   * Show weapon `id` with an optional cosmetic look { finish, charm }.
+   * Models are cached per weapon + finish; the charm is re-attached on change.
+   */
+  setWeapon(id, look = null) {
+    const finish = look?.finish || 'fn_factory';
+    const charm = look?.charm || 'ch_none';
+    const key = `${id}|${finish}`;
+    if (this.curKey === key && this.curCharm === charm) return;
+    if (this.cur && this.curKey !== key) this.cur.group.visible = false;
+    let m = this.models.get(key);
     if (!m) {
       const def = WEAPONS[id];
-      m = buildWeapon(def.model, this.wmats);
+      m = buildWeapon(def.model, finishMaterials(this.wmats, finish));
       m.def = def;
       m.pose = POSES[def.model] || POSES.ar;
       for (const k of Object.keys(m.parts)) m.parts[k].userData.base = m.parts[k].position.clone();
       this.pivot.add(m.group);
-      this.models.set(id, m);
+      this.models.set(key, m);
     }
     m.group.visible = true;
+    if (this.curCharm !== charm || this.cur !== m) {
+      if (this.charm) this.charm.group.removeFromParent();
+      const c = COSMETICS[charm]?.charm;
+      this.charm = buildCharm(c?.shape, c?.color);
+      if (m.markers.charm) { this.charm.group.position.copy(m.markers.charm.position); m.group.add(this.charm.group); }
+      this.charmSwing = { ax: 0, az: 0, vx: 0, vz: 0, last: null };
+    }
     this.cur = m;
     this.curId = id;
+    this.curKey = key;
+    this.curCharm = charm;
+  }
+
+  /** Sleeve camo and gloves follow the equipped outfit. */
+  setOutfit(outfitItem, lib) {
+    if (!outfitItem || this.outfitId === outfitItem.id) return;
+    this.outfitId = outfitItem.id;
+    const o = outfitItem.outfit;
+    const sleeve = lib.camoPalette(outfitItem.id, o.palette, !!o.stripes).clone();
+    sleeve.color = new THREE.Color(0.68, 0.7, 0.66);
+    const glove = new THREE.MeshStandardMaterial({ color: o.glove, roughness: 0.78 });
+    for (const a of Object.values(this.arms)) {
+      a.fore.material = sleeve; a.upper.material = sleeve;
+      a.hand.traverse((x) => { if (x.isMesh && x.material.color && x !== a.hand.children[a.hand.children.length - 1]) { if (x.material.roughness === 0.78) x.material = glove; } });
+    }
   }
 
   onFire(def) {
@@ -360,6 +392,24 @@ export class Viewmodel {
     const handRot = new THREE.Euler(rx, ry, rz, 'YXZ');
     this.placeArm(this.arms.R, rHand, new THREE.Vector3(0.26, -0.36, 0.02), new THREE.Vector3(0.38, -0.72, 0.4), handRot, 1);
     this.placeArm(this.arms.L, lHand, new THREE.Vector3(-0.1 + px * 0.3, -0.38, -0.12), new THREE.Vector3(-0.36, -0.75, 0.35), handRot, -1);
+
+    // charm swing: pendulum driven by weapon motion, hanging toward world-down
+    if (this.charm?.pendulum && m.markers.charm) {
+      const cs = this.charmSwing;
+      const wp = this.charm.group.getWorldPosition(tmpV);
+      if (cs.last) {
+        const vx = (wp.x - cs.last.x) / Math.max(dt, 1e-3), vz = (wp.z - cs.last.z) / Math.max(dt, 1e-3);
+        cs.vz += (vx - (cs.pvx || 0)) * 2.2; cs.vx -= (vz - (cs.pvz || 0)) * 2.2;
+        cs.pvx = vx; cs.pvz = vz;
+      }
+      cs.last = cs.last ? cs.last.copy(wp) : wp.clone();
+      const tx = -rx, tz = -rz;
+      cs.vx += ((tx - cs.ax) * 60 - cs.vx * 3.2) * dt; cs.vz += ((tz - cs.az) * 60 - cs.vz * 3.2) * dt;
+      cs.vx += (s.mouseDY || 0) * 0.002; cs.vz += (s.mouseDX || 0) * 0.002;
+      cs.ax += cs.vx * dt; cs.az += cs.vz * dt;
+      cs.ax = Math.max(-1.2, Math.min(1.2, cs.ax)); cs.az = Math.max(-1.2, Math.min(1.2, cs.az));
+      this.charm.pendulum.rotation.set(cs.ax, 0, cs.az);
+    }
 
     // muzzle flash
     if (this.flashT > 0) {

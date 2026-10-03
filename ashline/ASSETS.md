@@ -13,6 +13,7 @@
 | Gunshots, foley, footsteps, impacts, explosions, UI sounds | Synthesized at load time: `src/audio/audio.js` | Original |
 | Menu music & ambience | Synthesized at load time: `src/audio/audio.js` | Original |
 | Announcer voice | The player's browser speech synthesis (Web Speech API), when available | Browser-provided at runtime |
+| Cosmetics: weapon finishes, outfits, charms, calling cards, emblems, banners | Generated in code: `src/world/finishes.js`, `src/fx/weaponModels.js`, `src/entities/soldierModel.js`, `src/ui/art.js` | Original |
 | UI fonts | Rajdhani, Inter via Google Fonts (falls back to system fonts offline) | SIL Open Font License 1.1 |
 
 No images, models or audio files are downloaded or bundled. There are no names,

@@ -6,7 +6,9 @@
  */
 import * as THREE from 'three';
 import { Match } from './match.js';
-import { SoldierModel } from '../entities/soldierModel.js';
+import { SoldierModel, outfitMaterials } from '../entities/soldierModel.js';
+import { finishMaterials } from '../world/finishes.js';
+import { emblemArt } from '../ui/art.js';
 import { Hud } from '../ui/hud.js';
 import { WEAPONS, PRIMARY_IDS, damageAt } from '../data/weapons.js';
 import { MODES, TEAMS } from './modes.js';
@@ -31,13 +33,18 @@ export class Game {
     const m = this.match;
     m.presenter = true; // combatant events are consumed (and cleared) by this Game
     this.player = m.player;
+    this.cosm = app.profile.look; // equipped cosmetics (visual only — never affects gameplay)
+    this.summary = { classKills: {}, weaponKills: {}, weaponHeadshots: {}, weaponsUsed: new Set(), grenadeKills: 0, meleeKills: 0, longshots: 0, multikills: 0, difficulty: setup.difficulty };
     for (const c of m.combatants) c.displayName = c.dummy ? c.name : c.isBot ? `[BOT] ${c.name}` : c.name;
     // third-person views
     this.views = new Map();
     let seed = 1;
     this.isRange = !!m.mode.range;
     for (const c of m.combatants) {
-      const v = c.dummy ? new SoldierModel(app.dummyMats, app.wmats, 1, seed++, { unarmed: true }) : new SoldierModel(app.soldierMats, app.wmats, c.team, seed++);
+      let v;
+      if (c.dummy) v = new SoldierModel(app.dummyMats, app.wmats, 1, seed++, { unarmed: true });
+      else if (c === this.player) v = new SoldierModel(outfitMaterials(app.materials, app.soldierMats, this.cosm.outfit, this.cosm.operator), app.wmats, c.team, seed++);
+      else v = new SoldierModel(app.soldierMats, app.wmats, c.team, seed++);
       v.setWeapon(c.weapon.def.id);
       app.engine.scene.add(v.root);
       this.views.set(c.id, v);
@@ -47,7 +54,8 @@ export class Game {
     this.hud.setTeams(0);
     this.vm = app.viewmodel;
     this.vm.visible = true;
-    this.vm.setWeapon(this.player.weapon.def.id);
+    this.vm.setOutfit(this.cosm.outfit, app.materials);
+    this.vm.setWeapon(this.player.weapon.def.id, this.cosm.weapons[this.player.weapon.def.id]);
     this.look = { yaw: 0, pitch: 0 };
     this.recoilDebt = 0;
     this.camKick = { p: 0, y: 0, vp: 0, vy: 0 };
@@ -174,7 +182,7 @@ export class Game {
       p.applyLoadout({ ...p.loadout, primary: next });
       p.cur = 0; p.adsT = 0; p.swapT = 0;
       for (const w of p.weapons) w.refill();
-      this.vm.setWeapon(next);
+      this.vm.setWeapon(next, this.cosm.weapons[next]);
       this.hud.popup(WEAPONS[next].name, 0, 'medal');
     }
     if (inp.keyPressed('KeyY')) { r.infinite = !r.infinite; m.infiniteAmmo = r.infinite; this.hud.popup(`INFINITE AMMO ${r.infinite ? 'ON' : 'OFF'}`, 0, 'medal'); }
@@ -320,6 +328,7 @@ export class Game {
       case 'shot': {
         const c = e.c, def = WEAPONS[e.weapon];
         const me = c === p;
+        if (me) this.summary.weaponsUsed.add(e.weapon);
         const view = this.views.get(c.id);
         let mx, my, mz;
         if (me) {
@@ -404,6 +413,13 @@ export class Game {
       }
       case 'kill': {
         const kname = WEAPONS[e.weapon]?.name;
+        if (e.killer === p && e.victim !== p && e.victim.team !== p.team && !this.isRange) {
+          const S = this.summary, wd = WEAPONS[e.weapon];
+          if (wd) { S.weaponKills[e.weapon] = (S.weaponKills[e.weapon] || 0) + 1; S.classKills[wd.class] = (S.classKills[wd.class] || 0) + 1; if (e.headshot) S.weaponHeadshots[e.weapon] = (S.weaponHeadshots[e.weapon] || 0) + 1; }
+          if (e.kind === 'explosive') S.grenadeKills++;
+          if (e.kind === 'melee') S.meleeKills++;
+          for (const md of e.medals) { if (md.id === 'longshot') S.longshots++; if (['double', 'triple', 'fury'].includes(md.id)) S.multikills++; }
+        }
         hud.killfeed({ ...e, killer: e.killer && { ...e.killer, name: e.killer.displayName, team: e.killer.team, isBot: e.killer.isBot, id: e.killer.id }, victim: { ...e.victim, name: e.victim.displayName, team: e.victim.team, isBot: e.victim.isBot, id: e.victim.id }, weaponName: kname }, p.id);
         if (e.killer === p && e.victim !== p) {
           hud.popup(e.headshot ? 'HEADSHOT' : 'ELIMINATED', this.isRange ? 0 : 100);
@@ -564,7 +580,7 @@ export class Game {
 
   updateViewmodel(dt) {
     const p = this.player;
-    this.vm.setWeapon(p.weapon.def.id);
+    this.vm.setWeapon(p.weapon.def.id, this.cosm.weapons[p.weapon.def.id]);
     const scoped = !!(p.weapon.def.handling.scope && p.adsT > 0.92 && p.alive);
     this.vm.visible = p.alive && !scoped && !this.ended;
     this.scoped = scoped;
@@ -587,7 +603,8 @@ export class Game {
       if (!v.root.visible) continue;
       v.root.position.set(c.x, c.y, c.z);
       v.root.rotation.y = c.yaw;
-      v.setWeapon(c.weapon.def.id);
+      if (isMe) v.setWeapon(c.weapon.def.id, finishMaterials(this.app.wmats, this.cosm.weapons[c.weapon.def.id]?.finish));
+      else v.setWeapon(c.weapon.def.id);
       v.setLod(Math.hypot(c.x - cam.x, c.z - cam.z) > 55);
       v.update({ speed: c.speed, sprinting: c.sprinting, stance: c.stance, grounded: c.grounded || !!c.mantle, pitch: c.pitch, adsT: c.adsT, reloading: c.weapon.reloading || c.swapT > 0, alive: c.alive, vx: c.vx, vz: c.vz, yaw: c.yaw }, this.paused ? 0 : dt);
     }
@@ -701,7 +718,7 @@ export class Game {
     const tbl = (rows, team, col) => `
       <div class="team-head" style="color:${col}"><span>${esc(TEAMS[team].name)}</span><span class="score">${m.teamScores[team]}</span></div>
       <table class="sb"><thead><tr><th>Player</th><th class="num">Score</th><th class="num">K</th><th class="num">D</th><th class="num">A</th><th class="num">Streak</th></tr></thead><tbody>
-      ${rows.map((r) => `<tr class="${r.c === this.player ? 'me' : ''}" style="${r.c.alive ? '' : 'opacity:0.55'}"><td>${r.c.isBot ? '<span class="bot-tag">BOT</span>' : ''}${esc(r.c.name)}</td><td class="num">${r.score}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td><td class="num">${r.assists}</td><td class="num">${r.streak}</td></tr>`).join('')}
+      ${rows.map((r) => `<tr class="${r.c === this.player ? 'me' : ''}" style="${r.c.alive ? '' : 'opacity:0.55'}"><td>${r.c.isBot ? '<span class="bot-tag">BOT</span>' : `<img class="sb-emblem" src="${emblemArt(this.cosm.emblem.id, 32)}" alt="">`}${esc(r.c.name)}</td><td class="num">${r.score}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td><td class="num">${r.assists}</td><td class="num">${r.streak}</td></tr>`).join('')}
       </tbody></table>`;
     const t = Math.max(0, Math.ceil(m.timeLeft));
     return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="kicker">${esc(MODES[m.settings.mode].name)} · ${esc(this.map.def.name)}</span><span class="muted small">${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} remaining · first to ${m.settings.scoreLimit}</span></div>${tbl(A, 0, fc)}<div style="height:10px"></div>${tbl(B, 1, ec)}`;
@@ -712,10 +729,11 @@ export class Game {
     const outcome = m.winner === -1 ? 'draw' : m.winner === p.team ? 'win' : 'loss';
     const [A, B] = m.scoreboard();
     const row = (r) => ({ name: r.c.name, bot: r.c.isBot, me: r.c === p, score: r.score, kills: r.kills, deaths: r.deaths, assists: r.assists, acc: r.shots ? Math.round(r.hits / r.shots * 100) + '%' : '—' });
-    const recorded = this.app.profile.recordMatch(this.id, outcome, p.stats, m.time);
+    const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed] };
+    const rewards = this.app.profile.recordMatch(this.id, outcome, p.stats, m.time, summary);
     return {
       outcome, reason: m.endReason, scores: [...m.teamScores], mode: m.settings.mode,
-      rows: [A.map(row), B.map(row)], me: { ...p.stats }, medals: [...this.medals.values()], recorded,
+      rows: [A.map(row), B.map(row)], me: { ...p.stats }, medals: [...this.medals.values()], recorded: !!rewards, rewards,
     };
   }
 

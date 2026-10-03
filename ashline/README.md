@@ -53,6 +53,7 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
 - **Gunplay**: ADS with sights lined up, recoil you can control, spread and bloom, damage falloff, a headshot multiplier, hit markers, damage indicators and a kill feed. There is also a minimap that shows enemies when they fire.
 - **The full loop**: main menu → setup → loadout → match → results → play again. Five loadout presets and your local career stats are saved in the browser.
 - **Firing Range**: training targets at 5–90 m, with a live readout of damage, shots to kill and TTK, and observed time-to-kill (Milestone 2).
+- **Progression & cosmetics (Milestone 3)**: player and weapon levels, an 80-item cosmetic catalog with an Armory, a 50-tier battle pass (free + premium), daily and weekly challenges, and a demo Store. Every price uses clearly labelled **test credits**; there are no real payments.
 - **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
@@ -61,7 +62,7 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
 src/
   core/      engine (renderer, viewmodel overlay, IBL, shadows), input (KB/M + gamepad, rebinding),
              settings (schema-driven), profile + storage (versioned, validated localStorage)
-  data/      weapons & equipment definitions, bot names           ← all tuning numbers live here
+  data/      weapons, equipment, cosmetics catalog, season/pass, challenges, store catalog ← editable data
   world/     collision (AABB + spatial hash + DDA raycast + kinematic mover), nav grid (A*),
              procedural textures/materials, map builder, sky, maps/cinderYard.js
   entities/  combatant (shared player/bot simulation), bot AI, soldier model (rigid-skinned)
@@ -84,10 +85,12 @@ The match simulation does not depend on rendering. `tools/sim.mjs` and
 ## Testing
 
 ```bash
-npm test                         # 49 headless rules tests (movement, weapons, damage, grenades, spawns, match end)
+npm test                         # 83 headless rules tests (movement, weapons, damage, grenades, spawns, match end, economy)
 npm run sim -- 3 regular 5       # 3-minute bots-only 5v5 match, reports kills/stuck bots/perf
 npm run build && npm run preview &
 npm run e2e                      # full browser flow in headless Chromium (needs Playwright)
+node tools/m3.mjs                # progression/cosmetics/store/pass browser flow
+node tools/range.mjs             # firing range check
 node tools/beauty.mjs high       # review screenshots from fixed viewpoints
 ```
 

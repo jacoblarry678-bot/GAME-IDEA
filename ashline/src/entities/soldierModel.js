@@ -64,6 +64,21 @@ export function dummyMaterials(base) {
   };
 }
 
+/** Material set for an equipped outfit (team ID materials stay shared for readability). */
+export function outfitMaterials(lib, base, outfitItem, opItem) {
+  const o = outfitItem.outfit;
+  const camo = lib.camoPalette(outfitItem.id, o.palette, !!o.stripes);
+  const vest = lib.fabric('vest_' + outfitItem.id, o.vest);
+  const helmet = new THREE.MeshStandardMaterial({ color: o.helmet, roughness: 0.7 });
+  const glove = new THREE.MeshStandardMaterial({ color: o.glove, roughness: 0.8 });
+  const glow = o.glow ? new THREE.MeshStandardMaterial({ color: o.glow, emissive: o.glow, emissiveIntensity: 1.4, roughness: 0.5 }) : null;
+  return {
+    camo: [camo, camo], vest: [vest, vest], gear: base.gear, boot: base.boot, glove, helmet: [helmet, helmet],
+    skin: [base.skin[opItem?.op.skin ?? 0]], goggle: base.goggle, team: base.team, glow,
+    headgear: opItem?.op.headgear || 'helmet',
+  };
+}
+
 export class SoldierModel {
   constructor(mats, wmats, team, seed = 0, opts = {}) {
     this.unarmed = !!opts.unarmed;
@@ -121,11 +136,21 @@ export class SoldierModel {
     const head = this.head = B(neck);
     head.position.y = 0.14;
     P(rb(0.19, 0.22, 0.21, 0.08), skin, 0, 0, 0, head);
-    const helm = P(sphere(0.135, 16, 10, Math.PI * 2, Math.PI * 0.55), mats.helmet[team], 0, 0.035, 0.01, head);
-    helm.scale.set(1, 0.95, 1.08);
-    P(rb(0.26, 0.03, 0.29, 0.01), mats.helmet[team], 0, 0.035, 0.01, head);
-    if (seed % 3 === 0) P(rb(0.17, 0.05, 0.04, 0.015), mats.goggle, 0, 0.06, -0.12, head); // goggles on helmet
-    if (seed % 3 === 1) P(rb(0.19, 0.08, 0.04, 0.02), mats.gear, 0, -0.05, -0.1, head); // face mask
+    const hg = mats.headgear || (seed % 3 === 2 ? 'helmet' : 'helmet');
+    if (hg === 'cap') {
+      P(sphere(0.118, 14, 8, Math.PI * 2, Math.PI * 0.5), mats.helmet[team], 0, 0.04, 0.0, head);
+      P(rb(0.14, 0.015, 0.1, 0.006), mats.helmet[team], 0, 0.045, -0.13, head);
+    } else if (hg === 'beanie') {
+      const bn = P(sphere(0.12, 14, 8, Math.PI * 2, Math.PI * 0.6), mats.helmet[team], 0, 0.03, 0.0, head);
+      bn.scale.set(1, 1.15, 1.05);
+    } else {
+      const helm = P(sphere(0.135, 16, 10, Math.PI * 2, Math.PI * 0.55), mats.helmet[team], 0, 0.035, 0.01, head);
+      helm.scale.set(1, 0.95, 1.08);
+      P(rb(0.26, 0.03, 0.29, 0.01), mats.helmet[team], 0, 0.035, 0.01, head);
+    }
+    if (!mats.headgear && seed % 3 === 0) P(rb(0.17, 0.05, 0.04, 0.015), mats.goggle, 0, 0.06, -0.12, head); // goggles on helmet
+    if ((!mats.headgear && seed % 3 === 1) || hg === 'balaclava') P(rb(0.19, 0.08, 0.04, 0.02), mats.gear, 0, -0.05, -0.1, head); // face mask
+    if (mats.glow) { P(rb(0.02, 0.26, 0.02, 0.008), mats.glow, -0.12, 0.3, -0.16, spine); P(rb(0.02, 0.26, 0.02, 0.008), mats.glow, 0.12, 0.3, -0.16, spine); }
     P(rb(0.06, 0.05, 0.04, 0.01), this.teamMat, 0, 0.1, 0.1, head); // helmet strobe/ID
     // arms holding weapon: shoulder pivots
     this.arms = [];
@@ -191,12 +216,13 @@ export class SoldierModel {
     }
   }
 
-  setWeapon(id) {
-    if (this.unarmed || this.weaponId === id) return;
+  setWeapon(id, wmats = this.wmats) {
+    if (this.unarmed || (this.weaponId === id && this._wmats === wmats)) return;
     this.weaponId = id;
+    this._wmats = wmats;
     if (this.gun) { this.gunMount.remove(this.gun.group); }
     const key = WEAPONS[id].model;
-    this.gun = buildWeapon(key, this.wmats, { merge: true });
+    this.gun = buildWeapon(key, wmats, { merge: true });
     this.gunMount.add(this.gun.group);
     this.isPistol = key === 'pistol';
   }

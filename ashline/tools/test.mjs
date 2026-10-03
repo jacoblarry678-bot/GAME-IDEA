@@ -229,5 +229,94 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('time limit with tied score is a draw', m2.state === 'ended' && m2.winner === -1 && m2.endReason === 'time');
 }
 
+// ---------------- progression & economy (local profile) ----------------
+{
+  const store = {};
+  globalThis.window = { localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } } };
+  const { Profile, xpToNext } = await import('../src/core/profile.js');
+  const { SEASON, PASS_TIERS } = await import('../src/data/season.js');
+  const { BUNDLES, bundlePrice, itemPrice } = await import('../src/data/shop.js');
+  const { COSMETICS } = await import('../src/data/cosmetics.js');
+  const { periodKeys } = await import('../src/data/challenges.js');
+  let pr = new Profile();
+  t('new profile starts at level 1 with test credits', pr.data.level === 1 && pr.data.credits === SEASON.startingCredits);
+  // level-ups grant level unlocks
+  const lv = pr.addXp(xpToNext(1) + xpToNext(2) + xpToNext(3) + xpToNext(4));
+  t('XP raises level and grants level unlocks', pr.data.level === 5 && pr.owns('fn_graphite') && pr.owns('fn_sand') && pr.owns('em_star') && lv.unlocks.length >= 4, `L${pr.data.level} unlocks=${lv.unlocks.map((i) => i.id)}`);
+  // duplicate grant converts to credits
+  const c0 = pr.data.credits; const dup = pr.grant('fn_sand', 'test');
+  t('duplicate item converts to credits', dup.duplicate && pr.data.credits === c0 + 50);
+  // weapon level unlock
+  pr.addWeaponXp('ar_kv7', 20000, 10); pr.grantEarnedUnlocks();
+  t('weapon level unlocks weapon camo', pr.data.weaponProgress.ar_kv7.level >= 8 && pr.owns('fn_woodland'));
+  // equip rules
+  t('cannot equip an unowned item', pr.equip('fn_gold', 'ar_kv7') === false);
+  t('equip finish per weapon', pr.equip('fn_sand', 'smg_vesper') && pr.data.equipped.weapons.smg_vesper.finish === 'fn_sand' && pr.data.equipped.weapons.ar_kv7.finish === 'fn_factory');
+  // battle pass
+  t('cannot claim an unreached tier', pr.claim(1, 'free') === null && pr.passTier === 0);
+  pr.addPassXp(SEASON.xpPerTier * 3 + 10);
+  t('pass tier from XP', pr.passTier === 3);
+  t('premium track needs premium', pr.claim(1, 'premium') === null);
+  const r2 = pr.claim(2, 'free');
+  t('claim free tier item', r2 && pr.owns('cd_railbaron'));
+  t('no double claim', pr.claim(2, 'free') === null);
+  pr.data.credits = 100;
+  t('premium purchase blocked without funds', pr.buyPremium().reason === 'funds' && !pr.data.pass.premium);
+  pr.data.credits = 2000;
+  t('premium purchase with test credits', pr.buyPremium().ok && pr.data.credits === 2000 - SEASON.premiumPrice && pr.data.pass.premium);
+  const all = pr.claimAll();
+  t('claim all claims reached tiers only', all.length === 5 && pr.owns('op_kestrel') && pr.owns('of_kestrel_std') && !pr.owns(PASS_TIERS[9].premium.item || 'none'), `${all.length} claimed`);
+  t('every tier has a premium reward; 50 tiers', PASS_TIERS.length === 50 && PASS_TIERS.every((x) => x.premium));
+  // store
+  pr.data.credits = 5000;
+  const shopId = 'fn_cobalt';
+  const b1 = pr.buyItem(shopId);
+  t('buy shop item', b1.ok && pr.owns(shopId) && pr.data.credits === 5000 - itemPrice(shopId));
+  t('cannot buy owned item', pr.buyItem(shopId).reason === 'owned');
+  t('cannot buy non-shop item', pr.buyItem('fn_gold').reason === 'unavailable');
+  const bd = BUNDLES.find((x) => x.items.includes('fn_cobalt'));
+  const bp = bundlePrice(bd, pr.data.owned);
+  t('bundle price excludes owned items', bp.ownedCount === 1 && bp.price < Math.round(bd.items.reduce((s2, i) => s2 + itemPrice(i), 0) * (1 - bd.discount)));
+  const cb = pr.data.credits; const rb = pr.buyBundle(bd.id);
+  t('buy bundle grants only new items', rb.ok && rb.granted.length === 2 && pr.data.credits === cb - bp.price && bd.items.every((i) => pr.owns(i)));
+  t('purchase history logged', pr.data.purchases.length >= 3 && pr.data.purchases.every((h) => typeof h.balance === 'number'));
+  pr.data.credits = 0;
+  t('insufficient funds for item', pr.buyItem('fn_aurora').reason === 'funds');
+  // challenges
+  const day0 = Date.UTC(2026, 9, 5, 12); // a Monday
+  pr.ensureChallenges(day0);
+  const d0 = pr.data.challenges.daily.map((c) => c.id).join();
+  pr.ensureChallenges(day0 + 3600e3);
+  t('daily challenges stable within a day', pr.data.challenges.daily.map((c) => c.id).join() === d0);
+  pr.data.challenges.daily[0].progress = 5;
+  pr.ensureChallenges(day0 + 86400e3);
+  t('daily challenges reset next UTC day', pr.data.challenges.day === periodKeys(day0).day + 1 && pr.data.challenges.daily.every((c) => c.progress === 0));
+  const wk = pr.data.challenges.week;
+  pr.ensureChallenges(day0 + 6 * 86400e3);
+  t('weekly challenges keep through Sunday', pr.data.challenges.week === wk);
+  pr.ensureChallenges(day0 + 7 * 86400e3);
+  t('weekly challenges reset Monday', pr.data.challenges.week === wk + 1);
+  const huge = { kills: 999, headshots: 999, assists: 999, score: 99999, matches: 9, wins: 9, grenadeKills: 9, meleeKills: 9, longshots: 9, multikills: 99, bestStreak: 20, classKills: { assault: 99, smg: 99, shotgun: 99, sniper: 99, pistol: 99 } };
+  const done = pr.applyChallenges(huge, day0 + 7 * 86400e3);
+  t('all challenges complete with enough progress', done.length === 8, String(done.length));
+  t('completed challenges pay once', pr.applyChallenges(huge, day0 + 7 * 86400e3).length === 0);
+  // match rewards once
+  const before = pr.data.totalXp;
+  const rep = pr.recordMatch('m-1', 'win', { kills: 10, deaths: 4, assists: 2, headshots: 3, shots: 100, hits: 40, score: 1500, bestStreak: 5 }, 300, { classKills: { assault: 10 }, weaponKills: { ar_kv7: 10 }, weaponHeadshots: { ar_kv7: 3 }, weaponsUsed: ['ar_kv7'], difficulty: 'regular' });
+  t('match rewards: XP lines and total', rep && rep.total === 1500 + 500 + 500 + 300 + rep.challenges.reduce((a, c) => a + c.xp, 0) && pr.data.totalXp === before + rep.total, rep && `total ${rep.total}`);
+  t('same match never rewarded twice', pr.recordMatch('m-1', 'win', { kills: 1, deaths: 0, assists: 0, headshots: 0, shots: 1, hits: 1, score: 100, bestStreak: 1 }, 10, {}) === null);
+  // persistence + recovery
+  pr.save();
+  const pr2 = new Profile();
+  t('profile round-trips through storage', pr2.owns('op_kestrel') && pr2.data.pass.premium && pr2.data.equipped.weapons.smg_vesper.finish === 'fn_sand' && pr2.data.totalXp === pr.data.totalXp);
+  store['ashline.profile'] = '{not json';
+  const pr3 = new Profile();
+  t('corrupt save recovers to a valid default profile', pr3.data.level === 1 && pr3.owns('op_voss'));
+  store['ashline.profile'] = JSON.stringify({ version: 1, name: 'Old', owned: { bogus_item: { t: 1 } }, equipped: { operator: 'bogus', weapons: { ar_kv7: { finish: 'fn_gold' } } }, loadouts: [{ primary: 'nope' }] });
+  const pr4 = new Profile();
+  t('v1 / invalid data migrates safely', pr4.data.version === 2 && pr4.data.name === 'Old' && !pr4.owns('bogus_item') && pr4.data.equipped.operator === 'op_voss' && pr4.data.equipped.weapons.ar_kv7.finish === 'fn_factory' && pr4.data.loadouts[0].primary === 'ar_kv7');
+  t('catalog meets content targets (≥4 operators, ≥8 outfits, ≥20 finishes)', ['operator', 'outfit', 'finish'].map((k) => Object.values(COSMETICS).filter((i) => i.type === k).length).join() === '4,12,25');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);
