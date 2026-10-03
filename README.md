@@ -1,5 +1,7 @@
 # HELLRAISER: THE GAME
 
+> **Also in this repo:** [`ashline/`](ashline/) — **Operation Ashline**, an original browser 3D military FPS (Team Deathmatch vs bots). See [ashline/README.md](ashline/README.md).
+
 A browser-based, asymmetrical multiplayer horror prototype. Four survivors are
 trapped in **The Labyrinth** performing a rite that will open the Gate. One
 player is **The Hell Priest**, and is trying to make sure nobody finishes it.
