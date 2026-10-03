@@ -51,27 +51,49 @@ export class Viewmodel {
     this.models = new Map();
     this.cur = null;
     this.curId = null;
-    // arms
-    const sleeve = lib.camo(0);
-    const glove = new THREE.MeshStandardMaterial({ color: 0x262624, roughness: 0.75 });
+    // arms: capsule sleeves, cuffs and articulated gloves
+    const sleeve = lib.camo(0).clone();
+    sleeve.color = new THREE.Color(0.62, 0.64, 0.6);
+    const glove = new THREE.MeshStandardMaterial({ color: 0x2b2b28, roughness: 0.78 });
+    const knuckle = new THREE.MeshStandardMaterial({ color: 0x1b1b1a, roughness: 0.6 });
     const cuff = lib.fabric('cuff', [46, 50, 46]);
-    const unit = new RoundedBoxGeometry(0.075, 0.075, 1, 2, 0.025);
-    const handG = new RoundedBoxGeometry(0.085, 0.07, 0.11, 2, 0.025);
-    const fingerG = new RoundedBoxGeometry(0.075, 0.03, 0.06, 2, 0.012);
+    const unit = new THREE.CapsuleGeometry(0.04, 1, 4, 10);
+    unit.rotateX(Math.PI / 2);
+    this.unitLen = 1;
+    const finger = new THREE.CapsuleGeometry(0.0085, 0.03, 3, 6);
+    const fingerS = new THREE.CapsuleGeometry(0.0082, 0.022, 3, 6);
+    const palmG = new RoundedBoxGeometry(0.03, 0.08, 0.075, 2, 0.012);
     this.arms = {};
     for (const side of ['R', 'L']) {
       const fore = new THREE.Mesh(unit, sleeve);
       const upper = new THREE.Mesh(unit, sleeve);
-      upper.scale.set(1.15, 1.15, 1);
+      upper.scale.set(1.2, 1.2, 1);
       const hand = new THREE.Group();
-      const palm = new THREE.Mesh(handG, glove);
+      const s = side === 'R' ? 1 : -1;
+      // palm on the outside of the grip; fingers wrap around the front, thumb over the top
+      const palm = new THREE.Mesh(palmG, glove);
+      palm.position.set(0.026 * s, -0.02, 0.035);
       hand.add(palm);
-      const fingers = new THREE.Mesh(fingerG, glove);
-      fingers.position.set(0, -0.03, -0.06);
-      fingers.rotation.x = -0.6;
-      hand.add(fingers);
-      const band = new THREE.Mesh(new RoundedBoxGeometry(0.09, 0.085, 0.04, 2, 0.02), cuff);
-      band.position.z = 0.07;
+      for (let i = 0; i < 4; i++) {
+        const f1 = new THREE.Mesh(finger, glove);
+        f1.rotation.z = Math.PI / 2;
+        f1.position.set(0.006 * s, -0.004 - i * 0.019, -0.004);
+        hand.add(f1);
+        const f2 = new THREE.Mesh(fingerS, glove);
+        f2.position.set(-0.016 * s, -0.004 - i * 0.019, 0.012);
+        f2.rotation.x = Math.PI / 2;
+        hand.add(f2);
+        const k = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.012), knuckle);
+        k.position.set(0.03 * s, -0.004 - i * 0.019, 0.0);
+        hand.add(k);
+      }
+      const thumb = new THREE.Mesh(finger, glove);
+      thumb.position.set(-0.016 * s, 0.028, 0.03);
+      thumb.rotation.x = Math.PI / 2 - 0.3;
+      hand.add(thumb);
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.047, 0.045, 0.05, 12), cuff);
+      band.rotation.x = Math.PI / 2;
+      band.position.set(0.02 * s, -0.035, 0.1);
       hand.add(band);
       this.root.add(fore, upper, hand);
       this.arms[side] = { fore, upper, hand, palm };
@@ -368,7 +390,7 @@ export class Viewmodel {
     arm.hand.position.copy(hand);
     arm.hand.rotation.copy(handRot);
     if (side < 0) arm.hand.rotation.z += 0.4;
-    limb(arm.fore, tmpV.copy(hand).add(tmpV2.set(0, -0.01, 0.06)), elbow);
+    limb(arm.fore, tmpV.copy(hand).add(tmpV2.set(0.02 * side, -0.035, 0.11)), elbow);
     limb(arm.upper, elbow, shoulder);
   }
 }

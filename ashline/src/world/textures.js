@@ -255,6 +255,26 @@ const GEN = {
       o.h = rib * 0.8; o.rough = 0.6;
     }, { normalStrength: 2 });
   },
+  facade(S, tone = 1) {
+    // distant industrial building: concrete panels with a grid of dark windows
+    return generate(S, (u, v, o) => {
+      const n = fbm(u, v, 171, 4, 4);
+      const cols = 6, rows = 4;
+      const fx = (u * cols) % 1, fy = (v * rows) % 1;
+      const win = fx > 0.18 && fx < 0.82 && fy > 0.3 && fy < 0.72;
+      const lit = hash(Math.floor(u * cols), Math.floor(v * rows), 5) > 0.88;
+      if (win) {
+        const c = lit ? 150 : 34 + n * 20;
+        setRGB(o, c * (lit ? 1 : 0.9), c * (lit ? 0.92 : 0.95), c * (lit ? 0.7 : 1.05));
+        o.h = -0.5; o.rough = 0.25;
+      } else {
+        const c = (120 + n * 40) * tone;
+        const band = fy < 0.06 ? -14 : 0;
+        setRGB(o, c + band, c * 0.98 + band, c * 0.95 + band);
+        o.h = n * 0.3; o.rough = 0.9;
+      }
+    }, { normalStrength: 1.2 });
+  },
   floorpaint(S) {
     return generate(S, (u, v, o) => {
       const n = fbm(u, v, 43, 5, 4);
@@ -530,8 +550,8 @@ export class MaterialLibrary {
       case 'paint_orange': e = { mat: new THREE.MeshStandardMaterial({ color: 0xc8641e, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), scale: 1 }; break;
       case 'ballast': e = { mat: this._std(GEN.gravel(S), { extra: { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 } }), scale: 2.5 }; break;
       case 'floor_in': e = { mat: this._std(GEN.floorpaint(S), { extra: { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 } }), scale: 6 }; break;
-      case 'backdrop': e = { mat: new THREE.MeshStandardMaterial({ color: 0x5d6168, roughness: 1 }), scale: 1 }; break;
-      case 'backdrop2': e = { mat: new THREE.MeshStandardMaterial({ color: 0x4a4e55, roughness: 1 }), scale: 1 }; break;
+      case 'backdrop': e = { mat: this._std(GEN.facade(256)), scale: 12 }; break;
+      case 'backdrop2': e = { mat: this._std(GEN.facade(256, 0.75)), scale: 10 }; break;
       default:
         if (base.startsWith('container_')) {
           const colors = { red: [140, 46, 36], blue: [36, 78, 130], green: [48, 98, 66], orange: [196, 98, 34], grey: [120, 124, 126], white: [200, 200, 192] };

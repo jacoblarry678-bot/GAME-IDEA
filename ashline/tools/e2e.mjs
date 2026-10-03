@@ -72,8 +72,10 @@ await ev(() => window.__ashline.autopilot(false));
 const fireRes = await ev(() => {
   const g = window.__ashline.game, pl = g.player;
   if (!pl.alive) g.match.respawn(pl);
+  g.clearInput();
   g.debugAdvance(2.2);
-  const w = pl.weapon; w.cancelReload(); w.mag = w.def.mag;
+  if (!pl.alive) { g.match.respawn(pl); g.debugAdvance(0.1); }
+  const w = pl.weapon; w.cancelReload(); w.mag = w.def.mag; w.cool = 0; pl.mantle = null; pl.stance = 'stand';
   const before = w.mag;
   pl.cmd.fire = true; pl.sprinting = false; pl.sprintOutT = 0; pl.swapT = 0; pl.throwT = 0; pl.meleeT = 0;
   g.match.tick(1 / 60); g.afterTick(1 / 60);
@@ -98,6 +100,16 @@ const fov0 = await ev(() => window.__ashline.engine.camera.fov);
 await ev(() => window.__ashline.settings.set('graphics.fov', 105));
 const fov1 = await ev(() => window.__ashline.engine.camera.fov);
 check('FOV setting applies immediately', fov1 > fov0, `${fov0.toFixed(1)} → ${fov1.toFixed(1)}`);
+const post = await ev(() => {
+  const a = window.__ashline, S = a.settings;
+  S.set('graphics.ao', true); S.set('graphics.bloom', true);
+  a.engine.render(true);
+  const on = !!a.engine.composer && a.engine.aoPass.enabled && a.engine.bloomPass.enabled;
+  S.set('graphics.ao', false); S.set('graphics.bloom', false);
+  a.engine.render(true);
+  return { on, off: !a.engine.composer, fatal: String(a.fatal || '') };
+});
+check('bloom / AO toggle at runtime', post.on && post.off && !post.fatal, JSON.stringify(post));
 await p.click('text=Controls');
 await p.waitForTimeout(300);
 await S('e2e-05-settings-controls');
@@ -180,6 +192,17 @@ check('number key swaps to secondary, scope clears', pistol.id === 'pistol_warde
 await p.waitForTimeout(800);
 await S('e2e-11-pistol');
 await ev(() => window.__ashline.leaveMatch());
+
+// ---- firing range from the main menu
+await p.waitForTimeout(400);
+await ev(() => { const pr = window.__ashline.profile; pr.loadout.primary = 'ar_kv7'; pr.save(); });
+await p.click('text=Firing Range');
+await p.waitForFunction(() => window.__ashline?.game?.isRange, null, { timeout: 60000 });
+const rng = await ev(() => { const a = window.__ashline, g = a.game; a.autopilot(true); g.debugAdvance(15); a.autopilot(false); g.update(1 / 60); return { dummies: g.match.combatants.filter((c) => c.dummy).length, kills: g.player.stats.kills, panel: !!document.querySelector('.range-panel')?.innerText.includes('Shots to kill') }; });
+check('firing range: targets, eliminations, stats panel', rng.dummies === 13 && rng.kills > 0 && rng.panel, JSON.stringify(rng));
+await ev(() => window.__ashline.leaveMatch());
+await p.waitForTimeout(300);
+check('leaving range restores Cinder Yard', await ev(() => window.__ashline.activeMap.def.id === 'cinder_yard' && window.__ashline.state === 'menu'));
 
 check('no console errors', errors.length === 0, errors.slice(0, 5).join(' | '));
 const failed = results.filter((r) => !r.ok);

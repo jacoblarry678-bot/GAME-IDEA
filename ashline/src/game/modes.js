@@ -28,6 +28,19 @@ export const MODES = {
       match.end(a === b ? -1 : a > b ? 0 : 1, 'time');
     },
   },
+  range: {
+    id: 'range',
+    name: 'Firing Range',
+    short: 'RANGE',
+    blurb: 'Training targets at marked distances. No score, no time limit.',
+    teams: true,
+    range: true,
+    defaults: { scoreLimit: 9999, timeLimit: 999, botsPerTeam: 0 },
+    respawnDelay: 1.2,
+    playable: false,
+    onKill() {},
+    onTimeUp() {},
+  },
 };
 
 /** Modes on the roadmap (shown as unavailable, never as playable). */

@@ -13,10 +13,11 @@ import { MapBuilder } from './world/mapBuilder.js';
 import { NavGrid } from './world/navgrid.js';
 import { createSky } from './world/sky.js';
 import { CINDER_YARD } from './world/maps/cinderYard.js';
+import { FIRING_RANGE } from './world/maps/firingRange.js';
 import { weaponMaterials, buildWeapon } from './fx/weaponModels.js';
 import { Viewmodel } from './fx/viewmodel.js';
 import { Effects } from './fx/effects.js';
-import { SoldierMaterials } from './entities/soldierModel.js';
+import { SoldierMaterials, dummyMaterials } from './entities/soldierModel.js';
 import { Screens } from './ui/screens.js';
 import { MenuNav } from './ui/nav.js';
 import { Game } from './game/game.js';
@@ -50,9 +51,12 @@ export class App {
     this.materials = new MaterialLibrary(tq, Math.min(this.engine.maxAniso, tq === 'low' ? 2 : tq === 'medium' ? 4 : 8));
     this.wmats = weaponMaterials(this.materials);
     this.soldierMats = new SoldierMaterials(this.materials);
+    this.dummyMats = dummyMaterials(this.soldierMats);
     progress(0.35, 'Building Cinder Yard');
     await nextFrame();
-    await this.buildMap(CINDER_YARD, progress);
+    this.maps = {};
+    this.mapRuntime = await this.buildMap(CINDER_YARD, progress);
+    this.activateMap(this.mapRuntime);
     progress(0.86, 'Preparing weapons');
     await nextFrame();
     this.viewmodel = new Viewmodel(this.engine, this.materials, this.wmats, this.settings);
@@ -78,26 +82,36 @@ export class App {
     document.documentElement.style.setProperty('--text-scale', this.settings.data.accessibility.textScale);
   }
 
-  async buildMap(def, progress) {
+  async buildMap(def, progress = () => {}) {
     const b = new MapBuilder({ headless: false, materials: this.materials });
     def.build(b);
     progress(0.6, 'Merging geometry');
     await nextFrame();
     b.finish({ shadows: true });
-    this.engine.scene.add(b.root);
-    this.engine.setEnvironment(def);
-    this.sky = createSky(def);
-    this.engine.scene.add(this.sky);
-    this.engine.bakeEnvironment(this.sky);
     for (const L of b.lights) {
       const l = new THREE.PointLight(L.color, L.intensity, L.distance, 2);
       l.position.set(L.x, L.y, L.z);
-      this.engine.scene.add(l);
+      b.root.add(l);
     }
+    const sky = createSky(def);
+    const env = this.engine.bakeEnvironment(sky);
     progress(0.75, 'Baking navigation');
     await nextFrame();
     const nav = new NavGrid(b.world, def.bounds, 1);
-    this.mapRuntime = { def, world: b.world, nav, spawns: b.spawns, hotspots: b.hotspots, minimap: makeMinimap(def, b), root: b.root };
+    const rt = { def, world: b.world, nav, spawns: b.spawns, hotspots: b.hotspots, minimap: makeMinimap(def, b), root: b.root, sky, env };
+    b.root.visible = false; sky.visible = false;
+    this.engine.scene.add(b.root, sky);
+    this.maps[def.id] = rt;
+    return rt;
+  }
+
+  /** Show one map's geometry, sky, lighting and shadow frustum. */
+  activateMap(rt) {
+    for (const m of Object.values(this.maps)) { m.root.visible = m === rt; m.sky.visible = m === rt; }
+    this.sky = rt.sky;
+    this.engine.setEnvironment(rt.def);
+    this.engine.useEnvironment(rt.env);
+    this.activeMap = rt;
   }
 
   bindGlobal() {
@@ -130,6 +144,7 @@ export class App {
   // ---------------------------------------------------------------- flow
   toMenu() {
     if (this.game) { this.game.dispose(); this.game = null; }
+    if (this.activeMap !== this.mapRuntime) this.activateMap(this.mapRuntime);
     this.state = 'menu';
     this.input.enabled = false;
     this.input.lockWanted = false;
@@ -145,10 +160,33 @@ export class App {
     const setup = { ...this.profile.data.matchSetup };
     this.screens.clear();
     if (this.game) { this.game.dispose(); this.game = null; }
+    this.activateMap(this.mapRuntime);
     this.audio.init();
     this.audio.music(false);
     this.preview.hide();
     this.game = new Game(this, setup);
+    this.game.start();
+    this.state = 'match-live';
+    this.input.enabled = true;
+    this.input.lockWanted = true;
+    this.input.requestLock();
+    this.updateLockHint();
+  }
+
+  async startRange() {
+    this.screens.clear();
+    if (this.game) { this.game.dispose(); this.game = null; }
+    if (!this.maps.firing_range) {
+      this.screens.toast('Building firing range…', 1500);
+      await nextFrame(); await nextFrame();
+      await this.buildMap(FIRING_RANGE);
+    }
+    this.activateMap(this.maps.firing_range);
+    this.audio.init();
+    this.audio.music(false);
+    this.preview.hide();
+    const setup = { mode: 'range', map: 'firing_range', botsAllies: 0, botsEnemies: 0, difficulty: 'regular', scoreLimit: 9999, timeLimit: 999, friendlyFire: false, countdown: 0 };
+    this.game = new Game(this, setup, this.maps.firing_range);
     this.game.start();
     this.state = 'match-live';
     this.input.enabled = true;
@@ -240,6 +278,7 @@ export class App {
     const dt = Math.min(0.05, Math.max(0.0001, (now - this.last) / 1000));
     this.last = now;
     this.engine.stat(now);
+    this.engine.adaptResolution(now);
     this.input.poll();
     try {
       if (this.game) {
@@ -313,9 +352,7 @@ function makeMinimap(def, b) {
   ctx.fillStyle = '#2a3036';
   ctx.fillRect(0, 0, w, h);
   const X = (x) => (x - B.minX + pad) * scale, Y = (z) => (z - B.minZ + pad) * scale;
-  // rail beds
-  ctx.fillStyle = '#3a3a36';
-  for (const tz of [-7, 7]) ctx.fillRect(X(-37), Y(tz - 1.7), 74 * scale, 3.4 * scale);
+  def.minimapUnderlay?.(ctx, X, Y, scale);
   // buildings / props sorted by height
   const rects = [...b.minimapRects].sort((p, q) => p.h - q.h);
   for (const r of rects) {
@@ -323,9 +360,7 @@ function makeMinimap(def, b) {
     ctx.fillStyle = col;
     ctx.fillRect(X(r.x0), Y(r.z0), (r.x1 - r.x0) * scale, (r.z1 - r.z0) * scale);
   }
-  // spawn zones
-  ctx.fillStyle = 'rgba(61,155,255,0.14)'; ctx.fillRect(X(-48), Y(-36), 13 * scale, 72 * scale);
-  ctx.fillStyle = 'rgba(255,122,47,0.14)'; ctx.fillRect(X(35), Y(-36), 13 * scale, 72 * scale);
+  def.minimapOverlay?.(ctx, X, Y, scale);
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.font = `bold ${Math.round(scale * 2.2)}px Arial`;
   ctx.textAlign = 'center';

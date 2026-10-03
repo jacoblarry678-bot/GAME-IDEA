@@ -151,6 +151,7 @@ const SCREENS = {
           <h1 class="title" style="font-size:calc(76px * var(--text-scale));letter-spacing:0.08em">ASH<span style="color:var(--accent)">LINE</span></h1>
           <nav class="menu-nav">
             <button class="menu-btn" data-go="play">Play<span class="sub">Team Deathmatch vs bots · offline</span></button>
+            <button class="menu-btn" data-act="range">Firing Range<span class="sub">Test weapons on training targets</span></button>
             <button class="menu-btn" data-go="loadouts">Loadouts<span class="sub">Active: ${esc(app.profile.loadout.name)} — ${esc(WEAPONS[app.profile.loadout.primary].name)}</span></button>
             <button class="menu-btn" data-go="settings">Settings<span class="sub">Graphics, controls, audio, interface, accessibility</span></button>
             <button class="menu-btn" data-go="career">Career<span class="sub">${prof.career.matches} matches · ${prof.career.kills} eliminations</span></button>
@@ -161,9 +162,11 @@ const SCREENS = {
           <div><span class="pill on">Offline</span> <span class="pill">Solo vs bots</span> <span class="pill off">Online play: not available in this build</span></div>
           <div style="margin-top:8px">Operator <b style="color:var(--text)">${esc(prof.name)}</b> · progress is saved in this browser only.</div>
           <div class="dim" id="device-hint" style="margin-top:4px"></div>
+          ${matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches ? '<div style="margin-top:8px;color:var(--accent-2)">This game needs a keyboard and mouse or a game controller. Touch controls are not supported.</div>' : ''}
         </div>
       </div>`;
     node.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => app.screens.push(b.dataset.go); });
+    node.querySelector('[data-act=range]').onclick = () => app.startRange();
     const hint = node.querySelector('#device-hint');
     hint.textContent = app.input.device === 'pad' ? 'Controller detected — D-pad to navigate, A to select, B to go back.' : 'Mouse & keyboard. Controllers are supported.';
     entry.onBack = () => {};
@@ -182,7 +185,7 @@ const SCREENS = {
             <div class="field" style="grid-column: span 2">
               <label>Mode</label>
               <div class="choice" data-k="mode">
-                ${Object.values(MODES).map((m) => `<button data-v="${m.id}" class="${setup.mode === m.id ? 'sel' : ''}">${esc(m.name)}</button>`).join('')}
+                ${Object.values(MODES).filter((m) => m.playable).map((m) => `<button data-v="${m.id}" class="${setup.mode === m.id ? 'sel' : ''}">${esc(m.name)}</button>`).join('')}
                 ${ROADMAP_MODES.map((m) => `<button disabled title="Planned for a later milestone">${esc(m.name)} · later</button>`).join('')}
               </div>
               <div class="muted small">${esc(MODES[setup.mode].blurb)}</div>
@@ -291,6 +294,7 @@ const SCREENS = {
         <div class="page-foot">
           <button class="btn" data-a="back">Back</button>
           <div class="spacer"></div>
+          <button class="btn" data-a="range">Test in Firing Range</button>
           <button class="btn primary" data-a="active" ${sel === prof.data.activeLoadout ? 'disabled' : ''}>Set as Active</button>
         </div>
       </div>`;
@@ -310,6 +314,7 @@ const SCREENS = {
       nameIn.onchange = () => { lo.name = (nameIn.value || 'LOADOUT').toUpperCase().slice(0, 16); prof.save(); render(); };
       nameIn.onkeydown = (e) => e.stopPropagation();
       node.querySelector('[data-a=back]').onclick = () => app.screens.back();
+      node.querySelector('[data-a=range]').onclick = () => { prof.data.activeLoadout = sel; prof.save(); app.startRange(); };
       node.querySelector('[data-a=active]').onclick = () => { prof.data.activeLoadout = sel; prof.save(); app.screens.toast(`${lo.name} is now your active loadout`); render(); };
     };
     render();
@@ -417,20 +422,25 @@ const SCREENS = {
     node.classList.add('shade-full');
     const g = app.game;
     node.innerHTML = `<div class="menu-left col" style="justify-content:center">
-      <div class="kicker">Offline match paused</div>
+      <div class="kicker">${g.isRange ? 'Firing range' : 'Offline match paused'}</div>
       <h1 class="title">Paused</h1>
-      <div class="muted" style="margin-top:6px">${esc(TEAMS[0].name)} ${g.match.teamScores[0]} — ${g.match.teamScores[1]} ${esc(TEAMS[1].name)}</div>
+      <div class="muted" style="margin-top:6px">${g.isRange ? 'Training targets only. Nothing here counts toward career stats.' : `${esc(TEAMS[0].name)} ${g.match.teamScores[0]} — ${g.match.teamScores[1]} ${esc(TEAMS[1].name)}`}</div>
       <nav class="menu-nav">
         <button class="menu-btn" data-a="resume">Resume</button>
         <button class="menu-btn" data-a="settings">Settings</button>
-        <button class="menu-btn" data-a="restart">Restart Match</button>
-        <button class="menu-btn" data-a="leave">Leave Match</button>
+        ${g.isRange ? '<button class="menu-btn" data-a="loadouts">Change Loadout</button>' : '<button class="menu-btn" data-a="restart">Restart Match</button>'}
+        <button class="menu-btn" data-a="leave">${g.isRange ? 'Leave Range' : 'Leave Match'}</button>
       </nav>
     </div>`;
     node.querySelector('[data-a=resume]').onclick = () => app.resumeMatch();
     node.querySelector('[data-a=settings]').onclick = () => app.screens.push('settings', { inMatch: true });
-    node.querySelector('[data-a=restart]').onclick = () => app.screens.confirm('Restart match?', 'Current progress in this match will be lost.', 'Restart', () => app.startMatch());
-    node.querySelector('[data-a=leave]').onclick = () => app.screens.confirm('Leave match?', 'You will return to the main menu. This match will not count toward career stats.', 'Leave', () => app.leaveMatch());
+    if (g.isRange) {
+      node.querySelector('[data-a=loadouts]').onclick = () => { app.toMenu(); app.screens.push('loadouts'); };
+      node.querySelector('[data-a=leave]').onclick = () => app.leaveMatch();
+    } else {
+      node.querySelector('[data-a=restart]').onclick = () => app.screens.confirm('Restart match?', 'Current progress in this match will be lost.', 'Restart', () => app.startMatch());
+      node.querySelector('[data-a=leave]').onclick = () => app.screens.confirm('Leave match?', 'You will return to the main menu. This match will not count toward career stats.', 'Leave', () => app.leaveMatch());
+    }
     entry.onBack = () => app.resumeMatch();
   },
 

@@ -37,9 +37,12 @@ export const DEFAULT_SETTINGS = {
   graphics: {
     preset: 'high',
     renderScale: 1.0,
+    dynamicRes: false,
     shadows: 'high',
     textures: 'high',
     effects: 'high',
+    bloom: true,
+    ao: false,
     fov: 90,
     frameCap: 0,
     showFps: false,
@@ -83,10 +86,10 @@ export const DEFAULT_SETTINGS = {
 };
 
 export const QUALITY_PRESETS = {
-  low: { renderScale: 0.7, shadows: 'off', textures: 'low', effects: 'low' },
-  medium: { renderScale: 0.85, shadows: 'low', textures: 'medium', effects: 'medium' },
-  high: { renderScale: 1.0, shadows: 'high', textures: 'high', effects: 'high' },
-  ultra: { renderScale: 1.0, shadows: 'ultra', textures: 'ultra', effects: 'high' },
+  low: { renderScale: 0.7, shadows: 'off', textures: 'low', effects: 'low', bloom: false, ao: false },
+  medium: { renderScale: 0.85, shadows: 'low', textures: 'medium', effects: 'medium', bloom: true, ao: false },
+  high: { renderScale: 1.0, shadows: 'high', textures: 'high', effects: 'high', bloom: true, ao: false },
+  ultra: { renderScale: 1.0, shadows: 'ultra', textures: 'ultra', effects: 'high', bloom: true, ao: true },
 };
 
 /**
@@ -97,9 +100,12 @@ export const SETTINGS_SCHEMA = [
   { tab: 'Graphics', items: [
     { key: 'graphics.preset', label: 'Quality Preset', type: 'select', options: [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra'], ['custom', 'Custom']] },
     { key: 'graphics.renderScale', label: 'Render Resolution', type: 'slider', min: 0.5, max: 1.0, step: 0.05, fmt: (v) => `${Math.round(v * 100)}%` },
+    { key: 'graphics.dynamicRes', label: 'Dynamic Resolution', type: 'toggle', note: 'Lowers render resolution automatically (down to 50%) when the frame rate drops below 58 FPS.' },
     { key: 'graphics.shadows', label: 'Shadow Quality', type: 'select', options: [['off', 'Off'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra']] },
     { key: 'graphics.textures', label: 'Texture Quality', type: 'select', options: [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra']], restart: true },
     { key: 'graphics.effects', label: 'Effects Quality', type: 'select', options: [['low', 'Low'], ['medium', 'Medium'], ['high', 'High']] },
+    { key: 'graphics.ao', label: 'Ambient Occlusion (GTAO)', type: 'toggle', note: 'Contact shadows in corners and under cover. Costly on integrated GPUs.' },
+    { key: 'graphics.bloom', label: 'Bloom', type: 'toggle', note: 'Soft glow on lights, muzzle flashes and explosions.' },
     { key: 'graphics.fov', label: 'Field of View (horizontal)', type: 'slider', min: 70, max: 115, step: 1, fmt: (v) => `${v}°` },
     { key: 'graphics.frameCap', label: 'Frame Rate Limit', type: 'select', options: [[0, 'Display refresh'], [30, '30'], [60, '60'], [120, '120'], [144, '144']] },
     { key: 'graphics.brightness', label: 'Brightness', type: 'slider', min: 0.6, max: 1.6, step: 0.05, fmt: (v) => v.toFixed(2) },
@@ -182,7 +188,7 @@ export class Settings {
     o[keys[keys.length - 1]] = value;
     if (path === 'graphics.preset' && QUALITY_PRESETS[value]) {
       Object.assign(this.data.graphics, QUALITY_PRESETS[value]);
-    } else if (['graphics.renderScale', 'graphics.shadows', 'graphics.textures', 'graphics.effects'].includes(path)) {
+    } else if (['graphics.renderScale', 'graphics.shadows', 'graphics.textures', 'graphics.effects', 'graphics.bloom', 'graphics.ao'].includes(path)) {
       this.data.graphics.preset = 'custom';
       for (const [name, p] of Object.entries(QUALITY_PRESETS)) {
         if (Object.entries(p).every(([k, v]) => this.data.graphics[k] === v)) this.data.graphics.preset = name;

@@ -57,6 +57,16 @@ export class Match {
       c.brain = new BotBrain(c, this);
       this.add(c);
     };
+    if (this.mode.range) {
+      // training targets: static or strafing, standing or crouched; they never shoot back
+      for (const t of this.map.def.targets || []) {
+        const c = new Combatant({ name: `TARGET ${t.d}m`, team: 1, isBot: true, loadout: { primary: 'pistol_warden', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke' } });
+        c.dummy = { ...t, baseX: t.x, phase: Math.random() * Math.PI * 2 };
+        c.lethal.count = 0; c.tactical.count = 0;
+        this.add(c);
+      }
+      return;
+    }
     for (let i = 0; i < s.botsAllies; i++) mk(0);
     for (let i = 0; i < s.botsEnemies; i++) mk(1);
   }
@@ -81,7 +91,7 @@ export class Match {
   }
 
   respawn(c, initial = false) {
-    const sp = chooseSpawn(this, c, initial);
+    const sp = c.dummy ? { x: c.dummy.baseX, y: 0, z: c.dummy.z, yaw: Math.PI } : chooseSpawn(this, c, initial);
     c.spawnAt(sp);
     c.spawnProtectT = initial ? 0 : 2.0;
     if (c.brain) c.brain.onSpawn();
@@ -117,9 +127,15 @@ export class Match {
     }
     this.time += dt;
     this.timeLeft -= dt;
-    for (const c of this.combatants) {
+    // rotate update order every tick so no team systematically acts first
+    const n = this.combatants.length;
+    this._order = (this._order || 0) + 1;
+    for (let k = 0; k < n; k++) {
+      const c = this.combatants[(k + this._order) % n];
       if (c.brain && c.alive) c.brain.update(dt);
+      if (c.dummy) { c.cmd.crouch = !!c.dummy.crouch; c.cmd.yaw = Math.PI; c.cmd.pitch = 0; }
       c.tick(dt, this);
+      if (c.dummy) this._dummy(c, dt);
       if (!c.alive) {
         c.respawnT -= dt;
         if (c.isBot && c.respawnT <= 0) this.respawn(c);
@@ -132,6 +148,19 @@ export class Match {
     }
     // prune recent deaths
     while (this.recentDeaths.length && this.time - this.recentDeaths[0].t > 12) this.recentDeaths.shift();
+  }
+
+  _dummy(c, dt) {
+    const d = c.dummy;
+    if (d.move && c.alive && this.movingTargets !== false) {
+      d.phase += dt * d.move.speed;
+      const nx = d.baseX + Math.sin(d.phase) * d.move.amp;
+      c.vx = Math.max(-8, Math.min(8, (nx - c.x) / Math.max(dt, 1e-4))); // real velocity for animation/readouts
+      c.x = nx;
+    } else if (c.alive) { c.vx = 0; c.vz = 0; }
+    if (this.infiniteAmmo !== false && this.player) {
+      for (const w of this.player.weapons) if (w.reserve < w.def.mag) w.reserve = w.def.reserve;
+    }
   }
 
   end(winner, reason) {

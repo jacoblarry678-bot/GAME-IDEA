@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #0b0f12;
   --panel: rgba(14, 19, 23, 0.86);
   --panel-2: rgba(24, 31, 37, 0.92);
@@ -274,3 +275,12 @@ table.sb tr.me td { background: rgba(255,138,61,0.12); color: #fff; }
   .set-ctl { width: 180px; }
   .wpn-info { display: none; }
 }
+
+/* firing range panel */
+.range-panel { display: none; position: absolute; left: 22px; top: 230px; width: 330px; background: rgba(8,11,14,0.78); border: 1px solid var(--line-2); padding: 12px 14px; font-family: var(--font-body); font-size: 12px; pointer-events: none; }
+.range-panel .rp-w { font-family: var(--font-head); font-weight: 700; font-size: 20px; letter-spacing: 0.06em; margin: 2px 0 6px; }
+.range-panel .rp-w .muted { font-size: 12px; font-weight: 500; letter-spacing: 0.1em; margin-left: 6px; }
+.range-panel .rp-t td, .range-panel .rp-t th { padding: 3px 6px; }
+.range-panel .rp-line { margin-top: 6px; color: var(--muted); }
+.range-panel .rp-line b { color: var(--text); font-weight: 600; margin-left: 6px; }
+.range-panel .rp-keys { margin-top: 10px; color: var(--muted); line-height: 1.9; }

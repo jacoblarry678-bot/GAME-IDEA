@@ -58,6 +58,7 @@ class BillboardSystem {
     this.mat = mat;
     this.mesh = new THREE.Mesh(g, mat);
     this.mesh.frustumCulled = false;
+    this.mesh.userData.noAO = true;
     this.mesh.renderOrder = blending === THREE.AdditiveBlending ? 5 : 4;
     scene.add(this.mesh);
     this.p = []; // live particles

@@ -21,7 +21,6 @@ const body = html
 
 // The host supplies the document skeleton; emit page content only.
 const out = `<title>Operation Ashline</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
 ${fonts}
 <style>
 ${css}

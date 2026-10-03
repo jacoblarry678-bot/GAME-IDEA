@@ -38,6 +38,7 @@ export class Hud {
       <div class="death"></div>
       <div class="captions"></div>
       <div class="scoreboard"></div>
+      <div class="range-panel"></div>
     `;
     const q = (s) => this.root.querySelector(s);
     this.$ = {
@@ -46,7 +47,7 @@ export class Hud {
       hp: q('.hp'), hpv: q('.hpv'), hpfill: q('.hp .fill'), wname: q('.wname'), mag: q('.mag'), res: q('.res'),
       lethal: q('.lethal'), tactical: q('.tactical'), lk: q('.lk'), lc: q('.lc'), tk: q('.tk'), tc: q('.tc'),
       popups: q('.popups'), prompt: q('.prompt'), protect: q('.protect'), center: q('.center-msg'), death: q('.death'),
-      captions: q('.captions'), sb: q('.scoreboard'), np: q('.nameplates'),
+      captions: q('.captions'), sb: q('.scoreboard'), np: q('.nameplates'), rp: q('.range-panel'), topc: q('.hud-tc'),
     };
     this.miniCtx = this.$.mini.getContext('2d');
     this.hitT = 0; this.indicators = []; this.nadeInds = [];
@@ -152,7 +153,8 @@ export class Hud {
     if (this.centerT > 0) { this.centerT -= dt; if (this.centerT <= 0) $.center.innerHTML = ''; }
     // fps
     if (this.app.settings.data.graphics.showFps) {
-      this.set('fps', `${Math.round(this.app.engine.fps)} FPS · ${this.app.engine.frameMs.toFixed(1)} ms`, (v) => { $.fps.textContent = v; });
+      const e = this.app.engine, info = e.info();
+      this.set('fps', `${Math.round(e.fps)} FPS · ${e.frameMs.toFixed(1)} ms · ${Math.round((e.effectiveScale || 1) * 100)}% res · ${info.calls} draws`, (v) => { $.fps.textContent = v; });
     } else this.set('fps', '', () => { $.fps.textContent = ''; });
   }
 
@@ -307,6 +309,13 @@ export class Hud {
     ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(5, 6); ctx.lineTo(0, 3); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
+
+  rangeMode(on) {
+    this.$.topc.style.display = on ? 'none' : '';
+    this.$.rp.style.display = on ? 'block' : 'none';
+  }
+
+  rangePanel(html) { this.set('rp', html, (v) => { this.$.rp.innerHTML = v; }); }
 
   show(on) { this.root.style.display = on ? '' : 'none'; }
   destroy() { this.root.remove(); }

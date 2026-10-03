@@ -29,14 +29,32 @@ incomplete or still a known issue, and what comes next.
 - Third-person animation is procedural and simple: no IK, and only a basic death fall.
 - The texture-quality setting applies after a reload.
 
-## Next: Milestone 2 (visual & gameplay polish)
-- Post-processing (bloom, ambient occlusion) as real settings, plus better lighting inside interiors.
-- Better viewmodel arms and hands, and better weapon models and animation.
-- A shooting range with targets, damage readouts and a DPS/TTK display.
-- Weapon tuning from range data; better AI cover and flanking.
-- More audio variety and environmental reverb.
+## Milestone 2: Visual and gameplay polish (complete)
+
+**Added**
+- **Firing Range** (from the main menu, or **Test in Firing Range** in Loadouts): 13 training targets at 5–90 m. Some stand, some crouch and some strafe, and there is cover to peek from. A live panel shows damage per shot, shots to kill and TTK at 10/25/50 m, plus your last hit (damage, zone, distance), your last elimination (shots and milliseconds) and accuracy. Hotkeys: T next weapon, Y infinite ammo, H moving targets, U reset.
+- **Post-processing**: bloom and GTAO ambient occlusion are real toggles. Bloom is on by default from Medium up; AO is on in Ultra. The composer runs only when one of them is enabled, and keeps 4× MSAA.
+- **Dynamic resolution** (optional) holds the frame rate by lowering the render scale to as little as 50%. The FPS overlay now also shows render scale and draw calls.
+- **Audio**: convolution reverb crossfades between outdoor and indoor, based on whether there is a roof overhead and walls nearby. Distant gunfire and explosions echo off the yard, and occluded shots are muffled.
+- **First-person hands**: capsule sleeves and gloves with fingers wrapped on the grip and foregrip. The reflex sight is now an open frame, and the weapon preview on the loadout screen has moved.
+- **Third-person**: rounded capsule limbs. The hips turn toward strafes and the legs run backwards when backpedalling. Soldiers flinch when hit, and at range they drop their shadows and weapon detail (LOD).
+- **World**: backdrop buildings now have window facades, and the dock stairs no longer have a support post in the middle.
+- **AI**: bots share spotted enemies with teammates within 32 m, pre-aim likely approaches while holding a position, and take flank lanes into the enemy half. Update order now rotates each tick, which removes a measurable West-team advantage (12-match aggregate: 445 vs 462).
+
+**Verification run**
+- `npm test`: 49/49. `npm run e2e`: 31/31. That covers the M1 flow plus the runtime bloom/AO toggle, the firing range (targets, eliminations, stats panel) and returning to Cinder Yard afterwards.
+- Ultra-preset screenshots (bloom + GTAO + 4K shadows) render with no errors.
+
+**Known issues**
+- GPU performance is still unmeasured, for the reason given under M1. On Ultra, GTAO adds a full extra geometry pass (~400 draw calls in the yard).
+- Weapon attachments are not in yet (planned for M4). The range currently tests base weapons.
+
+## Next: Milestone 3 (progression & cosmetics)
+- Persistent profile with player level and XP from matches. Weapon levels unlock camos.
+- Inventory, with cosmetic equip and a live preview on the operator or weapon.
+- A 50-tier battle pass (free and premium tracks) with daily and weekly challenges.
+- A demonstration item shop using clearly labelled test currency.
 
 ## Later milestones
-- M3: progression, inventory, cosmetics, a battle pass, and a demo shop. Test currency only.
 - M4: more weapons and attachments, maps (Old Quarter, Signal Station), modes (FFA, Domination, Hardpoint, Elimination, Gun Game), support abilities.
 - M5: real online play needs a server-authoritative game server, accounts and a backend. Until then, online features stay labelled unavailable.

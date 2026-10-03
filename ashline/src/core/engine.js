@@ -4,6 +4,23 @@
  * performance stats.
  */
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+
+/** GTAO that skips particles, decals, sky and other transparent/unlit helpers in its G-buffer pass. */
+class AOPass extends GTAOPass {
+  overrideVisibility() {
+    const cache = this._visibilityCache;
+    this.scene.traverse((o) => {
+      cache.set(o, o.visible);
+      const m = o.material;
+      if (o.isPoints || o.isLine || o.userData.noAO || (m && !Array.isArray(m) && (m.transparent || m.isShaderMaterial))) o.visible = false;
+    });
+  }
+}
 
 const SHADOW_SIZES = { off: 0, low: 1024, medium: 2048, high: 2048, ultra: 4096 };
 
@@ -65,18 +82,23 @@ export class Engine {
     const s = sky.clone();
     s.material = sky.material.clone();
     s.material.uniforms.time.value = 0;
+    s.visible = true;
     envScene.add(s);
     // a dark ground disc so the lower hemisphere reflects ground, not sky
     const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 24), new THREE.MeshBasicMaterial({ color: 0x3c3a36 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -2;
     envScene.add(ground);
     const rt = pmrem.fromScene(envScene, 0.02);
-    this.scene.environment = rt.texture;
-    this.vmScene.environment = rt.texture;
+    pmrem.dispose();
+    return rt.texture;
+  }
+
+  useEnvironment(tex) {
+    this.scene.environment = tex;
+    this.vmScene.environment = tex;
     this.scene.environmentIntensity = 0.55;
     this.vmScene.environmentIntensity = 0.75;
     this.hemi.intensity = 0.75;
-    pmrem.dispose();
   }
 
   setEnvironment(def) {
@@ -84,8 +106,12 @@ export class Engine {
     this.sunDir = d;
     this.sun.color.set(def.sun.color);
     this.sun.intensity = def.sun.intensity;
-    this.sun.position.copy(d).multiplyScalar(120);
-    this.sun.target.position.set(0, 0, 0);
+    const ext = def.shadowExtent || { cx: 0, cz: 0, half: 64 };
+    this.sun.target.position.set(ext.cx, 0, ext.cz);
+    this.sun.position.copy(d).multiplyScalar(120).add(this.sun.target.position);
+    const sc = this.sun.shadow.camera;
+    sc.left = -ext.half; sc.right = ext.half; sc.top = ext.half; sc.bottom = -ext.half;
+    sc.updateProjectionMatrix();
     this.vmSun.position.copy(d);
     this.vmSun.color.set(def.sun.color);
     this.scene.fog = new THREE.FogExp2(def.fog.color, def.fog.density);
@@ -111,12 +137,15 @@ export class Engine {
     r.toneMappingExposure = g.brightness;
     this.frameCap = Number(g.frameCap) || 0;
     this.resize();
+    this.setupPost();
   }
 
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
     const g = this.settings.data.graphics;
-    const pr = Math.min(window.devicePixelRatio || 1, 2) * g.renderScale;
+    const scale = g.dynamicRes ? Math.min(g.renderScale, this.dynScale ?? g.renderScale) : g.renderScale;
+    const pr = Math.min(window.devicePixelRatio || 1, 2) * scale;
+    this.effectiveScale = scale;
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.canvas.style.width = w + 'px';
@@ -125,6 +154,7 @@ export class Engine {
     this.updateFov();
     this.vmCamera.aspect = this.aspect;
     this.vmCamera.updateProjectionMatrix();
+    if (this.composer) { this.composer.setPixelRatio(pr); this.composer.setSize(w, h); }
   }
 
   /** Horizontal FOV setting (at 16:9) → vertical camera FOV, divided by zoom. */
@@ -149,15 +179,62 @@ export class Engine {
     return now - this.lastFrame >= 1000 / this.frameCap - 1.5;
   }
 
+  /** Build or tear down the post-processing chain to match settings. */
+  setupPost() {
+    const g = this.settings.data.graphics;
+    const want = g.bloom || g.ao;
+    if (!want) {
+      if (this.composer) { this.composer.dispose(); this.composer = null; }
+      return;
+    }
+    const w = window.innerWidth, h = window.innerHeight;
+    if (!this.composer) {
+      const rt = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: 4 });
+      this.composer = new EffectComposer(this.renderer, rt);
+      this.renderPass = new RenderPass(this.scene, this.camera);
+      this.aoPass = new AOPass(this.scene, this.camera, w, h);
+      this.aoPass.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.4, thickness: 1.6, scale: 1.25, samples: 12, distanceFallOff: 1, screenSpaceRadius: false });
+      this.aoPass.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+      this.aoPass.blendIntensity = 0.85;
+      this.bloomPass = new UnrealBloomPass(new THREE.Vector2(w / 2, h / 2), 0.32, 0.45, 0.92);
+      this.outputPass = new OutputPass();
+      this.composer.addPass(this.renderPass);
+      this.composer.addPass(this.aoPass);
+      this.composer.addPass(this.bloomPass);
+      this.composer.addPass(this.outputPass);
+    }
+    this.aoPass.enabled = !!g.ao;
+    this.bloomPass.enabled = !!g.bloom;
+    this.composer.setPixelRatio(this.renderer.getPixelRatio());
+    this.composer.setSize(w, h);
+  }
+
   render(showViewmodel = true) {
     const r = this.renderer;
     r.info.reset();
-    r.clear();
-    r.render(this.scene, this.camera);
+    if (this.composer) {
+      this.composer.render();
+    } else {
+      r.clear();
+      r.render(this.scene, this.camera);
+    }
     if (showViewmodel) {
       r.clearDepth();
       r.render(this.vmScene, this.vmCamera);
     }
+  }
+
+  /** Dynamic resolution: nudge the render scale toward ~60 FPS. */
+  adaptResolution(now) {
+    const g = this.settings.data.graphics;
+    if (!g.dynamicRes) { this.dynScale = undefined; return; }
+    if (now - (this._dynT || 0) < 1500) return;
+    this._dynT = now;
+    const cur = this.dynScale ?? g.renderScale;
+    let next = cur;
+    if (this.fps < 58) next = Math.max(0.5, cur - 0.05);
+    else if (this.fps > 75) next = Math.min(g.renderScale, cur + 0.05);
+    if (Math.abs(next - cur) > 1e-3) { this.dynScale = next; this.resize(); }
   }
 
   stat(now) {

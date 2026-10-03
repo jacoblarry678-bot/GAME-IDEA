@@ -221,6 +221,22 @@ function ambience(ctx) {
   }, 2);
 }
 
+/** Stereo impulse response: early reflections + exponentially decaying diffuse tail. */
+function impulse(ctx, seconds, decay, early, seed) {
+  return buf(ctx, seconds, (d, n, ch) => {
+    const r = rng(seed + ch * 31);
+    for (let i = 0; i < n; i++) {
+      const t = i / SR;
+      d[i] = r() * Math.pow(1 - t / seconds, decay) * 0.6;
+    }
+    for (const [at, g] of early) {
+      const k = Math.floor((at + (ch ? 0.004 : 0)) * SR);
+      if (k < n) d[k] += g * (ch ? 0.85 : 1);
+    }
+    lowpass(d, ch ? 5200 : 4800);
+  }, 2);
+}
+
 export class AudioEngine {
   constructor(settings) {
     this.settings = settings;
@@ -245,6 +261,18 @@ export class AudioEngine {
     this.master.connect(this.comp).connect(c.destination);
     this.bus = {};
     for (const k of ['music', 'sfx', 'dialogue', 'ui']) { this.bus[k] = c.createGain(); this.bus[k].connect(this.master); }
+    // environmental reverb: outdoor yard slap vs. indoor room, crossfaded by listener position
+    this.send = c.createGain();
+    this.send.gain.value = 1;
+    this.revOut = c.createConvolver();
+    this.revOut.buffer = impulse(c, 0.9, 3.2, [[0.045, 0.5], [0.11, 0.35], [0.19, 0.22]], 3);
+    this.revIn = c.createConvolver();
+    this.revIn.buffer = impulse(c, 1.5, 2.2, [[0.012, 0.6], [0.025, 0.45], [0.04, 0.35], [0.07, 0.25]], 9);
+    this.wetOut = c.createGain(); this.wetOut.gain.value = 0.22;
+    this.wetIn = c.createGain(); this.wetIn.gain.value = 0;
+    this.send.connect(this.revOut).connect(this.wetOut).connect(this.bus.sfx);
+    this.send.connect(this.revIn).connect(this.wetIn).connect(this.bus.sfx);
+    this.indoor = 0;
     this.applyVolumes();
     this._build();
     this.ready = true;
@@ -298,6 +326,15 @@ export class AudioEngine {
     this.bus.ui.gain.setTargetAtTime(a.ui * 0.8, t, 0.05);
   }
 
+  /** 0 = open air, 1 = enclosed room. Smoothly crossfades the reverb. */
+  setEnvironment(indoor) {
+    if (!this.ctx) return;
+    this.indoor += (indoor - this.indoor) * 0.08;
+    const t = this.ctx.currentTime;
+    this.wetOut.gain.setTargetAtTime(0.22 * (1 - this.indoor), t, 0.1);
+    this.wetIn.gain.setTargetAtTime(0.42 * this.indoor, t, 0.1);
+  }
+
   setListener(pos, fwd, up) {
     if (!this.ctx) return;
     const L = this.ctx.listener, t = this.ctx.currentTime;
@@ -315,7 +352,7 @@ export class AudioEngine {
   _pick(x) { return Array.isArray(x) ? x[(Math.random() * x.length) | 0] : x; }
 
   /** Non-positional sound. */
-  play(name, { vol = 1, rate = 1, bus = 'sfx', delay = 0 } = {}) {
+  play(name, { vol = 1, rate = 1, bus = 'sfx', delay = 0, send = 0 } = {}) {
     if (!this.ready) return null;
     const b = this._pick(typeof name === 'string' ? this.b[name] : name);
     if (!b || this.voices > 64) return null;
@@ -326,6 +363,7 @@ export class AudioEngine {
     const g = c.createGain();
     g.gain.value = vol;
     s.connect(g).connect(this.bus[bus]);
+    if (bus === 'sfx' && send > 0) { const sg = c.createGain(); sg.gain.value = send; g.connect(sg).connect(this.send); }
     this.voices++;
     s.onended = () => { this.voices--; };
     s.start(c.currentTime + delay);
@@ -333,7 +371,7 @@ export class AudioEngine {
   }
 
   /** Positional sound. occluded → muffled. */
-  play3D(name, x, y, z, { vol = 1, rate = 1, occluded = false, ref = 4, bus = 'sfx' } = {}) {
+  play3D(name, x, y, z, { vol = 1, rate = 1, occluded = false, ref = 4, bus = 'sfx', send = 0.35, echo = false } = {}) {
     if (!this.ready) return null;
     const b = this._pick(typeof name === 'string' ? this.b[name] : name);
     if (!b || this.voices > 64) return null;
@@ -355,10 +393,25 @@ export class AudioEngine {
     const g = c.createGain();
     g.gain.value = vol * (occluded ? 0.55 : 1);
     s.connect(f).connect(p).connect(g).connect(this.bus[bus]);
+    if (send > 0) { const sg = c.createGain(); sg.gain.value = send * (occluded ? 1.4 : 1) * Math.min(1.5, 0.6 + dist / 40); g.connect(sg).connect(this.send); }
     this.voices++;
     s.onended = () => { this.voices--; };
     // speed of sound delay for distant sounds
-    s.start(c.currentTime + Math.min(0.5, dist / 343));
+    const at = c.currentTime + Math.min(0.5, dist / 343);
+    s.start(at);
+    // distant shots get a slapback echo off the yard's buildings
+    if (echo && dist > 25 && this.voices < 56) {
+      const e = c.createBufferSource();
+      e.buffer = b;
+      e.playbackRate.value = s.playbackRate.value * 0.96;
+      const ef = c.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 900;
+      const eg = c.createGain(); eg.gain.value = vol * 0.22 * Math.min(1, dist / 60);
+      const ep = c.createStereoPanner(); ep.pan.value = (Math.random() - 0.5) * 1.2;
+      e.connect(ef).connect(eg).connect(ep).connect(this.bus[bus]);
+      this.voices++;
+      e.onended = () => { this.voices--; };
+      e.start(at + 0.18 + Math.random() * 0.25);
+    }
     return s;
   }
 

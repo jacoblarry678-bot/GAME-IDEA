@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { Match } from './match.js';
 import { SoldierModel } from '../entities/soldierModel.js';
 import { Hud } from '../ui/hud.js';
-import { WEAPONS } from '../data/weapons.js';
+import { WEAPONS, PRIMARY_IDS, damageAt } from '../data/weapons.js';
 import { MODES, TEAMS } from './modes.js';
 import { esc } from '../ui/dom.js';
 import { PAD } from '../core/input.js';
@@ -16,12 +16,13 @@ import { PAD } from '../core/input.js';
 const v3 = new THREE.Vector3(), v3b = new THREE.Vector3();
 
 export class Game {
-  constructor(app, setup) {
+  constructor(app, setup, map = app.mapRuntime) {
     this.app = app;
     this.setup = setup;
+    this.map = map;
     const s = app.settings.data;
     this.id = Math.random().toString(36).slice(2);
-    this.match = new Match(app.mapRuntime, {
+    this.match = new Match(map, {
       ...setup,
       playerName: app.profile.data.name,
       playerLoadout: { ...app.profile.loadout },
@@ -30,12 +31,13 @@ export class Game {
     const m = this.match;
     m.presenter = true; // combatant events are consumed (and cleared) by this Game
     this.player = m.player;
-    for (const c of m.combatants) c.displayName = c.isBot ? `[BOT] ${c.name}` : c.name;
+    for (const c of m.combatants) c.displayName = c.dummy ? c.name : c.isBot ? `[BOT] ${c.name}` : c.name;
     // third-person views
     this.views = new Map();
     let seed = 1;
+    this.isRange = !!m.mode.range;
     for (const c of m.combatants) {
-      const v = new SoldierModel(app.soldierMats, app.wmats, c.team, seed++);
+      const v = c.dummy ? new SoldierModel(app.dummyMats, app.wmats, 1, seed++, { unarmed: true }) : new SoldierModel(app.soldierMats, app.wmats, c.team, seed++);
       v.setWeapon(c.weapon.def.id);
       app.engine.scene.add(v.root);
       this.views.set(c.id, v);
@@ -86,10 +88,18 @@ export class Game {
     this.look.pitch = 0;
     this.eyeH = this.player.eyeHeight;
     const mode = MODES[this.setup.mode];
-    this.hud.center(mode.name.toUpperCase(), `${this.app.mapRuntime.def.name} · first to ${this.setup.scoreLimit}`, 3.2);
     this.app.audio.ambience(true);
-    this.app.audio.announce('Team deathmatch. Eliminate the enemy team.');
     this.countdownBeep = 4;
+    if (this.isRange) {
+      this.hud.center('FIRING RANGE', 'Targets at 10 · 25 · 40 · 60 · 90 m', 2.5);
+      this.hud.rangeMode(true);
+      this.range = { hits: 0, shots: 0, last: null, tracks: new Map(), lastKill: null, infinite: true, moving: true };
+      this.match.infiniteAmmo = true;
+      this.match.movingTargets = true;
+      return;
+    }
+    this.hud.center(mode.name.toUpperCase(), `${this.map.def.name} · first to ${this.setup.scoreLimit}`, 3.2);
+    this.app.audio.announce('Team deathmatch. Eliminate the enemy team.');
   }
 
   // ------------------------------------------------------------------ input
@@ -152,6 +162,28 @@ export class Game {
     cmd.tactical = inp.isDown('tactical');
     cmd.yaw = this.look.yaw;
     cmd.pitch = this.look.pitch;
+    if (this.isRange) this.rangeInput();
+  }
+
+  /** Firing range hotkeys: T next primary, Y infinite ammo, U reset targets, H moving targets. */
+  rangeInput() {
+    const inp = this.app.input, r = this.range, m = this.match, p = this.player;
+    if (inp.keyPressed('KeyT') || (inp.pad && inp.padPressed(PAD.UP))) {
+      const ids = PRIMARY_IDS;
+      const next = ids[(ids.indexOf(p.loadout.primary) + 1) % ids.length];
+      p.applyLoadout({ ...p.loadout, primary: next });
+      p.cur = 0; p.adsT = 0; p.swapT = 0;
+      for (const w of p.weapons) w.refill();
+      this.vm.setWeapon(next);
+      this.hud.popup(WEAPONS[next].name, 0, 'medal');
+    }
+    if (inp.keyPressed('KeyY')) { r.infinite = !r.infinite; m.infiniteAmmo = r.infinite; this.hud.popup(`INFINITE AMMO ${r.infinite ? 'ON' : 'OFF'}`, 0, 'medal'); }
+    if (inp.keyPressed('KeyH')) { r.moving = !r.moving; m.movingTargets = r.moving; this.hud.popup(`MOVING TARGETS ${r.moving ? 'ON' : 'OFF'}`, 0, 'medal'); }
+    if (inp.keyPressed('KeyU')) {
+      for (const c of m.combatants) if (c.dummy) { m.respawn(c); c.spawnProtectT = 0; }
+      r.tracks.clear(); r.hits = 0; r.shots = 0; r.last = null; r.lastKill = null;
+      this.hud.popup('TARGETS RESET', 0, 'medal');
+    }
   }
 
   clearInput() {
@@ -198,6 +230,17 @@ export class Game {
     const fwd = v3.set(0, 0, -1).applyQuaternion(cam.quaternion);
     const up = v3b.set(0, 1, 0).applyQuaternion(cam.quaternion);
     app.audio.setListener(cam.position, fwd, up);
+    // reverb environment: enclosed if there is a roof overhead and walls close by
+    this.envT = (this.envT || 0) - dt;
+    if (this.envT <= 0) {
+      this.envT = 0.25;
+      const w = this.match.world;
+      const roof = w.raycast(cam.position.x, cam.position.y, cam.position.z, 0, 1, 0, 12, 'solid');
+      let walls = 0;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (w.raycast(cam.position.x, cam.position.y, cam.position.z, dx, 0, dz, 14, 'solid')) walls++;
+      this.indoor = roof ? Math.min(1, 0.4 + walls * 0.15) : walls >= 3 ? 0.25 : 0;
+    }
+    app.audio.setEnvironment(this.indoor || 0);
   }
 
   afterTick(dt) {
@@ -281,7 +324,7 @@ export class Game {
         let mx, my, mz;
         if (me) {
           this.vm.onFire(def);
-          a.play('shot_' + def.audio.kind, { vol: 0.85, rate: def.audio.pitch * (0.97 + Math.random() * 0.06) });
+          a.play('shot_' + def.audio.kind, { vol: 0.85, rate: def.audio.pitch * (0.97 + Math.random() * 0.06), send: 0.5 });
           if (def.bolt) a.play('bolt', { vol: 0.5, delay: 0.25 });
           if (def.pump) a.play('pump', { vol: 0.6, delay: 0.16 });
           this.app.input.rumble(def.class === 'sniper' || def.class === 'shotgun' ? 0.8 : 0.35, 0.3, 70);
@@ -298,7 +341,7 @@ export class Game {
           fx.muzzleFlash(mx, my, mz, dx, Math.sin(c.pitch), dz, def.class === 'shotgun' ? 1.4 : 1);
           const cam = app.engine.camera.position;
           const occluded = !this.match.canSee(cam.x, cam.y, cam.z, c.x, c.eyeY, c.z);
-          a.play3D('shot_' + def.audio.kind, c.x, c.eyeY, c.z, { vol: 1.0, rate: def.audio.pitch, occluded, ref: 6 });
+          a.play3D('shot_' + def.audio.kind, c.x, c.eyeY, c.z, { vol: 1.0, rate: def.audio.pitch, occluded, ref: 6, echo: true });
           if (c.team !== p.team) this.radar.set(c.id, this.match.time);
         }
         for (const end of e.ends) {
@@ -328,6 +371,21 @@ export class Game {
         break;
       }
       case 'damage': {
+        if (e.victim !== p && e.fromX !== undefined) {
+          const v = this.views.get(e.victim.id);
+          if (v) { const ry = Math.cos(e.victim.yaw) * (e.fromX - e.victim.x) - Math.sin(e.victim.yaw) * (e.fromZ - e.victim.z); v.hit(Math.sign(ry) || 1); }
+        }
+        if (this.isRange && e.attacker === p) {
+          const r = this.range;
+          const dist = Math.hypot(e.victim.x - p.x, e.victim.z - p.z);
+          r.last = { dmg: e.amount, zone: e.zone, dist, weapon: WEAPONS[e.weapon]?.name || e.weapon };
+          let tr = r.tracks.get(e.victim.id);
+          if (!tr) { tr = { t0: this.match.time, shots0: p.stats.shots - 1 }; r.tracks.set(e.victim.id, tr); }
+          if (e.kill) {
+            r.lastKill = { ms: Math.round((this.match.time - tr.t0) * 1000), shots: p.stats.shots - tr.shots0, dist, weapon: WEAPONS[e.weapon]?.name || e.weapon };
+            r.tracks.delete(e.victim.id);
+          }
+        }
         if (e.attacker === p && e.victim !== p) {
           hud.hitmarker(e.kill, e.zone === 'head');
           if (app.settings.data.interface.hitSound) a.play(e.zone === 'head' ? 'hitHead' : 'hit', { bus: 'sfx', vol: e.zone === 'head' ? 0.5 : 0.45 });
@@ -348,8 +406,8 @@ export class Game {
         const kname = WEAPONS[e.weapon]?.name;
         hud.killfeed({ ...e, killer: e.killer && { ...e.killer, name: e.killer.displayName, team: e.killer.team, isBot: e.killer.isBot, id: e.killer.id }, victim: { ...e.victim, name: e.victim.displayName, team: e.victim.team, isBot: e.victim.isBot, id: e.victim.id }, weaponName: kname }, p.id);
         if (e.killer === p && e.victim !== p) {
-          hud.popup(e.headshot ? 'HEADSHOT' : 'ELIMINATED', 100);
-          for (const md of e.medals) {
+          hud.popup(e.headshot ? 'HEADSHOT' : 'ELIMINATED', this.isRange ? 0 : 100);
+          if (!this.isRange) for (const md of e.medals) {
             if (md.id === 'headshot') continue;
             hud.popup(md.name.toUpperCase(), md.xp, 'medal');
           }
@@ -375,7 +433,7 @@ export class Game {
         fx.explosion(e.x, e.y, e.z, e.radius);
         const cam = app.engine.camera.position;
         const occluded = !this.match.canSee(cam.x, cam.y, cam.z, e.x, e.y + 0.5, e.z);
-        a.play3D('explosion', e.x, e.y + 0.5, e.z, { vol: 1.4, ref: 8, occluded });
+        a.play3D('explosion', e.x, e.y + 0.5, e.z, { vol: 1.4, ref: 8, occluded, echo: true, send: 0.6 });
         const d = Math.hypot(e.x - cam.x, e.z - cam.z);
         this.shake = Math.max(this.shake, Math.max(0, 0.9 - d / 25));
         if (d < 12) app.input.rumble(1, 1, 300);
@@ -385,6 +443,7 @@ export class Game {
       case 'smoke': fx.smokeCloud(e.x, e.y, e.z, e.radius, e.duration); a.play3D('smokePop', e.x, e.y, e.z, { vol: 0.8, ref: 4 }); break;
       case 'melee': if (e.hit) a.play3D('meleeHit', e.c.x, e.c.y + 1.2, e.c.z, { vol: 0.8, ref: 3 }); break;
       case 'live':
+        if (this.isRange) break;
         hud.center('ENGAGE', '', 1.2, 'var(--accent)');
         a.play('horn', { bus: 'sfx', vol: 0.5 });
         break;
@@ -404,7 +463,7 @@ export class Game {
 
   checkAnnouncements() {
     const m = this.match, a = this.app.audio;
-    if (m.state !== 'live') return;
+    if (m.state !== 'live' || this.isRange) return;
     const [s0, s1] = m.teamScores;
     const lead = s0 > s1 ? 0 : s1 > s0 ? 1 : -1;
     if (lead !== this.leader && lead !== -1 && s0 + s1 > 2) {
@@ -529,7 +588,8 @@ export class Game {
       v.root.position.set(c.x, c.y, c.z);
       v.root.rotation.y = c.yaw;
       v.setWeapon(c.weapon.def.id);
-      v.update({ speed: c.speed, sprinting: c.sprinting, stance: c.stance, grounded: c.grounded || !!c.mantle, pitch: c.pitch, adsT: c.adsT, reloading: c.weapon.reloading || c.swapT > 0, alive: c.alive }, this.paused ? 0 : dt);
+      v.setLod(Math.hypot(c.x - cam.x, c.z - cam.z) > 55);
+      v.update({ speed: c.speed, sprinting: c.sprinting, stance: c.stance, grounded: c.grounded || !!c.mantle, pitch: c.pitch, adsT: c.adsT, reloading: c.weapon.reloading || c.swapT > 0, alive: c.alive, vx: c.vx, vz: c.vz, yaw: c.yaw }, this.paused ? 0 : dt);
     }
   }
 
@@ -553,6 +613,7 @@ export class Game {
       x: p.x, z: p.z, yaw: this.look.yaw, nades,
       keys: { lethal: inp.label('lethal'), tactical: inp.label('tactical'), reload: inp.label('reload') },
     });
+    if (this.isRange) hud.rangePanel(this.rangeHtml());
     // death overlay
     if (!p.alive && this.deathInfo && m.state === 'live') {
       const rt = Math.max(0, p.respawnT);
@@ -580,7 +641,7 @@ export class Game {
         if (t !== undefined && m.time - t < 2) dots.push({ x: c.x, z: c.z, color: '#ff3b30', kind: 'enemy' });
       }
     }
-    hud.minimap(app.mapRuntime.minimap, { x: p.alive ? p.x : p.x, z: p.z, yaw: this.look.yaw }, dots);
+    hud.minimap(this.map.minimap, { x: p.alive ? p.x : p.x, z: p.z, yaw: this.look.yaw }, dots);
   }
 
   nameplates() {
@@ -610,6 +671,29 @@ export class Game {
     return out;
   }
 
+  rangeHtml() {
+    const p = this.player, r = this.range, d = p.weapon.def;
+    const pel = d.pellets || 1;
+    const stk = (dist, zone) => Math.ceil(100 / (damageAt(d, dist) * d.mult[zone] * pel));
+    const ttk = (n) => Math.round((n - 1) * (60 / d.rpm) * 1000);
+    const cols = [10, 25, 50];
+    const row = (label, f) => `<tr><td>${label}</td>${cols.map((c) => `<td class="num">${f(c)}</td>`).join('')}</tr>`;
+    const acc = p.stats.shots ? Math.round(p.stats.hits / p.stats.shots * 100) : 0;
+    const key = (k) => `<span class="key">${k}</span>`;
+    return `<div class="kicker">Firing range</div>
+      <div class="rp-w">${esc(d.name)} <span class="muted">${esc(d.classLabel)}</span></div>
+      <table class="sb rp-t"><thead><tr><th></th>${cols.map((c) => `<th class="num">${c} m</th>`).join('')}</tr></thead><tbody>
+        ${row('Damage / shot', (c) => Math.round(damageAt(d, c) * pel))}
+        ${row('Shots to kill', (c) => stk(c, 'torso'))}
+        ${row('Headshots', (c) => stk(c, 'head'))}
+        ${row('TTK (ms)', (c) => ttk(stk(c, 'torso')))}
+      </tbody></table>
+      <div class="rp-line">Last hit <b>${r.last ? `${Math.round(r.last.dmg)} · ${r.last.zone.toUpperCase()} · ${r.last.dist.toFixed(1)} m` : '—'}</b></div>
+      <div class="rp-line">Last elimination <b>${r.lastKill ? `${r.lastKill.shots} shots · ${r.lastKill.ms} ms · ${r.lastKill.dist.toFixed(0)} m` : '—'}</b></div>
+      <div class="rp-line">Accuracy <b>${p.stats.hits}/${p.stats.shots} (${acc}%)</b></div>
+      <div class="rp-keys">${key('T')} next weapon · ${key('1')}/${key('2')} swap · ${key('Y')} infinite ammo: <b>${r.infinite ? 'on' : 'off'}</b> · ${key('H')} moving targets: <b>${r.moving ? 'on' : 'off'}</b> · ${key('U')} reset · ${key('Esc')} menu</div>`;
+  }
+
   scoreboardHtml() {
     const m = this.match;
     const [A, B] = m.scoreboard();
@@ -620,7 +704,7 @@ export class Game {
       ${rows.map((r) => `<tr class="${r.c === this.player ? 'me' : ''}" style="${r.c.alive ? '' : 'opacity:0.55'}"><td>${r.c.isBot ? '<span class="bot-tag">BOT</span>' : ''}${esc(r.c.name)}</td><td class="num">${r.score}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td><td class="num">${r.assists}</td><td class="num">${r.streak}</td></tr>`).join('')}
       </tbody></table>`;
     const t = Math.max(0, Math.ceil(m.timeLeft));
-    return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="kicker">${esc(MODES[m.settings.mode].name)} · ${esc(this.app.mapRuntime.def.name)}</span><span class="muted small">${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} remaining · first to ${m.settings.scoreLimit}</span></div>${tbl(A, 0, fc)}<div style="height:10px"></div>${tbl(B, 1, ec)}`;
+    return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="kicker">${esc(MODES[m.settings.mode].name)} · ${esc(this.map.def.name)}</span><span class="muted small">${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')} remaining · first to ${m.settings.scoreLimit}</span></div>${tbl(A, 0, fc)}<div style="height:10px"></div>${tbl(B, 1, ec)}`;
   }
 
   buildResult() {

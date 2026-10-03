@@ -21,6 +21,14 @@ export const CINDER_YARD = {
   sky: { top: 0x5d86b5, horizon: 0xd9c6a8, ground: 0x5a5146 },
   fog: { color: 0xc4b8a4, density: 0.0065 },
   build,
+  minimapUnderlay(ctx, X, Y, scale) {
+    ctx.fillStyle = '#3a3a36'; // rail beds
+    for (const tz of [-7, 7]) ctx.fillRect(X(-37), Y(tz - 1.7), 74 * scale, 3.4 * scale);
+  },
+  minimapOverlay(ctx, X, Y, scale) {
+    ctx.fillStyle = 'rgba(61,155,255,0.14)'; ctx.fillRect(X(-48), Y(-36), 13 * scale, 72 * scale);
+    ctx.fillStyle = 'rgba(255,122,47,0.14)'; ctx.fillRect(X(35), Y(-36), 13 * scale, 72 * scale);
+  },
 };
 
 function build(b) {

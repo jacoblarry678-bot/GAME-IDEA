@@ -159,6 +159,17 @@ export class BotBrain {
         if (now - mem.t > 10) this.known.delete(e.id);
       }
     }
+    // callouts: share freshly spotted enemies with teammates nearby
+    this.calloutT = (this.calloutT || 0) - 0.13;
+    if (best && this.calloutT <= 0) {
+      this.calloutT = 1.5;
+      for (const o of m.combatants) {
+        if (o === c || !o.brain || !o.alive || o.team !== c.team) continue;
+        if (Math.hypot(o.x - c.x, o.z - c.z) > 32) continue;
+        const mem = o.brain.known.get(best.id);
+        if (!mem || (!mem.visible && now - mem.t > 1)) o.brain.known.set(best.id, { c: best, x: best.x, y: best.y, z: best.z, t: now, visible: false, seenSince: null, heard: true });
+      }
+    }
     if (best !== this.target) {
       this.target = best;
       this.trackT = 0;
@@ -407,11 +418,26 @@ export class BotBrain {
 
   glance(dt) {
     this.glanceT -= dt;
+    const c = this.c;
+    if (this.state === 'roam' && this.waitT > 0 && (!this.path || this.pathIdx >= this.path.length)) {
+      // holding a spot: check the most likely approach — toward enemy territory, sweeping a little
+      if (this.glanceT <= 0) {
+        this.glanceT = 1.2 + Math.random() * 2.0;
+        const ex = c.team === 0 ? 40 : -40;
+        const base = Math.atan2(-(ex - c.x), -(0 - c.z));
+        const pick = Math.random();
+        this._holdYaw = pick < 0.6 ? base + (Math.random() - 0.5) * 1.2 : base + (Math.random() < 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.2);
+        // prefer a direction with a long open sightline
+        const hit = this.m.world.raycast(c.x, c.eyeY, c.z, -Math.sin(this._holdYaw), 0, -Math.cos(this._holdYaw), 30, 'sight');
+        if (hit && hit.t < 3) this._holdYaw += Math.PI * 0.6;
+      }
+      if (this._holdYaw !== undefined) { this.lookYaw = this._holdYaw; this.lookPitch = 0; }
+      return;
+    }
     if (this.glanceT <= 0) {
       this.glanceT = 0.8 + Math.random() * 2.2;
       this._glanceOff = (Math.random() - 0.5) * 1.4;
     }
-    if (this.state === 'roam' && this.waitT > 0) this.lookYaw += (this._glanceOff || 0) * 0.02;
   }
 
   lookAtThreat(dt) {
@@ -484,6 +510,14 @@ export class BotBrain {
       total += w;
       return w;
     });
+    // sometimes take a flank lane deep into the enemy half instead
+    if (Math.random() < 0.22 * this.d.strafe) {
+      const flank = hs.filter((h) => /Alley|Road|Yard/.test(h.name) && (c.team === 0 ? h.x > -5 : h.x < 5));
+      if (flank.length) {
+        const f = flank[(Math.random() * flank.length) | 0];
+        if (this.setGoal(f.x + (Math.random() - 0.5) * 3, 0, f.z, f.name)) { this.waitT = this.d.hold[0] + Math.random() * 2; return; }
+      }
+    }
     let r = Math.random() * total;
     let pick = hs[0];
     for (let i = 0; i < hs.length; i++) { r -= weights[i]; if (r <= 0) { pick = hs[i]; break; } }

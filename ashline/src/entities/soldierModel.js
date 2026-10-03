@@ -22,6 +22,12 @@ function sphere(r, ws = 12, hs = 8, phiLen = Math.PI * 2, thetaLen = Math.PI) {
   return geo.get(k);
 }
 
+function cap(r, len) {
+  const k = `cap${r},${len}`;
+  if (!geo.has(k)) geo.set(k, new THREE.CapsuleGeometry(r, len, 2, 8));
+  return geo.get(k);
+}
+
 const SKIN = [0xc79a7c, 0x8d5f45, 0xe0b49a, 0x5e3d2b, 0xb08060];
 
 export class SoldierMaterials {
@@ -47,8 +53,20 @@ export class SoldierMaterials {
   }
 }
 
+/** Training-target look: grey mannequin with high-visibility orange vest. */
+export function dummyMaterials(base) {
+  const grey = new THREE.MeshStandardMaterial({ color: 0x8a8d8f, roughness: 0.7 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x4a4d50, roughness: 0.8 });
+  const orange = new THREE.MeshStandardMaterial({ color: 0xff7a1a, emissive: 0x401800, roughness: 0.6 });
+  return {
+    camo: [grey, grey], vest: [orange, orange], gear: dark, boot: dark, glove: dark,
+    helmet: [dark, dark], skin: [grey], goggle: dark, team: [orange, orange],
+  };
+}
+
 export class SoldierModel {
-  constructor(mats, wmats, team, seed = 0) {
+  constructor(mats, wmats, team, seed = 0, opts = {}) {
+    this.unarmed = !!opts.unarmed;
     this.mats = mats; this.wmats = wmats; this.team = team;
     const root = this.root = new THREE.Group();
     const camo = mats.camo[team], vest = mats.vest[team];
@@ -73,11 +91,11 @@ export class SoldierModel {
     for (const s of [-1, 1]) {
       const thigh = B(hips);
       thigh.position.set(s * 0.1, -0.04, 0);
-      P(rb(0.15, 0.46, 0.17, 0.05), camo, 0, -0.22, 0, thigh);
+      P(cap(0.085, 0.3), camo, 0, -0.22, 0, thigh);
       P(rb(0.06, 0.12, 0.14, 0.02), mats.gear, s * 0.08, -0.2, 0, thigh); // thigh pouch
       const shin = B(thigh);
       shin.position.set(0, -0.44, 0);
-      P(rb(0.13, 0.42, 0.15, 0.045), camo, 0, -0.2, 0, shin);
+      P(cap(0.07, 0.3), camo, 0, -0.2, 0, shin);
       P(rb(0.14, 0.12, 0.08, 0.03), mats.gear, 0, -0.02, -0.06, shin); // knee pad
       P(rb(0.13, 0.1, 0.27, 0.035), mats.boot, 0, -0.43, -0.05, shin);
       this.legs.push({ thigh, shin, side: s });
@@ -114,10 +132,10 @@ export class SoldierModel {
     for (const s of [-1, 1]) {
       const sh = B(spine);
       sh.position.set(s * 0.24, 0.46, 0);
-      const upper = P(rb(0.11, 0.3, 0.12, 0.04), camo, 0, -0.14, 0, sh);
+      const upper = P(cap(0.058, 0.2), camo, 0, -0.14, 0, sh);
       const elbow = B(sh);
       elbow.position.set(0, -0.28, 0);
-      P(rb(0.1, 0.28, 0.1, 0.035), camo, 0, -0.13, 0, elbow);
+      P(cap(0.052, 0.18), camo, 0, -0.13, 0, elbow);
       P(rb(0.09, 0.1, 0.1, 0.03), mats.glove, 0, -0.29, 0, elbow);
       this.arms.push({ sh, elbow, upper, side: s });
     }
@@ -174,7 +192,7 @@ export class SoldierModel {
   }
 
   setWeapon(id) {
-    if (this.weaponId === id) return;
+    if (this.unarmed || this.weaponId === id) return;
     this.weaponId = id;
     if (this.gun) { this.gunMount.remove(this.gun.group); }
     const key = WEAPONS[id].model;
@@ -186,6 +204,11 @@ export class SoldierModel {
   /** Pose the arms so the hands meet the weapon grip and foregrip. */
   poseArms(aimPitch) {
     const [L, R] = this.arms;
+    if (this.unarmed) {
+      R.sh.rotation.set(0.05, 0, -0.12); R.elbow.rotation.set(0.15, 0, 0);
+      L.sh.rotation.set(0.05, 0, 0.12); L.elbow.rotation.set(0.15, 0, 0);
+      return;
+    }
     // Euler XYZ: +X swings a hanging limb forward; +Z moves it toward +X.
     R.sh.rotation.set(0.35 + aimPitch * 0.8, 0, -0.35);
     R.elbow.rotation.set(1.45, 0, 0);
@@ -219,7 +242,18 @@ export class SoldierModel {
     if (this.deathT >= 0) { this.deathT = -1; this.root.rotation.set(0, this.root.rotation.y, 0); }
     const crouch = s.stance === 'crouch', slide = s.stance === 'slide';
     const spd = Math.min(s.speed, 8);
-    this.phase += dt * (spd * (s.sprinting ? 1.25 : 1.6) + 0.0001);
+    // movement direction relative to facing: turn the hips toward strafes, reverse the cycle when backpedalling
+    let dir = 1, hipYaw = 0;
+    if (spd > 0.6 && s.vx !== undefined) {
+      const sy = Math.sin(s.yaw), cy = Math.cos(s.yaw);
+      const fwd = (-sy * s.vx - cy * s.vz) / spd, right = (cy * s.vx - sy * s.vz) / spd;
+      const rel = Math.atan2(right, fwd);
+      if (Math.abs(rel) > 1.9) { dir = -1; hipYaw = -Math.sign(rel) * (Math.PI - Math.abs(rel)) * 0.6; }
+      else hipYaw = -Math.max(-1.0, Math.min(1.0, rel)) * 0.75;
+    }
+    this.hipYaw = (this.hipYaw || 0) + (hipYaw - (this.hipYaw || 0)) * Math.min(1, dt * 10);
+    this.hips.rotation.y = this.hipYaw;
+    this.phase += dir * dt * (spd * (s.sprinting ? 1.25 : 1.6) + 0.0001);
     const amp = Math.min(1, spd / 5) * (s.sprinting ? 0.85 : 0.55) * (crouch ? 0.6 : 1);
     const sw = Math.sin(this.phase), cw = Math.cos(this.phase);
     const hipY = slide ? 0.45 : crouch ? 0.62 : 0.95;
@@ -243,12 +277,14 @@ export class SoldierModel {
     // torso lean & aim
     const lean = s.sprinting ? -0.22 : slide ? 0.35 : crouch ? -0.15 : -0.04;
     this.spine.rotation.x += (lean - this.spine.rotation.x) * Math.min(1, dt * 10);
-    this.spine.rotation.y = Math.sin(this.phase) * amp * 0.12;
+    this.flinch = Math.max(0, (this.flinch || 0) - dt * 5);
+    this.spine.rotation.y = Math.sin(this.phase) * amp * 0.12 - this.hipYaw + (this.flinchSide || 0) * this.flinch * 0.25;
+    this.spine.rotation.x -= this.flinch * 0.12;
     const aim = Math.max(-1.0, Math.min(1.0, s.pitch));
     this.neck.rotation.x = aim * 0.5;
     this.recoil = Math.max(0, this.recoil - dt * 10);
     this.reloadDip += ((s.reloading ? 1 : 0) - this.reloadDip) * Math.min(1, dt * 8);
-    if (s.sprinting) {
+    if (s.sprinting && !this.unarmed) {
       // weapon held across the chest
       this.gunMount.rotation.set(-0.5, 0.9, 0.3);
       this.gunMount.position.set(0.04, 0.3, -0.18);
@@ -264,6 +300,17 @@ export class SoldierModel {
   }
 
   fired() { this.recoil = 1; }
+
+  /** Upper-body flinch when hit. */
+  hit(side) { this.flinch = 1; this.flinchSide = side; }
+
+  /** Distance LOD: drop shadows and the weapon detail when far away. */
+  setLod(far) {
+    if (this._far === far) return;
+    this._far = far;
+    for (const m of this.meshes) m.castShadow = !far;
+    if (this.gun) this.gun.group.visible = !far || this.unarmed;
+  }
 
   /** World position of the third-person muzzle. */
   muzzleWorld(out) {

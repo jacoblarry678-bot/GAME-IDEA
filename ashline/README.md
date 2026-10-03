@@ -52,6 +52,8 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
 - **Movement**: walk, sprint, crouch, slide, jump, mantle onto ledges and vault low walls.
 - **Gunplay**: ADS with sights lined up, recoil you can control, spread and bloom, damage falloff, a headshot multiplier, hit markers, damage indicators and a kill feed. There is also a minimap that shows enemies when they fire.
 - **The full loop**: main menu → setup → loadout → match → results → play again. Five loadout presets and your local career stats are saved in the browser.
+- **Firing Range**: training targets at 5–90 m, with a live readout of damage, shots to kill and TTK, and observed time-to-kill (Milestone 2).
+- **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
 
