@@ -7,8 +7,10 @@
 | All surface textures (asphalt, gravel, concrete, brick, corrugated metal, containers, wood, hazard paint, camo, fabrics, gun finishes) | Procedurally generated at load time in `src/world/textures.js` | Original (this project) |
 | Normal & roughness maps | Derived at load time from the procedural height fields | Original |
 | Signs, container branding (Kestrel Lines, Orba Freight, Nordvast, Tallis & Rowe, Meridian Box) | Canvas-drawn text in `src/world/textures.js` (fictional companies) | Original |
-| Map (Cinder Yard) | Built in code: `src/world/maps/cinderYard.js` | Original |
-| Weapon models (KV-7 Rampart, Vesper-9, Brakk-12, LR-338 Longreach, HX-9 Warden), grenades | Built in code: `src/fx/weaponModels.js` (fictional designs) | Original |
+| Maps (Cinder Yard, Old Quarter, Signal Station) | Built in code: `src/world/maps/*.js` with the shared kit `src/world/maps/kit.js` | Original |
+| Cobblestone, plaster, cut stone, dirt, rock, hedge, awnings, chain-link | Procedural in `src/world/textures.js` | Original |
+| Place and business names on signs (e.g. Place du Tram, Café Lumière, Signal Station 14) | Canvas text, fictional | Original |
+| Weapon models (16 fictional designs incl. KV-7 Rampart, Tarn-556, Meridian-B, Bastion .30, Vesper-9, Wasp MP, Hollow-X, Brakk-12, Rook Auto-12, LR-338 Longreach, Sentinel DMR, Drover LSW, Anvil-60, HX-9 Warden, Grizzly .50, breaching axe), attachments, grenades, flash, Bulwark | Built in code: `src/fx/weaponModels.js`, `src/fx/deployablesView.js` | Original |
 | Operator models | Built in code: `src/entities/soldierModel.js` | Original |
 | Gunshots, foley, footsteps, impacts, explosions, UI sounds | Synthesized at load time: `src/audio/audio.js` | Original |
 | Menu music & ambience | Synthesized at load time: `src/audio/audio.js` | Original |

@@ -1,8 +1,8 @@
 # OPERATION ASHLINE
 
 An original 3D military first-person shooter that runs in the browser. Fast
-movement and gunplay against bots on an industrial rail-yard map. Everything in
-it is made for this project: the map, weapons, characters, sounds and music are
+movement and gunplay against bots across three maps and six modes. Everything in
+it is made for this project: the maps, weapons, characters, sounds and music are
 generated in code when the game loads.
 
 > Offline build. Every other player in a match is a bot, and the game labels
@@ -40,11 +40,12 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
 | Reload | R | X |
 | Switch weapon | Mouse wheel · 1 / 2 | Y |
 | Melee | V or E | R3 |
-| Frag grenade / Smoke | G / Q | RB / LB |
+| Lethal (frag) / Tactical (smoke, flash or Bulwark) | G / Q | RB / LB |
+| Support: Recon Scan / Supply Drop / Area Strike | 3 / 4 / 5 | D-pad ← / ↑ / → |
 | Scoreboard | Tab | View |
 | Pause | Esc | Menu |
 
-## What you can play now (Milestone 1)
+## What you can play now (Milestones 1–4)
 
 - **Cinder Yard**: an industrial rail depot with a close-quarters warehouse, a rail yard with boxcars and a control booth, a container maze, a maintenance building, a long south road and two staging areas.
 - **Team Deathmatch** against up to 9 bots (5v5 with you), at four difficulty levels. You can set score and time limits and turn friendly fire on or off.
@@ -54,6 +55,14 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
 - **The full loop**: main menu → setup → loadout → match → results → play again. Five loadout presets and your local career stats are saved in the browser.
 - **Firing Range**: training targets at 5–90 m, with a live readout of damage, shots to kill and TTK, and observed time-to-kill (Milestone 2).
 - **Progression & cosmetics (Milestone 3)**: player and weapon levels, an 80-item cosmetic catalog with an Armory, a 50-tier battle pass (free + premium), daily and weekly challenges, and a demo Store. Every price uses clearly labelled **test credits**; there are no real payments.
+- **Milestone 4 content**:
+  - **Maps**: Old Quarter (town streets, a walled clock courtyard, enterable chapel, bakery, gendarmerie and hotel) and Signal Station (a fenced comms compound with tight interiors, open approaches, a dish field and a ridge road). Pick the map in Play setup; a map builds the first time you use it.
+  - **Modes**: Free-for-All, Domination (3 flags), Hardpoint (6 rotating zones), Elimination (rounds, no respawns, spectate) and Gun Game (16-step ladder ending on the axe), alongside Team Deathmatch. Private match settings cover map, mode, length, score limit, bot counts, difficulty and friendly fire.
+  - **16 weapons**: 4 assault rifles (including a bullpup, a battle rifle and a 3-round-burst carbine), 3 SMGs (one integrally suppressed), 2 shotguns, a bolt-action sniper and a DMR, 2 LMGs, 2 pistols (including a revolver) and a breaching axe. New weapons unlock by player level.
+  - **Gunsmith**: 16 attachments across optic, muzzle, barrel, magazine, stock and underbarrel, up to 5 per weapon. Each one lists its upside and its drawback, and they unlock by weapon level (never sold).
+  - **Perks**: 9 in 3 slots, unlocked by player level.
+  - **Equipment**: an FL-2 flash grenade (blinds by distance and facing; the reduced-flash accessibility setting caps it) and the Bulwark deployable cover (blocks bullets until destroyed).
+  - **Support abilities**: earned through consecutive eliminations: Recon Scan (4), Supply Drop (6) and Area Strike (8). Hardline lowers each by one. Bots use them too.
 - **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
@@ -62,16 +71,18 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
 src/
   core/      engine (renderer, viewmodel overlay, IBL, shadows), input (KB/M + gamepad, rebinding),
              settings (schema-driven), profile + storage (versioned, validated localStorage)
-  data/      weapons, equipment, cosmetics catalog, season/pass, challenges, store catalog ← editable data
+  data/      weapons, attachments, perks, support abilities, equipment, cosmetics, season/pass,
+             challenges, store catalog ← editable data with stable ids
   world/     collision (AABB + spatial hash + DDA raycast + kinematic mover), nav grid (A*),
-             procedural textures/materials, map builder, sky, maps/cinderYard.js
+             procedural textures/materials, map builder, sky, maps/ (kit + Cinder Yard, Old Quarter, Signal Station)
   entities/  combatant (shared player/bot simulation), bot AI, soldier model (rigid-skinned)
-  combat/    weapon state machine, grenades & smoke
+  combat/    weapon state machine, grenades/smoke/flash, deployables (shields, supply drops, strikes, recon)
   game/      match (rules, damage, scoring, spawning), modes, spawns, game (presentation + player control)
   fx/        viewmodel (procedural animation), weapon models, effects (instanced particles, tracers, decals)
   audio/     synthesized SFX + music, spatial playback, announcer
   ui/        menus/screens, HUD, controller menu navigation, styles
-tools/       sim.mjs (headless bot match), test.mjs (rules tests), e2e.mjs + shot.mjs + beauty.mjs (browser)
+tools/       sim.mjs (headless bot match), test.mjs (rules tests), mapcheck.mjs (map validation),
+             e2e.mjs, modes.mjs, m3.mjs, m4.mjs, maps.mjs, vm.mjs, beauty.mjs (browser checks)
 ```
 
 Players and bots run through the same `Combatant` simulation, driven by the
@@ -85,11 +96,15 @@ The match simulation does not depend on rendering. `tools/sim.mjs` and
 ## Testing
 
 ```bash
-npm test                         # 83 headless rules tests (movement, weapons, damage, grenades, spawns, match end, economy)
-npm run sim -- 3 regular 5       # 3-minute bots-only 5v5 match, reports kills/stuck bots/perf
+npm test                         # 172 headless tests (movement, weapons, damage, equipment, modes, economy, attachments, maps)
+npm run sim -- 3 regular 5 dom old_quarter   # bots-only match: minutes, difficulty, bots per team, mode, map
+npm run maps                     # validates spawns, nav connectivity and objectives on every map
 npm run build && npm run preview &
 npm run e2e                      # full browser flow in headless Chromium (needs Playwright)
+node tools/modes.mjs             # every mode in the browser
 node tools/m3.mjs                # progression/cosmetics/store/pass browser flow
+node tools/m4.mjs                # unlocks, gunsmith, perks, support abilities, shield, flash
+node tools/maps.mjs              # map picker + screenshots of the new maps
 node tools/range.mjs             # firing range check
 node tools/beauty.mjs high       # review screenshots from fixed viewpoints
 ```

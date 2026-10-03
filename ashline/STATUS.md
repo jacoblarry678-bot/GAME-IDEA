@@ -69,10 +69,34 @@ incomplete or still a known issue, and what comes next.
 
 **Not a real economy**: all currency is TEST credits. Purchases are simulated and stored in this browser's local storage, which a user can edit. A release would need server-side validation of balances, purchases and entitlements, and no real payment processing exists in this build.
 
-## Next: Milestone 4 (more content)
-- Expand the arsenal to 16 weapons, adding attachments, perks and support abilities.
-- New maps: Old Quarter and Signal Station.
-- New modes: Free-for-All, Domination, Hardpoint, Elimination and Gun Game.
+## Milestone 4: More content (complete; optional co-op survival not built)
 
-## Later milestones
-- M5: real online play needs a server-authoritative game server, accounts and a backend. Until then, online features stay labelled unavailable.
+**Added**
+- **Modes**: Free-for-All, Domination (3 flags with capture/contest/neutralize), Hardpoint (6 rotating zones per map), Elimination (rounds, no respawns, spectator camera) and Gun Game (16-step ladder ending on the axe, melee sets the victim back). Bots play the objectives with objective and slayer roles.
+- **Private match controls**: map, mode, time limit or round time, score limit or rounds to win, bots per team (or opponents in FFA), difficulty and friendly fire.
+- **16 weapons**: KV-7, Tarn-556 (bullpup), Meridian-B (3-round burst), Bastion .30 (battle rifle); Vesper-9, Wasp MP, Hollow-X (integrally suppressed); Brakk-12 (pump), Rook Auto-12; LR-338 Longreach (bolt), Sentinel DMR (3x optic); Drover LSW (drum), Anvil-60 (belt); HX-9 Warden, Grizzly .50 (revolver); and a breaching axe (one-hit melee weapon, can't aim). Each has its own model, sight picture, sound and unlock level, and bots use all of them.
+- **Gunsmith**: 16 attachments in 6 slots (optic, muzzle, barrel, magazine, stock, underbarrel), up to 5 per weapon. Every attachment states its upside and its drawback, and stat bars show the change against the base weapon. Optics, muzzles, barrels, magazines and underbarrels change the model and the sight picture. Attachments unlock by weapon level (2–19) and are never sold. Bots get random builds.
+- **Perks**: 9 in 3 slots, unlocked by player level: Quickdraw, Scavenger, Flak Lining; Hardline, Ghost, Fast Hands; Resolve, Dexterity, Dead Silence. Bots now hear footsteps, which Dead Silence counters.
+- **Equipment**: the FL-2 flash grenade blinds by distance and facing; the reduced-flash setting caps the white-out, and blinded bots lose track of you. The Bulwark deployable cover is an axis-aligned barrier that blocks bullets and blasts until it has taken 450 damage or 30 s have passed. Both unlock by level.
+- **Support abilities** come from consecutive eliminations and reset on death: Recon Scan (4) reveals enemies on the minimap and to allied bots, Supply Drop (6) restocks ammo, equipment and health, and Area Strike (8) hits the aimed point after a visible warning. Ghost hides from Recon, and strike kills don't chain into more abilities. There is a HUD strip, announcer lines, kill-feed notices and world visuals, and bots use all three.
+- **Maps**: Old Quarter (town streets, a walled clock courtyard, an enterable chapel, bakery, gendarmerie, hotel, bookshop, pharmacy and café, and a canal road) and Signal Station (a fenced compound with an operations building, generator shed and relay hut, a 42 m lattice mast, a dish field and survey bunker, a ridge road, a motor pool and a helipad). Each has team and neutral spawns, bot hotspots, 3 flags and 6 hardpoints. Pick them in Play setup; each map builds the first time it's used.
+- **Profile v3** stores attachment builds and perks. Loading an older save validates it: locked or unknown weapons, attachments, perks and equipment fall back to defaults. Results list new weapons and new attachments.
+
+**Verification run**
+- `npm test`: **172/172**. New tests cover burst fire, the axe, unlock gating, attachment math and sanitizing, Quickdraw, Hardline, Recon and Ghost, Supply Drop, Area Strike, flash, Bulwark (blocks, breaks and frees space), Flak, and every mode for 45 s on each of the 3 maps.
+- `npm run maps`: 0 problems. All spawns are clear, every hotspot and objective is on the main nav region, and 552 of 552 spawn→objective paths resolve on each map.
+- `tools/sim.mjs`, 8-minute 5v5 runs on the new maps in TDM, DOM and HP: 0–2 stuck reports per run, and those that remain are marksmen holding long sightlines. Winners alternate across repeated runs. An early Signal Station Hardpoint layout favoured the east team, so its zone list was rebalanced.
+- Browser (headless Chromium, SwiftShader): `e2e` 31/31; `modes` 27/27; `m3` 15/15; `m4` 16/16 (unlock gating, gunsmith, perks, keys 3/4/5, HUD strip, Bulwark, flash overlay); `maps` 4/4 (map picker, both new maps start, screenshots reviewed).
+- One run of `modes.mjs` exited early with a harness exception. It did not reproduce in two reruns (27/27 both times), so it is noted rather than explained.
+
+**Known issues / limits**
+- GPU performance is still unmeasured; see M1. On SwiftShader the first build of a new map takes about 5–6 s.
+- The optional **co-op survival** mode was not built. It is listed as planned in Play setup and never offered as playable.
+- The axe uses the generic melee animation. The Tac Laser has no visible beam; its gameplay effect is that bots notice you more easily.
+- The DMR's 3x sight picture is a small eyepiece view, not a full-screen scope.
+- The Bulwark snaps to the nearest axis because the collision world is axis-aligned.
+- Bot balance was checked by simulation samples, not by human playtesting.
+
+## Next: Milestone 5 (online), only if the environment supports it
+- Real online play needs a server-authoritative game server, accounts, matchmaking and a backend for progression and entitlements. None of that exists in this build or this environment, so online features stay labelled unavailable.
+- Smaller follow-ups that could come first: co-op survival, a dedicated axe swing animation, a laser beam visual, and GPU performance profiling on real hardware.

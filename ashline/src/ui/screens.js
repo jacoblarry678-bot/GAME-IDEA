@@ -17,7 +17,7 @@ import { PERKS, PERK_SLOTS, perksForSlot } from '../data/perks.js';
 import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
 
-export const VERSION = 'M3 · build 0.3.0';
+export const VERSION = 'M4 · build 0.4.0';
 
 export class Screens {
   constructor(app) {
@@ -496,7 +496,7 @@ const SCREENS = {
       node.innerHTML = `<div class="page">${head('Local profile', 'Career')}
         <div class="page-body scroll" style="flex-direction:column">
           <div class="stat-tiles">${tiles.map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
-          <div class="muted small" style="margin-top:14px">Career stats are stored locally in this browser. Persistent progression, weapon levels and unlocks arrive in Milestone 3.</div>
+          <div class="muted small" style="margin-top:14px">Career stats, levels, unlocks and purchases are stored locally in this browser (offline build — not a secure or synced save).</div>
           <div class="slot" style="max-width:420px;margin-top:10px"><div class="lab">Operator name</div><input class="name-in" maxlength="16" value="${esc(app.profile.data.name)}" style="width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:8px;font-size:16px" /></div>
         </div>
         <div class="page-foot"><button class="btn" data-a="back">Back</button><div class="spacer"></div><button class="btn danger" data-a="reset">Reset Career Stats</button></div></div>`;
@@ -523,22 +523,24 @@ const SCREENS = {
             ${Object.keys(DEFAULT_BINDINGS).map((a) => `<div>${esc(ACTION_LABELS[a])}</div><div>${key(a)}</div>`).join('')}
             <div>Pause</div><div><span class="key">ESC</span></div>
           </div>
-          <p class="muted small">Sprint + Crouch while moving to slide. Jump into a ledge or low wall to mantle/vault. Controller: standard layout (RT fire, LT aim, A jump, B crouch, X reload, Y swap, RB lethal, LB tactical, L3 sprint, R3 melee).</p>
+          <p class="muted small">Sprint + Crouch while moving to slide. Jump into a ledge or low wall to mantle/vault. Controller: standard layout (RT fire, LT aim, A jump, B crouch, X reload, Y swap, RB lethal, LB tactical, L3 sprint, R3 melee, D-pad ←/↑/→ support abilities).</p>
         </div>
         <div class="panel" style="flex:1;min-width:300px">
-          <h3 class="title">In this build (Milestone 1)</h3>
+          <h3 class="title">In this build (Milestone 4)</h3>
           <ul class="small" style="line-height:1.7;margin:0;padding-left:18px">
-            <li>Cinder Yard — industrial rail depot map</li>
-            <li>Team Deathmatch vs bots (up to 5v5), 4 difficulty levels</li>
-            <li>5 weapons (AR, SMG, shotgun, sniper, pistol), knife melee, frag + smoke grenades</li>
-            <li>Sprint, crouch, slide, jump, mantle/vault, ADS, health regen, spawn protection</li>
-            <li>Loadout presets, settings with rebinding, controller support, local career stats</li>
+            <li>3 maps: Cinder Yard, Old Quarter, Signal Station · plus a Firing Range</li>
+            <li>6 modes vs bots: Team Deathmatch, Free-for-All, Domination, Hardpoint, Elimination, Gun Game · private match settings</li>
+            <li>16 weapons (4 AR, 3 SMG, 2 shotguns, sniper + DMR, 2 LMGs, 2 pistols, breaching axe)</li>
+            <li>Gunsmith: 16 attachments in 6 slots, each with a drawback, unlocked by weapon level</li>
+            <li>9 perks · frag, smoke, flash, Bulwark deployable cover</li>
+            <li>Support abilities from kill streaks: Recon Scan (4), Supply Drop (6), Area Strike (8)</li>
+            <li>Player and weapon levels, cosmetics, 50-tier battle pass, challenges, demo store (test credits only)</li>
           </ul>
           <h3 class="title" style="margin-top:14px">Not in this build</h3>
           <ul class="small muted" style="line-height:1.7;margin:0;padding-left:18px">
             <li>Online multiplayer — not available; every other player is a labelled bot</li>
-            <li>Other modes, maps, attachments, perks, killstreak support abilities</li>
-            <li>Progression, battle pass, cosmetics shop (planned with demo currency only)</li>
+            <li>Co-op survival mode (planned)</li>
+            <li>Real payments — none; store and pass use test credits stored on this device</li>
           </ul>
         </div>
         <div class="panel" style="flex:1;min-width:300px">
