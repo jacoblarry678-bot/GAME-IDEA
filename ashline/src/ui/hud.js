@@ -14,6 +14,7 @@ export class Hud {
       <div class="nameplates"></div>
       <div class="vignette"></div>
       <div class="flash-white"></div>
+      <div class="blind"></div>
       <div class="scope"><div class="mask"></div><div class="line h"></div><div class="line v"></div><div class="line h thick-l"></div><div class="line h thick-r"></div><div class="line v thick-b"></div><div class="dot"></div></div>
       <div class="xh"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="d"></i><i class="c"></i></div>
       <div class="hitm"><i style="transform:rotate(45deg) translateY(-9px)"></i><i style="transform:rotate(135deg) translateY(-9px)"></i><i style="transform:rotate(225deg) translateY(-9px)"></i><i style="transform:rotate(315deg) translateY(-9px)"></i></div>
@@ -27,6 +28,7 @@ export class Hud {
       <div class="hud-tr"><div class="hs"><div class="killfeed"></div><div class="fps"></div></div></div>
       <div class="hud-bl"><div class="hs"><div class="hp"><div class="lab"><span>HEALTH</span><span class="hpv">100</span></div><div class="barbg"><div class="fill"></div></div></div></div></div>
       <div class="hud-br"><div class="hs">
+        <div class="support"></div>
         <div class="wname"></div>
         <div class="ammo"><span class="mag">30</span><span class="res">/ 120</span></div>
         <div class="equip"><span class="e lethal"><span class="ic"></span><span class="lk"></span> <span class="lc"></span></span><span class="e tactical"><span class="ic sq"></span><span class="tk"></span> <span class="tc"></span></span></div>
@@ -49,6 +51,7 @@ export class Hud {
       hp: q('.hp'), hpv: q('.hpv'), hpfill: q('.hp .fill'), wname: q('.wname'), mag: q('.mag'), res: q('.res'),
       lethal: q('.lethal'), tactical: q('.tactical'), lk: q('.lk'), lc: q('.lc'), tk: q('.tk'), tc: q('.tc'),
       popups: q('.popups'), prompt: q('.prompt'), protect: q('.protect'), center: q('.center-msg'), death: q('.death'),
+      blind: q('.blind'), support: q('.support'),
       captions: q('.captions'), sb: q('.scoreboard'), np: q('.nameplates'), rp: q('.range-panel'), topc: q('.hud-tc'), om: q('.obj-markers'), os: q('.obj-strip'),
     };
     this.miniCtx = this.$.mini.getContext('2d');
@@ -219,7 +222,14 @@ export class Hud {
     const col = (c) => (c.team === this.playerTeam ? f : e);
     const nm = (c) => `${c.isBot ? '' : '★ '}${esc(c.name)}`;
     const row = el('div', { class: 'kf' });
-    const w = k.weapon === 'frag' ? 'FRAG' : k.weapon === 'melee' ? 'MELEE' : k.weapon === 'fall' ? 'FELL' : (k.weaponName || '');
+    if (k.system) {
+      row.innerHTML = `<span class="w">${esc(k.text)}</span>`;
+      this.$.kf.prepend(row);
+      while (this.$.kf.children.length > 6) this.$.kf.lastChild.remove();
+      setTimeout(() => row.remove(), 5000);
+      return;
+    }
+    const w = k.weapon === 'frag' ? 'FRAG' : k.weapon === 'strike' ? 'AREA STRIKE' : k.weapon === 'melee' ? 'MELEE' : k.weapon === 'fall' ? 'FELL' : (k.weaponName || '');
     if (k.killer && k.killer !== k.victim) {
       row.innerHTML = `<span style="color:${col(k.killer)}">${nm(k.killer)}</span><span class="w">${esc(w)}</span>${k.headshot ? '<span class="hs">HEADSHOT</span>' : ''}<span style="color:${col(k.victim)}">${nm(k.victim)}</span>`;
     } else {
@@ -255,6 +265,21 @@ export class Hud {
     this.$.captions.appendChild(c);
     while (this.$.captions.children.length > 3) this.$.captions.firstChild.remove();
     setTimeout(() => c.remove(), 3500);
+  }
+
+  /** Flash-grenade blindness (k = 0..1). Reduced-flash accessibility setting caps it. */
+  blind(k) {
+    const reduced = this.app.settings.data.accessibility.reducedFlash;
+    this.set('blind', Math.round(k * 50), () => {
+      this.$.blind.style.opacity = (Math.min(1, k * 1.3) * (reduced ? 0.55 : 1)).toFixed(2);
+      this.$.blind.classList.toggle('reduced', !!reduced);
+    });
+  }
+
+  /** Support ability strip: [{ id, name, key, have, need, ready }]. */
+  support(list, hidden) {
+    const html = hidden ? '' : list.map((a) => `<div class="sa ${a.ready ? 'ready' : ''}"><span class="key">${esc(a.key)}</span><span class="sn">${esc(a.name)}${a.ready > 1 ? ' ×' + a.ready : ''}</span><span class="pips">${a.ready ? 'READY' : Array.from({ length: a.need }, (_, i) => `<i class="${i < a.have ? 'on' : ''}"></i>`).join('')}</span></div>`).join('');
+    this.set('support', html, (v) => { this.$.support.innerHTML = v; });
   }
 
   flash(amount) {

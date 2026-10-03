@@ -15,6 +15,7 @@ import { createSky } from './world/sky.js';
 import { CINDER_YARD } from './world/maps/cinderYard.js';
 import { FIRING_RANGE } from './world/maps/firingRange.js';
 import { weaponMaterials, buildWeapon, buildCharm } from './fx/weaponModels.js';
+import { buildKey } from './data/attachments.js';
 import { finishMaterials } from './world/finishes.js';
 import { COSMETICS } from './data/cosmetics.js';
 import { Viewmodel } from './fx/viewmodel.js';
@@ -321,10 +322,10 @@ class WeaponPreview {
     this.t = 0;
   }
   /** look: { finish, charm } (optional) */
-  show(id, look = null) {
+  show(id, look = null, attachments = null) {
     if (!WEAPONS[id]) return;
     const finish = look?.finish || 'fn_factory', charm = look?.charm || 'ch_none';
-    const key = `w|${id}|${finish}|${charm}`;
+    const key = `w|${id}|${finish}|${charm}|${buildKey(attachments)}`;
     this.kind = 'weapon';
     this.group.visible = true;
     if (this.cur === key) return;
@@ -332,7 +333,7 @@ class WeaponPreview {
     for (const m of this.models.values()) m.visible = false;
     let m = this.models.get(key);
     if (!m) {
-      const built = buildWeapon(WEAPONS[id].model, finishMaterials(this.app.wmats, finish));
+      const built = buildWeapon(WEAPONS[id].model, finishMaterials(this.app.wmats, finish), { attachments });
       m = built.group;
       const c = COSMETICS[charm]?.charm;
       if (c && built.markers.charm) {

@@ -23,6 +23,9 @@ export const DEFAULT_BINDINGS = {
   lethal: ['KeyG', ''],
   tactical: ['KeyQ', ''],
   scoreboard: ['Tab', ''],
+  support1: ['Digit3', ''],
+  support2: ['Digit4', ''],
+  support3: ['Digit5', ''],
 };
 
 export const ACTION_LABELS = {
@@ -30,6 +33,7 @@ export const ACTION_LABELS = {
   jump: 'Jump / Mantle', crouch: 'Crouch / Slide', sprint: 'Sprint', fire: 'Fire', ads: 'Aim Down Sights',
   reload: 'Reload', swap: 'Switch Weapon', primary: 'Primary Weapon', secondary: 'Secondary Weapon',
   melee: 'Melee', lethal: 'Lethal Equipment', tactical: 'Tactical Equipment', scoreboard: 'Scoreboard',
+  support1: 'Recon Scan', support2: 'Supply Drop', support3: 'Area Strike',
 };
 
 export const DEFAULT_SETTINGS = {

@@ -18,7 +18,7 @@ export class CollisionWorld {
   /**
    * box: { minX,minY,minZ,maxX,maxY,maxZ, mat, bullet (blocks bullets), walk (can stand on), sight (blocks LOS) }
    */
-  add(b) {
+  add(b, dynamic = false) {
     const box = {
       minX: b.minX, minY: b.minY, minZ: b.minZ, maxX: b.maxX, maxY: b.maxY, maxZ: b.maxZ,
       mat: b.mat || 'concrete',
@@ -28,7 +28,9 @@ export class CollisionWorld {
       id: this.boxes.length,
       _s: 0,
     };
-    this.boxes.push(box);
+    if (b.shield) box.shield = b.shield;
+    if (!dynamic) this.boxes.push(box);
+    else box.dynamic = true;
     const c = this.cell;
     const x0 = Math.floor(box.minX / c), x1 = Math.floor(box.maxX / c);
     const z0 = Math.floor(box.minZ / c), z1 = Math.floor(box.maxZ / c);
@@ -40,13 +42,28 @@ export class CollisionWorld {
         arr.push(box);
       }
     }
-    if (box.maxX - box.minX < 400) {
+    if (!dynamic && box.maxX - box.minX < 400) {
       this.bounds.minX = Math.min(this.bounds.minX, box.minX);
       this.bounds.maxX = Math.max(this.bounds.maxX, box.maxX);
       this.bounds.minZ = Math.min(this.bounds.minZ, box.minZ);
       this.bounds.maxZ = Math.max(this.bounds.maxZ, box.maxZ);
     }
     return box;
+  }
+
+  /** Remove a dynamic box (deployables) from the spatial hash. */
+  remove(box) {
+    const c = this.cell;
+    const x0 = Math.floor(box.minX / c), x1 = Math.floor(box.maxX / c);
+    const z0 = Math.floor(box.minZ / c), z1 = Math.floor(box.maxZ / c);
+    for (let x = x0; x <= x1; x++) {
+      for (let z = z0; z <= z1; z++) {
+        const arr = this._cellList(x, z);
+        if (!arr) continue;
+        const i = arr.indexOf(box);
+        if (i >= 0) arr.splice(i, 1);
+      }
+    }
   }
 
   _cellList(x, z) {

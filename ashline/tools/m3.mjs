@@ -111,11 +111,13 @@ await p.waitForTimeout(300);
 await p.click('text=Start Match');
 await p.waitForTimeout(500);
 const inMatch = await ev((id) => { const g = window.__ashline.game; return { vmKey: g.vm.curKey, outfit: g.vm.outfitId, finish: window.__ashline.profile.data.equipped.weapons[g.player.weapon.def.id].finish }; }, target);
-check('equipped finish + outfit used by the first-person view in match', inMatch.vmKey.endsWith(inMatch.finish) && inMatch.outfit === 'of_kestrel_std', JSON.stringify(inMatch));
+check('equipped finish + outfit used by the first-person view in match', inMatch.vmKey.includes('|' + inMatch.finish + '|') && inMatch.outfit === 'of_kestrel_std', JSON.stringify(inMatch));
 await ev(() => { const g = window.__ashline.game; g.debugAdvance(3.4); });
 await p.waitForTimeout(1500);
 await S('09-match-cosmetics');
 // play it out with the autopilot
+// make one daily deterministic (the rotation is date-seeded)
+await ev(() => { const d = window.__ashline.profile.data; if (!d.challenges.daily.some((c) => c.id === 'd_play2')) d.challenges.daily[0] = { id: 'd_play2', progress: 0, done: false }; });
 const lvl0 = await ev(() => ({ xp: window.__ashline.profile.data.totalXp, pass: window.__ashline.profile.data.pass.xp }));
 await ev(() => window.__ashline.autopilot(true));
 for (let i = 0; i < 25; i++) { const st = await ev(() => { const g = window.__ashline.game; g.debugAdvance(10); return g.match.state; }); if (st === 'ended') break; }
@@ -123,7 +125,7 @@ await ev(() => { window.__ashline.game.endTimer = 10; });
 await p.waitForFunction(() => window.__ashline.state === 'results', null, { timeout: 60000 });
 await p.waitForTimeout(600);
 await S('10-results-rewards');
-const after = await ev(() => { const d = window.__ashline.profile.data; return { xp: d.totalXp, pass: d.pass.xp, matches: d.career.matches, wpn: d.weaponProgress.ar_kv7, ch: d.challenges.daily.map((c) => c.progress) }; });
+const after = await ev(() => { const d = window.__ashline.profile.data; return { xp: d.totalXp, pass: d.pass.xp, matches: d.career.matches, wpn: d.weaponProgress.ar_kv7, ch: [...d.challenges.daily, ...d.challenges.weekly].map((c) => c.progress) }; });
 check('match XP applied to player level and battle pass', after.xp > lvl0.xp && after.pass > lvl0.pass, JSON.stringify({ lvl0, after: { xp: after.xp, pass: after.pass } }));
 check('challenge progress tracked', after.ch.some((v) => v > 0), JSON.stringify(after.ch));
 const again = await ev(() => { const g = window.__ashline.game; const before = window.__ashline.profile.data.totalXp; g && g.buildResult(); return window.__ashline.profile.data.totalXp === before; });

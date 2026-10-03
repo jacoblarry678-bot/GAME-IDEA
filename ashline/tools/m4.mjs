@@ -28,8 +28,9 @@ await p.waitForTimeout(500);
 // ---- loadouts: unlock gating
 await p.click('.menu-btn[data-go=loadouts]');
 await p.waitForTimeout(600);
-const opts = await ev(() => ({ total: document.querySelectorAll('.wpn-opt[data-slot=primary], .wpn-opt[data-slot=secondary]').length, locked: document.querySelectorAll('.wpn-opt.locked').length }));
+const opts = await ev(() => ({ total: document.querySelectorAll('.wpn-opt[data-slot=primary], .wpn-opt[data-slot=secondary]').length, locked: document.querySelectorAll('.wpn-opt.locked[data-slot=primary], .wpn-opt.locked[data-slot=secondary]').length, perks: document.querySelectorAll('.wpn-opt[data-slot=perk]').length, lockedOther: document.querySelectorAll('.wpn-opt.locked[data-slot=perk], .wpn-opt.locked[data-slot=tactical]').length }));
 check('loadouts list all 16 weapons; most locked at level 1', opts.total === 16 && opts.locked === 11, JSON.stringify(opts));
+check('loadouts show 9 perks in 3 slots; advanced perks and tacticals locked at level 1', opts.perks === 9 && opts.lockedOther === 8, JSON.stringify(opts));
 await S('01-loadouts-locked');
 await p.click('.wpn-opt[data-id=lmg_anvil]');
 await p.waitForTimeout(300);
@@ -44,16 +45,43 @@ await p.waitForTimeout(500);
 await p.click('.wpn-opt[data-id=ar_meridian]');
 await p.click('.wpn-opt[data-id=melee_axe]');
 await p.waitForTimeout(300);
+await p.click('.wpn-opt[data-id=pk_scavenger]');
+await p.click('.wpn-opt[data-id=pk_ghost]');
+await p.click('.wpn-opt[data-id=shield]');
+await p.waitForTimeout(300);
 const st2 = await ev(() => ({ ...window.__ashline.profile.loadout, locked: document.querySelectorAll('.wpn-opt.locked').length }));
+check('perks and Bulwark equip at level 20', st2.perks.join() === 'pk_scavenger,pk_ghost,pk_resolve' && st2.tactical === 'shield', JSON.stringify(st2.perks) + st2.tactical);
 check('at level 20 every weapon is unlocked and equippable', st2.primary === 'ar_meridian' && st2.secondary === 'melee_axe' && st2.locked === 0, JSON.stringify(st2));
 await S('02-loadouts-unlocked');
+// ---- gunsmith
+await p.click('[data-a=gs-primary]');
+await p.waitForTimeout(500);
+const gs0 = await ev(() => ({ locked: document.querySelectorAll('.att-opt.locked').length, slots: document.querySelectorAll('.gs-slot').length }));
+await p.click('.att-opt[data-id=opt_reflex]');
+await p.waitForTimeout(200);
+const gs1 = await ev(() => ({ build: window.__ashline.profile.data.builds.ar_meridian, toast: [...document.querySelectorAll('.toast')].map((t) => t.textContent).join('|') }));
+check('gunsmith: attachments locked at weapon level 1 with a reason', gs0.slots === 6 && gs0.locked > 0 && !gs1.build?.optic && /weapon level/i.test(gs1.toast), JSON.stringify({ ...gs0, ...gs1 }));
+await ev(() => { const a = window.__ashline; a.profile.data.weaponProgress.ar_meridian.level = 20; a.profile.save(); a.screens.refreshTop(); });
+await p.waitForTimeout(400);
+await p.click('.gs-slot[data-s=optic]');
+await p.click('.att-opt[data-id=opt_3x]');
+await p.click('.gs-slot[data-s=magazine]');
+await p.click('.att-opt[data-id=mg_ext]');
+await p.click('.gs-slot[data-s=muzzle]');
+await p.click('.att-opt[data-id=mz_supp]');
+await p.waitForTimeout(500);
+const gs2 = await ev(() => ({ build: window.__ashline.profile.data.builds.ar_meridian, deltas: document.querySelectorAll('.wpn-info .bar b').length }));
+check('gunsmith: equip optic, magazine and muzzle; stats show tradeoffs', gs2.build.optic === 'opt_3x' && gs2.build.magazine === 'mg_ext' && gs2.build.muzzle === 'mz_supp' && gs2.deltas >= 2, JSON.stringify(gs2));
+await S('02b-gunsmith');
+await p.click('[data-screen=gunsmith] >> text=Back');
+await p.waitForTimeout(400);
 await p.click('[data-screen=loadouts] >> text=Back');
 await p.waitForTimeout(300);
 
 // ---- match with Meridian + axe
 await ev(() => { const a = window.__ashline; Object.assign(a.profile.data.matchSetup, { mode: 'tdm', botsAllies: 1, botsEnemies: 2 }); a.startMatch(); a.game.debugAdvance(3.4); });
 const g0 = await ev(() => { const g = window.__ashline.game, pl = g.player; pl.spawnProtectT = 99; return { w: pl.weapon.def.id, mag: pl.weapon.mag }; });
-check('match starts with the Meridian', g0.w === 'ar_meridian', JSON.stringify(g0));
+check('match starts with the Meridian and its attachments', g0.w === 'ar_meridian' && g0.mag === 45, JSON.stringify(g0));
 const burst = await ev(() => {
   const g = window.__ashline.game, pl = g.player, m = g.match;
   const before = pl.weapon.mag;
@@ -71,6 +99,25 @@ const axe = await ev(() => {
 check('axe equips and HUD shows no ammo count', axe.w === 'melee_axe' && axe.hud === '—', JSON.stringify(axe));
 await p.waitForTimeout(400);
 await S('03-axe-in-match');
+// ---- support abilities, shield, flash
+await ev(() => { const g = window.__ashline.game, pl = g.player; pl.cmd.swapTo = 0; for (let i = 0; i < 60; i++) { g.match.tick(1 / 60); g.update(1 / 60); } pl.abilities.recon = 1; pl.abilities.supply = 1; pl.abilities.strike = 1; pl.x = 12; pl.z = -1.5; pl.y = 0; g.look.yaw = -Math.PI / 2; g.look.pitch = -0.12; window.__ashline.input.enabled = true; });
+for (const k of ['Digit3', 'Digit4', 'Digit5']) {
+  await p.keyboard.down(k);
+  await ev(() => { const g = window.__ashline.game; window.__ashline.input.poll?.(); g.update(1 / 60); g.match.tick(1 / 60); });
+  await p.keyboard.up(k);
+  await ev(() => { const g = window.__ashline.game; window.__ashline.input.poll?.(); g.update(1 / 60); g.match.tick(1 / 60); });
+}
+const sup = await ev(() => { const g = window.__ashline.game, m = g.match, d = m.deployables; return { a: g.player.abilities, recon: (d.recon[0] || 0) > m.time, drops: d.drops.length, strikes: d.strikes.length, hud: document.querySelector('#hud .support')?.textContent || '' }; });
+check('keys 3/4/5 call Recon Scan, Supply Drop and Area Strike', sup.recon && sup.drops === 1 && sup.strikes === 1 && sup.a.recon + sup.a.supply + sup.a.strike === 0, JSON.stringify(sup));
+check('HUD shows the support ability strip', /recon scan/i.test(sup.hud) && /area strike/i.test(sup.hud), sup.hud.slice(0, 80));
+await ev(() => { const g = window.__ashline.game; for (let i = 0; i < 90; i++) { g.match.tick(1 / 60); g.update(1 / 60); } });
+await p.waitForTimeout(500);
+await S('04-support');
+const sh = await ev(() => { const g = window.__ashline.game, pl = g.player; pl.cmd.tactical = false; for (let i = 0; i < 3; i++) g.match.tick(1 / 60); g.look.yaw = Math.PI / 2; g.look.pitch = 0; pl.cmd.yaw = Math.PI / 2; pl.tactical.count = 1; for (let i = 0; i < 40; i++) { pl.cmd.yaw = Math.PI / 2; pl.cmd.tactical = i < 2; g.match.tick(1 / 60); g.update(1 / 60); } return { n: g.match.deployables.shields.length, view: g.depView.views.size }; });
+check('Bulwark shield deploys with a world model', sh.n === 1 && sh.view >= 1, JSON.stringify(sh));
+const fl = await ev(() => { const g = window.__ashline.game, pl = g.player, m = g.match; m.projectiles.flash({ x: pl.x - 3, y: pl.y + 1.3, z: pl.z, def: { radius: 14, maxBlind: 3.6 }, owner: m.combatants.find((c) => c.team !== pl.team) }); g.update(1 / 60); return { t: pl.blindT, op: Number(getComputedStyle(document.querySelector('#hud .blind')).opacity) }; });
+check('flash blinds the player with a white-out overlay', fl.t > 1 && fl.op > 0.5, JSON.stringify(fl));
+await S('05-flashed');
 const bots = await ev(() => { const g = window.__ashline.game; for (let i = 0; i < 600; i++) g.update(1 / 60); return g.match.combatants.filter((c) => c.isBot).map((c) => c.weapon.def.id); });
 check('bots run 10 s alongside new weapons without errors', bots.length === 3, bots.join());
 check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));

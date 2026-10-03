@@ -9,13 +9,15 @@
  */
 import { load, save, mergeDefaults } from './storage.js';
 import { WEAPONS, EQUIPMENT, PRIMARY_IDS } from '../data/weapons.js';
+import { sanitizeBuild, attachmentsFor, ATTACHMENTS, ATTACH_SLOTS, MAX_ATTACHMENTS } from '../data/attachments.js';
+import { PERKS, DEFAULT_PERKS } from '../data/perks.js';
 import { COSMETICS, COSMETIC_LIST, DEFAULT_ITEMS, RARITY } from '../data/cosmetics.js';
 import { SEASON, PASS_TIERS } from '../data/season.js';
 import { DAILY_POOL, WEEKLY_POOL, DAILY_SLOTS, WEEKLY_SLOTS, periodKeys, pickChallenges } from '../data/challenges.js';
 import { BUNDLES, itemPrice, bundlePrice } from '../data/shop.js';
 import { MODES } from '../game/modes.js';
 
-export const PROFILE_VERSION = 2;
+export const PROFILE_VERSION = 3;
 export const MAX_LEVEL = 55;
 export const MAX_WEAPON_LEVEL = 20;
 
@@ -30,11 +32,11 @@ const DEFAULT_PROFILE = {
   name: 'Operator',
   activeLoadout: 0,
   loadouts: [
-    { name: 'RIFLEMAN', primary: 'ar_kv7', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke' },
-    { name: 'BREACHER', primary: 'smg_vesper', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke' },
-    { name: 'POINTMAN', primary: 'sg_brakk', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke' },
-    { name: 'OVERWATCH', primary: 'sr_longreach', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke' },
-    { name: 'CUSTOM 5', primary: 'ar_kv7', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke' },
+    { name: 'RIFLEMAN', primary: 'ar_kv7', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
+    { name: 'BREACHER', primary: 'smg_vesper', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
+    { name: 'POINTMAN', primary: 'sg_brakk', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
+    { name: 'OVERWATCH', primary: 'sr_longreach', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
+    { name: 'CUSTOM 5', primary: 'ar_kv7', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
   ],
   matchSetup: { mode: 'tdm', map: 'cinder_yard', botsAllies: 4, botsEnemies: 5, difficulty: 'regular', scoreLimit: 75, timeLimit: 10, friendlyFire: false },
   career: { matches: 0, wins: 0, losses: 0, draws: 0, kills: 0, deaths: 0, assists: 0, headshots: 0, shots: 0, hits: 0, score: 0, bestStreak: 0, timePlayed: 0 },
@@ -46,6 +48,7 @@ const DEFAULT_PROFILE = {
   owned: {},
   equipped: { operator: 'op_voss', outfits: {}, weapons: {}, card: 'cd_recruit', emblem: 'em_chevron', banner: 'bn_steel' },
   weaponProgress: {},
+  builds: {},
   pass: { season: SEASON.id, xp: 0, premium: false, claimed: { free: {}, premium: {} } },
   challenges: { day: -1, week: -1, daily: [], weekly: [] },
   purchases: [],
@@ -57,7 +60,7 @@ export class Profile {
     const saved = load('profile', null);
     this.data = mergeDefaults(DEFAULT_PROFILE, saved);
     // open maps are not covered by mergeDefaults' key filter; restore them from the save
-    for (const k of ['owned', 'weaponProgress']) this.data[k] = isObj(saved?.[k]) ? { ...saved[k] } : {};
+    for (const k of ['owned', 'weaponProgress', 'builds']) this.data[k] = isObj(saved?.[k]) ? { ...saved[k] } : {};
     this.data.equipped.outfits = isObj(saved?.equipped?.outfits) ? { ...saved.equipped.outfits } : {};
     this.data.equipped.weapons = isObj(saved?.equipped?.weapons) ? { ...saved.equipped.weapons } : {};
     this.data.pass.claimed = { free: { ...(saved?.pass?.claimed?.free || {}) }, premium: { ...(saved?.pass?.claimed?.premium || {}) } };
@@ -76,14 +79,17 @@ export class Profile {
     d.version = PROFILE_VERSION; // v1 saves (M1/M2) migrate by filling the new fields with defaults
     d.level = clampInt(d.level, 1, MAX_LEVEL);
     const ok = (id, slot) => WEAPONS[id]?.slot === slot && this.weaponUnlocked(id);
+    const eqOk = (id, slot) => EQUIPMENT[id]?.slot === slot && d.level >= (EQUIPMENT[id].unlockLevel || 1);
+    const perkOk = (id, i) => PERKS[id]?.slot === i + 1 && d.level >= PERKS[id].unlockLevel;
     d.loadouts = DEFAULT_PROFILE.loadouts.map((def, i) => {
       const s = d.loadouts?.[i] || {};
       return {
         name: typeof s.name === 'string' && s.name.length <= 16 ? s.name : def.name,
         primary: ok(s.primary, 'primary') ? s.primary : def.primary,
         secondary: ok(s.secondary, 'secondary') ? s.secondary : def.secondary,
-        lethal: EQUIPMENT[s.lethal]?.slot === 'lethal' ? s.lethal : def.lethal,
-        tactical: EQUIPMENT[s.tactical]?.slot === 'tactical' ? s.tactical : def.tactical,
+        lethal: eqOk(s.lethal, 'lethal') ? s.lethal : def.lethal,
+        tactical: eqOk(s.tactical, 'tactical') ? s.tactical : def.tactical,
+        perks: DEFAULT_PERKS.map((dp, i) => (perkOk(s.perks?.[i], i) ? s.perks[i] : dp)),
       };
     });
     if (!(d.activeLoadout >= 0 && d.activeLoadout < d.loadouts.length)) d.activeLoadout = 0;
@@ -102,6 +108,7 @@ export class Profile {
     for (const id of WEAPON_IDS) {
       const wp = d.weaponProgress[id];
       d.weaponProgress[id] = { xp: Math.max(0, wp?.xp | 0), level: clampInt(wp?.level || 1, 1, MAX_WEAPON_LEVEL), kills: Math.max(0, wp?.kills | 0) };
+      d.builds[id] = sanitizeBuild(WEAPONS[id], d.builds?.[id], d.weaponProgress[id].level);
       const eq = d.equipped.weapons[id] || {};
       d.equipped.weapons[id] = {
         finish: this.owns(eq.finish) && COSMETICS[eq.finish].type === 'finish' ? eq.finish : 'fn_factory',
@@ -120,6 +127,30 @@ export class Profile {
   }
 
   get loadout() { return this.data.loadouts[this.data.activeLoadout]; }
+  /** Loadout as the match needs it: weapons, equipment, perks and attachment builds. */
+  get matchLoadout() {
+    const lo = this.loadout;
+    return { ...lo, perks: [...lo.perks], builds: { [lo.primary]: { ...this.data.builds[lo.primary] }, [lo.secondary]: { ...this.data.builds[lo.secondary] } } };
+  }
+  equipmentUnlocked(id) { return (this.data.level | 0 || 1) >= (EQUIPMENT[id]?.unlockLevel || 1); }
+  perkUnlocked(id) { return (this.data.level | 0 || 1) >= (PERKS[id]?.unlockLevel || 1); }
+
+  /** Attach (or clear with null) an attachment. Returns { ok, reason }. */
+  setAttachment(weaponId, slot, attId) {
+    const def = WEAPONS[weaponId];
+    if (!def || !ATTACH_SLOTS.includes(slot)) return { ok: false, reason: 'Unknown weapon or slot' };
+    const build = { ...(this.data.builds[weaponId] || {}) };
+    if (!attId) { delete build[slot]; this.data.builds[weaponId] = build; this.save(); return { ok: true }; }
+    const a = attachmentsFor(def).find((x) => x.id === attId);
+    if (!a || a.slot !== slot) return { ok: false, reason: 'Not compatible with this weapon' };
+    const lvl = this.data.weaponProgress[weaponId].level;
+    if (lvl < a.level) return { ok: false, reason: `Reach weapon level ${a.level} to unlock` };
+    if (!build[slot] && Object.keys(build).length >= MAX_ATTACHMENTS) return { ok: false, reason: `Maximum ${MAX_ATTACHMENTS} attachments — remove one first` };
+    build[slot] = attId;
+    this.data.builds[weaponId] = build;
+    this.save();
+    return { ok: true };
+  }
   /** Weapons unlock by player level (data-driven `unlockLevel`); starters are level 1. */
   weaponUnlocked(id) { return (this.data.level | 0 || 1) >= (WEAPONS[id]?.unlockLevel || 1); }
   /** Weapons that unlocked between two player levels. */
@@ -438,7 +469,9 @@ export class Profile {
       const wxp = k * 150 + h * 50 + 150;
       const before = this.data.weaponProgress[wid].level;
       const r = this.addWeaponXp(wid, Math.round(wxp * diffMul), k);
-      weapons.push({ id: wid, xp: Math.round(wxp * diffMul), from: before, to: this.data.weaponProgress[wid].level, levels: r.levels });
+      const to = this.data.weaponProgress[wid].level;
+      const atts = attachmentsFor(WEAPONS[wid]).filter((a) => a.level > before && a.level <= to).map((a) => a.id);
+      weapons.push({ id: wid, xp: Math.round(wxp * diffMul), from: before, to, levels: r.levels, atts });
     }
     const weaponUnlocks = this.grantEarnedUnlocks();
     return {

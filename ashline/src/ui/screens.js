@@ -12,6 +12,9 @@ import { COSMETICS, RARITY } from '../data/cosmetics.js';
 import { itemThumb, cardArt } from './art.js';
 import { xpToNext, MAX_LEVEL } from '../core/profile.js';
 import { SEASON } from '../data/season.js';
+import { ATTACHMENTS, ATTACH_SLOTS, SLOT_LABELS, MAX_ATTACHMENTS, attachmentsFor, applyAttachments } from '../data/attachments.js';
+import { PERKS, PERK_SLOTS, perksForSlot } from '../data/perks.js';
+import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 
 export const VERSION = 'M3 · build 0.3.0';
 
@@ -115,29 +118,38 @@ function stepper(value, fmt = (v) => v) {
   return w;
 }
 
-function bar(label, v, extra = '') {
-  return `<span>${esc(label)}</span><div class="bar"><i style="width:${Math.round(v * 100)}%"></i></div><span>${extra}</span>`;
+function bar(label, v, extra = '', base = null) {
+  const w = Math.round(Math.max(0, Math.min(1, v)) * 100);
+  let delta = '';
+  if (base !== null) {
+    const b = Math.round(Math.max(0, Math.min(1, base)) * 100);
+    if (Math.abs(w - b) >= 1) delta = `<b class="${w > b ? 'up' : 'down'}" style="left:${Math.min(w, b)}%;width:${Math.abs(w - b)}%"></b>`;
+    return `<span>${esc(label)}</span><div class="bar"><i style="width:${Math.min(w, b)}%"></i>${delta}</div><span>${extra}</span>`;
+  }
+  return `<span>${esc(label)}</span><div class="bar"><i style="width:${w}%"></i></div><span>${extra}</span>`;
 }
 
-function weaponStatsHtml(id) {
-  const d = WEAPONS[id];
+function weaponStatsHtml(id, build = null) {
+  const base = WEAPONS[id];
+  const d = build ? applyAttachments(base, build) : base;
   const s = weaponStats(d);
+  const sb = build ? weaponStats(base) : {};
   return `
     <div class="kicker">${esc(d.classLabel)}</div>
     <h2 class="title">${esc(d.name)}</h2>
     <div class="muted small" style="margin-bottom:10px">${esc(d.blurb)}</div>
     <div class="stats">
-      ${bar('Damage', s.damage, d.damage.near + (d.pellets > 1 ? '×' + d.pellets : ''))}
-      ${bar('Range', s.range, d.damage.end + 'm')}
-      ${bar('Fire Rate', s.fireRate, d.rpm)}
-      ${bar('Accuracy', s.accuracy, '')}
-      ${bar('Mobility', s.mobility, '')}
-      ${bar('Handling', s.handling, Math.round(d.handling.adsTime * 1000) + 'ms')}
+      ${bar('Damage', s.damage, d.damage.near + (d.pellets > 1 ? '×' + d.pellets : ''), build ? sb.damage : null)}
+      ${bar('Range', s.range, Math.round(d.damage.end) + 'm', build ? sb.range : null)}
+      ${bar('Fire Rate', s.fireRate, d.rpm, build ? sb.fireRate : null)}
+      ${bar('Accuracy', s.accuracy, '', build ? sb.accuracy : null)}
+      ${bar('Mobility', s.mobility, '', build ? sb.mobility : null)}
+      ${bar('Handling', s.handling, Math.round(d.handling.adsTime * 1000) + 'ms', build ? sb.handling : null)}
     </div>
     <div class="row small muted" style="margin-top:10px;gap:16px;flex-wrap:wrap">
       <span>MAG <b style="color:var(--text)">${d.mag}</b></span>
       <span>RESERVE <b style="color:var(--text)">${d.reserve}</b></span>
-      <span>RELOAD <b style="color:var(--text)">${d.tube ? d.tube.perShell + 's/shell' : d.reload + 's'}</b></span>
+      <span>RELOAD <b style="color:var(--text)">${d.tube ? d.tube.perShell.toFixed(2) + 's/shell' : d.reload.toFixed(2) + 's'}</b></span>${d.suppressed ? '<span class="pill">Suppressed</span>' : ''}
       <span>HEAD ×<b style="color:var(--text)">${d.mult.head}</b></span>
       <span>DMG @40m <b style="color:var(--text)">${Math.round(damageAt(d, 40) * (d.pellets || 1))}</b></span>
     </div>`;
@@ -297,22 +309,25 @@ const SCREENS = {
           </div>
           <div class="lo-edit scroll">
             <div class="slot"><div class="lab">Preset name</div><input class="name-in" maxlength="16" value="${esc(lo.name)}" style="width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:8px;font-family:var(--font-head);font-size:18px;letter-spacing:0.08em" /></div>
-            <div class="slot"><div class="lab">Primary</div><div class="wpn-opts">
+            <div class="slot"><div class="lab row">Primary<div class="spacer"></div><button class="btn sm" data-a="gs-primary">Gunsmith · ${buildCount(prof, lo.primary)}/${MAX_ATTACHMENTS}</button></div><div class="wpn-opts">
               ${PRIMARY_IDS.map((id) => wpnOpt(prof, lo, 'primary', id)).join('')}
             </div></div>
-            <div class="slot"><div class="lab">Secondary</div><div class="wpn-opts">
+            <div class="slot"><div class="lab row">Secondary<div class="spacer"></div>${WEAPONS[lo.secondary].melee ? '' : `<button class="btn sm" data-a="gs-secondary">Gunsmith · ${buildCount(prof, lo.secondary)}/${MAX_ATTACHMENTS}</button>`}</div><div class="wpn-opts">
               ${SECONDARY_IDS.map((id) => wpnOpt(prof, lo, 'secondary', id)).join('')}
             </div></div>
             <div class="slot"><div class="lab">Lethal</div><div class="wpn-opts">
-              ${LETHAL_IDS.map((id) => `<button class="wpn-opt ${lo.lethal === id ? 'sel' : ''}" data-slot="lethal" data-id="${id}"><div class="wn">${esc(EQUIPMENT[id].name)}</div><div class="wc">${esc(EQUIPMENT[id].blurb)}</div></button>`).join('')}
+              ${LETHAL_IDS.map((id) => eqOpt(prof, lo, 'lethal', id)).join('')}
             </div></div>
             <div class="slot"><div class="lab">Tactical</div><div class="wpn-opts">
-              ${TACTICAL_IDS.map((id) => `<button class="wpn-opt ${lo.tactical === id ? 'sel' : ''}" data-slot="tactical" data-id="${id}"><div class="wn">${esc(EQUIPMENT[id].name)}</div><div class="wc">${esc(EQUIPMENT[id].blurb)}</div></button>`).join('')}
+              ${TACTICAL_IDS.map((id) => eqOpt(prof, lo, 'tactical', id)).join('')}
             </div></div>
+            ${PERK_SLOTS.map((ps, i) => `<div class="slot"><div class="lab">Perk ${ps}</div><div class="wpn-opts three">
+              ${perksForSlot(ps).map((pk) => perkOpt(prof, lo, i, pk)).join('')}
+            </div></div>`).join('')}
             <div class="row"><button class="btn" data-a="armory">Finishes &amp; charms for ${esc(WEAPONS[previewId || lo.primary].name)}</button></div>
           </div>
         </div>
-        <div class="panel wpn-info">${weaponStatsHtml(previewId)}</div>
+        <div class="panel wpn-info">${weaponStatsHtml(previewId, prof.data.builds[previewId])}</div>
         <div class="page-foot">
           <button class="btn" data-a="back">Back</button>
           <div class="spacer"></div>
@@ -320,18 +335,19 @@ const SCREENS = {
           <button class="btn primary" data-a="active" ${sel === prof.data.activeLoadout ? 'disabled' : ''}>Set as Active</button>
         </div>
       </div>`;
-      app.preview.show(previewId, app.profile.data.equipped.weapons[previewId]);
+      app.preview.show(previewId, app.profile.data.equipped.weapons[previewId], prof.data.builds[previewId]);
       node.querySelectorAll('.lo-item').forEach((b) => { b.onclick = () => { sel = Number(b.dataset.i); previewId = null; render(); }; });
       node.querySelectorAll('.wpn-opt').forEach((b) => {
         b.onclick = () => {
-          if (b.classList.contains('locked')) { app.screens.toast(`${WEAPONS[b.dataset.id].name} unlocks at level ${WEAPONS[b.dataset.id].unlockLevel}`); return; }
+          if (b.classList.contains('locked')) { app.screens.toast(b.dataset.lock); return; }
+          if (b.dataset.slot === 'perk') { lo.perks[Number(b.dataset.i)] = b.dataset.id; prof.save(); render(); return; }
           lo[b.dataset.slot] = b.dataset.id;
           prof.save();
           if (WEAPONS[b.dataset.id]) previewId = b.dataset.id;
           render();
         };
-        b.onmouseenter = () => { if (WEAPONS[b.dataset.id]) { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(b.dataset.id); app.preview.show(b.dataset.id, app.profile.data.equipped.weapons[b.dataset.id]); } };
-        b.onmouseleave = () => { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(previewId); app.preview.show(previewId, app.profile.data.equipped.weapons[previewId]); };
+        b.onmouseenter = () => { if (WEAPONS[b.dataset.id]) { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(b.dataset.id, prof.data.builds[b.dataset.id]); app.preview.show(b.dataset.id, app.profile.data.equipped.weapons[b.dataset.id], prof.data.builds[b.dataset.id]); } };
+        b.onmouseleave = () => { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(previewId, prof.data.builds[previewId]); app.preview.show(previewId, app.profile.data.equipped.weapons[previewId], prof.data.builds[previewId]); };
       });
       const nameIn = node.querySelector('.name-in');
       nameIn.onchange = () => { lo.name = (nameIn.value || 'LOADOUT').toUpperCase().slice(0, 16); prof.save(); render(); };
@@ -339,11 +355,89 @@ const SCREENS = {
       node.querySelector('[data-a=back]').onclick = () => app.screens.back();
       node.querySelector('[data-a=range]').onclick = () => { prof.data.activeLoadout = sel; prof.save(); app.startRange(); };
       node.querySelector('[data-a=armory]').onclick = () => app.screens.push('armory', { tab: 'finish', weapon: previewId || lo.primary });
+      for (const sl of ['primary', 'secondary']) {
+        const gb = node.querySelector(`[data-a=gs-${sl}]`);
+        if (gb) gb.onclick = () => app.screens.push('gunsmith', { weapon: lo[sl] });
+      }
       node.querySelector('[data-a=active]').onclick = () => { prof.data.activeLoadout = sel; prof.save(); app.screens.toast(`${lo.name} is now your active loadout`); render(); };
     };
     render();
     entry.cleanup = () => app.preview.hide();
     entry.onBack = () => { app.screens.pop(); app.screens.refreshTop(); };
+    entry.refresh = render;
+  },
+
+  /** Gunsmith: attachments per weapon, earned by weapon level. */
+  gunsmith(app, node, p, entry) {
+    node.classList.add('shade');
+    app.setMenuCamera('closeup');
+    const prof = app.profile;
+    const id = p.weapon;
+    const def = WEAPONS[id];
+    const avail = attachmentsFor(def);
+    let slot = ATTACH_SLOTS.find((s) => avail.some((a) => a.slot === s));
+    const render = () => {
+      const build = prof.data.builds[id] || {};
+      const lvl = prof.data.weaponProgress[id].level;
+      const n = Object.keys(build).length;
+      const opts = avail.filter((a) => a.slot === slot);
+      node.innerHTML = `<div class="page">
+        ${head('Gunsmith', def.name)}
+        <div class="page-body">
+          <div class="lo-list scroll">
+            ${ATTACH_SLOTS.map((s) => {
+              const has = avail.some((a) => a.slot === s);
+              const cur = build[s] ? ATTACHMENTS[build[s]].name : has ? 'None' : 'Not available';
+              return `<button class="lo-item gs-slot ${s === slot ? 'sel' : ''}" data-s="${s}" ${has ? '' : 'disabled style="opacity:.4"'}><div class="n">${esc(SLOT_LABELS[s])}</div><div class="d">${esc(cur)}</div></button>`;
+            }).join('')}
+            <div class="muted small" style="margin-top:6px">Weapon level <b>${lvl}</b> · ${n}/${MAX_ATTACHMENTS} attachments. Attachments unlock by using this weapon in matches — they can't be bought.</div>
+          </div>
+          <div class="lo-edit scroll">
+            <div class="slot"><div class="lab">${esc(SLOT_LABELS[slot])}</div>
+              <button class="att-opt ${!build[slot] ? 'sel' : ''}" data-id=""><div class="wn">None</div><div class="wc">Remove the ${esc(SLOT_LABELS[slot].toLowerCase())} attachment.</div></button>
+              ${opts.map((a) => {
+                const locked = lvl < a.level;
+                return `<button class="att-opt ${build[slot] === a.id ? 'sel' : ''} ${locked ? 'locked' : ''}" data-id="${a.id}">
+                  <div class="row"><div class="wn">${esc(a.name)}</div><div class="spacer"></div>${locked ? `<span class="pill">🔒 Weapon LV ${a.level}</span>` : build[slot] === a.id ? '<span class="pill on">Equipped</span>' : ''}</div>
+                  <div class="pc">${a.pros.map((t) => `<span class="pro">+ ${esc(t)}</span>`).join('')}${a.cons.map((t) => `<span class="con">− ${esc(t)}</span>`).join('')}</div>
+                </button>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="panel wpn-info">${weaponStatsHtml(id, build)}</div>
+        <div class="page-foot">
+          <button class="btn" data-a="back">Back</button>
+          <div class="spacer"></div>
+          <button class="btn danger" data-a="clear" ${n ? '' : 'disabled'}>Remove all</button>
+          <button class="btn" data-a="range">Test in Firing Range</button>
+        </div>
+      </div>`;
+      app.preview.show(id, prof.data.equipped.weapons[id], build);
+      node.querySelectorAll('.gs-slot').forEach((b) => { b.onclick = () => { slot = b.dataset.s; render(); }; });
+      node.querySelectorAll('.att-opt').forEach((b) => {
+        b.onclick = () => {
+          const r = prof.setAttachment(id, slot, b.dataset.id || null);
+          if (!r.ok) { app.screens.toast(r.reason); return; }
+          app.audio.ui('select');
+          render();
+        };
+        b.onmouseenter = () => {
+          if (b.classList.contains('locked')) return;
+          const tb = { ...build };
+          if (b.dataset.id) tb[slot] = b.dataset.id; else delete tb[slot];
+          node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(id, tb);
+          app.preview.show(id, prof.data.equipped.weapons[id], tb);
+        };
+        b.onmouseleave = () => { node.querySelector('.wpn-info').innerHTML = weaponStatsHtml(id, build); app.preview.show(id, prof.data.equipped.weapons[id], build); };
+      });
+      node.querySelector('[data-a=back]').onclick = () => app.screens.back();
+      node.querySelector('[data-a=clear]').onclick = () => { for (const s of ATTACH_SLOTS) prof.setAttachment(id, s, null); render(); };
+      node.querySelector('[data-a=range]').onclick = () => app.startRange();
+    };
+    render();
+    entry.cleanup = () => app.preview.hide();
+    entry.onBack = () => { app.screens.pop(); const t = app.screens.top; if (t?.refresh) t.refresh(); else app.screens.refreshTop(); };
   },
 
   settings(app, node, p, entry) {
@@ -527,7 +621,7 @@ function rewardsHtml(app, rw, recorded) {
     <div class="row small" style="margin-top:8px"><b>LEVEL ${d.level}</b>${lvUp ? `<span class="pill on">Level up! ${rw.levelBefore} → ${rw.levelAfter}</span>` : ''}<div class="spacer"></div><span class="muted">${d.level >= MAX_LEVEL ? 'Max' : `${d.xp.toLocaleString('en-US')} / ${need.toLocaleString('en-US')}`}</span></div>
     <div class="xpbar"><i style="width:${pct}%"></i></div>
     <div class="row small" style="margin-top:8px"><span>Battle pass tier ${rw.pass.from} → <b>${rw.pass.to}</b></span>${rw.pass.to > rw.pass.from ? '<span class="pill on">Rewards ready to claim</span>' : ''}</div>
-    ${rw.weapons.length ? `<div class="small" style="margin-top:8px">${rw.weapons.map((w) => `<div class="row"><span class="muted">${esc(WEAPONS[w.id].name)}</span><div class="spacer"></div>+${w.xp} XP · LV ${w.to}${w.to > w.from ? ' <span class="pill on">Level up</span>' : ''}</div>`).join('')}</div>` : ''}
+    ${rw.weapons.length ? `<div class="small" style="margin-top:8px">${rw.weapons.map((w) => `<div class="row"><span class="muted">${esc(WEAPONS[w.id].name)}</span><div class="spacer"></div>+${w.xp} XP · LV ${w.to}${w.to > w.from ? ' <span class="pill on">Level up</span>' : ''}</div>${w.atts?.length ? `<div class="muted" style="margin:-2px 0 4px 10px">New attachments: ${w.atts.map((id) => esc(ATTACHMENTS[id].name)).join(', ')}</div>` : ''}`).join('')}</div>` : ''}
     ${rw.challenges.length ? `<div class="small" style="margin-top:8px">${rw.challenges.map((c) => `<div class="row"><span class="pill on">Challenge complete</span><span>${esc(c.text)}</span></div>`).join('')}</div>` : ''}
     ${rw.newWeapons?.length ? `<h3 class="title" style="margin-top:12px">New weapons</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.newWeapons.map((id) => `<div class="pill on">${esc(WEAPONS[id].name)} · ${esc(WEAPONS[id].classLabel)}</div>`).join('')}</div>` : ''}
     ${rw.unlocks.length ? `<h3 class="title" style="margin-top:12px">Unlocked</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.unlocks.map((i) => `<div class="row small" style="gap:6px;border:1px solid ${RARITY[i.rarity].color};padding:4px 8px">${itemThumb(i)}<span>${esc(i.name)}</span></div>`).join('')}</div>` : ''}
@@ -629,5 +723,17 @@ function renderBindings(app, rerender) {
 function wpnOpt(prof, lo, slot, id) {
   const w = WEAPONS[id], open = prof.weaponUnlocked(id);
   const sub = open ? `${esc(w.classLabel)} · LV ${prof.data.weaponProgress[id].level}` : `🔒 Unlocks at level ${w.unlockLevel}`;
-  return `<button class="wpn-opt ${lo[slot] === id ? 'sel' : ''} ${open ? '' : 'locked'}" data-slot="${slot}" data-id="${id}"><div class="wn">${esc(w.name)}</div><div class="wc">${sub}</div></button>`;
+  return `<button class="wpn-opt ${lo[slot] === id ? 'sel' : ''} ${open ? '' : 'locked'}" data-slot="${slot}" data-id="${id}" data-lock="${esc(w.name)} unlocks at level ${w.unlockLevel}"><div class="wn">${esc(w.name)}</div><div class="wc">${sub}</div></button>`;
+}
+
+function buildCount(prof, id) { return Object.keys(prof.data.builds[id] || {}).length; }
+
+function eqOpt(prof, lo, slot, id) {
+  const e = EQUIPMENT[id], open = prof.equipmentUnlocked(id);
+  return `<button class="wpn-opt ${lo[slot] === id ? 'sel' : ''} ${open ? '' : 'locked'}" data-slot="${slot}" data-id="${id}" data-lock="${esc(e.name)} unlocks at level ${e.unlockLevel}"><div class="wn">${esc(e.name)}</div><div class="wc">${open ? esc(e.blurb) : `🔒 Unlocks at level ${e.unlockLevel}`}</div></button>`;
+}
+
+function perkOpt(prof, lo, i, pk) {
+  const open = prof.perkUnlocked(pk.id);
+  return `<button class="wpn-opt ${lo.perks[i] === pk.id ? 'sel' : ''} ${open ? '' : 'locked'}" data-slot="perk" data-i="${i}" data-id="${pk.id}" data-lock="${esc(pk.name)} unlocks at level ${pk.unlockLevel}"><div class="wn">${esc(pk.name)}</div><div class="wc">${open ? esc(pk.desc) : `🔒 Unlocks at level ${pk.unlockLevel}`}</div></button>`;
 }

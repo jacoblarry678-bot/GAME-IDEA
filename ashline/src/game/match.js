@@ -6,6 +6,9 @@
 import { Combatant } from '../entities/combatant.js';
 import { BotBrain } from '../entities/bot.js';
 import { Projectiles } from '../combat/projectiles.js';
+import { Deployables } from '../combat/deployables.js';
+import { attachmentsFor, ATTACH_SLOTS, MAX_ATTACHMENTS } from '../data/attachments.js';
+import { PERK_SLOTS, perksForSlot } from '../data/perks.js';
 import { WEAPONS, MELEE, damageAt, PRIMARY_IDS } from '../data/weapons.js';
 import { MODES, DIFFICULTIES } from './modes.js';
 import { chooseSpawn } from './spawns.js';
@@ -40,6 +43,7 @@ export class Match {
     this.endT = 0;
     this.firstBlood = false;
     this.projectiles = new Projectiles(this);
+    this.deployables = new Deployables(this);
     this.player = null;
     this._populate();
   }
@@ -146,7 +150,14 @@ export class Match {
       const c = this.combatants[(k + this._order) % n];
       if (c.brain && c.alive) c.brain.update(dt);
       if (c.dummy) { c.cmd.crouch = !!c.dummy.crouch; c.cmd.yaw = Math.PI; c.cmd.pitch = 0; }
+      const ne = c.events.length;
       c.tick(dt, this);
+      if (c.alive && !c.perks?.has('pk_silence')) {
+        for (let i = ne; i < c.events.length; i++) {
+          const e = c.events[i];
+          if (e.type === 'step' && !e.crouch) this.footstep(c, e.sprint ? 13 : 8);
+        }
+      }
       if (c.dummy) this._dummy(c, dt);
       if (!c.alive) {
         c.respawnT -= dt;
@@ -154,6 +165,7 @@ export class Match {
       }
     }
     this.projectiles.update(dt);
+    this.deployables.update(dt);
     this.mode.update?.(this, dt);
     if (this.timeLeft <= 0 && this.state === 'live') {
       this.timeLeft = 0;
@@ -211,6 +223,7 @@ export class Match {
       }
       const res = this.trace(c, ox, oy, oz, d[0], d[1], d[2], def.range);
       ends.push(res);
+      if (res.shield) this.deployables.damageShield(res.shield, damageAt(def, res.t), c);
       if (res.victim) {
         anyHit = true;
         const dmg = damageAt(def, res.t) * def.mult[res.zone];
@@ -244,6 +257,7 @@ export class Match {
       t: maxT, victim, zone,
       x: ox + dx * maxT, y: oy + dy * maxT, z: oz + dz * maxT,
       world: !victim && wh ? { nx: wh.nx, ny: wh.ny, nz: wh.nz, mat: wh.box.mat } : null,
+      shield: !victim && wh?.box.shield ? wh.box.shield : null,
     };
   }
 
@@ -265,7 +279,23 @@ export class Match {
     if (best) this.applyDamage(best, c, M.damage, { weapon: weaponDef ? weaponDef.id : 'melee', zone: 'torso', kind: 'melee', fromX: c.x, fromZ: c.z });
   }
 
-  throwEquipment(c, kind) { this.projectiles.throw(c, kind); }
+  throwEquipment(c, kind) {
+    if (kind === 'shield') this.deployables.deployShield(c);
+    else this.projectiles.throw(c, kind);
+  }
+
+  canDeploy(c, kind) { return kind !== 'shield' || !!this.deployables.shieldSpot(c); }
+
+  useSupport(c, id) { return this.deployables.use(c, id); }
+
+  /** Footsteps alert nearby enemy bots (Dead Silence prevents this). */
+  footstep(c, radius) {
+    for (const o of this.combatants) {
+      if (!o.brain || !o.alive || o.team === c.team) continue;
+      const d = Math.hypot(o.x - c.x, o.z - c.z);
+      if (d < radius) o.brain.hear(c, c.x, c.z, d / radius);
+    }
+  }
 
   onFell(c) { this.applyDamage(c, null, 999, { weapon: 'fall', kind: 'fall' }); }
 
@@ -294,6 +324,7 @@ export class Match {
     if (!victim.alive || this.state !== 'live') return;
     if (victim.spawnProtectT > 0 && info.kind !== 'fall') return;
     if (attacker && attacker !== victim && attacker.team === victim.team && !this.settings.friendlyFire) return;
+    if ((info.kind === 'explosive' || info.kind === 'strike') && victim.perks?.has('pk_flak')) amount *= 0.55;
     amount = Math.max(1, Math.round(amount));
     victim.health -= amount;
     victim.lastDamageT = this.time;
@@ -343,9 +374,12 @@ export class Match {
       if (info.kind === 'explosive') medals.push({ id: 'frag', name: 'Grenade Kill', xp: 25 });
       if (victimStreak >= 3) medals.push({ id: 'buzzkill', name: 'Buzzkill', xp: 50 });
       if ([5, 10, 15, 20].includes(st.streak)) medals.push({ id: 'streak' + st.streak, name: `${st.streak} Kill Streak`, xp: 100 });
+      if (info.kind === 'strike') medals.push({ id: 'strike', name: 'Area Strike Kill', xp: 25 });
       for (const m of medals) score += m.xp;
       st.score += score;
       attacker._lastScore = score;
+      if (attacker.perks?.has('pk_scavenger')) for (const w of attacker.weapons) if (!w.def.melee) w.reserve = Math.min(w.def.reserve, w.reserve + w.def.mag);
+      this.deployables.onKill(attacker, info);
     }
     // assists
     const assisters = [];
@@ -383,7 +417,22 @@ function randomBotLoadout(rng) {
   let r = rng() * total, primary = pool[0][0];
   for (const [id, w] of pool) { r -= w; if (r <= 0) { primary = id; break; } }
   const secondary = rng() < 0.75 ? 'pistol_warden' : 'pistol_grizzly';
-  return { primary, secondary, lethal: 'frag', tactical: 'smoke' };
+  const tr = rng();
+  const tactical = tr < 0.5 ? 'smoke' : tr < 0.85 ? 'flash' : 'shield';
+  const perks = PERK_SLOTS.map((s) => { const l = perksForSlot(s); return l[Math.floor(rng() * l.length)].id; });
+  // a few random attachments per gun, like a real player's build
+  const builds = {};
+  for (const id of [primary, secondary]) {
+    const avail = attachmentsFor(WEAPONS[id]);
+    const b = {};
+    const n = Math.floor(rng() * 4);
+    for (let i = 0; i < n * 2 && Object.keys(b).length < Math.min(n, MAX_ATTACHMENTS); i++) {
+      const a = avail[Math.floor(rng() * avail.length)];
+      if (a && !b[a.slot]) b[a.slot] = a.id;
+    }
+    builds[id] = b;
+  }
+  return { primary, secondary, lethal: 'frag', tactical, perks, builds };
 }
 
 /** Random direction inside a cone around yaw/pitch (uniform on disk). */

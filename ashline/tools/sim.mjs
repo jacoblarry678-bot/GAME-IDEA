@@ -21,7 +21,7 @@ const match = new Match(map, {
   mode, scoreLimit: mode === 'tdm' || mode === 'ffa' ? 999 : mode === 'elim' ? 99 : mode === 'gun' ? 0 : 9999, timeLimit: mode === 'elim' ? 1.5 : minutes, botsAllies: per, botsEnemies: per,
   difficulty, friendlyFire: false, includePlayer: false, countdown: 0.1,
 });
-const counts = { objective: 0, roundEnd: 0, kill: 0, shot: 0, damage: 0, grenadeThrown: 0, explosion: 0, melee: 0, smoke: 0 };
+const counts = { objective: 0, roundEnd: 0, kill: 0, shot: 0, damage: 0, grenadeThrown: 0, explosion: 0, melee: 0, smoke: 0, flash: 0, flashed: 0, shield: 0, supportEarned: 0, supportUsed: 0, supplyPickup: 0 };
 const kinds = {};
 const weaponsK = {};
 const objK = {};

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildWeapon } from '../fx/weaponModels.js';
+import { buildKey } from '../data/attachments.js';
 import { WEAPONS } from '../data/weapons.js';
 
 const geo = new Map();
@@ -216,13 +217,15 @@ export class SoldierModel {
     }
   }
 
-  setWeapon(id, wmats = this.wmats) {
-    if (this.unarmed || (this.weaponId === id && this._wmats === wmats)) return;
+  setWeapon(id, wmats = this.wmats, attachments = null) {
+    const bk = buildKey(attachments);
+    if (this.unarmed || (this.weaponId === id && this._wmats === wmats && this._bk === bk)) return;
     this.weaponId = id;
     this._wmats = wmats;
+    this._bk = bk;
     if (this.gun) { this.gunMount.remove(this.gun.group); }
     const key = WEAPONS[id].model;
-    this.gun = buildWeapon(key, wmats, { merge: true });
+    this.gun = buildWeapon(key, wmats, { merge: true, attachments });
     this.gunMount.add(this.gun.group);
     this.isPistol = key === 'pistol';
   }

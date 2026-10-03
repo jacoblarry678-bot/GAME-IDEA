@@ -66,6 +66,13 @@ export class BotBrain {
 
   onDeath() { this.target = null; this.path = null; }
 
+  onFlashed(t) {
+    // lose track of what we were looking at
+    for (const [, mem] of this.known) { mem.visible = false; mem.seenSince = null; }
+    this.target = null;
+    this.state = this.state === 'engage' ? 'hunt' : this.state;
+  }
+
   idleLook(dt) {
     this.c.cmd.yaw = this.c.yaw;
   }
@@ -110,6 +117,13 @@ export class BotBrain {
     if (this.state === 'engage' && this.target) this.engage(dt);
     else this.navigate(dt);
 
+    if (c.blindT > 0.6) {
+      // blinded: can't aim, stumbles back, may spray at the last known spot
+      cmd.ads = false;
+      cmd.fire = cmd.fire && Math.random() < 0.3;
+      cmd.moveZ = -0.5; cmd.moveX = Math.sin(this.m.time * 3) * 0.6;
+      this.lookYaw += (Math.random() - 0.5) * dt * 3;
+    }
     this.turn(dt);
     this.checkStuck(dt);
   }
@@ -128,7 +142,7 @@ export class BotBrain {
       if (d > 95) continue;
       const inFov = d < 4 || (dx * fx + dz * fz) / (d || 1) > cosFov;
       let vis = false;
-      if (inFov) {
+      if (inFov && c.blindT < 0.6) {
         const pts = e.sightPoints();
         // distant crouched targets are harder to pick out
         const maxCheck = e.stance !== 'stand' && d > 45 ? 1 : 2;
@@ -146,7 +160,7 @@ export class BotBrain {
         // reaction: shorter if we were already aware of this enemy, longer at range
         const aware = mem.prevT && now - mem.prevT < 3;
         const facing = (dx * fx + dz * fz) / (d || 1);
-        const peripheral = facing < 0.87 ? 1.6 : 1; // outside ~30° of view center takes longer to notice
+        const peripheral = facing < 0.87 && !(e.weapon.def.laser && e.adsT < 0.5) ? 1.6 : 1; // outside ~30° of view center takes longer to notice (a visible laser gives you away)
         const moving = Math.hypot(e.vx, e.vz) > 0.5 ? 1 : 1.35; // still targets are harder to spot
         const react = this.d.reaction * (aware ? 0.5 : peripheral * moving) * (1 + d / 90);
         if (now - mem.seenSince >= react) {
@@ -200,7 +214,7 @@ export class BotBrain {
       if (this.planCover()) {
         this.state = 'cover';
         // pop smoke to cover the retreat sometimes
-        if (c.tactical.count > 0 && !c.busy && Math.random() < this.d.nade * 1.5 && this.target) {
+        if (c.tactical.id === 'smoke' && c.tactical.count > 0 && !c.busy && Math.random() < this.d.nade * 1.5 && this.target) {
           const t = this.target;
           const mx = (c.x + t.x) / 2, mz = (c.z + t.z) / 2;
           const sol = solveThrow(c, mx, c.y, mz, EQUIPMENT.smoke.throwSpeed);
@@ -247,13 +261,16 @@ export class BotBrain {
           this.state = 'hunt';
           this.setGoal(recent.x, recent.y, recent.z, 'hunt');
         }
-        // grenade a target that just ducked out of sight
+        // grenade (or flash) a target that just ducked out of sight
         this.considerGrenade(recent);
+        if (c.tactical.id === 'flash') this.considerFlash(recent);
       } else if (this.state !== 'roam' || !this.goal) {
         this.state = 'roam';
         this.pickRoamGoal();
       }
     }
+    this.considerSupport();
+    if (this.target && c.tactical.id === 'shield') this.considerShield();
     // reload when idle
     if (!this.target && w.mag < w.def.mag * 0.5 && w.canReload && !w.reloading) c.cmd._wantReload = true;
     // swap back to primary when calm
@@ -355,7 +372,9 @@ export class BotBrain {
     if (dist > pref[2]) mz = 1;
     else if (dist > pref[1] + 4 && cls !== 'sniper') mz = 0.6;
     else if (dist < pref[0]) mz = -0.8;
-    let mx = this.strafe * this.d.strafe;
+    if (this.holdT > 0) { this.holdT -= dt; mz = 0; } // fighting from behind a deployed shield
+    if (this.rushT > 0) { this.rushT -= dt; if (dist > 3) mz = 1; }
+    let mx = this.strafe * this.d.strafe * (this.holdT > 0 ? 0.3 : 1);
     // obstacle check on strafe direction
     const rx = Math.cos(c.yaw), rz = -Math.sin(c.yaw);
     if (mx !== 0 && m.world.raycast(c.x, c.y + 0.6, c.z, rx * Math.sign(mx), 0, rz * Math.sign(mx), 1.0, 'solid')) { this.strafe = -this.strafe; mx = -mx; }
@@ -622,6 +641,57 @@ export class BotBrain {
     c.cmd.lethal = true;
     this.throwLock = 0.55;
     this.nadeCd = 12 + Math.random() * 10;
+  }
+
+  considerFlash(mem) {
+    const c = this.c, m = this.m;
+    this.flashCd = (this.flashCd ?? 3 + Math.random() * 6) - 0.12;
+    if (this.flashCd > 0 || c.tactical.count <= 0 || c.busy) return;
+    const d = Math.hypot(mem.x - c.x, mem.z - c.z);
+    if (m.time - mem.t > 3 || d < 6 || d > 20) return;
+    if (Math.random() > this.d.nade * 3) { this.flashCd = 2.5; return; }
+    const sol = solveThrow(c, mem.x, mem.y + 0.5, mem.z, EQUIPMENT.flash.throwSpeed);
+    if (!sol) return;
+    this.lookYaw = sol.yaw; this.lookPitch = sol.pitch;
+    c.cmd.yaw = sol.yaw; c.cmd.pitch = sol.pitch; c.yaw = sol.yaw; c.pitch = sol.pitch;
+    c.cmd.tactical = true;
+    this.throwLock = 0.55;
+    this.flashCd = 10 + Math.random() * 8;
+    // rush in behind the flash
+    this.rushT = 3;
+  }
+
+  considerShield() {
+    const c = this.c, t = this.target;
+    if (c.tactical.count <= 0 || c.busy || !t) return;
+    const d = Math.hypot(t.x - c.x, t.z - c.z);
+    if (d < 14 || d > 50 || this.trackT < 0.8 || Math.random() > 0.04) return;
+    // face the threat then drop cover between us
+    const yaw = Math.atan2(-(t.x - c.x), -(t.z - c.z));
+    c.yaw = c.cmd.yaw = yaw;
+    if (!this.m.canDeploy(c, 'shield')) return;
+    c.cmd.tactical = true;
+    this.holdT = 4 + Math.random() * 3; // fight from behind it for a while
+  }
+
+  /** Use earned support abilities like a player would. */
+  considerSupport() {
+    const c = this.c, m = this.m, a = c.abilities;
+    if (!a || c.busy || m.state !== 'live') return;
+    if (a.recon > 0) { c.cmd.support = 'recon'; return; }
+    if (a.supply > 0 && !this.target && (c.health < 70 || c.weapon.reserve < c.weapon.def.mag * 2 || Math.random() < 0.05)) { c.cmd.support = 'supply'; return; }
+    if (a.strike > 0) {
+      // aim at the freshest known enemy that is far enough away and not near teammates
+      let best = null;
+      for (const [, mem] of this.known) {
+        if (!mem.c.alive || m.time - mem.t > 2.5) continue;
+        const d = Math.hypot(mem.x - c.x, mem.z - c.z);
+        if (d < 14) continue;
+        if (m.combatants.some((o) => o.team === c.team && o.alive && Math.hypot(o.x - mem.x, o.z - mem.z) < 9)) continue;
+        if (!best || mem.t > best.t) best = mem;
+      }
+      if (best) { this.strikeTarget = { x: best.x, y: best.y, z: best.z }; c.cmd.support = 'strike'; }
+    }
   }
 
   // ---------------- motor ----------------

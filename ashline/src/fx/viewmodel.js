@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { buildWeapon, buildGrenade, buildCharm } from './weaponModels.js';
+import { buildKey } from '../data/attachments.js';
 import { finishMaterials } from '../world/finishes.js';
 import { COSMETICS } from '../data/cosmetics.js';
 import { WEAPONS } from '../data/weapons.js';
@@ -112,7 +113,7 @@ export class Viewmodel {
       this.arms[side] = { fore, upper, hand, palm };
     }
     // grenade in hand
-    this.handGrenade = { frag: buildGrenade('frag', wmats), smoke: buildGrenade('smoke', wmats) };
+    this.handGrenade = { frag: buildGrenade('frag', wmats), smoke: buildGrenade('smoke', wmats), flash: buildGrenade('flash', wmats), shield: buildGrenade('shield', wmats) };
     for (const g of Object.values(this.handGrenade)) { g.visible = false; this.root.add(g); }
     // muzzle flash
     const flashTex = spriteTexture('flash');
@@ -160,16 +161,16 @@ export class Viewmodel {
    * Show weapon `id` with an optional cosmetic look { finish, charm }.
    * Models are cached per weapon + finish; the charm is re-attached on change.
    */
-  setWeapon(id, look = null) {
+  setWeapon(id, look = null, attachments = null) {
     const finish = look?.finish || 'fn_factory';
     const charm = look?.charm || 'ch_none';
-    const key = `${id}|${finish}`;
+    const key = `${id}|${finish}|${buildKey(attachments)}`;
     if (this.curKey === key && this.curCharm === charm) return;
     if (this.cur && this.curKey !== key) this.cur.group.visible = false;
     let m = this.models.get(key);
     if (!m) {
       const def = WEAPONS[id];
-      m = buildWeapon(def.model, finishMaterials(this.wmats, finish));
+      m = buildWeapon(def.model, finishMaterials(this.wmats, finish), { attachments });
       m.def = def;
       m.pose = POSES[def.model] || POSES.ar;
       for (const k of Object.keys(m.parts)) m.parts[k].userData.base = m.parts[k].position.clone();

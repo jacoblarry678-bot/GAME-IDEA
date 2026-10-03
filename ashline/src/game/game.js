@@ -15,6 +15,8 @@ import { MODES, TEAMS } from './modes.js';
 import { esc } from '../ui/dom.js';
 import { PAD } from '../core/input.js';
 import { ObjectiveView } from '../fx/objectives.js';
+import { DeployablesView } from '../fx/deployablesView.js';
+import { SUPPORT, SUPPORT_IDS, supportThreshold } from '../data/support.js';
 
 const v3 = new THREE.Vector3(), v3b = new THREE.Vector3();
 
@@ -28,7 +30,7 @@ export class Game {
     this.match = new Match(map, {
       ...setup,
       playerName: app.profile.data.name,
-      playerLoadout: { ...app.profile.loadout },
+      playerLoadout: app.profile.matchLoadout,
       includePlayer: true,
     });
     const m = this.match;
@@ -49,7 +51,7 @@ export class Game {
       if (c.dummy) v = new SoldierModel(app.dummyMats, app.wmats, 1, seed++, { unarmed: true });
       else if (c === this.player) v = new SoldierModel(outfitMaterials(app.materials, app.soldierMats, this.cosm.outfit, this.cosm.operator), app.wmats, 0, seed++);
       else v = new SoldierModel(app.soldierMats, app.wmats, this.visTeam(c), seed++);
-      v.setWeapon(c.weapon.def.id);
+      v.setWeapon(c.weapon.def.id, undefined, c.weapon.def.attachments);
       app.engine.scene.add(v.root);
       this.views.set(c.id, v);
     }
@@ -60,7 +62,7 @@ export class Game {
     this.vm = app.viewmodel;
     this.vm.visible = true;
     this.vm.setOutfit(this.cosm.outfit, app.materials);
-    this.vm.setWeapon(this.player.weapon.def.id, this.cosm.weapons[this.player.weapon.def.id]);
+    this.vm.setWeapon(this.player.weapon.def.id, this.cosm.weapons[this.player.weapon.def.id], this.player.weapon.def.attachments);
     this.look = { yaw: 0, pitch: 0 };
     this.recoilDebt = 0;
     this.camKick = { p: 0, y: 0, vp: 0, vy: 0 };
@@ -85,7 +87,7 @@ export class Game {
     this.lastLanded = 0;
     m.on((e) => this.onEvent(e));
     this.unsubSettings = () => {};
-    const onSet = () => { this.hud.applySettings(); this.updateTeamColors(); this.objView?.setColors(app.settings.teamColors()); };
+    const onSet = () => { this.hud.applySettings(); this.updateTeamColors(); this.objView?.setColors(app.settings.teamColors()); this.depView?.setColors(app.settings.teamColors()); };
     app.settings.onChange(onSet);
     this.unsubSettings = () => { const i = app.settings.listeners.indexOf(onSet); if (i >= 0) app.settings.listeners.splice(i, 1); };
   }
@@ -112,6 +114,7 @@ export class Game {
       return;
     }
     this.objView = new ObjectiveView(this.app.engine.scene, this.match, 0, this.app.settings.teamColors());
+    this.depView = new DeployablesView(this.app.engine.scene, this.match, 0, this.app.settings.teamColors());
     const goal = { tdm: `first to ${this.setup.scoreLimit}`, ffa: `first to ${this.setup.scoreLimit} eliminations`, dom: `capture flags A · B · C — ${this.setup.scoreLimit} points`, hp: `hold the zone — ${this.setup.scoreLimit} points`, elim: `no respawns — first to ${this.setup.scoreLimit} rounds`, gun: `${this.match.ladder?.length || 0} weapons to win` }[mode.id];
     this.hud.center(mode.name.toUpperCase(), `${this.map.def.name} · ${goal}`, 3.4);
     this.app.audio.announce({ tdm: 'Team deathmatch. Eliminate the enemy team.', ffa: 'Free for all. Trust no one.', dom: 'Domination. Capture the flags.', hp: 'Hardpoint. Secure the zone.', elim: 'Elimination. Round one. No respawns.', gun: 'Gun game. Every kill upgrades your weapon.' }[mode.id]);
@@ -175,6 +178,7 @@ export class Game {
     cmd.melee = inp.isDown('melee');
     cmd.lethal = inp.isDown('lethal');
     cmd.tactical = inp.isDown('tactical');
+    if (!this.isRange) SUPPORT_IDS.forEach((id, i) => { if (inp.pressed('support' + (i + 1))) { if (p.abilities[id] > 0) cmd.support = id; else this.hud.popup(`${SUPPORT[id].name.toUpperCase()} NOT READY`, 0, 'medal'); } });
     cmd.yaw = this.look.yaw;
     cmd.pitch = this.look.pitch;
     if (this.isRange) this.rangeInput();
@@ -189,7 +193,7 @@ export class Game {
       p.applyLoadout({ ...p.loadout, primary: next });
       p.cur = 0; p.adsT = 0; p.swapT = 0;
       for (const w of p.weapons) w.refill();
-      this.vm.setWeapon(next, this.cosm.weapons[next]);
+      this.vm.setWeapon(next, this.cosm.weapons[next], p.weapon.def.attachments);
       this.hud.popup(WEAPONS[next].name, 0, 'medal');
     }
     if (inp.keyPressed('KeyY')) { r.infinite = !r.infinite; m.infiniteAmmo = r.infinite; this.hud.popup(`INFINITE AMMO ${r.infinite ? 'ON' : 'OFF'}`, 0, 'medal'); }
@@ -240,6 +244,7 @@ export class Game {
     this.updateViewmodel(dt);
     app.effects.update(this.paused ? 0 : dt, m.projectiles);
     this.objView?.update(this.paused ? 0 : dt);
+    this.depView?.update(this.paused ? 0 : dt);
     this.updateHud(dt);
     // audio listener
     const cam = app.engine.camera;
@@ -288,6 +293,7 @@ export class Game {
     const pos = (vol, name, opts = {}) => (me ? a.play(name, { vol: vol * 0.8, ...opts }) : a.play3D(name, c.x, c.y + 1, c.z, { vol, ...opts }));
     switch (e.type) {
       case 'step': {
+        if (!me && c.perks?.has('pk_silence')) break;
         const mat = this.surfaceAt(c);
         const vol = e.sprint ? 0.6 : e.crouch ? 0.15 : 0.35;
         if (me) a.play(a.b.steps?.[mat] || 'land', { vol: vol * 0.45 });
@@ -445,7 +451,7 @@ export class Game {
           this.deathInfo = {
             by: k && k !== p ? 'ELIMINATED BY' : 'YOU DIED',
             who: k && k !== p ? k.displayName : (e.weapon === 'frag' ? 'Your own grenade' : 'Environment'),
-            how: k && k !== p ? `${e.weapon === 'frag' ? 'M-7 FRAG' : e.weapon === 'melee' ? 'MELEE' : (kname || '')}${e.headshot ? ' · HEADSHOT' : ''}${e.dist ? ` · ${Math.round(e.dist)} m` : ''}` : '',
+            how: k && k !== p ? `${e.weapon === 'frag' ? 'M-7 FRAG' : e.weapon === 'strike' ? 'AREA STRIKE' : e.weapon === 'melee' ? 'MELEE' : (kname || '')}${e.headshot ? ' · HEADSHOT' : ''}${e.dist ? ` · ${Math.round(e.dist)} m` : ''}` : '',
             color: k && k.team !== p.team ? 'var(--enemy)' : 'var(--friendly)',
             killer: k,
           };
@@ -464,6 +470,39 @@ export class Game {
         if (d < 9 && !occluded) hud.flash(Math.max(0.15, 0.5 - d / 20));
         break;
       }
+      case 'flash': {
+        fx.muzzleFlash?.(e.x, e.y, e.z, 0, 1, 0, 3);
+        const cp = this.app.engine.camera.position;
+        const occluded = !this.match.canSee(cp.x, cp.y, cp.z, e.x, e.y, e.z);
+        a.play3D('explosion', e.x, e.y + 0.3, e.z, { vol: 0.9, rate: 1.8, ref: 6, occluded, echo: true });
+        break;
+      }
+      case 'flashed':
+        if (e.c === p) { a.play('beepHi', { vol: 0.35 * Math.min(1, e.t / 3), rate: 2.4 }); app.input.rumble(0.6, 0.6, 400); }
+        else if (e.owner === p && e.c.team !== p.team) hud.popup('FLASHED', 0, 'medal');
+        break;
+      case 'shield': a.play3D('bolt', e.s.x, e.s.y + 0.6, e.s.z, { vol: 0.9, rate: 0.6, ref: 4 }); break;
+      case 'shieldGone': if (e.broken) { a.play3D('impact', e.s.x, e.s.y + 0.6, e.s.z, { vol: 1.2, rate: 0.5, ref: 5 }); fx.explosion?.(e.s.x, e.s.y + 0.5, e.s.z, 0.6); } break;
+      case 'supportEarned':
+        if (e.c === p) {
+          const k = app.input.label('support' + (SUPPORT_IDS.indexOf(e.id) + 1));
+          hud.center(`${SUPPORT[e.id].name.toUpperCase()} READY`, `Press ${k} · ${SUPPORT[e.id].desc}`, 2.4, 'var(--accent)');
+          a.play('beepHi', { bus: 'ui', vol: 0.6 });
+          a.announce(`${SUPPORT[e.id].name} ready.`);
+        }
+        break;
+      case 'supportUsed': {
+        const ally = e.c.team === p.team && !this.ffa;
+        const mine = e.c === p;
+        const name = SUPPORT[e.id].name;
+        if (e.id === 'recon') { hud.popup(mine || ally ? 'RECON SCAN ACTIVE' : 'ENEMY RECON SCAN', 0, 'medal'); a.announce(mine || ally ? 'Recon scan online. Enemies marked.' : 'Enemy recon scan detected.'); }
+        else if (e.id === 'supply') { if (mine || ally) a.announce('Supply drop inbound.'); }
+        else if (e.id === 'strike') { a.announce(mine ? 'Area strike called in.' : ally ? 'Friendly area strike inbound.' : 'Enemy area strike incoming!'); if (!mine && !ally) hud.center('INCOMING AREA STRIKE', 'Watch for the marked zone', 2, 'var(--bad)'); }
+        if (!mine && (ally || e.id !== 'recon')) hud.killfeed?.({ system: true, text: `${e.c.displayName} · ${name}` }, p.id);
+        break;
+      }
+      case 'dropLanded': a.play3D('land', e.d.x, e.d.y + 0.3, e.d.z, { vol: 1.4, rate: 0.6, ref: 5 }); break;
+      case 'supplyPickup': if (e.c === p) { hud.popup('RESUPPLIED', 0, 'medal'); a.play('magIn', { vol: 0.8 }); } break;
       case 'smoke': fx.smokeCloud(e.x, e.y, e.z, e.radius, e.duration); a.play3D('smokePop', e.x, e.y, e.z, { vol: 0.8, ref: 4 }); break;
       case 'melee': if (e.hit) a.play3D('meleeHit', e.c.x, e.c.y + 1.2, e.c.z, { vol: 0.8, ref: 3 }); break;
       case 'live':
@@ -645,7 +684,7 @@ export class Game {
 
   updateViewmodel(dt) {
     const p = this.player;
-    this.vm.setWeapon(p.weapon.def.id, this.cosm.weapons[p.weapon.def.id]);
+    this.vm.setWeapon(p.weapon.def.id, this.cosm.weapons[p.weapon.def.id], p.weapon.def.attachments);
     const scoped = !!(p.weapon.def.handling.scope && p.adsT > 0.92 && p.alive);
     this.vm.visible = p.alive && !scoped && !this.ended;
     this.scoped = scoped;
@@ -668,8 +707,8 @@ export class Game {
       if (!v.root.visible) continue;
       v.root.position.set(c.x, c.y, c.z);
       v.root.rotation.y = c.yaw;
-      if (isMe) v.setWeapon(c.weapon.def.id, finishMaterials(this.app.wmats, this.cosm.weapons[c.weapon.def.id]?.finish));
-      else v.setWeapon(c.weapon.def.id);
+      if (isMe) v.setWeapon(c.weapon.def.id, finishMaterials(this.app.wmats, this.cosm.weapons[c.weapon.def.id]?.finish), c.weapon.def.attachments);
+      else v.setWeapon(c.weapon.def.id, undefined, c.weapon.def.attachments);
       v.setLod(Math.hypot(c.x - cam.x, c.z - cam.z) > 55);
       v.update({ speed: c.speed, sprinting: c.sprinting, stance: c.stance, grounded: c.grounded || !!c.mantle, pitch: c.pitch, adsT: c.adsT, reloading: c.weapon.reloading || c.swapT > 0, alive: c.alive, vx: c.vx, vz: c.vz, yaw: c.yaw }, this.paused ? 0 : dt);
     }
@@ -695,6 +734,9 @@ export class Game {
       x: p.x, z: p.z, yaw: this.look.yaw, nades,
       keys: { lethal: inp.label('lethal'), tactical: inp.label('tactical'), reload: inp.label('reload') },
     });
+    hud.blind(p.alive && p.blindT > 0 ? Math.min(1, p.blindT / Math.min(1.6, p.blindMax || 1)) : 0);
+    hud.support(SUPPORT_IDS.map((id, i) => ({ id, name: SUPPORT[id].name, key: inp.label('support' + (i + 1)), have: Math.min(p.supportKills, supportThreshold(id, p.perks)), need: supportThreshold(id, p.perks), ready: p.abilities[id] })), this.isRange || !p.alive);
+    if (!this.isRange) for (const c of m.combatants) if (m.deployables.revealed(c, p.team)) this.radar.set(c.id, m.time);
     if (this.isRange) hud.rangePanel(this.rangeHtml());
     else { hud.objStrip(this.objStripHtml()); hud.objMarkers(this.objMarkerList()); }
     // death overlay
@@ -905,6 +947,7 @@ export class Game {
     this.views.clear();
     this.hud.destroy();
     this.objView?.dispose();
+    this.depView?.dispose();
     this.unsubSettings();
     this.app.audio.ambience(false);
     this.vm.visible = false;

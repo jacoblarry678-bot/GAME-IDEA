@@ -75,6 +75,7 @@ export class Projectiles {
         this.list.splice(i, 1);
         if (g.kind === 'frag') this.explode(g);
         else if (g.kind === 'smoke') this.deploySmoke(g);
+        else if (g.kind === 'flash') this.flash(g);
       }
     }
     for (let i = this.smokes.length - 1; i >= 0; i--) {
@@ -85,11 +86,15 @@ export class Projectiles {
     }
   }
 
-  explode(g) {
-    const m = this.match, def = g.def;
-    m.emit({ type: 'explosion', x: g.x, y: g.y, z: g.z, kind: 'frag', radius: def.radius });
-    m.noise(g.x, g.z, 70, g.owner);
-    const cx = g.x, cy = g.y + 0.15, cz = g.z;
+  explode(g) { this.explodeAt(g.x, g.y, g.z, g.owner, g.def, 'frag', 'explosive'); }
+
+  /** Blast with line-of-sight falloff damage (frags and area-strike shells). */
+  explodeAt(x, y, z, owner, def, weapon, kind) {
+    const m = this.match;
+    m.emit({ type: 'explosion', x, y, z, kind: weapon, radius: def.radius });
+    m.noise(x, z, 70, owner);
+    const cx = x, cy = y + 0.15, cz = z;
+    const falloff = (d) => (d <= def.innerRadius ? def.damage : def.minDamage + (def.damage - def.minDamage) * (1 - (d - def.innerRadius) / (def.radius - def.innerRadius)) * 0.75);
     for (const c of m.combatants) {
       if (!c.alive) continue;
       const tx = c.x, ty = c.y + 1.0, tz = c.z;
@@ -105,10 +110,38 @@ export class Projectiles {
         if (!hit) { exposed = true; break; }
       }
       if (!exposed) continue;
-      let dmg;
-      if (d <= def.innerRadius) dmg = def.damage;
-      else dmg = def.minDamage + (def.damage - def.minDamage) * (1 - (d - def.innerRadius) / (def.radius - def.innerRadius)) * 0.75;
-      m.applyDamage(c, g.owner, dmg, { weapon: 'frag', zone: 'torso', kind: 'explosive', fromX: cx, fromZ: cz });
+      m.applyDamage(c, owner, falloff(d), { weapon, zone: 'torso', kind, fromX: cx, fromZ: cz });
+    }
+    // deployed shields soak blast damage
+    for (const s of [...(m.deployables?.shields || [])]) {
+      const d = Math.hypot(s.x - cx, s.y + 0.5 - cy, s.z - cz);
+      if (d < def.radius) m.deployables.damageShield(s, falloff(d) * 1.5, owner);
+    }
+  }
+
+  /** Stun flash: blinds anyone with line of sight, scaled by distance and facing. */
+  flash(g) {
+    const m = this.match, def = g.def;
+    const cx = g.x, cy = g.y + 0.2, cz = g.z;
+    m.emit({ type: 'flash', x: cx, y: cy, z: cz, radius: def.radius });
+    m.noise(cx, cz, 40, g.owner);
+    for (const c of m.combatants) {
+      if (!c.alive || c.dummy) continue;
+      if (c.team === g.owner.team && c !== g.owner && !m.settings.friendlyFire) continue;
+      const ex = c.x, ey = c.eyeY, ez = c.z;
+      const dx = cx - ex, dy = cy - ey, dz = cz - ez;
+      const d = Math.hypot(dx, dy, dz);
+      if (d > def.radius) continue;
+      const hit = m.world.raycast(ex, ey, ez, dx / (d || 1), dy / (d || 1), dz / (d || 1), d, 'sight');
+      if (hit) continue;
+      const cp = Math.cos(c.pitch);
+      const facing = (dx * -Math.sin(c.yaw) * cp + dy * Math.sin(c.pitch) + dz * -Math.cos(c.yaw) * cp) / (d || 1);
+      const k = (1 - d / def.radius) * (0.3 + 0.7 * Math.max(0, facing));
+      let t = 0.5 + def.maxBlind * k;
+      if (c.perks?.has('pk_flak')) t *= 0.5;
+      if (t > c.blindT) { c.blindT = t; c.blindMax = t; }
+      m.emit({ type: 'flashed', c, t, owner: g.owner });
+      if (c.brain) c.brain.onFlashed?.(t);
     }
   }
 

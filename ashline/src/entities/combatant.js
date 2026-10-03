@@ -6,6 +6,7 @@
 import { moveBody } from '../world/collision.js';
 import { WeaponState } from '../combat/weaponState.js';
 import { WEAPONS, EQUIPMENT, MELEE } from '../data/weapons.js';
+import { applyAttachments } from '../data/attachments.js';
 
 export const MOVE = {
   walk: 5.0,
@@ -32,7 +33,7 @@ export function newCommand() {
   return {
     moveX: 0, moveZ: 0, sprint: false, crouch: false, jump: false,
     fire: false, firePressed: false, ads: false, reload: false, swap: false,
-    swapTo: -1, melee: false, lethal: false, tactical: false,
+    swapTo: -1, melee: false, lethal: false, tactical: false, support: null,
     yaw: 0, pitch: 0,
   };
 }
@@ -78,6 +79,11 @@ export class Combatant {
     this.lastKiller = null;
     this.stats = { kills: 0, deaths: 0, assists: 0, score: 0, shots: 0, hits: 0, headshots: 0, streak: 0, bestStreak: 0, damage: 0 };
     this.damageLog = new Map(); // attackerId -> {amount, t}
+    this.blindT = 0; // flash effect remaining (s)
+    this.blindMax = 1;
+    this.supportKills = 0; // eliminations this life that count toward support abilities
+    this.supportEarned = {}; // abilities already earned this life
+    this.abilities = { recon: 0, supply: 0, strike: 0 }; // ready to use
     this.cmd = newCommand();
     this.prevCmd = newCommand();
     this.events = []; // per-tick events consumed by presentation (footstep, land, jump...)
@@ -86,7 +92,9 @@ export class Combatant {
 
   applyLoadout(lo) {
     this.loadout = lo;
-    this.weapons = [new WeaponState(WEAPONS[lo.primary]), new WeaponState(WEAPONS[lo.secondary])];
+    const b = lo.builds || {};
+    this.weapons = [new WeaponState(applyAttachments(WEAPONS[lo.primary], b[lo.primary])), new WeaponState(applyAttachments(WEAPONS[lo.secondary], b[lo.secondary]))];
+    this.perks = new Set(lo.perks || []);
     this.cur = 0;
     this.lethal = { id: lo.lethal, count: EQUIPMENT[lo.lethal].count };
     this.tactical = { id: lo.tactical, count: EQUIPMENT[lo.tactical].count };
@@ -122,6 +130,8 @@ export class Combatant {
     this.tactical.count = this.loadout.noEquipment ? 0 : EQUIPMENT[this.tactical.id].count;
     this.damageLog.clear();
     this.lastDamageT = -99;
+    this.blindT = 0;
+    this.supportKills = 0; this.supportEarned = {};
     this.events.push({ type: 'spawn' });
   }
 
@@ -173,13 +183,15 @@ export class Combatant {
     if (this.meleeCd > 0) this.meleeCd -= dt;
     if (this.slideCd > 0) this.slideCd -= dt;
     if (this.flinch > 0) this.flinch = Math.max(0, this.flinch - dt * 4);
+    if (this.blindT > 0) this.blindT = Math.max(0, this.blindT - dt);
+    const perks = this.perks;
 
     // ---- aim ----
     this.yaw = cmd.yaw;
     this.pitch = Math.max(-1.5, Math.min(1.5, cmd.pitch));
 
     // ---- health regen ----
-    if (this.health < HEALTH.max && ctx.time - this.lastDamageT > HEALTH.regenDelay) {
+    if (this.health < HEALTH.max && ctx.time - this.lastDamageT > (perks.has('pk_resolve') ? 2.5 : HEALTH.regenDelay)) {
       this.health = Math.min(HEALTH.max, this.health + HEALTH.regenRate * dt);
     }
 
@@ -218,13 +230,13 @@ export class Combatant {
       this.sprinting = true;
     } else if (this.sprinting && (!wantSprint || cmd.fire)) {
       this.sprinting = false;
-      this.sprintOutT = def.handling.sprintOut;
+      this.sprintOutT = def.handling.sprintOut * (perks.has('pk_dexterity') ? 0.65 : 1);
     }
     if (this.sprintOutT > 0) this.sprintOutT -= dt;
 
     // ---- ADS ----
     const wantAds = cmd.ads && !def.melee && !this.sprinting && !this.mantle && this.meleeT <= 0 && this.throwT <= 0 && this.stance !== 'slide';
-    const adsRate = 1 / def.handling.adsTime;
+    const adsRate = (perks.has('pk_quickdraw') ? 1.25 : 1) / def.handling.adsTime;
     this.adsT = Math.max(0, Math.min(1, this.adsT + (wantAds ? adsRate : -adsRate * 1.3) * dt));
 
     // ---- movement ----
@@ -316,7 +328,7 @@ export class Combatant {
       this.weapon.cancelReload();
       this.swapTarget = swapReq;
       this.swapFrom = this.cur;
-      this.swapDur = (def.handling.swap * 0.5 + WEAPONS[this.loadout[swapReq === 0 ? 'primary' : 'secondary']].handling.swap * 0.5) * 1.6;
+      this.swapDur = (def.handling.swap * 0.5 + WEAPONS[this.loadout[swapReq === 0 ? 'primary' : 'secondary']].handling.swap * 0.5) * 1.6 * (perks.has('pk_dexterity') ? 0.65 : 1);
       this.swapT = this.swapDur;
       this.events.push({ type: 'swapOut' });
     }
@@ -339,17 +351,19 @@ export class Combatant {
     }
 
     // ---- equipment ----
+    const throwDur = perks.has('pk_sleight') ? 0.38 : 0.5;
     if (this.throwT > 0) {
       const before = this.throwT;
       this.throwT -= dt;
-      if (before > 0.18 && this.throwT <= 0.18) ctx.throwEquipment(this, this.throwKind);
+      const at = 0.18 * (throwDur / 0.5);
+      if (before > at && this.throwT <= at) ctx.throwEquipment(this, this.throwKind);
     } else if (!this.busy && this.stance !== 'slide') {
       if (cmd.lethal && !prev.lethal && this.lethal.count > 0) {
-        this.lethal.count--; this.throwKind = this.lethal.id; this.throwT = 0.5;
+        this.lethal.count--; this.throwKind = this.lethal.id; this.throwT = throwDur;
         this.weapon.cancelReload(); this.sprinting = false;
         this.events.push({ type: 'throw', kind: this.throwKind });
-      } else if (cmd.tactical && !prev.tactical && this.tactical.count > 0) {
-        this.tactical.count--; this.throwKind = this.tactical.id; this.throwT = 0.5;
+      } else if (cmd.tactical && !prev.tactical && this.tactical.count > 0 && (!EQUIPMENT[this.tactical.id].deploy || ctx.canDeploy?.(this, this.tactical.id))) {
+        this.tactical.count--; this.throwKind = this.tactical.id; this.throwT = throwDur;
         this.weapon.cancelReload(); this.sprinting = false;
         this.events.push({ type: 'throw', kind: this.throwKind });
       }
@@ -358,7 +372,7 @@ export class Combatant {
     // ---- reload ----
     const wpn = this.weapon;
     if (cmd.reload && !prev.reload && !this.busy && wpn.canReload) {
-      if (wpn.startReload()) { this.sprinting = this.sprinting && true; }
+      if (wpn.startReload(perks.has('pk_sleight') ? 1.25 : 1)) { this.sprinting = this.sprinting && true; }
     }
     // ---- fire ----
     let trigger = def.auto ? cmd.fire : (cmd.fire && !prev.fire);
@@ -372,7 +386,7 @@ export class Combatant {
     if (trigger && canShoot) {
       if (wpn.mag <= 0) {
         if (cmd.fire && !prev.fire) this.events.push({ type: 'dry' });
-        if (wpn.canReload) wpn.startReload();
+        if (wpn.canReload) wpn.startReload(perks.has('pk_sleight') ? 1.25 : 1);
       } else if (wpn.fire(ctx.time)) {
         if (def.burst) { wpn.burstLeft--; if (wpn.burstLeft <= 0 || wpn.mag <= 0) { wpn.burstLeft = 0; wpn.cool = def.burst.delay; } }
         this.stats.shots++;
@@ -385,13 +399,18 @@ export class Combatant {
         const kh = (Math.random() * 2 - 1) * r.h * adsMul * (Math.PI / 180);
         this.kickPitch += kv; this.kickYaw += kh;
         this.recoilImpulse = { v: kv, h: kh };
-        if (wpn.mag === 0 && wpn.canReload && !this.isBot) wpn.startReload();
+        if (wpn.mag === 0 && wpn.canReload && !this.isBot) wpn.startReload(perks.has('pk_sleight') ? 1.25 : 1);
       }
     } else if (def.burst && wpn.burstLeft && !canShoot) {
       wpn.burstLeft = 0;
     } else if (cmd.fire && !prev.fire && wpn.mag <= 0 && !this.busy && !def.melee) {
       this.events.push({ type: 'dry' });
       if (wpn.canReload) wpn.startReload();
+    }
+    // ---- support abilities ----
+    if (cmd.support) {
+      if (this.abilities[cmd.support] > 0 && ctx.useSupport?.(this, cmd.support)) this.abilities[cmd.support]--;
+      cmd.support = null;
     }
     // reload events -> presentation
     for (const ws of this.weapons) {

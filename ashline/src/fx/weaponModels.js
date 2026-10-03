@@ -40,6 +40,7 @@ export function weaponMaterials(lib) {
 
 class Builder {
   constructor(mats) {
+    this.att = {};
     this.mats = mats;
     this.group = new THREE.Group();
     this.parts = {};
@@ -75,6 +76,11 @@ function rail(b, y, z0, z1, mat = 'metal') {
 }
 
 function reflexSight(b, y, z) {
+  if (opticOverride(b, y, z, 'reflex')) return;
+  reflexCore(b, y, z);
+}
+
+function reflexCore(b, y, z) {
   // low mount + open window frame (no solid plates) so the view stays clear when aiming
   b.add(rbox(0.026, 0.01, 0.05, 0.003), 'polymer', 0, y + 0.005, z);
   b.add(rbox(0.004, 0.026, 0.006, 0.0015), 'polymer', 0.0135, y + 0.023, z - 0.018);
@@ -89,6 +95,7 @@ function reflexSight(b, y, z) {
 }
 
 function ironSights(b, yRear, zRear, yFront, zFront) {
+  if (opticOverride(b, yRear - 0.004, zRear - 0.03, 'iron')) return;
   b.add(rbox(0.024, 0.016, 0.014, 0.002), 'metal', 0, yRear, zRear);
   b.add(rbox(0.006, 0.006, 0.016), 'polymer', 0, yRear + 0.011, zRear);
   b.add(rbox(0.008, 0.012, 0.01), 'metal', -0.008, yRear + 0.012, zRear);
@@ -96,6 +103,64 @@ function ironSights(b, yRear, zRear, yFront, zFront) {
   b.add(rbox(0.016, 0.014, 0.012, 0.002), 'metal', 0, yFront, zFront);
   b.add(rbox(0.003, 0.016, 0.003, 0.001), 'metal', 0, yFront + 0.014, zFront);
   b.marker('sight', 0, yRear + 0.018, zRear);
+}
+
+/**
+ * Swap the weapon's built-in sight for the attached optic. `y` is the mount
+ * surface, `z` the optic position. Returns true when an optic was built.
+ */
+function opticOverride(b, y, z, native) {
+  const want = b.att.optic;
+  if (!want || b.opticDone || want === native) return false;
+  b.opticDone = true;
+  if (native === 'iron' || native === 'bead') b.add(rbox(0.022, 0.012, 0.06, 0.003), 'metal', 0, y - 0.002, z); // riser mount
+  if (want === 'reflex') reflexCore(b, y, z);
+  else if (want === 'holo') holoCore(b, y, z);
+  else if (want === 'scope3x') {
+    b.add(rbox(0.016, 0.05, 0.02), 'metal', 0, y + 0.02, z - 0.05);
+    b.add(rbox(0.016, 0.05, 0.02), 'metal', 0, y + 0.02, z + 0.05);
+    scopeCore(b, y + 0.058, z);
+  }
+  return true;
+}
+
+/** Muzzle devices, barrel extension, magazine and underbarrel visuals. */
+function attachmentVisuals(b) {
+  const a = b.att, mz = b.markers.muzzle;
+  if (!mz) return;
+  const p = mz.position;
+  let z = p.z;
+  if (a.barrel === 'long') {
+    b.add(cyl(0.011, 0.07), 'metal', 0, p.y, z - 0.035);
+    z -= 0.07;
+  }
+  if (a.muzzle === 'supp') {
+    b.add(cyl(0.021, 0.17, 14), 'polymer', 0, p.y, z - 0.085);
+    b.add(cyl(0.0215, 0.006, 14), 'metal', 0, p.y, z - 0.02);
+    z -= 0.17;
+  } else if (a.muzzle === 'comp') {
+    b.add(cyl(0.015, 0.05, 8), 'metal', 0, p.y, z - 0.025);
+    for (let i = 0; i < 3; i++) b.add(rbox(0.004, 0.012, 0.006, 0.001), 'polymer', 0, p.y + 0.012, z - 0.012 - i * 0.013);
+    z -= 0.05;
+  } else if (a.muzzle === 'brake') {
+    b.add(rbox(0.034, 0.024, 0.055, 0.004), 'metal', 0, p.y, z - 0.028);
+    b.add(rbox(0.036, 0.006, 0.01, 0.001), 'polymer', 0, p.y, z - 0.02);
+    b.add(rbox(0.036, 0.006, 0.01, 0.001), 'polymer', 0, p.y, z - 0.038);
+    z -= 0.055;
+  }
+  p.z = z;
+  if (a.magazine === 'ext' && b.parts.mag) b.parts.mag.scale.set(1.05, 1.4, 1.05);
+  const lh = b.markers.leftHand;
+  if (lh && a.underbarrel) {
+    const q = lh.position;
+    if (a.underbarrel === 'vgrip') b.add(rbox(0.022, 0.075, 0.026, 0.006), 'polymer', 0, q.y - 0.045, q.z + 0.03);
+    else if (a.underbarrel === 'angled') b.add(rbox(0.022, 0.03, 0.07, 0.006), 'polymer', 0, q.y - 0.025, q.z + 0.02, -0.5, 0, 0);
+    else if (a.underbarrel === 'laser') {
+      b.add(rbox(0.02, 0.022, 0.05, 0.004), 'polymer', 0.026, q.y + 0.02, q.z - 0.04);
+      b.add(new THREE.CircleGeometry(0.004, 8), 'reddot', 0.026, q.y + 0.02, q.z - 0.0655);
+      b.marker('laser', 0.026, q.y + 0.02, q.z - 0.066);
+    }
+  }
 }
 
 const BUILDERS = {
@@ -183,7 +248,7 @@ const BUILDERS = {
     b.add(rbox(0.04, 0.075, 0.26, 0.012), 'wood', 0, 0.035, 0.23, -0.12, 0, 0);
     b.add(rbox(0.044, 0.1, 0.02, 0.008), 'polymer', 0, 0.025, 0.36, -0.12, 0, 0);
     b.add(rbox(0.006, 0.004, 0.06), 'metal', 0, 0.015, -0.01);
-    b.marker('sight', 0, 0.112, 0.02);
+    if (!opticOverride(b, 0.104, -0.03, 'bead')) b.marker('sight', 0, 0.112, 0.02);
     b.marker('muzzle', 0, 0.085, -0.67);
     b.marker('leftHand', 0, 0.03, -0.32);
     b.marker('eject', 0.03, 0.075, -0.06);
@@ -251,6 +316,11 @@ const BUILDERS = {
 
 
 function holoSight(b, y, z) {
+  if (opticOverride(b, y, z, 'holo')) return;
+  holoCore(b, y, z);
+}
+
+function holoCore(b, y, z) {
   // larger rectangular holographic window
   b.add(rbox(0.032, 0.012, 0.07, 0.003), 'polymer', 0, y + 0.006, z);
   b.add(rbox(0.004, 0.034, 0.05, 0.0015), 'polymer', 0.017, y + 0.027, z - 0.008);
@@ -265,7 +335,12 @@ function holoSight(b, y, z) {
   b.marker('sight', 0, y + 0.027, z + 0.03);
 }
 
-function scope3x(b, y, z) {
+function scope3x(b, y, z, railY = y - 0.06) {
+  if (opticOverride(b, railY, z, 'scope3x')) return;
+  scopeCore(b, y, z);
+}
+
+function scopeCore(b, y, z) {
   // open-ended tube: from the eye you look through it and see the housing as a ring
   const tube = (r1, r2, len, zz) => {
     const g = new THREE.CylinderGeometry(r2, r1, len, 16, 1, true);
@@ -420,7 +495,7 @@ Object.assign(BUILDERS, {
     const mag = b.sub('mag', 0, 0.03, -0.11);
     b.add(rbox(0.028, 0.085, 0.07, 0.006), 'polymer', 0, -0.04, 0, -0.08, 0, 0, mag);
     bipod(b, 0.03, -0.42);
-    scope3x(b, 0.17, -0.04);
+    scope3x(b, 0.17, -0.04, 0.112);
     b.marker('muzzle', 0, 0.072, -0.8);
     b.marker('leftHand', 0, 0.03, -0.34);
     b.marker('eject', 0.03, 0.08, -0.04);
@@ -524,7 +599,9 @@ Object.assign(BUILDERS, {
  */
 export function buildWeapon(modelId, mats, options = {}) {
   const b = new Builder(mats);
+  b.att = visualAttachments(options.attachments);
   (BUILDERS[modelId] || BUILDERS.ar)(b);
+  attachmentVisuals(b);
   if (options.merge) return mergeModel(b);
   b.group.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
   return { group: b.group, parts: b.parts, markers: b.markers };
@@ -560,6 +637,15 @@ function mergeModel(b) {
   return { group: out, parts: {}, markers };
 }
 
+/** Attachment ids → visual variants used by the builders. */
+function visualAttachments(build) {
+  const out = {};
+  if (!build) return out;
+  const ATT = { opt_reflex: ['optic', 'reflex'], opt_holo: ['optic', 'holo'], opt_3x: ['optic', 'scope3x'], mz_supp: ['muzzle', 'supp'], mz_comp: ['muzzle', 'comp'], mz_choke: ['muzzle', 'comp'], mz_brake: ['muzzle', 'brake'], br_long: ['barrel', 'long'], mg_ext: ['magazine', 'ext'], ub_vgrip: ['underbarrel', 'vgrip'], ub_angled: ['underbarrel', 'angled'], ub_laser: ['underbarrel', 'laser'] };
+  for (const id of Object.values(build)) { const v = ATT[id]; if (v) out[v[0]] = v[1]; }
+  return out;
+}
+
 /** Simple grenade models for hands/world. */
 export function buildGrenade(kind, mats) {
   const g = new THREE.Group();
@@ -570,6 +656,20 @@ export function buildGrenade(kind, mats) {
     top.position.y = 0.065; g.add(top);
     const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0325, 0.0325, 0.012, 12), new THREE.MeshStandardMaterial({ color: 0xd8d8d0 }));
     band.position.y = 0.03; g.add(band);
+  } else if (kind === 'flash') {
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0x8a8f86, roughness: 0.5, metalness: 0.5 }));
+    g.add(body);
+    for (const y of [-0.025, 0.0, 0.025]) {
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0265, 0.0265, 0.006, 12), new THREE.MeshStandardMaterial({ color: 0x24282a }));
+      band.position.y = y; g.add(band);
+    }
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.02, 10), mats.metal);
+    top.position.y = 0.06; g.add(top);
+  } else if (kind === 'shield') {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.05), new THREE.MeshStandardMaterial({ color: 0x5c6468, metalness: 0.7, roughness: 0.4 }));
+    g.add(body);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.02), mats.metal);
+    handle.position.y = 0.07; g.add(handle);
   } else {
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.034, 14, 10), new THREE.MeshStandardMaterial({ color: 0x3c4a34, roughness: 0.55, metalness: 0.3 }));
     body.scale.y = 1.15; g.add(body);

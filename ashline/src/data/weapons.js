@@ -229,13 +229,23 @@ export const EQUIPMENT = {
     blurb: 'Screening smoke. Deploys a cloud that blocks sight for 14 s.',
     fuse: 1.2, throwSpeed: 15, radius: 4.8, duration: 14,
   },
+  flash: {
+    id: 'flash', name: 'FL-2 FLASH', slot: 'tactical', count: 2, unlockLevel: 3,
+    blurb: 'Stun flash. Blinds anyone facing it within 14 m; looking away shortens the effect.',
+    fuse: 1.3, throwSpeed: 16, radius: 14, maxBlind: 3.6,
+  },
+  shield: {
+    id: 'shield', name: 'BULWARK COVER', slot: 'tactical', count: 1, deploy: true, unlockLevel: 8,
+    blurb: 'Deployable ballistic barrier. Blocks bullets until it takes 450 damage or 30 s pass.',
+    hp: 450, life: 30, width: 1.5, height: 1.15, depth: 0.16, dist: 1.4,
+  },
 };
 
 export const PRIMARY_IDS = ['ar_kv7', 'ar_tarn', 'ar_meridian', 'ar_bastion', 'smg_vesper', 'smg_wasp', 'smg_hollow', 'sg_brakk', 'sg_rook', 'sr_longreach', 'dmr_sentinel', 'lmg_drover', 'lmg_anvil'];
 export const SECONDARY_IDS = ['pistol_warden', 'pistol_grizzly', 'melee_axe'];
 export const GUN_LADDER = ['smg_wasp', 'smg_vesper', 'ar_tarn', 'ar_kv7', 'ar_meridian', 'smg_hollow', 'sg_brakk', 'sg_rook', 'lmg_drover', 'lmg_anvil', 'ar_bastion', 'dmr_sentinel', 'sr_longreach', 'pistol_grizzly', 'pistol_warden', 'melee'];
 export const LETHAL_IDS = ['frag'];
-export const TACTICAL_IDS = ['smoke'];
+export const TACTICAL_IDS = ['smoke', 'flash', 'shield'];
 
 /** Damage at distance d with falloff. */
 export function damageAt(def, d) {

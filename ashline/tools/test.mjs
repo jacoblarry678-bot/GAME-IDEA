@@ -7,7 +7,7 @@ import { CINDER_YARD } from '../src/world/maps/cinderYard.js';
 import { NavGrid } from '../src/world/navgrid.js';
 import { Match } from '../src/game/match.js';
 import { Combatant, MOVE } from '../src/entities/combatant.js';
-import { WEAPONS, damageAt } from '../src/data/weapons.js';
+import { WEAPONS, EQUIPMENT, damageAt } from '../src/data/weapons.js';
 import { WeaponState } from '../src/combat/weaponState.js';
 
 let pass = 0, fail = 0;
@@ -368,7 +368,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('corrupt save recovers to a valid default profile', pr3.data.level === 1 && pr3.owns('op_voss'));
   store['ashline.profile'] = JSON.stringify({ version: 1, name: 'Old', owned: { bogus_item: { t: 1 } }, equipped: { operator: 'bogus', weapons: { ar_kv7: { finish: 'fn_gold' } } }, loadouts: [{ primary: 'nope' }] });
   const pr4 = new Profile();
-  t('v1 / invalid data migrates safely', pr4.data.version === 2 && pr4.data.name === 'Old' && !pr4.owns('bogus_item') && pr4.data.equipped.operator === 'op_voss' && pr4.data.equipped.weapons.ar_kv7.finish === 'fn_factory' && pr4.data.loadouts[0].primary === 'ar_kv7');
+  t('v1 / invalid data migrates safely', pr4.data.version === 3 && pr4.data.name === 'Old' && !pr4.owns('bogus_item') && pr4.data.equipped.operator === 'op_voss' && pr4.data.equipped.weapons.ar_kv7.finish === 'fn_factory' && pr4.data.loadouts[0].primary === 'ar_kv7');
   // weapon unlock gating
   store['ashline.profile'] = JSON.stringify({ version: 2, level: 3, loadouts: [{ name: 'X', primary: 'lmg_anvil', secondary: 'melee_axe' }, { name: 'Y', primary: 'ar_tarn', secondary: 'pistol_grizzly' }] });
   const pr5 = new Profile();
@@ -401,6 +401,80 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('axe: cannot aim down sights', p2.adsT === 0);
   // suppressed SMG makes less noise than an unsuppressed one
   t('Hollow is suppressed (no radar ping)', WEAPONS.smg_hollow.suppressed === true);
+}
+
+// ---------------- M4 attachments / perks / equipment / support ----------------
+{
+  const { applyAttachments, attachmentsFor, sanitizeBuild, ATTACHMENTS } = await import('../src/data/attachments.js');
+  const base = WEAPONS.ar_kv7;
+  const avail = attachmentsFor(base);
+  t('attachments: each gun has options, melee has none', avail.length >= 12 && attachmentsFor(WEAPONS.melee_axe).length === 0 && Object.keys(WEAPONS).filter((id) => id !== 'melee_axe').every((id) => attachmentsFor(WEAPONS[id]).length >= 5), `${avail.length} for KV-7`);
+  t('attachments unlock across weapon levels 2–19', avail[0].level === 2 && avail[avail.length - 1].level === 19);
+  const ext = applyAttachments(base, { magazine: 'mg_ext' });
+  t('extended mag: +50% rounds, slower reload, same stable id', ext.mag === 45 && ext.reload > base.reload && ext.id === base.id && base.mag === 30);
+  const sup = applyAttachments(base, { muzzle: 'mz_supp' });
+  t('suppressor: suppressed, shorter range', sup.suppressed && sup.damage.end < base.damage.end && sup.audio.kind === 'suppressed');
+  t('every attachment has a drawback', Object.values(ATTACHMENTS).every((a) => a.cons.length > 0 && a.pros.length > 0));
+  t('builds are sanitized: locked, wrong-slot, unknown and inapplicable dropped', JSON.stringify(sanitizeBuild(base, { optic: 'opt_3x', muzzle: 'mg_ext', barrel: 'nope', magazine: 'mg_ext' }, 6)) === '{"magazine":"mg_ext"}' && Object.keys(sanitizeBuild(WEAPONS.pistol_warden, { optic: 'opt_reflex' })).length === 0);
+  // build applies in a match
+  const m = mkMatch({ playerLoadout: { ...LO, builds: { ar_kv7: { magazine: 'mg_ext' } }, perks: ['pk_quickdraw', 'pk_hardline', 'pk_resolve'] } });
+  const p = m.player;
+  t('match uses the attachment build', p.weapon.mag === 45 && p.weapon.def.mag === 45);
+  // quickdraw: ADS faster
+  place(p, 12, 0, -1.5, -Math.PI / 2);
+  run(m, 0.15, () => { p.cmd.ads = true; });
+  const qd = p.adsT;
+  const m0 = mkMatch(); const p0 = m0.player; place(p0, 12, 0, -1.5, -Math.PI / 2);
+  run(m0, 0.15, () => { p0.cmd.ads = true; });
+  t('Quickdraw aims faster', qd > p0.adsT + 0.05, `${qd.toFixed(2)} vs ${p0.adsT.toFixed(2)}`);
+  // support abilities: Hardline recon at 3 kills
+  for (let i = 0; i < 3; i++) { const e = addEnemy(m); place(e, 14, 0, -1.5); m.applyDamage(e, p, 200, { weapon: 'ar_kv7', zone: 'torso', kind: 'bullet' }); }
+  t('Hardline: Recon Scan earned at 3 eliminations', p.abilities.recon === 1 && p.abilities.supply === 0, JSON.stringify(p.abilities));
+  const e2 = addEnemy(m); place(e2, 30, 0, -1.5);
+  p.cmd.support = 'recon'; run(m, 0.05);
+  t('Recon Scan reveals enemies to the team', p.abilities.recon === 0 && m.deployables.revealed(e2, 0));
+  const ghost = addEnemy(m, 1, { ...LO, perks: ['pk_flak', 'pk_ghost', 'pk_resolve'] }); place(ghost, 25, 0, -1.5);
+  t('Ghost hides from Recon Scan', !m.deployables.revealed(ghost, 0));
+  // supply drop
+  p.abilities.supply = 1; p.weapon.reserve = 0; p.lethal.count = 0; p.health = 50; p.lastDamageT = m.time;
+  p.cmd.support = 'supply'; run(m, 0.05);
+  const drop = m.deployables.drops[0];
+  t('Supply Drop is called in', !!drop && drop.fall > 0);
+  place(p, drop.x, drop.y, drop.z + 0.5); run(m, 3.5);
+  t('Supply Drop restocks ammo, equipment and health', p.weapon.reserve === p.weapon.def.reserve && p.lethal.count === 1 && p.health === 100);
+  // area strike
+  const far = addEnemy(m); place(far, 30, 0, -1.5); far.health = 100;
+  p.abilities.strike = 1; place(p, 12, 0, -1.5, -Math.PI / 2); p.cmd.pitch = -0.08; run(m, 0.02);
+  const before = p.stats.kills;
+  p.cmd.support = 'strike'; run(m, 0.05);
+  const s = m.deployables.strikes[0];
+  t('Area Strike targets the aim point', !!s && s.x > 14, s ? `${s.x.toFixed(1)},${s.z.toFixed(1)}` : 'none');
+  place(far, s.x, 0, s.z);
+  run(m, 6, () => { place(far, s.x, 0, s.z); });
+  t('Area Strike damages enemies in the zone and credits the caller', !far.alive || p.stats.kills > before, `alive=${far.alive} hp=${far.health}`);
+  t('strike kills do not advance support streaks', p.supportKills === 3 + 0, `${p.supportKills}`);
+  // flash
+  const m2 = mkMatch(); const p2 = m2.player; place(p2, 12, 0, -1.5, -Math.PI / 2);
+  const fe = addEnemy(m2); place(fe, 20, 0, -1.5, Math.PI / 2);
+  const fe2 = addEnemy(m2); place(fe2, 20, 0, -2.5, -Math.PI / 2); // looking away
+  m2.projectiles.flash({ x: 19, y: 0.2, z: -2, def: EQUIPMENT.flash, owner: p2 });
+  t('flash blinds enemies; facing it blinds longer', fe.blindT > 2 && fe2.blindT > 0 && fe.blindT > fe2.blindT, `${fe.blindT.toFixed(2)} / ${fe2.blindT.toFixed(2)}`);
+  // shield
+  const m3 = mkMatch({ playerLoadout: { ...LO, tactical: 'shield' } }); const p3 = m3.player; place(p3, 12, 0, -1.5, -Math.PI / 2);
+  run(m3, 0.6, (i) => { p3.cmd.tactical = i < 2; });
+  const sh = m3.deployables.shields[0];
+  t('Bulwark deploys in front of the player', !!sh && sh.x > 12.5, sh ? `${sh.x.toFixed(2)}` : 'none');
+  const se = addEnemy(m3); place(se, 22, 0, -1.5, Math.PI / 2); se.health = 100;
+  run(m3, 0.4, () => { p3.cmd.crouch = true; });
+  const hp0 = sh.hp, aim = Math.atan2(0.75 - 1.62, 10);
+  run(m3, 1.0, () => { se.cmd.fire = true; se.cmd.yaw = Math.PI / 2; se.cmd.pitch = aim; p3.cmd.crouch = true; });
+  t('Bulwark blocks bullets and takes damage', sh.hp < hp0 && p3.health === 100, `shield ${sh.hp}/${hp0} player ${p3.health}`);
+  run(m3, 8, (i) => { se.cmd.fire = i % 2 === 0; se.cmd.pitch = aim; se.cmd.reload = se.weapon.mag === 0; p3.cmd.crouch = true; });
+  t('Bulwark breaks after enough damage and frees the space', !m3.deployables.shields.length && !m3.world.overlaps(sh.box.minX, sh.box.minY + 0.1, sh.box.minZ, sh.box.maxX, sh.box.maxY - 0.1, sh.box.maxZ), `hp ${sh.hp}`);
+  // flak
+  const m4 = mkMatch({ playerLoadout: { ...LO, perks: ['pk_flak', 'pk_hardline', 'pk_resolve'] } }); const p4 = m4.player; place(p4, 12, 0, -1.5);
+  m4.applyDamage(p4, null, 80, { weapon: 'frag', zone: 'torso', kind: 'explosive' });
+  t('Flak Lining reduces explosive damage', p4.health === 56, `${p4.health}`);
 }
 
 console.log(`\n${pass}/${pass + fail} passed`);
