@@ -103,6 +103,7 @@ as a claude.ai artifact can't reach a server on your machine; open the server's 
   - **Equipment**: an FL-2 flash grenade (blinds by distance and facing; the reduced-flash accessibility setting caps it) and the Bulwark deployable cover (blocks bullets until destroyed).
   - **Support abilities**: earned through consecutive eliminations: Recon Scan (4), Supply Drop (6) and Area Strike (8). Hardline lowers each by one. Bots use them too.
 - **Milestone 5**: online play on a self-hosted, server-authoritative server (see above).
+- **Update 0.5.1**: sun glare and lens flare that buildings, roofs, trees and smoke can block; windows and polished metal reflect each map's own buildings through a per-map reflection probe; scope glint on enemy snipers and 3x optics aimed at you; HX-9 Warden buff; **Waspinator collab** (keychain charm + banner) in the Store's Collab section (test credits).
 - **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
@@ -149,6 +150,7 @@ node tools/modes.mjs             # every mode in the browser
 node tools/m3.mjs                # progression/cosmetics/store/pass browser flow
 node tools/m4.mjs                # unlocks, gunsmith, perks, support abilities, shield, flash
 node tools/maps.mjs              # map picker + screenshots of the new maps
+node tools/sun.mjs               # sun flare/occlusion, reflections, scope glint, Waspinator collab
 node tools/range.mjs             # firing range check
 node tools/beauty.mjs high       # review screenshots from fixed viewpoints
 ```

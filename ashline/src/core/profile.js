@@ -247,7 +247,7 @@ export class Profile {
       case 'level': return `Reach player level ${u.level}`;
       case 'weapon': return `Reach ${WEAPONS[u.weapon].name} level ${u.level}`;
       case 'pass': return `Battle Pass tier ${u.tier} (${u.track === 'premium' ? 'Premium' : 'Free'} track)`;
-      case 'shop': return 'Available in the Store';
+      case 'shop': return u.collab ? 'Collab item · Store (Collabs section)' : 'Available in the Store';
       case 'operator': return `Comes with ${COSMETICS[u.operator].name}`;
       default: return '';
     }

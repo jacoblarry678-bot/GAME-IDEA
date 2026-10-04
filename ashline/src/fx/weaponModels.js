@@ -725,6 +725,44 @@ export function buildCharm(shape, color, mats) {
       add(g, 0, 0, 0, 0, Math.PI / 2, 0);
       break;
     }
+    case 'waspinator': {
+      // collab keychain: a tiny robot wasp (original model in the character's colour scheme)
+      const green = new THREE.MeshStandardMaterial({ color, metalness: 0.35, roughness: 0.35 });
+      const gold = new THREE.MeshStandardMaterial({ color: 0xd8a72e, metalness: 0.85, roughness: 0.3 });
+      const yellow = new THREE.MeshStandardMaterial({ color: 0xf2c51e, metalness: 0.2, roughness: 0.4 });
+      const black = new THREE.MeshStandardMaterial({ color: 0x141414, metalness: 0.3, roughness: 0.5 });
+      const visor = new THREE.MeshStandardMaterial({ color: 0x7fb6ff, emissive: 0x3f7dff, emissiveIntensity: 2.2, roughness: 0.2 });
+      const glass = new THREE.MeshStandardMaterial({ color: 0xa8b4ff, metalness: 0.4, roughness: 0.1, emissive: 0x2a3070, emissiveIntensity: 0.6 });
+      const wing = new THREE.MeshStandardMaterial({ color: 0xd8d2ff, emissive: 0x6a5cc8, emissiveIntensity: 0.35, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, roughness: 0.2 });
+      // head with visor, mandibles and antennae
+      add(new RoundedBoxGeometry(0.008, 0.0075, 0.008, 2, 0.0022), 0, 0.0125, 0, 0, 0, 0, green);
+      add(new RoundedBoxGeometry(0.0016, 0.0024, 0.0068, 1, 0.0006), 0.0038, 0.0135, 0, 0, 0, 0, visor);
+      for (const z of [-0.0017, 0.0017]) {
+        add(new THREE.ConeGeometry(0.0009, 0.0035, 5), 0.0034, 0.0086, z, 0, 0, Math.PI * 0.85, gold);
+        add(new THREE.CylinderGeometry(0.00035, 0.00035, 0.006, 4), -0.0008, 0.0185, z * 1.6, z > 0 ? 0.35 : -0.35, 0, 0.2, black);
+      }
+      // thorax with glassy chest plates and gold shoulders
+      add(new RoundedBoxGeometry(0.0085, 0.0085, 0.0115, 2, 0.0025), 0, 0.0045, 0, 0, 0, 0, green);
+      for (const z of [-0.0026, 0.0026]) {
+        const plate = add(new THREE.SphereGeometry(0.0024, 10, 8, 0, Math.PI), 0.0038, 0.0052, z, 0, Math.PI / 2, 0, glass);
+        plate.scale.set(1, 1.15, 0.6);
+        add(new THREE.SphereGeometry(0.0021, 8, 6), 0, 0.0074, z * 2.45, 0, 0, 0, gold);
+        add(new THREE.CylinderGeometry(0.0011, 0.0013, 0.007, 6), 0.001, 0.001, z * 2.6, 0, 0, 0.35, green); // arms
+      }
+      // striped abdomen tapering into a stinger
+      const bands = [[0.0042, yellow], [0.0040, black], [0.0036, yellow], [0.0031, black], [0.0026, yellow]];
+      bands.forEach(([r, mat], i) => add(new THREE.CylinderGeometry(r, r * 0.92, 0.0028, 12), -0.0006, -0.0012 - i * 0.0027, 0, 0, 0, 0, mat));
+      add(new THREE.ConeGeometry(0.0018, 0.005, 8), -0.0006, -0.0168, 0, Math.PI, 0, 0, black);
+      // four translucent wings
+      for (const [z, up, len] of [[-1, 0.5, 0.015], [1, 0.5, 0.015], [-1, 0.15, 0.011], [1, 0.15, 0.011]]) {
+        const w = add(new THREE.CircleGeometry(1, 16), -0.0045, 0.006, z * 0.0035, 0, 0, 0, wing);
+        w.scale.set(len * 0.5, 0.0032, 1);
+        w.geometry.translate(1, 0, 0);
+        w.rotation.set(0, z * (Math.PI / 2 + 0.5), up);
+      }
+      p.scale.setScalar(1.35);
+      break;
+    }
     case 'spike': add(new THREE.BoxGeometry(0.006, 0.034, 0.006)); add(new THREE.BoxGeometry(0.012, 0.004, 0.009), 0, 0.017, 0); break;
     case 'duck': add(new THREE.SphereGeometry(0.009, 10, 8)); add(new THREE.SphereGeometry(0.0062, 10, 8), 0, 0.009, -0.005); add(new THREE.ConeGeometry(0.0025, 0.006, 6), 0, 0.0085, -0.0115, -Math.PI / 2, 0, 0, new THREE.MeshStandardMaterial({ color: 0xff7a1a })); break;
     case 'cog': {

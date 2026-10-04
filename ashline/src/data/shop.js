@@ -14,6 +14,12 @@ export const BUNDLES = [
   { id: 'bd_morale', name: 'Morale Pack', desc: 'Rubber Duck charm, Iron Helm emblem and Prismatic finish.', items: ['ch_duck', 'em_skullcap', 'fn_prism'], discount: 0.3 },
 ];
 
+/** Collaborations: always listed in their own Store section (not part of the rotation). */
+export const COLLABS = [
+  { id: 'waspinator', name: 'Waspinator Collab', bundle: 'bd_waspinator', items: ['ch_waspinator', 'bn_waspinator'], blurb: 'Limited collaboration set. Cosmetic only — never affects gameplay.' },
+];
+BUNDLES.push({ id: 'bd_waspinator', name: 'Waspinator Collab Bundle', desc: 'The Waspinator keychain charm and the Waspinator banner.', items: ['ch_waspinator', 'bn_waspinator'], discount: 0.2, collab: 'waspinator' });
+
 export const SHOP_CONFIG = { featuredSlots: 4, bundleSlots: 2, demoLabel: 'Demo rotation, generated on this device from the date. Not a live service.' };
 
 /** Base price for a single item, by rarity. */
@@ -30,12 +36,12 @@ export function bundlePrice(b, owned) {
   return { full, price: Math.max(0, base), ownedCount: b.items.filter((id) => owned[id]).length };
 }
 
-export const SHOP_ITEMS = COSMETIC_LIST.filter((i) => i.unlock.type === 'shop').map((i) => i.id);
+export const SHOP_ITEMS = COSMETIC_LIST.filter((i) => i.unlock.type === 'shop' && !i.collab).map((i) => i.id);
 
 /** Current demo rotation: featured items (daily) and bundles (weekly). */
 export function currentRotation(now = Date.now()) {
   const { day, week } = periodKeys(now);
   const featured = pickChallenges(SHOP_ITEMS, SHOP_CONFIG.featuredSlots, day + 101);
-  const bundles = pickChallenges(BUNDLES, SHOP_CONFIG.bundleSlots, week + 707);
+  const bundles = pickChallenges(BUNDLES.filter((b) => !b.collab), SHOP_CONFIG.bundleSlots, week + 707);
   return { featured, bundles, day, week };
 }

@@ -100,9 +100,64 @@ export function bannerArt(id, w = 480, h = 120) {
   if (a.kind === 'hazard') { x.fillStyle = a.b; for (let i = -h; i < w; i += 36) { x.beginPath(); x.moveTo(i, h); x.lineTo(i + 18, h); x.lineTo(i + 18 + h, 0); x.lineTo(i + h, 0); x.fill(); } }
   if (a.kind === 'camo') for (let i = 0; i < 40; i++) { x.fillStyle = r() > 0.5 ? a.b : shade(a.a, 0.7); x.beginPath(); x.ellipse(r() * w, r() * h, 10 + r() * 40, 6 + r() * 20, r() * 3, 0, 7); x.fill(); }
   if (a.kind === 'embers') for (let i = 0; i < 90; i++) { x.fillStyle = `rgba(255,${80 + r() * 120 | 0},20,${0.3 + r() * 0.7})`; x.beginPath(); x.arc(r() * w, h - r() * r() * h, 1 + r() * 2.5, 0, 7); x.fill(); }
+  if (a.kind === 'waspinator') waspBanner(x, w, h, r);
   const url = c.toDataURL();
   cache.set(key, url);
   return url;
+}
+
+/** Collab banner: sunset haze, wasp stripes, wings and a stylised robot-wasp head (original art). */
+function waspBanner(x, w, h, r) {
+  const g = x.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#2a1230'); g.addColorStop(0.45, '#8a2a5a'); g.addColorStop(0.8, '#e0743a'); g.addColorStop(1, '#f2b84a');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  const glow = x.createRadialGradient(w * 0.2, h * 0.5, 2, w * 0.2, h * 0.5, h * 1.1);
+  glow.addColorStop(0, 'rgba(255,240,255,0.55)'); glow.addColorStop(0.4, 'rgba(200,120,255,0.18)'); glow.addColorStop(1, 'transparent');
+  x.fillStyle = glow; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 160; i++) { x.fillStyle = `rgba(${r() > 0.5 ? '255,220,180' : '40,10,30'},${r() * 0.12})`; x.fillRect(r() * w, r() * h, 1 + r() * 30, 1); } // grunge
+  // stripe band
+  x.save();
+  x.beginPath(); x.rect(0, h * 0.78, w, h * 0.22); x.clip();
+  x.fillStyle = '#f2c51e'; x.fillRect(0, h * 0.78, w, h * 0.22);
+  x.fillStyle = '#141414'; for (let i = -h; i < w; i += 28) { x.beginPath(); x.moveTo(i, h); x.lineTo(i + 14, h); x.lineTo(i + 14 + h * 0.22, h * 0.78); x.lineTo(i + h * 0.22, h * 0.78); x.fill(); }
+  x.restore();
+  // wings
+  const cx = w * 0.2, cy = h * 0.46, s = h / 120;
+  x.save();
+  x.globalAlpha = 0.6;
+  for (const [dx, rot, len] of [[-1, -0.5, 62], [1, 0.5, 62], [-1, -0.15, 44], [1, 0.15, 44]]) {
+    const wg = x.createLinearGradient(cx, cy, cx + dx * len * s, cy - 30 * s);
+    wg.addColorStop(0, '#f4f0ff'); wg.addColorStop(1, '#9a8cf0');
+    x.fillStyle = wg;
+    x.beginPath(); x.ellipse(cx + dx * len * 0.55 * s, cy - 6 * s, len * 0.55 * s, 11 * s, rot, 0, 7); x.fill();
+  }
+  x.restore();
+  // head
+  x.save();
+  x.translate(cx, cy);
+  x.scale(s, s);
+  x.fillStyle = '#2f8f34'; x.strokeStyle = '#0d2a10'; x.lineWidth = 3;
+  x.beginPath(); x.moveTo(-26, -26); x.lineTo(26, -26); x.lineTo(32, 4); x.lineTo(14, 30); x.lineTo(-14, 30); x.lineTo(-32, 4); x.closePath(); x.fill(); x.stroke();
+  x.fillStyle = '#5fd35a'; x.beginPath(); x.moveTo(-20, -22); x.lineTo(20, -22); x.lineTo(16, -12); x.lineTo(-16, -12); x.closePath(); x.fill();
+  const vg = x.createLinearGradient(0, -8, 0, 6); vg.addColorStop(0, '#d8ecff'); vg.addColorStop(1, '#3f7dff');
+  x.fillStyle = vg; x.shadowColor = '#7fb6ff'; x.shadowBlur = 12;
+  x.beginPath(); x.moveTo(-24, -6); x.lineTo(-4, 4); x.lineTo(-4, 9); x.lineTo(-26, 0); x.closePath(); x.fill();
+  x.beginPath(); x.moveTo(24, -6); x.lineTo(4, 4); x.lineTo(4, 9); x.lineTo(26, 0); x.closePath(); x.fill();
+  x.shadowBlur = 0;
+  x.fillStyle = '#d8a72e'; for (const sx of [-1, 1]) { x.beginPath(); x.moveTo(sx * 6, 16); x.lineTo(sx * 13, 34); x.lineTo(sx * 2, 24); x.closePath(); x.fill(); }
+  x.strokeStyle = '#141414'; x.lineWidth = 2.5; for (const sx of [-1, 1]) { x.beginPath(); x.moveTo(sx * 10, -26); x.quadraticCurveTo(sx * 18, -46, sx * 30, -50); x.stroke(); }
+  x.restore();
+  // title
+  x.save();
+  x.font = `900 ${Math.round(h * 0.34)}px Rajdhani, Arial Black, sans-serif`;
+  x.textBaseline = 'middle';
+  x.lineJoin = 'round'; x.lineWidth = Math.max(3, h * 0.05); x.strokeStyle = '#0d1a0d';
+  x.strokeText('WASPINATOR', w * 0.38, h * 0.42);
+  const tg = x.createLinearGradient(0, h * 0.25, 0, h * 0.6); tg.addColorStop(0, '#9aef6a'); tg.addColorStop(1, '#2f8f34');
+  x.fillStyle = tg; x.fillText('WASPINATOR', w * 0.38, h * 0.42);
+  x.font = `700 ${Math.round(h * 0.11)}px Rajdhani, Arial, sans-serif`;
+  x.fillStyle = '#fff5e0'; x.fillText('COLLAB', w * 0.385, h * 0.66);
+  x.restore();
 }
 
 /** Thumbnail for any cosmetic (2D icon or swatch); 3D items get a colored glyph. */

@@ -15,7 +15,8 @@
     "maps": "node tools/mapcheck.mjs",
     "server": "node server/server.mjs",
     "nettest": "node tools/nettest.mjs",
-    "online": "node tools/online.mjs"
+    "online": "node tools/online.mjs",
+    "sun": "node tools/sun.mjs"
   },
   "dependencies": {
     "three": "0.169.0",

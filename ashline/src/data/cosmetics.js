@@ -88,6 +88,8 @@ charm('ch_star', 'Brass Star', 'rare', 'Five points of polished brass.', { type:
 charm('ch_spike', 'Rail Spike', 'epic', 'Pulled from Line 2 at Cinder Yard.', { type: 'pass', tier: 28, track: 'premium' }, 'spike', 0x6a4a36);
 charm('ch_duck', 'Rubber Duck', 'epic', 'Morale equipment.', { type: 'shop' }, 'duck', 0xffd23a);
 charm('ch_cog', 'Gear Cog', 'rare', 'A cog from the turntable gearbox.', { type: 'pass', tier: 33, track: 'free' }, 'cog', 0x8a8e92);
+// ---- collaboration: Waspinator (licensed collab per the project owner; original procedural art)
+add({ id: 'ch_waspinator', type: 'charm', name: 'Waspinator Keychain', rarity: 'legendary', collab: 'waspinator', desc: 'Collab keychain: a tiny robot wasp with buzzing wings and a glowing visor. Cosmetic only.', unlock: { type: 'shop', collab: 'waspinator' }, charm: { shape: 'waspinator', color: 0x3fa63a } });
 charm('ch_compass', 'Field Compass', 'legendary', 'Points toward the nearest objective. Probably.', { type: 'pass', tier: 48, track: 'premium' }, 'compass', 0xc89a40);
 
 // ---------------- calling cards (2D art params)
@@ -127,6 +129,7 @@ banner('bn_hazard', 'Hazard', 'rare', 'Mind the gap.', { type: 'level', level: 2
 banner('bn_dusk', 'Dusk', 'rare', 'Last light over the depot.', { type: 'pass', tier: 27, track: 'free' }, { kind: 'gradient', a: '#1b2140', b: '#e0743a' });
 banner('bn_camo', 'Field', 'common', 'Woodland pattern.', { type: 'pass', tier: 36, track: 'free' }, { kind: 'camo', a: '#2c3424', b: '#5a6640' });
 banner('bn_ember', 'Ember', 'epic', 'Glowing coals.', { type: 'pass', tier: 44, track: 'premium' }, { kind: 'embers', a: '#120a08', b: '#ff5a1a' });
+add({ id: 'bn_waspinator', type: 'banner', name: 'Waspinator', rarity: 'epic', collab: 'waspinator', desc: 'Collab banner: green armour, wasp stripes and translucent wings on a sunset haze.', unlock: { type: 'shop', collab: 'waspinator' }, art: { kind: 'waspinator', a: '#3a1830', b: '#e0743a' } });
 banner('bn_royal', 'Royal', 'legendary', 'Deep violet and gold.', { type: 'shop' }, { kind: 'gradient', a: '#1e0f30', b: '#c49a3a' });
 
 export const COSMETICS = Object.fromEntries(items.map((i) => [i.id, i]));

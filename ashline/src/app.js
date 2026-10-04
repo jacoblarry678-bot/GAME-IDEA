@@ -102,10 +102,14 @@ export class App {
     }
     const sky = createSky(def);
     const env = this.engine.bakeEnvironment(sky);
+    progress(0.7, 'Baking reflections');
+    await nextFrame();
+    let reflEnv = null;
+    try { reflEnv = this.engine.bakeReflections(b.root, sky, def, env); } catch (e) { console.warn('reflection bake skipped', e); }
     progress(0.75, 'Baking navigation');
     await nextFrame();
     const nav = new NavGrid(b.world, def.bounds, 1);
-    const rt = { def, world: b.world, nav, spawns: b.spawns, hotspots: b.hotspots, minimap: makeMinimap(def, b), root: b.root, sky, env };
+    const rt = { def, world: b.world, nav, spawns: b.spawns, hotspots: b.hotspots, minimap: makeMinimap(def, b), root: b.root, sky, env, reflEnv };
     b.root.visible = false; sky.visible = false;
     this.engine.scene.add(b.root, sky);
     this.maps[def.id] = rt;
@@ -118,6 +122,12 @@ export class App {
     this.sky = rt.sky;
     this.engine.setEnvironment(rt.def);
     this.engine.useEnvironment(rt.env);
+    // glass and polished metal reflect this map's own buildings
+    for (const k of ['window_dark', 'tank_white', 'dish']) {
+      const m = this.materials.get(k).mat;
+      m.envMap = rt.reflEnv || null;
+      m.needsUpdate = true;
+    }
     this.activeMap = rt;
   }
 

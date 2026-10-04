@@ -534,6 +534,7 @@ function buildBackdrop(b) {
     let x, z;
     if (side === 0) { x = along; z = dist; } else if (side === 1) { x = along; z = -dist; } else if (side === 2) { x = dist + 4; z = along * 0.7; } else { x = -dist - 4; z = along * 0.7; }
     b.box(x - w / 2, 0, z - d / 2, x + w / 2, h, z + d / 2, i % 3 ? 'backdrop' : 'backdrop2', { collide: false });
+    b.box(x - w / 2, 0, z - d / 2, x + w / 2, h, z + d / 2, null, { visual: false, solid: false, bullet: false, sight: true, map: false }); // occludes the sun
   }
   // gantry cranes (far north)
   for (const cx of [-30, 18]) {

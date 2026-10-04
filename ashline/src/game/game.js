@@ -18,6 +18,7 @@ import { ObjectiveView } from '../fx/objectives.js';
 import { DeployablesView } from '../fx/deployablesView.js';
 import { SUPPORT, SUPPORT_IDS, supportThreshold } from '../data/support.js';
 import { COSMETICS } from '../data/cosmetics.js';
+import { SunFlare, glintTexture } from '../fx/sunflare.js';
 
 const v3 = new THREE.Vector3(), v3b = new THREE.Vector3();
 
@@ -57,6 +58,8 @@ export class Game {
     }
     this.updateTeamColors();
     this.hud = new Hud(document.getElementById('ui'), app);
+    this.sunflare = new SunFlare(this.hud.root);
+    this.glints = new Map();
     this.hud.setTeams(0);
     this.hud.setFfa(this.ffa && !this.isRange);
     this.vm = app.viewmodel;
@@ -262,7 +265,9 @@ export class Game {
     }
     this.updateCamera(dt);
     this.updateViews(dt);
+    this.updateGlints();
     this.updateViewmodel(dt);
+    this.updateSun(dt);
     app.effects.update(this.paused ? 0 : dt, m.projectiles);
     this.objView?.update(this.paused ? 0 : dt);
     this.depView?.update(this.paused ? 0 : dt);
@@ -735,6 +740,48 @@ export class Game {
     }
   }
 
+  /** Sun glare / lens flare, hidden by geometry and smoke. */
+  updateSun(dt) {
+    const g = this.app.settings.data.graphics, acc = this.app.settings.data.accessibility;
+    const strength = g.sunFlare ? (acc.reducedFlash ? 0.4 : 1) * (this.scoped ? 0.7 : 1) : 0;
+    const w = this.match.world, pj = this.match.projectiles;
+    this.sunflare.update(this.paused && !this.online ? 0 : dt, this.app.engine.camera, this.app.engine.sunDir, (ox, oy, oz, dx, dy, dz) => !!w.raycast(ox, oy, oz, dx, dy, dz, 300, 'sight') || pj.smokeBlocks(ox, oy, oz, ox + dx * 60, oy + dy * 60, oz + dz * 60), strength);
+  }
+
+  /** Scope glint: enemies aiming a magnified optic at you flash a bright glint. */
+  updateGlints() {
+    const cam = this.app.engine.camera.position, p = this.player;
+    const seen = new Set();
+    for (const c of this.match.combatants) {
+      if (c === p || !c.alive || c.dummy) continue;
+      if (!this.ffa && c.team === p.team) continue;
+      const def = c.weapon.def;
+      const magnified = def.class === 'sniper' || def.attachments?.optic === 'opt_3x';
+      if (!magnified || c.adsT < 0.6) continue;
+      const cp = Math.cos(c.pitch);
+      const fx = -Math.sin(c.yaw) * cp, fy = Math.sin(c.pitch), fz = -Math.cos(c.yaw) * cp;
+      const gx = c.x + fx * 0.35, gy = c.eyeY + 0.03, gz = c.z + fz * 0.35;
+      const dx = cam.x - gx, dy = cam.y - gy, dz = cam.z - gz;
+      const d = Math.hypot(dx, dy, dz);
+      if (d < 6) continue;
+      const facing = (dx * fx + dy * fy + dz * fz) / d;
+      if (facing < 0.93) continue;
+      let s = this.glints.get(c.id);
+      if (!s) {
+        s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glintTexture(), blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false, fog: false }));
+        this.app.engine.scene.add(s);
+        this.glints.set(c.id, s);
+      }
+      const k = Math.pow((facing - 0.93) / 0.07, 2) * (0.75 + 0.25 * Math.sin(performance.now() / 90 + c.id));
+      s.visible = true;
+      s.position.set(gx, gy, gz);
+      s.scale.setScalar(Math.max(0.3, d * 0.022) * (0.6 + k * 0.6));
+      s.material.opacity = Math.min(1, k * 1.2);
+      seen.add(c.id);
+    }
+    for (const [id, s] of this.glints) if (!seen.has(id)) s.visible = false;
+  }
+
   project(x, y, z) {
     const cam = this.app.engine.camera;
     v3b.set(x, y, z).project(cam);
@@ -967,6 +1014,8 @@ export class Game {
   }
 
   dispose() {
+    for (const s of this.glints.values()) { this.app.engine.scene.remove(s); s.material.dispose(); }
+    this.sunflare.destroy();
     for (const v of this.views.values()) this.app.engine.scene.remove(v.root);
     this.views.clear();
     this.hud.destroy();

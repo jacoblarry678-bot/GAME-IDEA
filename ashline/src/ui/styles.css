@@ -415,3 +415,15 @@ table.sb tr.me td { background: rgba(255,138,61,0.12); color: #fff; }
 .loading-ov .ld { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .loading-ov .spin { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,0.15); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* collab */
+.collab-tag { display: inline-block; font-family: var(--font-head); font-weight: 700; font-size: 10px; letter-spacing: 0.16em; padding: 1px 6px; color: #10200f; background: linear-gradient(90deg, #f2c51e, #7fd35a); }
+.collab-box { padding: 10px 12px; border: 1px solid rgba(242,197,30,0.45); background: linear-gradient(135deg, rgba(138,42,90,0.25), rgba(224,116,58,0.12)); display: flex; flex-direction: column; gap: 8px; }
+
+/* sun glare / lens flare (screen-space, under the HUD) */
+#hud .sunflare { position: absolute; inset: 0; pointer-events: none; overflow: hidden; mix-blend-mode: screen; z-index: 0; }
+#hud .sunflare > div { position: absolute; left: 0; top: 0; border-radius: 50%; will-change: transform, opacity; }
+#hud .sf-veil { inset: 0; width: 100% !important; height: 100% !important; border-radius: 0 !important; background: radial-gradient(ellipse at center, rgba(255,236,200,0.9), rgba(255,220,170,0.55)); }
+#hud .sf-glare { background: radial-gradient(circle, rgba(255,247,225,0.75) 0%, rgba(255,226,170,0.35) 12%, rgba(255,190,120,0.12) 35%, rgba(255,170,100,0) 62%); }
+#hud .sf-core { background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,250,235,0.95) 22%, rgba(255,235,190,0.35) 50%, rgba(255,220,160,0) 72%); }
+#hud .sf-streak { width: 120vw; height: 6px; border-radius: 3px !important; background: linear-gradient(90deg, rgba(160,200,255,0), rgba(200,225,255,0.55) 45%, rgba(255,255,255,0.9) 50%, rgba(200,225,255,0.55) 55%, rgba(160,200,255,0)); }

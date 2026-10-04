@@ -501,5 +501,27 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   }
 }
 
+// ---------------- update: pistol buff, Waspinator collab ----------------
+{
+  const W = WEAPONS.pistol_warden;
+  const stk = (d) => Math.ceil(100 / damageAt(W, d));
+  t('HX-9 Warden buff: 3 body shots to 14 m, 4 to 32 m; 2 headshots kill; 15-round mag', stk(10) === 3 && stk(14) === 3 && stk(30) === 4 && damageAt(W, 10) * W.mult.head * 2 >= 100 && W.mag === 15 && W.rpm >= 460, `${stk(10)}/${stk(30)} shots`);
+  const { COSMETICS } = await import('../src/data/cosmetics.js');
+  const { SHOP_ITEMS, BUNDLES, COLLABS, currentRotation, bundlePrice } = await import('../src/data/shop.js');
+  const wasp = ['ch_waspinator', 'bn_waspinator'];
+  t('Waspinator collab: keychain charm + banner, flagged collab, store-only', wasp.every((id) => COSMETICS[id]?.collab === 'waspinator' && COSMETICS[id].unlock.type === 'shop') && COSMETICS.ch_waspinator.charm.shape === 'waspinator' && COSMETICS.bn_waspinator.art.kind === 'waspinator');
+  t('collab items stay out of the daily/weekly rotation and have their own section', !SHOP_ITEMS.some((id) => wasp.includes(id)) && !currentRotation().bundles.some((b) => b.collab) && COLLABS[0].items.join() === wasp.join());
+  const { Profile: P2 } = await import('../src/core/profile.js');
+  globalThis.window.localStorage.setItem('ashline.profile', JSON.stringify({ version: 3, credits: 5000 }));
+  const pc = new P2();
+  const b = BUNDLES.find((x) => x.id === 'bd_waspinator');
+  const price = bundlePrice(b, pc.data.owned).price;
+  const r = pc.buyBundle('bd_waspinator');
+  t('collab bundle buys with test credits and grants both items', r.ok && wasp.every((id) => pc.owns(id)) && pc.data.credits === 5000 - price && price === Math.round((1800 + 1000) * 0.8 / 10) * 10, `price ${price}`);
+  t('collab bundle cannot be bought twice', pc.buyBundle('bd_waspinator').reason === 'owned');
+  pc.equip('ch_waspinator', 'ar_kv7'); pc.equip('bn_waspinator');
+  t('collab charm and banner equip', pc.data.equipped.weapons.ar_kv7.charm === 'ch_waspinator' && pc.data.equipped.banner === 'bn_waspinator');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

@@ -93,6 +93,46 @@ export class Engine {
     return rt.texture;
   }
 
+  /**
+   * Reflection probe for glass and polished metal: a cube snapshot of the map
+   * itself (buildings, sky, sun) from its centre, prefiltered like the sky IBL.
+   * Windows then reflect the surrounding buildings instead of only the sky.
+   */
+  bakeReflections(root, sky, def, env) {
+    const scene = new THREE.Scene();
+    const s = sky.clone();
+    s.material = sky.material.clone();
+    s.material.uniforms.time.value = 0;
+    s.visible = true;
+    scene.add(s);
+    const parent = root.parent, wasVisible = root.visible;
+    scene.add(root);
+    root.visible = true;
+    const d = new THREE.Vector3(...def.sun.dir).normalize();
+    const sun = new THREE.DirectionalLight(def.sun.color, def.sun.intensity);
+    sun.position.copy(d).multiplyScalar(100);
+    scene.add(sun, new THREE.HemisphereLight(0xbcc8d6, 0x4a443c, 0.75));
+    scene.environment = env;
+    scene.environmentIntensity = 0.55;
+    if (def.fog) scene.fog = new THREE.FogExp2(def.fog.color, def.fog.density);
+    const cube = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType, generateMipmaps: false });
+    const cam = new THREE.CubeCamera(0.5, 600, cube);
+    const B = def.bounds;
+    cam.position.set((B.minX + B.maxX) / 2, 7, (B.minZ + B.maxZ) / 2);
+    const shadows = this.renderer.shadowMap.enabled;
+    this.renderer.shadowMap.enabled = false;
+    cam.update(this.renderer, scene);
+    this.renderer.shadowMap.enabled = shadows;
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    const tex = pmrem.fromCubemap(cube.texture).texture;
+    pmrem.dispose();
+    cube.dispose();
+    scene.remove(root);
+    root.visible = wasVisible;
+    if (parent) parent.add(root);
+    return tex;
+  }
+
   useEnvironment(tex) {
     this.scene.environment = tex;
     this.vmScene.environment = tex;

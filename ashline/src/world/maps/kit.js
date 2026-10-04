@@ -57,6 +57,7 @@ export function building(b, o) {
   const cy = Math.min(h, o.ceilY ?? 3.6);
   b.box(x0 + t / 2, cy, z0 + t / 2, x1 - t / 2, cy + 0.2, z1 - t / 2, o.ceil || 'concrete_dark', { map: false });
   b.box(x0 - 0.25, h, z0 - 0.25, x1 + 0.25, h + 0.25, z1 + 0.25, o.cornice || 'stone', { map: false });
+  if (o.gable) b.box(x0, h + 0.25, z0, x1, h + 0.25 + (o.gableH ?? 2.6) * 0.5, z1, null, { visual: false, solid: false, bullet: false, sight: true, map: false }); // roof volume blocks sight
   if (o.gable) gable(b, x0 - 0.35, x1 + 0.35, z0 - 0.35, z1 + 0.35, h + 0.25, o.gableH ?? 2.6, o.gable === 'x', o.roof || 'tile_roof');
   if (o.floor !== false) b.box(x0 + t / 2, 0, z0 + t / 2, x1 - t / 2, 0.015, z1 - t / 2, o.floor || 'floor_in', { collide: false });
   if (b.headless) return;
@@ -168,6 +169,8 @@ export function car(b, x, z, alongX, mat = 'steel_green') {
 
 export function tree(b, x, z, h = 5.5, r = 2.2) {
   b.cylinder(x, 0, z, 0.2, h * 0.55, 'wood', { seg: 8 });
+  // the crown blocks sight (and the sun flare) but not movement or bullets
+  b.box(x - r * 0.8, h * 0.58, z - r * 0.8, x + r * 0.8, h * 0.58 + r * 1.6, z + r * 0.8, null, { visual: false, solid: false, bullet: false, sight: true, map: false });
   if (b.headless) return;
   for (const [ox, oy, oz, s] of [[0, h * 0.75, 0, 1], [0.6, h * 0.62, 0.3, 0.7], [-0.5, h * 0.66, -0.4, 0.75]]) {
     const g = new THREE.IcosahedronGeometry(r * s, 1);
@@ -233,5 +236,6 @@ export function backdrop(b, seed, mats, minDist = 56, spread = 22, count = 26, h
     let x, z;
     if (side === 0) { x = along; z = dist; } else if (side === 1) { x = along; z = -dist; } else if (side === 2) { x = dist + 4; z = along * 0.7; } else { x = -dist - 4; z = along * 0.7; }
     b.box(x - w / 2, 0, z - d / 2, x + w / 2, h, z + d / 2, mats[i % mats.length], { collide: false });
+    b.box(x - w / 2, 0, z - d / 2, x + w / 2, h, z + d / 2, null, { visual: false, solid: false, bullet: false, sight: true, map: false }); // occludes the sun
   }
 }

@@ -18,7 +18,7 @@ import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
 import { NetClient } from '../net/netClient.js';
 
-export const VERSION = 'M5 · build 0.5.0';
+export const VERSION = 'M5 · build 0.5.1';
 
 export class Screens {
   constructor(app) {
@@ -188,7 +188,7 @@ const SCREENS = {
             <button class="menu-btn" data-go="armory">Armory${app.profile.unseenCount() ? ` <span class="newdot">${app.profile.unseenCount()}</span>` : ''}<span class="sub">Operators, outfits, finishes, charms, cards</span></button>
             <button class="menu-btn" data-go="pass">Battle Pass<span class="sub">Season ${SEASON.number} · tier ${app.profile.passTier} / ${SEASON.tiers}${app.profile.data.pass.premium ? ' · Premium' : ''}</span></button>
             <button class="menu-btn" data-go="challenges">Challenges<span class="sub">${app.profile.challengeDefs().daily.filter((c) => c.done).length}/5 daily · ${app.profile.challengeDefs().weekly.filter((c) => c.done).length}/3 weekly</span></button>
-            <button class="menu-btn" data-go="store">Store<span class="sub">Cosmetics · test credits only</span></button>
+            <button class="menu-btn" data-go="store">Store<span class="sub">New: Waspinator collab · test credits only</span></button>
             <button class="menu-btn" data-go="settings">Settings<span class="sub">Graphics, controls, audio, interface, accessibility</span></button>
             <button class="menu-btn" data-go="career">Career<span class="sub">${prof.career.matches} matches · ${prof.career.kills} eliminations</span></button>
             <button class="menu-btn" data-go="about">About &amp; Controls<span class="sub">What's in this build and what's next</span></button>

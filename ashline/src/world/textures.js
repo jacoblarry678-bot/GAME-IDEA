@@ -638,7 +638,7 @@ export class MaterialLibrary {
       case 'lamp': e = { mat: new THREE.MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffe2a8, emissiveIntensity: 3 }), scale: 1 }; break;
       case 'lamp_red': e = { mat: new THREE.MeshStandardMaterial({ color: 0xff5040, emissive: 0xff2010, emissiveIntensity: 4 }), scale: 1 }; break;
       case 'lamp_green': e = { mat: new THREE.MeshStandardMaterial({ color: 0x60ff80, emissive: 0x20ff50, emissiveIntensity: 3 }), scale: 1 }; break;
-      case 'window_dark': e = { mat: new THREE.MeshStandardMaterial({ color: 0x182028, roughness: 0.15, metalness: 0.6 }), scale: 1 }; break;
+      case 'window_dark': e = { mat: new THREE.MeshStandardMaterial({ color: 0x7d93a8, roughness: 0.05, metalness: 1.0, envMapIntensity: 1.0 }), scale: 1 }; break;
       case 'paint_yellow': e = { mat: new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), scale: 1 }; break;
       case 'paint_white': e = { mat: new THREE.MeshStandardMaterial({ color: 0xbdbab0, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), scale: 1 }; break;
       case 'paint_blue': e = { mat: new THREE.MeshStandardMaterial({ color: 0x2f6fb0, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), scale: 1 }; break;

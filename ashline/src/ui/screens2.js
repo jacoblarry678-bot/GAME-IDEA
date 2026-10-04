@@ -8,7 +8,7 @@ import { COSMETICS, COSMETIC_LIST, RARITY, TYPES } from '../data/cosmetics.js';
 import { WEAPONS } from '../data/weapons.js';
 import { SEASON, PASS_TIERS, CURRENCY, seasonDaysLeft } from '../data/season.js';
 import { nextReset } from '../data/challenges.js';
-import { BUNDLES, SHOP_CONFIG, currentRotation, itemPrice, bundlePrice } from '../data/shop.js';
+import { BUNDLES, SHOP_CONFIG, COLLABS, currentRotation, itemPrice, bundlePrice } from '../data/shop.js';
 import { xpToNext, MAX_LEVEL, weaponXpToNext } from '../core/profile.js';
 import { cardArt, emblemArt, bannerArt, itemThumb } from './art.js';
 
@@ -255,7 +255,7 @@ export const SCREENS2 = {
       if (!sel) sel = { kind: 'item', id: featured[0] };
       const card = (id) => {
         const it = COSMETICS[id], own = prof.owns(id);
-        return `<button class="shop-it ${sel.kind === 'item' && sel.id === id ? 'sel' : ''}" data-item="${id}" style="--rc:${RARITY[it.rarity].color}">${itemThumb(it)}<div class="inv-name">${esc(it.name)}</div><div class="inv-sub">${rarityTag(it)} · ${TYPES[it.type].single}</div><div class="price">${own ? 'OWNED' : `${fmt(itemPrice(id))} AC`}</div></button>`;
+        return `<button class="shop-it ${sel.kind === 'item' && sel.id === id ? 'sel' : ''}" data-item="${id}" style="--rc:${RARITY[it.rarity].color}">${itemThumb(it)}<div class="inv-name">${esc(it.name)}</div><div class="inv-sub">${it.collab ? '<span class="collab-tag">COLLAB</span> ' : ''}${rarityTag(it)} · ${TYPES[it.type].single}</div><div class="price">${own ? 'OWNED' : `${fmt(itemPrice(id))} AC`}</div></button>`;
       };
       const bcard = (b) => {
         const bp = bundlePrice(b, owned), all = bp.ownedCount === b.items.length;
@@ -285,6 +285,8 @@ export const SCREENS2 = {
         <div class="page-body scroll" style="flex-direction:column;gap:14px;max-width:min(760px,56vw)">
           ${view === 'featured' ? `
             <div class="muted small">${esc(SHOP_CONFIG.demoLabel)} Featured items change daily, bundles weekly.</div>
+            ${COLLABS.map((c) => `<div class="collab-box"><div class="row"><span class="collab-tag">COLLAB</span><h3 class="title" style="margin:0">${esc(c.name)}</h3></div><div class="muted small">${esc(c.blurb)}</div>
+              <div class="shop-grid">${bcard(BUNDLES.find((b) => b.id === c.bundle))}${c.items.map(card).join('')}</div></div>`).join('')}
             <h3 class="title">Featured today</h3><div class="shop-grid">${featured.map(card).join('')}</div>
             <h3 class="title">Bundles this week</h3><div class="shop-grid">${rot.bundles.map(bcard).join('')}</div>`
           : `<table class="sb"><thead><tr><th>When</th><th>Purchase</th><th class="num">Price</th><th class="num">Balance after</th></tr></thead><tbody>

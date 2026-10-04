@@ -131,6 +131,27 @@ someone runs the server, and others connect to it.
 - The netcode has been tested on localhost and with simulated latency, not over real internet links with packet loss. WebSocket (TCP) means a lost packet causes a brief stall, not a gap.
 - GPU performance is still unmeasured (see M1).
 
+## Update 0.5.1: sun, reflections, pistol buff, Waspinator collab
+
+**Added**
+- **Sun glare and lens flare**: a screen-space glare, core, anamorphic streak and ghosts follow the sun, plus a soft veil when you look toward it. Visibility comes from a ray through the collision world and smoke, so buildings, containers, pitched roofs, tree crowns and smoke hide it. There's a Settings → Graphics toggle, and *Reduce Flashing* dims it.
+- **Reflections on buildings**: each map bakes a reflection probe the first time it loads (a cube snapshot of the map from its centre, prefiltered). Windows are now tinted mirror glass, and windows, white tanks and satellite dishes reflect that map's own buildings and sky, with sun glints that bloom catches.
+- **Sight-only occluders**: tree crowns and pitched-roof volumes block sight (bots, the flare) but not movement or bullets. Distant backdrop buildings block the flare (client only).
+- **Scope glint**: enemies aiming a sniper rifle, DMR or 3x optic at you show a bright glint at their scope, scaled with distance.
+- **HX-9 Warden buff**: damage 34→38 near and 21→26 far, falloff range 10–24 m → 14–32 m, head multiplier 1.4→1.5 (two headshots kill), 420→460 rpm, magazine 12→15 (reserve 60), lower recoil and spread, faster reload, ADS and swap.
+- **Waspinator collab** (licensed per the project owner; see ASSETS.md): the *Waspinator Keychain* (legendary 3D charm: green armour, glowing blue visor, translucent wings, striped abdomen) and the *Waspinator* banner (epic). Both are original procedural art; the uploaded reference image is not included in the game. They sell in a permanent **Collab** section of the Store, individually or as a 20%-off bundle (2,240 test credits), and stay out of the daily and weekly rotation. They are cosmetic only.
+
+**Verification run**
+- `npm test`: 178/178. New tests cover the Warden shots-to-kill (3 body shots to 14 m, 4 to 32 m, 2 headshots), the collab catalog entries, rotation exclusion, bundle price and purchase, the no-duplicate rule and equipping.
+- `node tools/sun.mjs`: 17/17. On each map the flare shows facing the sun in the open, hides when a building blocks it, and is absent facing away, and windows use that map's probe. It also covers enemy scope glint, the Store collab section, the bundle purchase and the keychain on the first-person weapon. Screenshots were reviewed. On the first pass the flare showed through a tree canopy and the windows looked black; both were fixed.
+- Regression: `nettest` 20/20, `e2e` 31/31, `modes` 27/27, `m3` 15/15, `m4` 16/16, `maps` 4/4, `online` 22/22, map validation 0 problems. Bot sims on Old Quarter and Cinder Yard ran with 0–1 stuck reports.
+- `m3` needed one test fix: it bought "the first Store item", which is now the collab keychain and costs more than a new profile's credits.
+
+**Known issues**
+- The flare is a screen overlay. Thin visual-only parts (lamp posts, the lattice mast, fences) don't block it.
+- The reflection probe is one snapshot per map, taken from the map centre. It's an approximation: reflections don't move with the viewer and don't include players.
+- Scope glint shows regardless of where the sun is, as is common in shooters.
+
 ## Possible next steps
 - Co-op survival, multiple rooms per server or a simple server list, an axe swing animation, a laser beam visual, and GPU profiling on real hardware.
 - A production online service would need hosted servers, accounts, server-side progression and entitlements, and anti-cheat. That isn't in scope without real infrastructure.

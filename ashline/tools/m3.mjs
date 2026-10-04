@@ -43,7 +43,7 @@ await p.waitForTimeout(300);
 // Store: buy a featured item through the UI
 await p.click('.menu-btn[data-go=store]');
 await p.waitForTimeout(600);
-const target = await ev(() => document.querySelector('.shop-it[data-item]')?.dataset.item);
+const target = await ev(() => [...document.querySelectorAll('.shop-it[data-item]')].find((e) => !e.closest('.collab-box'))?.dataset.item); // a daily featured item
 await p.click(`.shop-it[data-item="${target}"]`);
 await p.waitForTimeout(300);
 await S('03-store');
