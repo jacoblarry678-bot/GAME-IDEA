@@ -152,6 +152,23 @@ someone runs the server, and others connect to it.
 - The reflection probe is one snapshot per map, taken from the map centre. It's an approximation: reflections don't move with the viewer and don't include players.
 - Scope glint shows regardless of where the sun is, as is common in shooters.
 
+## Hotfix 0.5.2: sealed Waspinator skin (ready to release at any moment)
+
+**Added**
+- **Content vault**: drops ship as AES-256-GCM ciphertext, with keys derived from a ~100-bit release code by PBKDF2-SHA256 at 210,000 iterations. GCM rejects tampered data, and decrypted content is validated before it touches the catalog. Opened content registers at runtime, before the profile is validated, so owned vault items survive reloads.
+- **Release paths**: *Store → Redeem code*, a self-hosted server with `--release` (sent in the welcome message, so joining players unlock it automatically), or a code baked into a public build (`tools/vault.mjs release`). Unlocks are remembered per device.
+- **Drop `drop_001`**: the **WASPINATOR** legendary operator skin, with its outfit *Hive Armour*. It has green armour plating, a visor helmet with a glowing blue band, antennae and gold mandibles, chest lenses, gold shoulder trim, yellow/black banded legs and four translucent wings, and green first-person sleeves. Team colour bands and hitbox are unchanged. Once released it appears in the Store's Waspinator Collab section for 1,800 test credits.
+- **Generic armour kit** in the soldier renderer (visor helmet, plated shell, banded limbs, chest lenses, back wings), driven entirely by outfit data. The renderer code names no item.
+- `tools/vault.mjs` (keygen, seal, open, release, list) and `.gitignore` rules for vault sources and codes.
+
+**Verification run**
+- The built bundle contains no plaintext item ids or names for the drop: 0 hits for `op_waspinator`, `of_waspinator`, `Hive Armour` and the description.
+- `npm test`: 182/182 without the code (release tests skipped) and **188/188 with `VAULT_TEST_CODE`**. Those cover a wrong code, tamper rejection, unlocking with different case and spacing, Store registration, redeeming twice, purchase and equip, the remembered unlock and persistence across a reload.
+- `node tools/vaultui.mjs`: 8/8 in the browser. The drop is invisible before release, a wrong code is refused, and the right code unlocks it with an announcement. Then: buy and equip, persistence after a page reload, a new player auto-unlocking it from a server started with `--release`, and the other player seeing Alpha wearing the skin online. Screenshots were reviewed.
+- Regression: `nettest` 20/20, `m3` 15/15, `e2e` 31/31, `online` 22/22, `sun` 17/17, `m4` 16/16.
+
+**Limits**: this hides content until release; it is not DRM. After a code is published, the drop can be read by anyone with the build. Unlocks and purchases are local like all progression.
+
 ## Possible next steps
 - Co-op survival, multiple rooms per server or a simple server list, an axe swing animation, a laser beam visual, and GPU profiling on real hardware.
 - A production online service would need hosted servers, accounts, server-side progression and entitlements, and anti-cheat. That isn't in scope without real infrastructure.

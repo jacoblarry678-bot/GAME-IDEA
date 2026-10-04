@@ -280,7 +280,7 @@ export const SCREENS2 = {
       }
       const history = prof.data.purchases.slice().reverse();
       node.innerHTML = `<div class="page">
-        <div class="page-head"><div><div class="kicker">Cosmetics only · test currency</div><h1 class="title">Store</h1></div><div class="spacer"></div>${creditsChip(app)}<button class="btn" data-a="topup" title="Demo only">+1,000 test credits</button></div>
+        <div class="page-head"><div><div class="kicker">Cosmetics only · test currency</div><h1 class="title">Store</h1></div><div class="spacer"></div><input class="code-in" placeholder="Redeem code" maxlength="32" spellcheck="false" /><button class="btn" data-a="redeem">Redeem</button>${creditsChip(app)}<button class="btn" data-a="topup" title="Demo only">+1,000 test credits</button></div>
         <div class="tabs"><button class="tab ${view === 'featured' ? 'sel' : ''}" data-v="featured">Featured</button><button class="tab ${view === 'history' ? 'sel' : ''}" data-v="history">Purchase History</button></div>
         <div class="page-body scroll" style="flex-direction:column;gap:14px;max-width:min(760px,56vw)">
           ${view === 'featured' ? `
@@ -301,6 +301,20 @@ export const SCREENS2 = {
       node.querySelectorAll('[data-bundle]').forEach((b) => { b.onclick = () => { sel = { kind: 'bundle', id: b.dataset.bundle }; render(); }; });
       const A = (k, f) => { const b = node.querySelector(`[data-a=${k}]`); if (b) b.onclick = f; };
       A('back', () => app.screens.back());
+      const codeIn = node.querySelector('.code-in');
+      if (codeIn) codeIn.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') node.querySelector('[data-a=redeem]').click(); };
+      A('redeem', async () => {
+        const code = codeIn.value;
+        if (!code.trim()) return;
+        const btn = node.querySelector('[data-a=redeem]');
+        btn.disabled = true;
+        const got = await app.redeemCode(code);
+        btn.disabled = false;
+        if (!got.length) { app.screens.toast('Code not recognised (or already redeemed).'); return; }
+        const first = got[0].cosmetics.find((i) => i.unlock.type === 'shop');
+        if (first) sel = { kind: 'item', id: first.id };
+        render();
+      });
       A('topup', () => { prof.addTestCredits(1000); app.screens.toast('Added 1,000 TEST credits (demo only)'); render(); });
       A('armory', () => { const it = COSMETICS[sel.id]; app.screens.push('armory', { tab: it.type, item: it.id }); });
       A('buy', () => {

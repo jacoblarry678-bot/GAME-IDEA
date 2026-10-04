@@ -427,3 +427,5 @@ table.sb tr.me td { background: rgba(255,138,61,0.12); color: #fff; }
 #hud .sf-glare { background: radial-gradient(circle, rgba(255,247,225,0.75) 0%, rgba(255,226,170,0.35) 12%, rgba(255,190,120,0.12) 35%, rgba(255,170,100,0) 62%); }
 #hud .sf-core { background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,250,235,0.95) 22%, rgba(255,235,190,0.35) 50%, rgba(255,220,160,0) 72%); }
 #hud .sf-streak { width: 120vw; height: 6px; border-radius: 3px !important; background: linear-gradient(90deg, rgba(160,200,255,0), rgba(200,225,255,0.55) 45%, rgba(255,255,255,0.9) 50%, rgba(200,225,255,0.55) 55%, rgba(160,200,255,0)); }
+
+.code-in { background: var(--panel-2); border: 1px solid var(--line-2); color: var(--text); padding: 7px 10px; font-family: monospace; font-size: 14px; width: 210px; letter-spacing: 0.08em; text-transform: uppercase; margin-right: 6px; }

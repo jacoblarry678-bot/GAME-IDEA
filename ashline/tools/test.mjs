@@ -523,5 +523,42 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('collab charm and banner equip', pc.data.equipped.weapons.ar_kv7.charm === 'ch_waspinator' && pc.data.equipped.banner === 'bn_waspinator');
 }
 
+// ---------------- hotfix: sealed vault content ----------------
+{
+  globalThis.localStorage = globalThis.window.localStorage;
+  const fs = await import('node:fs');
+  const V = await import('../src/core/vault.js');
+  const { VAULT } = await import('../src/data/vault.js');
+  const { COSMETICS } = await import('../src/data/cosmetics.js');
+  const { BUNDLES, COLLABS } = await import('../src/data/shop.js');
+  const src = fs.readFileSync(new URL('../src/data/vault.js', import.meta.url), 'utf8');
+  const body = src.replace(/^[\s\S]*?export const VAULT/, '');
+  t('vault ships sealed: no item ids or names in plaintext', VAULT.length >= 1 && VAULT.every((e) => /^[A-Za-z0-9+/=]+$/.test(e.data)) && !/op_wasp|of_wasp|hive armour|visorhelm|"name"/i.test(body));
+  t('vault content is not registered before release', !Object.values(COSMETICS).some((i) => i.vault));
+  t('a wrong code opens nothing', (await V.redeem('AAAAA-BBBBB-CCCCC-DDDDD')).length === 0);
+  // tampering is detected by GCM authentication
+  const bad = { ...VAULT[0], data: VAULT[0].data.slice(0, -6) + (VAULT[0].data.endsWith('AAAA==') ? 'BBBB==' : 'AAAA==') };
+  t('tampered ciphertext is rejected', (await V.unseal(bad, 'nope')) === null);
+  const code = process.env.VAULT_TEST_CODE;
+  if (code) {
+    const got = await V.redeem(code.toLowerCase().replace(/-/g, ' '));
+    const op = Object.values(COSMETICS).find((i) => i.vault && i.type === 'operator');
+    t('release code opens the drop (case/spacing-insensitive) and registers its items', got.length === 1 && !!op && Object.values(COSMETICS).filter((i) => i.vault).length === 2, op?.id);
+    t('released skin joins the Store collab section; outfit comes with the operator', COLLABS.some((c) => c.items.includes(op.id)) && Object.values(COSMETICS).some((i) => i.vault && i.type === 'outfit' && i.operator === op.id));
+    t('redeeming again is a no-op', (await V.redeem(code)).length === 0);
+    const { Profile: P3 } = await import('../src/core/profile.js');
+    globalThis.window.localStorage.setItem('ashline.profile', JSON.stringify({ version: 3, credits: 5000 }));
+    const pr = new P3();
+    const r = pr.buyItem(op.id);
+    pr.grantEarnedUnlocks(true);
+    pr.equip(op.id);
+    pr.save();
+    t('released operator skin can be bought with test credits and equipped', r.ok && pr.owns(op.op.outfit) && pr.data.equipped.operator === op.id);
+    t('the unlock is remembered for the next launch', JSON.parse(globalThis.localStorage.getItem('ashline.vault')).length === 1);
+    const pr2 = new P3();
+    t('owned vault skin survives a reload (vault opens before profile validation)', pr2.owns(op.id) && pr2.data.equipped.operator === op.id);
+  } else console.log('SKIP  release-code tests (set VAULT_TEST_CODE to run them)');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

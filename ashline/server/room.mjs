@@ -183,7 +183,7 @@ export class Room {
         cl.loadout = sanitizeLoadout(msg.loadout);
         cl.look = sanitizeLook(msg.look);
         cl.pending = true;
-        this.send(cl, { t: 'welcome', server: { name: this.opts.name, protocol: PROTOCOL_VERSION, tick: TICK_HZ, snap: SNAP_HZ }, you: cl.id, name: cl.name, match: this.matchInfo() });
+        this.send(cl, { t: 'welcome', server: { name: this.opts.name, protocol: PROTOCOL_VERSION, tick: TICK_HZ, snap: SNAP_HZ }, you: cl.id, name: cl.name, match: this.matchInfo(), release: this.opts.release || [] });
         break;
       }
       case 'ready': {

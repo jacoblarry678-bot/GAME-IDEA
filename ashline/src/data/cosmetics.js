@@ -136,3 +136,11 @@ export const COSMETICS = Object.fromEntries(items.map((i) => [i.id, i]));
 export const COSMETIC_LIST = items;
 export const DEFAULT_ITEMS = items.filter((i) => i.unlock.type === 'default').map((i) => i.id);
 export const byType = (t) => items.filter((i) => i.type === t);
+
+/** Add an item at runtime (content opened from the vault). Ids never collide with shipped items. */
+export function registerCosmetic(it) {
+  if (COSMETICS[it.id]) return COSMETICS[it.id];
+  items.push(it);
+  COSMETICS[it.id] = it;
+  return it;
+}

@@ -15,6 +15,7 @@ import { createSky } from './world/sky.js';
 import { CINDER_YARD } from './world/maps/cinderYard.js';
 import { MAPS } from './world/maps/index.js';
 import { NetClient } from './net/netClient.js';
+import { openKnown, redeem } from './core/vault.js';
 import { NetMatch } from './net/netMatch.js';
 import { MODES } from './game/modes.js';
 import { FIRING_RANGE } from './world/maps/firingRange.js';
@@ -44,6 +45,8 @@ export class App {
   async boot(progress) {
     progress(0.05, 'Loading settings');
     this.settings = new Settings();
+    // released / previously unlocked vault content must exist before the profile is validated
+    try { await openKnown(); } catch (e) { console.warn('vault', e); }
     this.profile = new Profile();
     this.applyTextScale();
     this.settings.onChange(() => this.applyTextScale());
@@ -273,6 +276,8 @@ export class App {
       loadout: lo,
       look: { operator: look.operator?.id, outfit: look.outfit?.id, finish: look.weapons?.[lo.primary]?.finish, emblem: look.emblem?.id },
     });
+    // content the server operator has released (keys from --release)
+    for (const code of welcome.release || []) { try { const got = await redeem(code); if (got.length) this.onVaultOpened(got); } catch { /* ignore */ } }
     this.online = { client, server: welcome.server, name: welcome.name };
     client.on('newMatch', (m) => { if (this.online?.client === client) this.enterOnlineMatch(m.match, false).catch((e) => this.onlineFailed(e)); });
     client.on('close', () => {
@@ -283,6 +288,19 @@ export class App {
     });
     await this.enterOnlineMatch(welcome.match, true);
     return welcome;
+  }
+
+  /** Redeem a release code (Store). Returns the opened payloads. */
+  async redeemCode(code) {
+    const got = await redeem(code);
+    if (got.length) this.onVaultOpened(got);
+    return got;
+  }
+
+  onVaultOpened(list) {
+    this.profile.grantEarnedUnlocks(true);
+    this.profile.save();
+    for (const p of list) this.screens?.toast(p.announce || 'New content unlocked.', 5000);
   }
 
   onlineFailed(e) {

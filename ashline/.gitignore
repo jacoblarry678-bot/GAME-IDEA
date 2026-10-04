@@ -3,3 +3,8 @@ dist/
 build/
 *.log
 shots/
+
+# vault sources and release codes never go in the repo
+*.vault.json
+vault-src/
+.release-code*

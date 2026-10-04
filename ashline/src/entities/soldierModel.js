@@ -29,6 +29,12 @@ function cap(r, len) {
   return geo.get(k);
 }
 
+function cyl(r, h, r2 = r) {
+  const k = `cyl${r},${h},${r2}`;
+  if (!geo.has(k)) geo.set(k, new THREE.CylinderGeometry(r, r2, h, 12));
+  return geo.get(k);
+}
+
 const SKIN = [0xc79a7c, 0x8d5f45, 0xe0b49a, 0x5e3d2b, 0xb08060];
 
 export class SoldierMaterials {
@@ -73,10 +79,22 @@ export function outfitMaterials(lib, base, outfitItem, opItem) {
   const helmet = new THREE.MeshStandardMaterial({ color: o.helmet, roughness: 0.7 });
   const glove = new THREE.MeshStandardMaterial({ color: o.glove, roughness: 0.8 });
   const glow = o.glow ? new THREE.MeshStandardMaterial({ color: o.glow, emissive: o.glow, emissiveIntensity: 1.4, roughness: 0.5 }) : null;
+  const k = o.kit;
+  // optional armour kit (data-driven): visor helmet, plated shell, banded limbs, chest lenses, back wings
+  const kit = k ? {
+    armor: new THREE.MeshStandardMaterial({ color: k.armor ?? o.helmet, metalness: 0.45, roughness: 0.32 }),
+    trim: new THREE.MeshStandardMaterial({ color: k.trim ?? 0xb0b0b0, metalness: 0.85, roughness: 0.28 }),
+    visor: new THREE.MeshStandardMaterial({ color: k.visor ?? 0x88aaff, emissive: k.visor ?? 0x88aaff, emissiveIntensity: 1.8, roughness: 0.15 }),
+    bandA: k.bands ? new THREE.MeshStandardMaterial({ color: k.bands[0], roughness: 0.45, metalness: 0.2 }) : null,
+    bandB: k.bands ? new THREE.MeshStandardMaterial({ color: k.bands[1], roughness: 0.5, metalness: 0.2 }) : null,
+    lens: k.lens ? new THREE.MeshStandardMaterial({ color: k.lens, emissive: k.lens, emissiveIntensity: 0.35, metalness: 0.5, roughness: 0.08 }) : null,
+    wing: k.wings ? new THREE.MeshStandardMaterial({ color: k.wings, emissive: k.wings, emissiveIntensity: 0.25, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false, roughness: 0.2 }) : null,
+    faceArmor: !!k.faceArmor, antennae: !!k.antennae, mandibles: !!k.mandibles,
+  } : null;
   return {
     camo: [camo, camo], vest: [vest, vest], gear: base.gear, boot: base.boot, glove, helmet: [helmet, helmet],
-    skin: [base.skin[opItem?.op.skin ?? 0]], goggle: base.goggle, team: base.team, glow,
-    headgear: opItem?.op.headgear || 'helmet',
+    skin: [kit?.faceArmor ? kit.armor : base.skin[opItem?.op.skin ?? 0]], goggle: base.goggle, team: base.team, glow,
+    headgear: opItem?.op.headgear || 'helmet', kit,
   };
 }
 
@@ -114,6 +132,10 @@ export class SoldierModel {
       P(cap(0.07, 0.3), camo, 0, -0.2, 0, shin);
       P(rb(0.14, 0.12, 0.08, 0.03), mats.gear, 0, -0.02, -0.06, shin); // knee pad
       P(rb(0.13, 0.1, 0.27, 0.035), mats.boot, 0, -0.43, -0.05, shin);
+      if (mats.kit?.bandA) {
+        for (let i = 0; i < 4; i++) P(cyl(0.093, 0.06), i % 2 ? mats.kit.bandB : mats.kit.bandA, 0, -0.08 - i * 0.075, 0, thigh);
+        for (let i = 0; i < 3; i++) P(cyl(0.078, 0.055, 0.07), i % 2 ? mats.kit.bandB : mats.kit.bandA, 0, -0.1 - i * 0.07, 0, shin);
+      }
       this.legs.push({ thigh, shin, side: s });
     }
     // spine / torso
@@ -138,7 +160,15 @@ export class SoldierModel {
     head.position.y = 0.14;
     P(rb(0.19, 0.22, 0.21, 0.08), skin, 0, 0, 0, head);
     const hg = mats.headgear || (seed % 3 === 2 ? 'helmet' : 'helmet');
-    if (hg === 'cap') {
+    const kit = mats.kit;
+    if (hg === 'visorhelm' && kit) {
+      const helm = P(sphere(0.135, 16, 10, Math.PI * 2, Math.PI * 0.6), kit.armor, 0, 0.03, 0.01, head);
+      helm.scale.set(1, 1.0, 1.1);
+      P(rb(0.2, 0.045, 0.05, 0.015), kit.visor, 0, 0.0, -0.1, head); // visor band
+      P(rb(0.05, 0.14, 0.05, 0.02), kit.armor, 0, 0.05, -0.115, head); // brow ridge
+      if (kit.mandibles) for (const sx of [-1, 1]) P(rb(0.03, 0.07, 0.03, 0.01), kit.trim, sx * 0.045, -0.09, -0.1, head);
+      if (kit.antennae) for (const sx of [-1, 1]) { const a = P(rb(0.012, 0.16, 0.012, 0.004), mats.gear, sx * 0.05, 0.19, 0.0, head); a.rotation.z = -sx * 0.35; a.rotation.x = 0.3; }
+    } else if (hg === 'cap') {
       P(sphere(0.118, 14, 8, Math.PI * 2, Math.PI * 0.5), mats.helmet[team], 0, 0.04, 0.0, head);
       P(rb(0.14, 0.015, 0.1, 0.006), mats.helmet[team], 0, 0.045, -0.13, head);
     } else if (hg === 'beanie') {
@@ -148,6 +178,19 @@ export class SoldierModel {
       const helm = P(sphere(0.135, 16, 10, Math.PI * 2, Math.PI * 0.55), mats.helmet[team], 0, 0.035, 0.01, head);
       helm.scale.set(1, 0.95, 1.08);
       P(rb(0.26, 0.03, 0.29, 0.01), mats.helmet[team], 0, 0.035, 0.01, head);
+    }
+    if (kit) {
+      // plated shell over the torso, gold trim, chest lenses and wings on the back (team bands stay visible)
+      P(rb(0.42, 0.2, 0.32, 0.05), kit.armor, 0, 0.42, 0, spine);
+      for (const s2 of [-1, 1]) P(rb(0.1, 0.06, 0.18, 0.02), kit.trim, s2 * 0.3, 0.33, 0, spine);
+      if (kit.lens) for (const s2 of [-1, 1]) { const l = P(sphere(0.07, 12, 8, Math.PI * 2, Math.PI * 0.5), kit.lens, s2 * 0.1, 0.35, -0.15, spine); l.rotation.x = -Math.PI / 2; l.scale.set(1, 0.45, 1.2); }
+      if (kit.wing) for (const [s2, up, len] of [[-1, 0.55, 0.62], [1, 0.55, 0.62], [-1, 0.15, 0.45], [1, 0.15, 0.45]]) {
+        const w = P(new THREE.CircleGeometry(1, 18), kit.wing, 0, 0.42, 0.22, spine);
+        w.geometry = w.geometry.clone();
+        w.geometry.scale(len * 0.5, 0.11, 1);
+        w.geometry.translate(len * 0.5, 0, 0);
+        w.rotation.set(0, s2 > 0 ? -0.35 : Math.PI + 0.35, s2 > 0 ? up : -up);
+      }
     }
     if (!mats.headgear && seed % 3 === 0) P(rb(0.17, 0.05, 0.04, 0.015), mats.goggle, 0, 0.06, -0.12, head); // goggles on helmet
     if ((!mats.headgear && seed % 3 === 1) || hg === 'balaclava') P(rb(0.19, 0.08, 0.04, 0.02), mats.gear, 0, -0.05, -0.1, head); // face mask

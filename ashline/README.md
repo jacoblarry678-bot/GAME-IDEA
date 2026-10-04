@@ -166,6 +166,24 @@ FPS, so those numbers say nothing about real hardware. Turn on Settings → Grap
 → Show FPS to measure on your machine. If you need more frames, lower Render
 Resolution, Shadows or the quality preset.
 
+## Staged content drops (sealed vault)
+
+Unreleased cosmetics can ship inside a build as AES-256-GCM ciphertext (`src/data/vault.js`).
+Nothing about them — ids, names, colours — is readable until a release code is supplied. Hotfix
+0.5.2 ships one sealed drop.
+
+Release it any of these ways (each one is instant, no rebuild needed for the first two):
+- **Code**: players type it into **Store → Redeem code**. It unlocks for that device and is remembered.
+- **Server**: `npm run server -- --release <CODE>` (or `ASHLINE_RELEASE_KEYS=<CODE>`). Everyone who joins gets it automatically.
+- **Public build**: `node tools/vault.mjs release <CODE>`, then `npm run build` (and `npm run build:single`) and deploy — every copy of that build has it unlocked.
+
+Tooling: `node tools/vault.mjs keygen | seal <content.json> <code> | open <code> | list`. Keep the
+content JSON and the code out of git (`*.vault.json` is ignored). The release-code tests run only
+when `VAULT_TEST_CODE` is set (`VAULT_TEST_CODE=<code> npm test`, `node tools/vaultui.mjs`).
+
+Limits: this hides content until release; it is not DRM. Once a code is published, anyone with the
+build can read and unlock that drop, and unlocks/purchases are stored locally like all progression.
+
 ## Assets & licenses
 
 See [ASSETS.md](ASSETS.md). The only third-party code is three.js (MIT) in the game and ws (MIT) in the dedicated server.

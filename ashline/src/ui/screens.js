@@ -18,7 +18,7 @@ import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
 import { NetClient } from '../net/netClient.js';
 
-export const VERSION = 'M5 · build 0.5.1';
+export const VERSION = 'M5 · build 0.5.2';
 
 export class Screens {
   constructor(app) {

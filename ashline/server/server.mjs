@@ -43,6 +43,7 @@ export function startServer(opts = {}) {
     scoreLimit: opts.score ?? (args.score ? Number(args.score) : undefined),
     dev: opts.dev ?? !!args.dev,
     resultsPause: opts.resultsPause,
+    release: opts.release ?? [...String(args.release && args.release !== true ? args.release : process.env.ASHLINE_RELEASE_KEYS || '').split(',')].map((x) => x.trim()).filter(Boolean),
     lagComp: opts.lagComp ?? !args['no-lag-comp'],
     log: opts.quiet ? () => {} : (m) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`),
   });
@@ -115,5 +116,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     for (const a of addrs) console.log(`  Players on your network: http://${a}:${p}/`);
     console.log(`  Rotation: ${room.opts.rotation.map((r) => `${r.mode}@${r.map}`).join(', ')} · ${room.opts.botsPerTeam} per team (bots fill empty slots)`);
     if (!fs.existsSync(root)) console.log('  Note: dist/ not found — run "npm run build" so the server can serve the game.');
+    if (room.opts.release.length) console.log(`  Releasing ${room.opts.release.length} vault code(s) to every player who joins.`);
   });
 }
