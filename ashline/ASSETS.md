@@ -3,6 +3,7 @@
 | Asset | Source | License |
 | --- | --- | --- |
 | Rendering engine | [three.js](https://threejs.org) r169 (npm `three`) | MIT |
+| WebSocket server library (dedicated server only) | [ws](https://github.com/websockets/ws) 8 (npm `ws`) | MIT |
 | Rounded box / geometry merge helpers | three.js `examples/jsm` addons | MIT |
 | All surface textures (asphalt, gravel, concrete, brick, corrugated metal, containers, wood, hazard paint, camo, fabrics, gun finishes) | Procedurally generated at load time in `src/world/textures.js` | Original (this project) |
 | Normal & roughness maps | Derived at load time from the procedural height fields | Original |
@@ -18,5 +19,5 @@
 | Cosmetics: weapon finishes, outfits, charms, calling cards, emblems, banners | Generated in code: `src/world/finishes.js`, `src/fx/weaponModels.js`, `src/entities/soldierModel.js`, `src/ui/art.js` | Original |
 | UI fonts | Rajdhani, Inter via Google Fonts (falls back to system fonts offline) | SIL Open Font License 1.1 |
 
-No images, models or audio files are downloaded or bundled. There are no names,
+No images, models or audio files are downloaded or bundled. The browser client uses the built-in WebSocket API; `ws` runs only in the Node server. There are no names,
 logos, maps or assets from existing games.

@@ -5,8 +5,9 @@ movement and gunplay against bots across three maps and six modes. Everything in
 it is made for this project: the maps, weapons, characters, sounds and music are
 generated in code when the game loads.
 
-> Offline build. Every other player in a match is a bot, and the game labels
-> them `[BOT]`. Online play does not exist yet. See [STATUS.md](STATUS.md).
+> Play offline against bots, or online with other people on a server you run
+> yourself (`npm run server`). Bots are always labelled `[BOT]`; there are no
+> public servers, matchmaking or accounts. See [STATUS.md](STATUS.md).
 
 ## Run it
 
@@ -25,7 +26,45 @@ npm run build && npm run preview     # http://localhost:4180
 npm run build:single                 # build/ashline.html — one self-contained file
 ```
 
-Click into the game to capture the mouse. `Esc` releases the mouse and pauses the match.
+Click into the game to capture the mouse. `Esc` releases the mouse and pauses the match
+(online matches keep running while the menu is open).
+
+## Online play (self-hosted)
+
+One person hosts; everyone else joins from a browser.
+
+```bash
+cd ashline
+npm install
+npm run build        # the server serves these files
+npm run server       # prints e.g. http://localhost:4190/ and http://192.168.1.20:4190/
+```
+
+Everyone opens the printed address, chooses **Online**, and presses **Connect** (the address is
+pre-filled). Players on other networks need the port forwarded (TCP 4190 by default) or a VPN.
+
+Server options: `--port 4190`, `--map old_quarter --mode dom` (a fixed map and mode instead of the
+rotation), `--bots 1-5` (per team; bots fill every slot nobody occupies), `--difficulty
+recruit|regular|hardened|veteran`, `--time <minutes>`, `--score <limit>`, `--name "My Server"`.
+`GET /status` returns the room state as JSON.
+
+How it works:
+- The server runs the match at 60 Hz with the same simulation as offline play. Clients send only
+  inputs; positions, hits, damage, scores, objectives, equipment and support abilities are decided
+  by the server and sent back 20 times a second (≈1 KB per snapshot, ≈20 KB/s per player with 6
+  combatants).
+- Your own movement is predicted immediately and blended toward the server's position. Other
+  players are drawn 100 ms in the past and interpolated. Shots are lag-compensated: the server
+  rewinds other players up to 250 ms to where you saw them.
+- Each input frame is applied with its own time step, within a real-time budget, so sending more
+  inputs doesn't make anyone faster.
+- A player takes over a bot's slot (team modes balance humans across teams) and the bot comes back
+  when they leave. Matches rotate through maps and modes with a results pause in between.
+
+Limits: there are no public servers, matchmaking, accounts, chat or anti-cheat beyond server
+authority (aim is still client-side). Progression stays on each player's device, so the server
+checks that a loadout is valid but can't verify that it was unlocked. The copy of the game hosted
+as a claude.ai artifact can't reach a server on your machine; open the server's own address.
 
 ## Controls (defaults; all rebindable in Settings → Controls)
 
@@ -45,7 +84,7 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
 | Scoreboard | Tab | View |
 | Pause | Esc | Menu |
 
-## What you can play now (Milestones 1–4)
+## What you can play now (Milestones 1–5)
 
 - **Cinder Yard**: an industrial rail depot with a close-quarters warehouse, a rail yard with boxcars and a control booth, a container maze, a maintenance building, a long south road and two staging areas.
 - **Team Deathmatch** against up to 9 bots (5v5 with you), at four difficulty levels. You can set score and time limits and turn friendly fire on or off.
@@ -63,6 +102,7 @@ Click into the game to capture the mouse. `Esc` releases the mouse and pauses th
   - **Perks**: 9 in 3 slots, unlocked by player level.
   - **Equipment**: an FL-2 flash grenade (blinds by distance and facing; the reduced-flash accessibility setting caps it) and the Bulwark deployable cover (blocks bullets until destroyed).
   - **Support abilities**: earned through consecutive eliminations: Recon Scan (4), Supply Drop (6) and Area Strike (8). Hardline lowers each by one. Bots use them too.
+- **Milestone 5**: online play on a self-hosted, server-authoritative server (see above).
 - **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
@@ -80,7 +120,9 @@ src/
   game/      match (rules, damage, scoring, spawning), modes, spawns, game (presentation + player control)
   fx/        viewmodel (procedural animation), weapon models, effects (instanced particles, tracers, decals)
   audio/     synthesized SFX + music, spatial playback, announcer
+  net/       online protocol, browser connection (clock sync, ping), NetMatch (prediction/interpolation)
   ui/        menus/screens, HUD, controller menu navigation, styles
+server/      server.mjs (HTTP + WebSocket entry, CLI), room.mjs (authoritative match room, lag compensation)
 tools/       sim.mjs (headless bot match), test.mjs (rules tests), mapcheck.mjs (map validation),
              e2e.mjs, modes.mjs, m3.mjs, m4.mjs, maps.mjs, vm.mjs, beauty.mjs (browser checks)
 ```
@@ -99,6 +141,8 @@ The match simulation does not depend on rendering. `tools/sim.mjs` and
 npm test                         # 172 headless tests (movement, weapons, damage, equipment, modes, economy, attachments, maps)
 npm run sim -- 3 regular 5 dom old_quarter   # bots-only match: minutes, difficulty, bots per team, mode, map
 npm run maps                     # validates spawns, nav connectivity and objectives on every map
+npm run nettest                  # dedicated server with real WebSocket clients
+npm run build && npm run online  # two browser players on one server, incl. 150 ms simulated latency
 npm run build && npm run preview &
 npm run e2e                      # full browser flow in headless Chromium (needs Playwright)
 node tools/modes.mjs             # every mode in the browser
@@ -122,4 +166,4 @@ Resolution, Shadows or the quality preset.
 
 ## Assets & licenses
 
-See [ASSETS.md](ASSETS.md). The only third-party code is three.js (MIT).
+See [ASSETS.md](ASSETS.md). The only third-party code is three.js (MIT) in the game and ws (MIT) in the dedicated server.

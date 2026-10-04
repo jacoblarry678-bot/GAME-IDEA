@@ -18,7 +18,7 @@ import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
 import { NetClient } from '../net/netClient.js';
 
-export const VERSION = 'M4 · build 0.4.0';
+export const VERSION = 'M5 · build 0.5.0';
 
 export class Screens {
   constructor(app) {
@@ -581,7 +581,7 @@ const SCREENS = {
           <p class="muted small">Sprint + Crouch while moving to slide. Jump into a ledge or low wall to mantle/vault. Controller: standard layout (RT fire, LT aim, A jump, B crouch, X reload, Y swap, RB lethal, LB tactical, L3 sprint, R3 melee, D-pad ←/↑/→ support abilities).</p>
         </div>
         <div class="panel" style="flex:1;min-width:300px">
-          <h3 class="title">In this build (Milestone 4)</h3>
+          <h3 class="title">In this build (Milestone 5)</h3>
           <ul class="small" style="line-height:1.7;margin:0;padding-left:18px">
             <li>3 maps: Cinder Yard, Old Quarter, Signal Station · plus a Firing Range</li>
             <li>6 modes vs bots: Team Deathmatch, Free-for-All, Domination, Hardpoint, Elimination, Gun Game · private match settings</li>
@@ -590,10 +590,11 @@ const SCREENS = {
             <li>9 perks · frag, smoke, flash, Bulwark deployable cover</li>
             <li>Support abilities from kill streaks: Recon Scan (4), Supply Drop (6), Area Strike (8)</li>
             <li>Player and weapon levels, cosmetics, 50-tier battle pass, challenges, demo store (test credits only)</li>
+            <li>Online play on a self-hosted server (npm run server): server-authoritative matches, lag-compensated hits, bots fill empty slots</li>
           </ul>
           <h3 class="title" style="margin-top:14px">Not in this build</h3>
           <ul class="small muted" style="line-height:1.7;margin:0;padding-left:18px">
-            <li>Online multiplayer — not available; every other player is a labelled bot</li>
+            <li>Public servers, matchmaking, accounts, chat — online play needs a server you run yourself</li>
             <li>Co-op survival mode (planned)</li>
             <li>Real payments — none; store and pass use test credits stored on this device</li>
           </ul>

@@ -97,6 +97,40 @@ incomplete or still a known issue, and what comes next.
 - The Bulwark snaps to the nearest axis because the collision world is axis-aligned.
 - Bot balance was checked by simulation samples, not by human playtesting.
 
-## Next: Milestone 5 (online), only if the environment supports it
-- Real online play needs a server-authoritative game server, accounts, matchmaking and a backend for progression and entitlements. None of that exists in this build or this environment, so online features stay labelled unavailable.
-- Smaller follow-ups that could come first: co-op survival, a dedicated axe swing animation, a laser beam visual, and GPU performance profiling on real hardware.
+## Milestone 5: Online play, self-hosted (complete within the environment's limits)
+
+**What the environment allows**: a Node WebSocket server can run, and the match simulation already
+runs headless, so a real server-authoritative multiplayer server was buildable and testable here.
+What it can't provide is a public, always-on host: this container is temporary and not reachable
+from the internet, and there is no account or payment backend. So online play is **self-hosted**:
+someone runs the server, and others connect to it.
+
+**Added**
+- **Dedicated server** (`npm run server`): it serves the built game over HTTP and runs one match room on a WebSocket (`/ws`) on the same port (4190 by default). The room loops through a map/mode rotation with a results pause between matches, or runs a fixed map and mode from the CLI. There are also bot count, difficulty, time, score and name options, and `/status` returns JSON.
+- **Server authority**: clients send only inputs. The server simulates movement, firing, hits, damage, scoring, objectives, equipment, deployables and support abilities with the same code as offline play. Inputs are applied one frame at a time under a real-time budget, which blocks speed hacks, and are validated and clamped. Names, loadouts and attachment builds are sanitized, and mismatched protocol versions are rejected with a reason.
+- **Lag compensation**: the server keeps 0.6 s of position history and rewinds the other players to the time the shooter's client was drawing them (capped at 250 ms) for each shot and melee.
+- **Bots and players**: joining players take over bot slots, and team modes balance humans across teams. A bot returns when a player leaves. Bots are always tagged `[BOT]`; players are not. In Elimination, someone joining mid-round spectates until the next round.
+- **Client**: there is an Online screen with the server address (pre-filled when the page is served by the server), name, loadout and connect status, plus clear notes on what isn't provided. Your own movement is predicted locally and blended toward the server's position, snapping if it's off by more than 2.5 m. Other players are interpolated 100 ms behind, and grenades are smoothed between snapshots. Server events drive the same HUD, kill feed, audio and effects as offline play. Remote players' cosmetics (operator, outfit, emblem) are shown. The scoreboard has a ping column. The pause menu doesn't stop an online match. The next match starts automatically after the results, and losing the connection returns you to the menu with a notice.
+- **Protocol**: JSON over WebSocket at 60 Hz simulation and 20 Hz snapshots. A snapshot is about 1 KB with 6 combatants, roughly 20 KB/s per player.
+- **Gameplay fix found while testing**: the Bulwark is now 1.3 m tall. At 1.15 m it left a crouched player's head exposed, which caused an intermittent test failure.
+
+**Verification run**
+- `npm run nettest`: 20/20 with real WebSocket clients against the server. It covers join, welcome and roster (2 humans on opposite teams, bots flagged), the version reject, the countdown, movement from inputs (~5 m/s), input acks, the input time budget, a server-side kill seen by both clients, damage and shot broadcasts, scoreboard stats, the death state, respawn on request, lag compensation (and its 250 ms cap), leaving with a bot refill, the /status endpoint and bandwidth (20 snapshots/s, ~19 KB/s).
+- `npm run online`: 22/22 with two headless Chromium players. Both connect through the Online screen. A sees Bravo as a human and the bots tagged. Prediction matches the server, and B sees A in the same place. A server-side elimination shows on both screens (death screen, kill feed, scoreboard), then B respawns. When B leaves a bot takes the slot, and losing the server returns to the menu. A server-ended match shows online results, and the client follows the rotation to the next map and mode.
+- **At a simulated 150 ms round trip** (75 ms each way): movement responds immediately, prediction and server agree after stopping, and tapped shots at a strafing player land 4 of 4 and eliminate them. **Control run with lag compensation off**: about 1 hit in 12–13 shots. The test was run repeatedly and passed every time after the fixes listed below.
+- Regression (after restarting the preview server): `npm test` 172/172, `e2e` 31/31, `modes` 27/27, `m3` 15/15, `maps` 4/4. `m4` scored 15/16 once and 16/16 on four reruns; the check that failed that once wasn't captured (likely a bot standing where the Bulwark deploys).
+- Test fixes during this milestone: the online and net tests first failed intermittently because bots could kill a test player before being frozen, and because hits on an already-dead target were counted. A debug-only "revive" hook and a corrected metric fixed both.
+
+**Known issues / limits**
+- No public servers, matchmaking, server browser, accounts, friends, chat or voice. You connect by address.
+- Anti-cheat stops at server authority. Aim and view direction come from the client, so aim assistance can't be detected.
+- Progression and unlocks live on each device, so the server can't verify that a loadout was earned.
+- Online results award XP and challenges to your local profile like offline matches do. They are just as editable by the user and are not a secure economy.
+- The claude.ai artifact copy can't reach a local server; use the address the server prints.
+- Only one room per server process. Joining at full capacity is refused, and capacity equals the bot slots (10 in team modes, 8 in FFA).
+- The netcode has been tested on localhost and with simulated latency, not over real internet links with packet loss. WebSocket (TCP) means a lost packet causes a brief stall, not a gap.
+- GPU performance is still unmeasured (see M1).
+
+## Possible next steps
+- Co-op survival, multiple rooms per server or a simple server list, an axe swing animation, a laser beam visual, and GPU profiling on real hardware.
+- A production online service would need hosted servers, accounts, server-side progression and entitlements, and anti-cheat. That isn't in scope without real infrastructure.
