@@ -17,17 +17,21 @@ import { PAD } from '../core/input.js';
 import { ObjectiveView } from '../fx/objectives.js';
 import { DeployablesView } from '../fx/deployablesView.js';
 import { SUPPORT, SUPPORT_IDS, supportThreshold } from '../data/support.js';
+import { COSMETICS } from '../data/cosmetics.js';
 
 const v3 = new THREE.Vector3(), v3b = new THREE.Vector3();
 
 export class Game {
-  constructor(app, setup, map = app.mapRuntime) {
+  /** `net` (online play): { client, match: NetMatch } — the match mirrors a server. */
+  constructor(app, setup, map = app.mapRuntime, net = null) {
     this.app = app;
     this.setup = setup;
     this.map = map;
     const s = app.settings.data;
     this.id = Math.random().toString(36).slice(2);
-    this.match = new Match(map, {
+    this.online = !!net;
+    this.net = net;
+    this.match = net ? net.match : new Match(map, {
       ...setup,
       playerName: app.profile.data.name,
       playerLoadout: app.profile.matchLoadout,
@@ -38,22 +42,18 @@ export class Game {
     this.player = m.player;
     this.cosm = app.profile.look; // equipped cosmetics (visual only — never affects gameplay)
     this.summary = { classKills: {}, weaponKills: {}, weaponHeadshots: {}, weaponsUsed: new Set(), grenadeKills: 0, meleeKills: 0, longshots: 0, multikills: 0, difficulty: setup.difficulty };
-    for (const c of m.combatants) c.displayName = c.dummy ? c.name : c.isBot ? `[BOT] ${c.name}` : c.name;
     // third-person views
     this.views = new Map();
-    let seed = 1;
+    this.viewSeed = 1;
     this.isRange = !!m.mode.range;
     this.ffa = !m.mode.teams;
     // free-for-all: everyone except you wears enemy colours
     this.visTeam = (c) => (this.ffa ? (c === this.player ? 0 : 1) : c.team);
-    for (const c of m.combatants) {
-      let v;
-      if (c.dummy) v = new SoldierModel(app.dummyMats, app.wmats, 1, seed++, { unarmed: true });
-      else if (c === this.player) v = new SoldierModel(outfitMaterials(app.materials, app.soldierMats, this.cosm.outfit, this.cosm.operator), app.wmats, 0, seed++);
-      else v = new SoldierModel(app.soldierMats, app.wmats, this.visTeam(c), seed++);
-      v.setWeapon(c.weapon.def.id, undefined, c.weapon.def.attachments);
-      app.engine.scene.add(v.root);
-      this.views.set(c.id, v);
+    for (const c of m.combatants) this.addView(c);
+    if (this.online) {
+      // players and bots come and go on a server
+      m.onRoster = (added, removed) => { for (const c of removed) this.removeView(c); for (const c of added) this.addView(c); };
+      m.onLoadoutChange = () => this.vm.setWeapon(this.player.weapon.def.id, this.cosm.weapons[this.player.weapon.def.id], this.player.weapon.def.attachments);
     }
     this.updateTeamColors();
     this.hud = new Hud(document.getElementById('ui'), app);
@@ -90,6 +90,27 @@ export class Game {
     const onSet = () => { this.hud.applySettings(); this.updateTeamColors(); this.objView?.setColors(app.settings.teamColors()); this.depView?.setColors(app.settings.teamColors()); };
     app.settings.onChange(onSet);
     this.unsubSettings = () => { const i = app.settings.listeners.indexOf(onSet); if (i >= 0) app.settings.listeners.splice(i, 1); };
+  }
+
+  addView(c) {
+    const app = this.app;
+    c.displayName = c.dummy ? c.name : c.isBot ? `[BOT] ${c.name}` : c.name;
+    let v;
+    if (c.dummy) v = new SoldierModel(app.dummyMats, app.wmats, 1, this.viewSeed++, { unarmed: true });
+    else if (c === this.player) v = new SoldierModel(outfitMaterials(app.materials, app.soldierMats, this.cosm.outfit, this.cosm.operator), app.wmats, 0, this.viewSeed++);
+    else if (c.look && COSMETICS[c.look.outfit] && COSMETICS[c.look.operator]) v = new SoldierModel(outfitMaterials(app.materials, app.soldierMats, COSMETICS[c.look.outfit], COSMETICS[c.look.operator]), app.wmats, this.visTeam(c), this.viewSeed++);
+    else v = new SoldierModel(app.soldierMats, app.wmats, this.visTeam(c), this.viewSeed++);
+    v.setWeapon(c.weapon.def.id, undefined, c.weapon.def.attachments);
+    app.engine.scene.add(v.root);
+    this.views.set(c.id, v);
+  }
+
+  removeView(c) {
+    const v = this.views.get(c.id);
+    if (!v) return;
+    this.app.engine.scene.remove(v.root);
+    v.dispose?.();
+    this.views.delete(c.id);
   }
 
   updateTeamColors() {
@@ -217,13 +238,13 @@ export class Game {
     const app = this.app, m = this.match, p = this.player;
     const inp = app.input;
     this.mouseDX = 0; this.mouseDY = 0;
-    if (!this.paused) {
+    if (!this.paused || this.online) {
       if (p.brain) { this.look.yaw = p.cmd.yaw; this.look.pitch = p.cmd.pitch; }
-      else if (!this.ended && p.alive && m.state !== 'ended') this.readInput(dt);
+      else if (!this.paused && !this.ended && p.alive && m.state !== 'ended') this.readInput(dt);
       else this.clearInput();
       // respawn request
       if (!p.alive && m.state === 'live' && m.canRespawn(p)) {
-        if (p.respawnT <= 0 && (inp.pressed('jump') || inp.pressed('fire') || p.respawnT < -2.5)) m.respawn(p);
+        if (p.respawnT <= 0 && (inp.pressed('jump') || inp.pressed('fire') || p.respawnT < -2.5 || (this.online && p.respawnT <= 0 && this.paused))) m.respawn(p);
       }
       const wasAlive = p.alive;
       m.tick(dt);
@@ -892,7 +913,9 @@ export class Game {
     const groups = m.scoreboard();
     const [fc, ec] = this.app.settings.teamColors();
     const gun = m.mode.id === 'gun';
-    const name = (r) => `${r.c.isBot ? '<span class="bot-tag">BOT</span>' : `<img class="sb-emblem" src="${emblemArt(this.cosm.emblem.id, 32)}" alt="">`}${esc(r.c.name)}`;
+    const emb = (c) => (c === this.player ? this.cosm.emblem.id : COSMETICS[c.look?.emblem]?.type === 'emblem' ? c.look.emblem : 'em_chevron');
+    const ping = (c) => (this.online && !c.isBot ? ` <span class="muted small">${c === this.player ? Math.round((this.net.client.rtt || 0) * 1000) : c.netPing ?? '—'} ms</span>` : '');
+    const name = (r) => `${r.c.isBot ? '<span class="bot-tag">BOT</span>' : `<img class="sb-emblem" src="${emblemArt(emb(r.c), 32)}" alt="">`}${esc(r.c.name)}${ping(r.c)}`;
     const tbl = (rows, head) => `${head}
       <table class="sb"><thead><tr><th>Player</th>${gun ? '<th class="num">Level</th>' : ''}<th class="num">Score</th><th class="num">K</th><th class="num">D</th><th class="num">A</th><th class="num">Streak</th></tr></thead><tbody>
       ${rows.map((r) => `<tr class="${r.c === this.player ? 'me' : ''}" style="${r.c.alive ? '' : 'opacity:0.55'}"><td>${name(r)}</td>${gun ? `<td class="num">${Math.min(r.level + 1, m.ladder.length)}/${m.ladder.length}</td>` : ''}<td class="num">${r.score}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td><td class="num">${r.assists}</td><td class="num">${r.streak}</td></tr>`).join('')}
@@ -912,6 +935,7 @@ export class Game {
     const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed] };
     const rewards = this.app.profile.recordMatch(this.id, outcome, p.stats, m.time, summary);
     return {
+      online: this.online,
       outcome, reason: m.endReason, scores: this.hudScores(), mode: m.settings.mode,
       rows: groups.map((g) => g.map(row)), ffa: this.ffa, placing: this.ffa ? groups[0].findIndex((r) => r.c === p) + 1 : 0, ladder: m.ladder?.length || 0, me: { ...p.stats }, medals: [...this.medals.values()], recorded: !!rewards, rewards,
     };

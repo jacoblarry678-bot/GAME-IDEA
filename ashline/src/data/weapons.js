@@ -237,7 +237,7 @@ export const EQUIPMENT = {
   shield: {
     id: 'shield', name: 'BULWARK COVER', slot: 'tactical', count: 1, deploy: true, unlockLevel: 8,
     blurb: 'Deployable ballistic barrier. Blocks bullets until it takes 450 damage or 30 s pass.',
-    hp: 450, life: 30, width: 1.5, height: 1.15, depth: 0.16, dist: 1.4,
+    hp: 450, life: 30, width: 1.5, height: 1.3, depth: 0.16, dist: 1.4,
   },
 };
 

@@ -12,10 +12,14 @@
     "test": "node tools/test.mjs",
     "e2e": "node tools/e2e.mjs",
     "build:single": "vite build && node tools/build-single.mjs",
-    "maps": "node tools/mapcheck.mjs"
+    "maps": "node tools/mapcheck.mjs",
+    "server": "node server/server.mjs",
+    "nettest": "node tools/nettest.mjs",
+    "online": "node tools/online.mjs"
   },
   "dependencies": {
-    "three": "0.169.0"
+    "three": "0.169.0",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "vite": "^5.4.8"

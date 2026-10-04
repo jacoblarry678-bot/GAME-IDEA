@@ -16,6 +16,7 @@ import { ATTACHMENTS, ATTACH_SLOTS, SLOT_LABELS, MAX_ATTACHMENTS, attachmentsFor
 import { PERKS, PERK_SLOTS, perksForSlot } from '../data/perks.js';
 import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
+import { NetClient } from '../net/netClient.js';
 
 export const VERSION = 'M4 · build 0.4.0';
 
@@ -181,6 +182,7 @@ const SCREENS = {
           <h1 class="title" style="font-size:calc(76px * var(--text-scale));letter-spacing:0.08em">ASH<span style="color:var(--accent)">LINE</span></h1>
           <nav class="menu-nav compact">
             <button class="menu-btn" data-go="play">Play<span class="sub">${esc(MODES[app.profile.data.matchSetup.mode]?.name || "Team Deathmatch")} vs bots · offline</span></button>
+            <button class="menu-btn" data-go="online">Online<span class="sub">Self-hosted server · real players, bots fill empty slots</span></button>
             <button class="menu-btn" data-act="range">Firing Range<span class="sub">Test weapons on training targets</span></button>
             <button class="menu-btn" data-go="loadouts">Loadouts<span class="sub">Active: ${esc(app.profile.loadout.name)} — ${esc(WEAPONS[app.profile.loadout.primary].name)}</span></button>
             <button class="menu-btn" data-go="armory">Armory${app.profile.unseenCount() ? ` <span class="newdot">${app.profile.unseenCount()}</span>` : ''}<span class="sub">Operators, outfits, finishes, charms, cards</span></button>
@@ -382,6 +384,59 @@ const SCREENS = {
     entry.refresh = render;
   },
 
+  /** Online: connect to a self-hosted Ashline server. */
+  online(app, node) {
+    node.classList.add('shade-full');
+    let saved = '';
+    try { saved = localStorage.getItem('ashline.server') || ''; } catch { /* storage unavailable */ }
+    const hosted = typeof location !== 'undefined' && (location.protocol === 'file:' || /claude\.ai$|claudeusercontent\.com$/.test(location.hostname));
+    node.innerHTML = `<div class="page">
+      ${head('Self-hosted server', 'Online')}
+      <div class="page-body scroll" style="gap:16px;flex-wrap:wrap;align-items:flex-start">
+        <div class="panel" style="flex:1;min-width:320px;max-width:560px">
+          <div class="slot"><div class="lab">Server address</div><input class="srv-in" value="${esc(saved || NetClient.defaultUrl())}" spellcheck="false" style="width:100%;background:var(--panel-2);border:1px solid var(--line-2);color:var(--text);padding:8px;font-size:16px;font-family:monospace" /></div>
+          <div class="slot"><div class="lab">Your name</div><div>${esc(app.profile.data.name)} <span class="muted small">(change it in Career)</span></div></div>
+          <div class="slot"><div class="lab">Loadout</div><div>${esc(app.profile.loadout.name)} — ${esc(WEAPONS[app.profile.loadout.primary].name)} + ${esc(WEAPONS[app.profile.loadout.secondary].name)}</div></div>
+          <div class="row" style="margin-top:10px"><button class="btn primary" data-a="connect" style="padding:10px 34px">Connect</button><span class="status muted small"></span></div>
+          ${hosted ? '<div class="small" style="margin-top:10px;color:var(--accent-2)">This copy of the game is a hosted static page. Browsers usually block it from reaching a server on your computer or network, so connecting from here is likely to fail. Open the address that the server prints instead (for example http://localhost:4190/).</div>' : ''}
+        </div>
+        <div class="panel" style="flex:1;min-width:300px;max-width:520px">
+          <h3 class="title">How online play works</h3>
+          <ul class="small" style="line-height:1.7;margin:0;padding-left:18px">
+            <li>One person runs the server on a PC: <span class="key">npm run build</span> then <span class="key">npm run server</span> (Node 18+). It prints the address to open.</li>
+            <li>Everyone opens that address in a browser, picks <b>Online</b> and connects. Ports must be reachable (same network, or a forwarded port).</li>
+            <li>The server runs the match: movement, hits (with lag compensation), damage, scores and objectives. Your game only sends inputs.</li>
+            <li>Empty slots are filled by bots, always tagged <span class="bot-tag">BOT</span>. Players have no tag.</li>
+            <li>Maps and modes rotate on the server. Progression and unlocks stay on each device; the server checks that loadouts are valid but can't verify unlocks.</li>
+          </ul>
+          <h3 class="title" style="margin-top:12px">Not provided</h3>
+          <ul class="small muted" style="line-height:1.7;margin:0;padding-left:18px">
+            <li>No public servers, matchmaking, accounts, friends lists or voice/text chat.</li>
+            <li>No anti-cheat beyond server authority (aim is still client-side).</li>
+          </ul>
+        </div>
+      </div>
+      <div class="page-foot"><button class="btn" data-a="back">Back</button></div></div>`;
+    const input = node.querySelector('.srv-in');
+    const status = node.querySelector('.status');
+    input.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') connect(); };
+    const btn = node.querySelector('[data-a=connect]');
+    const connect = async () => {
+      let url;
+      try { url = NetClient.normalize(input.value); } catch { status.textContent = 'That address is not valid.'; return; }
+      try { localStorage.setItem('ashline.server', input.value.trim()); } catch { /* ignore */ }
+      btn.disabled = true;
+      status.textContent = `Connecting to ${url}…`;
+      try { await app.connectOnline(url); } catch (e) {
+        btn.disabled = false;
+        status.textContent = e.message;
+        status.style.color = 'var(--bad)';
+      }
+    };
+    btn.onclick = connect;
+    node.querySelector('[data-a=back]').onclick = () => app.screens.back();
+  },
+
   /** Gunsmith: attachments per weapon, earned by weapon level. */
   gunsmith(app, node, p, entry) {
     node.classList.add('shade');
@@ -557,14 +612,14 @@ const SCREENS = {
     node.classList.add('shade-full');
     const g = app.game;
     node.innerHTML = `<div class="menu-left col" style="justify-content:center">
-      <div class="kicker">${g.isRange ? 'Firing range' : 'Offline match paused'}</div>
+      <div class="kicker">${g.isRange ? 'Firing range' : g.online ? `Online · ${esc(app.online?.server?.name || 'server')} · the match keeps running` : 'Offline match paused'}</div>
       <h1 class="title">Paused</h1>
       <div class="muted" style="margin-top:6px">${g.isRange ? 'Training targets only. Nothing here counts toward career stats.' : `${esc(TEAMS[0].name)} ${g.match.teamScores[0]} — ${g.match.teamScores[1]} ${esc(TEAMS[1].name)}`}</div>
       <nav class="menu-nav">
         <button class="menu-btn" data-a="resume">Resume</button>
         <button class="menu-btn" data-a="settings">Settings</button>
-        ${g.isRange ? '<button class="menu-btn" data-a="loadouts">Change Loadout</button>' : '<button class="menu-btn" data-a="restart">Restart Match</button>'}
-        <button class="menu-btn" data-a="leave">${g.isRange ? 'Leave Range' : 'Leave Match'}</button>
+        ${g.isRange ? '<button class="menu-btn" data-a="loadouts">Change Loadout</button>' : g.online ? '' : '<button class="menu-btn" data-a="restart">Restart Match</button>'}
+        <button class="menu-btn" data-a="leave">${g.isRange ? 'Leave Range' : g.online ? 'Leave Server' : 'Leave Match'}</button>
       </nav>
     </div>`;
     node.querySelector('[data-a=resume]').onclick = () => app.resumeMatch();
@@ -573,8 +628,11 @@ const SCREENS = {
       node.querySelector('[data-a=loadouts]').onclick = () => { app.toMenu(); app.screens.push('loadouts'); };
       node.querySelector('[data-a=leave]').onclick = () => app.leaveMatch();
     } else {
-      node.querySelector('[data-a=restart]').onclick = () => app.screens.confirm('Restart match?', 'Current progress in this match will be lost.', 'Restart', () => app.startMatch());
-      node.querySelector('[data-a=leave]').onclick = () => app.screens.confirm('Leave match?', 'You will return to the main menu. This match will not count toward career stats.', 'Leave', () => app.leaveMatch());
+      if (g.online) node.querySelector('[data-a=leave]').onclick = () => app.screens.confirm('Leave server?', 'You will disconnect and a bot takes your slot.', 'Leave', () => app.leaveMatch());
+      else {
+        node.querySelector('[data-a=restart]').onclick = () => app.screens.confirm('Restart match?', 'Current progress in this match will be lost.', 'Restart', () => app.startMatch());
+        node.querySelector('[data-a=leave]').onclick = () => app.screens.confirm('Leave match?', 'You will return to the main menu. This match will not count toward career stats.', 'Leave', () => app.leaveMatch());
+      }
     }
     entry.onBack = () => app.resumeMatch();
   },
@@ -615,11 +673,12 @@ const SCREENS = {
         <button class="btn" data-a="loadouts">Loadouts</button>
         <button class="btn" data-a="pass">Battle Pass</button>
         <div class="spacer"></div>
-        <button class="btn primary" data-a="again" style="padding:12px 40px">Play Again</button>
+        ${r.online ? '<span class="muted small">Online · the next match starts automatically</span><button class="btn primary" data-a="menu2" style="padding:12px 30px">Leave Server</button>' : '<button class="btn primary" data-a="again" style="padding:12px 40px">Play Again</button>'}
       </div></div>`;
     node.querySelector('[data-a=menu]').onclick = () => app.toMenu();
     node.querySelector('[data-a=loadouts]').onclick = () => { app.toMenu(); app.screens.push('play'); app.screens.push('loadouts'); };
-    node.querySelector('[data-a=again]').onclick = () => app.startMatch();
+    if (r.online) node.querySelector('[data-a=menu2]').onclick = () => app.toMenu();
+    else node.querySelector('[data-a=again]').onclick = () => app.startMatch();
     node.querySelector('[data-a=pass]').onclick = () => { app.toMenu(); app.screens.push('pass'); };
   },
 };

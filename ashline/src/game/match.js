@@ -130,6 +130,7 @@ export class Match {
       this.countdown -= dt;
       // allow looking but not moving
       for (const c of this.combatants) {
+        if (c.net) continue; // network players are ticked per received command
         c.cmd.moveX = c.cmd.moveZ = 0; c.cmd.fire = false; c.cmd.jump = false;
         if (c.brain) c.brain.idleLook(dt);
         c.tick(dt, this);
@@ -148,16 +149,10 @@ export class Match {
     this._order = (this._order || 0) + 1;
     for (let k = 0; k < n; k++) {
       const c = this.combatants[(k + this._order) % n];
+      if (c.net) { if (!c.alive) c.respawnT -= dt; continue; } // ticked per received command (server)
       if (c.brain && c.alive) c.brain.update(dt);
       if (c.dummy) { c.cmd.crouch = !!c.dummy.crouch; c.cmd.yaw = Math.PI; c.cmd.pitch = 0; }
-      const ne = c.events.length;
-      c.tick(dt, this);
-      if (c.alive && !c.perks?.has('pk_silence')) {
-        for (let i = ne; i < c.events.length; i++) {
-          const e = c.events[i];
-          if (e.type === 'step' && !e.crouch) this.footstep(c, e.sprint ? 13 : 8);
-        }
-      }
+      this.tickCombatant(c, dt);
       if (c.dummy) this._dummy(c, dt);
       if (!c.alive) {
         c.respawnT -= dt;
@@ -173,6 +168,18 @@ export class Match {
     }
     // prune recent deaths
     while (this.recentDeaths.length && this.time - this.recentDeaths[0].t > 12) this.recentDeaths.shift();
+  }
+
+  /** Advance one combatant and let bots hear its footsteps. */
+  tickCombatant(c, dt) {
+    const ne = c.events.length;
+    c.tick(dt, this);
+    if (c.alive && !c.perks?.has('pk_silence')) {
+      for (let i = ne; i < c.events.length; i++) {
+        const e = c.events[i];
+        if (e.type === 'step' && !e.crouch) this.footstep(c, e.sprint ? 13 : 8);
+      }
+    }
   }
 
   _dummy(c, dt) {

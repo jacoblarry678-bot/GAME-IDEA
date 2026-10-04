@@ -14,6 +14,9 @@ import { NavGrid } from './world/navgrid.js';
 import { createSky } from './world/sky.js';
 import { CINDER_YARD } from './world/maps/cinderYard.js';
 import { MAPS } from './world/maps/index.js';
+import { NetClient } from './net/netClient.js';
+import { NetMatch } from './net/netMatch.js';
+import { MODES } from './game/modes.js';
 import { FIRING_RANGE } from './world/maps/firingRange.js';
 import { weaponMaterials, buildWeapon, buildCharm } from './fx/weaponModels.js';
 import { buildKey } from './data/attachments.js';
@@ -158,7 +161,9 @@ export class App {
 
   // ---------------------------------------------------------------- flow
   toMenu() {
-    if (this.game) { this.game.dispose(); this.game = null; }
+    if (this.online) { const o = this.online; this.online = null; o.client.close(); }
+    this.screens.loading?.(null);
+    if (this.game) { this.game.match.dispose?.(); this.game.dispose(); this.game = null; }
     if (this.activeMap !== this.mapRuntime) this.activateMap(this.mapRuntime);
     this.state = 'menu';
     this.input.enabled = false;
@@ -246,6 +251,64 @@ export class App {
   }
 
   leaveMatch() { this.toMenu(); }
+
+  // ---------------------------------------------------------------- online (self-hosted server)
+  /** Connect to a server; resolves when the first match is running, rejects with a readable reason. */
+  async connectOnline(url) {
+    const client = new NetClient(NetClient.normalize(url));
+    const lo = this.profile.matchLoadout;
+    const look = this.profile.look;
+    const welcome = await client.connect({
+      name: this.profile.data.name,
+      loadout: lo,
+      look: { operator: look.operator?.id, outfit: look.outfit?.id, finish: look.weapons?.[lo.primary]?.finish, emblem: look.emblem?.id },
+    });
+    this.online = { client, server: welcome.server, name: welcome.name };
+    client.on('newMatch', (m) => { if (this.online?.client === client) this.enterOnlineMatch(m.match, false).catch((e) => this.onlineFailed(e)); });
+    client.on('close', () => {
+      if (this.online?.client !== client) return;
+      this.online = null;
+      this.toMenu();
+      this.screens.toast('Disconnected from the server.', 4000);
+    });
+    await this.enterOnlineMatch(welcome.match, true);
+    return welcome;
+  }
+
+  onlineFailed(e) {
+    if (!this.online) return;
+    this.toMenu();
+    this.screens.toast(`Online: ${e.message}`, 5000);
+  }
+
+  async enterOnlineMatch(info, first) {
+    const o = this.online;
+    if (!o) return;
+    const def = MAPS[info.map];
+    if (!def) throw new Error(`Server uses an unknown map "${info.map}" — update this game build.`);
+    this.screens.loading?.(`${first ? 'Joining' : 'Next match'}: ${MODES[info.mode]?.name || info.mode} · ${def.name}`);
+    if (this.game) { this.game.match.dispose?.(); this.game.dispose(); this.game = null; }
+    if (!this.maps[def.id]) { await nextFrame(); await nextFrame(); await this.buildMap(def); }
+    if (this.online !== o) return;
+    if (first) o.client.send({ t: 'ready', mid: info.mid });
+    const roster = await o.client.waitFor('roster', (m) => m.mid === info.mid && m.you, 10000);
+    if (this.online !== o) return;
+    const rt = this.maps[def.id];
+    const match = new NetMatch(rt, info.setup, o.client, { ...info, roster: roster.list, you: roster.you });
+    this.screens.clear();
+    this.screens.loading?.(null);
+    this.activateMap(rt);
+    this.audio.init();
+    this.audio.music(false);
+    this.preview.hide();
+    this.game = new Game(this, { ...info.setup, online: true }, rt, { client: o.client, match });
+    this.game.start();
+    this.state = 'match-live';
+    this.input.enabled = true;
+    this.input.lockWanted = true;
+    this.input.requestLock();
+    this.updateLockHint();
+  }
 
   /** Test hook: let the AI play the local player. */
   autopilot(on = true) { this.game?.debugAutopilot(on, BotBrain); }
