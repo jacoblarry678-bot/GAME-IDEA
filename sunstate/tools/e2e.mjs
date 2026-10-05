@@ -152,14 +152,17 @@ await T(() => { const g = window.__sun.game; const v = g.vehicles.filter((x) => 
 st = await state();
 check('gets back in a car during the alarm', st.inVehicle);
 await T(() => window.__sun.debug.autopilot(90, -240, { arrive: 25 }));
+const wantedLine = () => T(() => { const g = window.__sun.game, W = g.wanted, p = g.player; return `lvl${W.level} ${W.state} left=${W.searchLeft.toFixed(1)} lk=${W.lastKnown ? W.lastKnown.x.toFixed(0) + ',' + W.lastKnown.z.toFixed(0) : '-'} R=${W.searchRadius} sees=${g.police.seesPlayer} calls=${W.calls.length} veh=${!!p.vehicle} p=${p.pos.x.toFixed(0)},${p.pos.z.toFixed(0)} dead=${p.dead} overlay=${window.__sun.app.overlay} units=${g.police.units.map((u) => u.mode).join(',')} log=${W.log.slice(0, 3).map((l) => l.text).join(' / ')}`; });
 const pursuitSeen = await T(() => { let seen = false; let t = 0; while (t < 90 && !window.__sun.debug.arrived) { window.__t.tick(0.5); t += 0.5; const w = window.__sun.game.wanted; if (w.state === 'pursuit' || w.state === 'search') seen = true; if (w.level === 0) break; } return { seen, t }; });
+console.log('  escape drive done:', await wantedLine());
 let escapeT = await T(() => window.__t.waitFor('g.wanted.level === 0', 90, 0.5));
+console.log('  after waiting:', await wantedLine());
 st = await state();
 if (escapeT < 0) {
   // police kept eyes on the autopilot car; hide on the mainland stub and wait the search out
   // hide out: swim far offshore, beyond sight range of every road and the search area
   await T(() => { window.__sun.debug.stop(); const g = window.__sun.game; g.respawnPlayer(330, -60, 0, { health: g.player.health }); });
-  escapeT = await T(() => window.__t.waitFor('g.wanted.level === 0', 90, 0.5));
+  for (let k = 0; k < 9 && escapeT < 0; k++) { escapeT = await T(() => window.__t.waitFor('g.wanted.level === 0', 10, 0.5)); console.log('  hiding:', await wantedLine()); }
   check('escape: wanted level clears after hiding out of sight', escapeT >= 0, `cleared ${escapeT}s after swimming offshore (the autopilot can't evade; pursuit/search seen: ${pursuitSeen.seen})`);
 } else check('escape: losing the police clears the wanted level', true, `cleared after driving away · pursuit/search seen: ${pursuitSeen.seen}`);
 st = await state();
