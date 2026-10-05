@@ -292,16 +292,19 @@ const longRun = await T(() => {
   window.__sun.debug.autopilot(0, 0, { cruise: true });
   const t0 = performance.now();
   let maxVeh = 0, maxPeds = 0, dist = 0, last = v.pos.clone(), stuck = 0;
+  const samples = [];
   for (let s = 0; s < 300; s += 1) {
     window.__t.tick(1);
+    if (s % 20 === 0) samples.push(`t${s} ${v.pos.x.toFixed(0)},${v.pos.z.toFixed(0)} spd${v.speed.toFixed(1)} hp${Math.round(v.health)} in=${v.input.throttle.toFixed(1)}/${v.input.brake.toFixed(1)}/${v.input.steer.toFixed(1)} hook=${!!g.debugHook} drv=${g.player.vehicle === v} lvl=${g.wanted.level} state=${window.__sun.app.state} vi=${JSON.stringify(window.__sun.input.virtual.steer)}`);
     maxVeh = Math.max(maxVeh, g.vehicles.length);
     maxPeds = Math.max(maxPeds, g.peds.length + g.extras.length);
     const d = last.distanceTo(v.pos); dist += d; last.copy(v.pos);
     if (d < 0.5) stuck++; else stuck = 0;
     if (stuck > 20) { v.pos.set(151.75, 0, 0); v.yaw = Math.PI; v.vel.set(0, 0); window.__sun.debug.autopilot(0, 0, { cruise: true }); stuck = 0; }
   }
-  return { ms: performance.now() - t0, maxVeh, maxPeds, dist, events: g.director.history.length, inVehicle: !!g.player.vehicle };
+  return { ms: performance.now() - t0, maxVeh, maxPeds, dist, events: g.director.history.length, inVehicle: !!g.player.vehicle, samples };
 });
+console.log(longRun.samples.map((x) => '  ' + x).join('\n'));
 check('5 minutes of simulated driving complete', longRun.inVehicle && longRun.dist > 1500, `${(longRun.dist / 1000).toFixed(1)} km driven, ${longRun.events} ambient events`);
 check('populations stay bounded', longRun.maxVeh < 45 && longRun.maxPeds < 70, `max ${longRun.maxVeh} vehicles, ${longRun.maxPeds} people`);
 const errs = logs.filter((l) => /PAGEERROR|\[error\]/.test(l) && !/fonts|ERR_CERT|favicon/.test(l));
