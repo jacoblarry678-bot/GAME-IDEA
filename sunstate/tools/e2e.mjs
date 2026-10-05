@@ -155,8 +155,8 @@ await T(() => window.__sun.debug.autopilot(90, -240, { arrive: 25 }));
 const wantedLine = () => T(() => { const g = window.__sun.game, W = g.wanted, p = g.player; return `lvl${W.level} ${W.state} left=${W.searchLeft.toFixed(1)} lk=${W.lastKnown ? W.lastKnown.x.toFixed(0) + ',' + W.lastKnown.z.toFixed(0) : '-'} R=${W.searchRadius} sees=${g.police.seesPlayer} calls=${W.calls.length} veh=${!!p.vehicle} p=${p.pos.x.toFixed(0)},${p.pos.z.toFixed(0)} dead=${p.dead} overlay=${window.__sun.app.overlay} units=${g.police.units.map((u) => u.mode).join(',')} log=${W.log.slice(0, 3).map((l) => l.text).join(' / ')}`; });
 const pursuitSeen = await T(() => { let seen = false; let t = 0; while (t < 90 && !window.__sun.debug.arrived) { window.__t.tick(0.5); t += 0.5; const w = window.__sun.game.wanted; if (w.state === 'pursuit' || w.state === 'search') seen = true; if (w.level === 0) break; } return { seen, t }; });
 console.log('  escape drive done:', await wantedLine());
-let escapeT = await T(() => window.__t.waitFor('g.wanted.level === 0', 90, 0.5));
-console.log('  after waiting:', await wantedLine());
+await T(() => window.__sun.debug.stop());
+let escapeT = await T(() => (window.__sun.game.wanted.level === 0 ? 0 : -1));
 st = await state();
 if (escapeT < 0) {
   // police kept eyes on the autopilot car; hide on the mainland stub and wait the search out
