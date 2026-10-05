@@ -90,7 +90,14 @@ function debugTools(app) {
       const t = Math.max(0.05, Math.min(0.95, from === e.a ? rp.t : 1 - rp.t));
       ai = new DriverAI(v, g, { edge: e.id, from, lane: 0, t: Math.min(0.95, t + 0.15) });
       ai.mode = cruise ? 'cruise' : 'route';
-      if (!cruise) ai.route = L.findRoute(to, L.nearestNode(x, z).id);
+      if (!cruise) {
+        // drive along the road segment nearest the destination, so the car actually passes it
+        const tp = L.nearestRoadPoint(x, z);
+        const [A, B] = [tp.edge.a, tp.edge.b];
+        const viaA = L.findRoute(to, A), viaB = L.findRoute(to, B);
+        const len = (r) => (r ? r.length : 1e9);
+        ai.route = len(viaA) <= len(viaB) ? [...viaA, B] : [...viaB, A];
+      }
       ai.speedScale = 1.1;
       target = cruise ? null : { x, z, arrive };
       arrived = false;
