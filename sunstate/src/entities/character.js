@@ -53,7 +53,12 @@ export class Character {
 
   /** One fixed physics step. */
   step(dt) {
-    if (this.vehicle) return;
+    if (this.vehicle) {
+      // occupants ride along: everything that reads pos (missions, AI, HUD) sees the car's position
+      this.pos.set(this.vehicle.pos.x, this.vehicle.pos.y, this.vehicle.pos.z);
+      this.vel.set(this.vehicle.vel.x, 0, this.vehicle.vel.y);
+      return;
+    }
     const world = this.game.world;
     if (this.dead || this.knockT > 0) {
       if (this.knockT > 0) this.knockT -= dt;
