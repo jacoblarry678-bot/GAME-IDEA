@@ -306,7 +306,13 @@ export class Vehicle {
     const coll = this.game.world.collision;
     const contacts = coll.boxContacts(this.pos.x, this.pos.z, this.hx, this.hz, this.yaw, this.pos.y + 0.15, this.def.height - 0.1, this._contacts || (this._contacts = []));
     for (const c of contacts) {
-      if (c.collider.tag === 'prop' && c.collider.data?.breakable) continue;
+      if (c.collider.data?.breakable && this.speed > 2.5) {
+        // knock it over and lose a little speed
+        this.game.world.breakProp?.(c.collider);
+        this.vel.multiplyScalar(0.9);
+        this.game.events?.emit('propBroken', { x: c.px, z: c.pz, y: this.pos.y + 0.5, type: c.collider.data.type });
+        continue;
+      }
       this.pos.x += c.nx * c.depth;
       this.pos.z += c.nz * c.depth;
       this.applyImpulse(c.px, c.pz, c.nx, c.nz, null, 0.25);

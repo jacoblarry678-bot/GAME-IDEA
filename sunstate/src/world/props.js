@@ -157,8 +157,11 @@ export function buildProps(collision, mats) {
   };
   for (const [type, def] of Object.entries(furniture)) {
     const list = by(type);
-    group.add(instanced(def.geo, vc, list, (p, m) => placed(p, m)));
-    for (const p of list) collision.add({ ...def.col, cx: p.x, cz: p.z, angle: p.rot || 0, y0: -1, y1: CURB + def.col.y1, material: type === 'bench' ? 'wood' : 'metal', cameraBlock: false, tag: 'prop' });
+    const im = instanced(def.geo, vc, list, (p, m) => placed(p, m));
+    group.add(im);
+    // small furniture gets knocked over by cars (see World.breakProp); planters are too heavy
+    const breakable = type !== 'planter';
+    list.forEach((p, index) => collision.add({ ...def.col, cx: p.x, cz: p.z, angle: p.rot || 0, y0: -1, y1: CURB + def.col.y1, material: type === 'bench' ? 'wood' : 'metal', cameraBlock: false, tag: 'prop', data: breakable ? { breakable: true, mesh: im, index, type } : null }));
   }
 
   // --- beach --------------------------------------------------------------------
@@ -172,7 +175,8 @@ export function buildProps(collision, mats) {
   const loungers = by('lounger');
   const loungerGeo = merge([part(new THREE.BoxGeometry(0.62, 0.06, 1.3), 0xf4f1ea, 0, 0.3, 0.2), part(new THREE.BoxGeometry(0.62, 0.06, 0.7), 0xf4f1ea, 0, 0.5, -0.65, -0.6, 0, 0), part(new THREE.BoxGeometry(0.6, 0.28, 0.06), 0xcfcfcf, 0, 0.14, 0.75), part(new THREE.BoxGeometry(0.6, 0.28, 0.06), 0xcfcfcf, 0, 0.14, -0.3)]);
   group.add(instanced(loungerGeo, vc, loungers, (p, m) => placed(p, m)));
-  for (const p of loungers) collision.add({ type: 'box', cx: p.x, cz: p.z, hx: 0.32, hz: 0.75, angle: p.rot, y0: -2, y1: groundHeight(p.x, p.z) + 0.55, tag: 'prop', cameraBlock: false, material: 'wood' });
+  const loungerMesh = group.children[group.children.length - 1];
+  loungers.forEach((p, index) => collision.add({ type: 'box', cx: p.x, cz: p.z, hx: 0.32, hz: 0.75, angle: p.rot, y0: -2, y1: groundHeight(p.x, p.z) + 0.55, tag: 'prop', cameraBlock: false, material: 'wood', data: { breakable: true, mesh: loungerMesh, index, type: 'lounger' } }));
 
   // lifeguard towers, docks, boats, barriers etc. are few: batch them
   const Bt = new Batcher();

@@ -74,6 +74,7 @@ export class Game {
       if (vehicle === this.player.vehicle || (vehicle && vehicle.seats.includes(this.player))) this.cameraRig.addShake(Math.min(1, strength / 8));
     });
     ev.on('splash', (ch) => this.audio?.splash(ch.pos));
+    ev.on('propBroken', (p) => { this.audio?.impact(p, 2.5); this.combat.puff(new THREE.Vector3(p.x, p.y, p.z), 0xb8b0a0, 0.6); });
   }
 
   /** Put the player back on their feet somewhere (respawn, checkpoint). */

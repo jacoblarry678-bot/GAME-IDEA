@@ -30,6 +30,32 @@ export class World {
     engine.interiorLight.intensity = 30;
   }
 
+  /** A car hit a piece of street furniture hard enough to knock it over. */
+  breakProp(collider) {
+    const d = collider.data;
+    if (!d || d.broken) return;
+    d.broken = true;
+    this.collision.remove(collider);
+    d.matrix = new THREE.Matrix4();
+    d.mesh.getMatrixAt(d.index, d.matrix);
+    (this.broken || (this.broken = [])).push(collider);
+    d.mesh.setMatrixAt(d.index, new THREE.Matrix4().makeScale(0, 0, 0));
+    d.mesh.instanceMatrix.needsUpdate = true;
+    this.onPropBroken?.(collider);
+  }
+
+  /** Put knocked-over furniture back (new game / continue). */
+  restoreProps() {
+    for (const c of this.broken || []) {
+      const d = c.data;
+      d.broken = false;
+      d.mesh.setMatrixAt(d.index, d.matrix);
+      d.mesh.instanceMatrix.needsUpdate = true;
+      this.collision.add(c);
+    }
+    this.broken = [];
+  }
+
   ground(x, z, y) { return groundHeight(x, z, y); }
   isWater(x, z) { return isWater(x, z); }
   surface(x, z, y) { return surfaceAt(x, z, y); }

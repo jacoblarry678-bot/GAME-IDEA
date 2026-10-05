@@ -75,6 +75,7 @@ export class App {
 
   createGame() {
     if (this.game) this.game.dispose();
+    this.world.restoreProps();
     this.game = new Game({ engine: this.engine, world: this.world, input: this.input, settings: this.settings, audio: this.audio });
     this.game.hud = this.hud;
     this.hud.bind(this.game);

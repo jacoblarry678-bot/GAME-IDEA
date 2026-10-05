@@ -182,6 +182,9 @@ export class PoliceManager {
     else if (u.mode === 'pursue' && u.lostT > 3) u.mode = W.state === 'search' ? 'search' : 'respond';
     if (u.mode === 'pursue' && !p.vehicle && d < 16 && v.speed < 6) { this.deploy(u); return; }
 
+    // failsafe: a unit wedged somewhere for a long time, out of the player's view, is replaced
+    if (v.speed < 1 && u.mode !== 'deploy') u.wedgedT = (u.wedgedT || 0) + dt; else u.wedgedT = 0;
+    if (u.wedgedT > 12 && d > 60 && !(tr && tr.visible(v.pos.x, v.pos.y, v.pos.z))) { this.removeUnit(u); return; }
     if (u.mode === 'pursue') this.drivePursuit(u, dt, target, p.vehicle);
     else {
       // follow roads toward the report / last known area; search wanders inside it

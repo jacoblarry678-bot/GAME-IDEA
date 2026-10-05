@@ -187,7 +187,7 @@ export class DriverAI {
 
     // recover from being stuck (blocked by something static, pushed off the lane)
     if (speed < 0.6 && target > 3 && !obs) this.stuckT += dt; else this.stuckT = Math.max(0, this.stuckT - dt * 2);
-    if (this.stuckT > 2.5) { this.reverseT = 1.6; this.stuckT = 0; }
+    if (this.stuckT > 2.5) { this.reverseT = 1.6; this.stuckT = 0; this.ignore = null; this.ignoreT = 3; } // back up, then take a line offset to the side
     if (this.reverseT > 0) {
       this.reverseT -= dt;
       v.input.throttle = 0; v.input.brake = 0.7; v.input.steer = -steer; v.input.handbrake = false;
