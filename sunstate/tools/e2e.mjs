@@ -157,12 +157,16 @@ let escapeT = await T(() => window.__t.waitFor('g.wanted.level === 0', 90, 0.5))
 st = await state();
 if (escapeT < 0) {
   // police kept eyes on the autopilot car; hide on the mainland stub and wait the search out
-  await T(() => { window.__sun.debug.stop(); const g = window.__sun.game, v = g.player.vehicle; if (v) { v.pos.set(-360, 0, 40); v.vel.set(0, 0); } else g.player.pos.set(-360, 0, 40); });
+  // hide out: swim far offshore, beyond sight range of every road and the search area
+  await T(() => { window.__sun.debug.stop(); const g = window.__sun.game; g.respawnPlayer(330, -60, 0, { health: g.player.health }); });
   escapeT = await T(() => window.__t.waitFor('g.wanted.level === 0', 90, 0.5));
-  check('escape: wanted level clears after hiding out of sight', escapeT >= 0, `(autopilot alone could not shake them; pursuit/search seen: ${pursuitSeen.seen})`);
+  check('escape: wanted level clears after hiding out of sight', escapeT >= 0, `cleared ${escapeT}s after swimming offshore (the autopilot can't evade; pursuit/search seen: ${pursuitSeen.seen})`);
 } else check('escape: losing the police clears the wanted level', true, `cleared after driving away · pursuit/search seen: ${pursuitSeen.seen}`);
 st = await state();
 check('mission moves on to the safehouse', st.stage === 'return', st.stage);
+if (!(await T(() => !!window.__sun.game.player.vehicle))) {
+  await T(() => { const g = window.__sun.game; g.respawnPlayer(146.75, -40, Math.PI); const v = g.addVehicle('kestrel', 146.75, -40, Math.PI); g.seatCharacter(v, 0, g.player); window.__t.tick(0.5); });
+}
 
 // --- return & save ------------------------------------------------------------------------
 const sh = await T(() => window.__sun.game.world.places.safehouse);
