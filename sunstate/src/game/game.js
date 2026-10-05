@@ -89,6 +89,8 @@ export class Game {
     p.controller.enter = null; p.controller.exit = null; p.controller.reloadT = 0; p.controller.frozen = false;
     p.anim_.surrender = false; p.anim_.aim = false;
     this.cameraRig.snapBehind(yaw);
+    // police sight is re-evaluated from the new position (no stale "seen" for one tick)
+    if (this.police) { this.police.seesPlayer = false; this.police.seeT = 0; }
   }
 
   /** Write the save file (at the safehouse or after a mission). */
@@ -210,7 +212,18 @@ export class Game {
     this.debugHook?.(dt);
     this.missions?.step(dt);
 
-    for (const v of this.vehicles) v.step(dt);
+    for (const v of this.vehicles) {
+      v.step(dt);
+      // a car that has filled with water: everyone swims out
+      if (v.sunk) {
+        v.sunkT = (v.sunkT || 0) + dt;
+        if (v.sunkT > 2.5 && v.occupied) for (const o of [...v.seats]) if (o) {
+          this.unseatCharacter(v, o, { x: o === this.player ? v.pos.x : v.pos.x + (Math.random() - 0.5) * 3, y: this.world.waterY - 1.3, z: v.pos.z });
+          o.swim = true; o.grounded = false;
+          if (o.controller?.panic) o.controller.panic(v.pos, 'sinking');
+        }
+      }
+    }
     // vehicle–vehicle contacts (broad phase by distance)
     const vs = this.vehicles;
     for (let i = 0; i < vs.length; i++) for (let j = i + 1; j < vs.length; j++) {

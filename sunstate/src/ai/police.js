@@ -181,6 +181,9 @@ export class PoliceManager {
     if (sees && d < 60) u.mode = 'pursue';
     else if (u.mode === 'pursue' && u.lostT > 3) u.mode = W.state === 'search' ? 'search' : 'respond';
     if (u.mode === 'pursue' && !p.vehicle && d < 16 && v.speed < 6) { this.deploy(u); return; }
+    // the suspect is sitting in a stopped vehicle nearby: get out and move in
+    if (u.mode === 'pursue' && p.vehicle && p.vehicle.speed < 1.5 && d < 25 && sees) u.stillT = (u.stillT || 0) + dt; else u.stillT = 0;
+    if (u.stillT > 3 && v.speed < 6) { u.stillT = 0; this.deploy(u); return; }
 
     // failsafe: a unit wedged somewhere for a long time, out of the player's view, is replaced
     if (v.speed < 1 && u.mode !== 'deploy') u.wedgedT = (u.wedgedT || 0) + dt; else u.wedgedT = 0;
