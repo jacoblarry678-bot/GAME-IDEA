@@ -99,7 +99,7 @@ check('enters a parked car with F', st.inVehicle, JSON.stringify(st.vpos));
 
 // --- drive to the store (autopilot = traffic AI driving the player's car) ---------------
 const store = await T(() => window.__sun.game.store.place);
-await T(([x, z]) => window.__sun.debug.autopilot(x, z, { arrive: 16 }), [store.door.x, store.door.z - 6]);
+await T(([x, z]) => window.__sun.debug.autopilot(x, z, { arrive: 9 }), [store.door.x, store.door.z - 6]);
 const driveT = await T(() => window.__t.waitFor('S.debug.arrived', 120, 0.5));
 st = await state();
 check('drives through the streets to the store', driveT >= 0, `${driveT}s · car at ${st.vpos} · stage ${st.stage}`);
