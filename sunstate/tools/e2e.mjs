@@ -98,6 +98,11 @@ st = await state();
 check('enters a parked car with F', st.inVehicle, JSON.stringify(st.vpos));
 
 // --- drive to the store (autopilot = traffic AI driving the player's car) ---------------
+// The autopilot is the lane-following traffic AI; it doesn't do parking-lot manoeuvres, so the
+// scripted drive starts from the street: hop out of the sedan and into a car on Palmetto Ave.
+const exitOk = await T(() => { window.__t.press('enterVehicle'); window.__t.waitFor('!g.player.vehicle', 5); window.__t.tick(0.3); return !window.__sun.game.player.vehicle; });
+check('exits the parked sedan', exitOk);
+await T(() => { const g = window.__sun.game; g.respawnPlayer(33.5, -20, 0); const v = g.addVehicle('kestrel', 28.25, -20, 0, 0x8fb7c9); v.owner = 'player'; g.seatCharacter(v, 0, g.player); window.__t.tick(0.3); });
 const store = await T(() => window.__sun.game.store.place);
 await T(([x, z]) => window.__sun.debug.autopilot(x, z, { arrive: 9 }), [store.door.x, store.door.z - 6]);
 const driveT = await T(() => window.__t.waitFor('S.debug.arrived', 120, 0.5));
@@ -150,21 +155,21 @@ check('police do not spawn right next to the player', !visibleSpawn);
 // The test's driver (the traffic AI) can't evade police, so the getaway is scripted: the player
 // is relocated 300 m away, out of sight, in a car. What's verified is that the wanted level then
 // clears through the real search rules (outside the circle, unseen, timer runs out).
-const wantedLine = () => T(() => { const g = window.__sun.game, W = g.wanted, p = g.player; return `lvl${W.level} ${W.state} left=${W.searchLeft.toFixed(1)} lk=${W.lastKnown ? W.lastKnown.x.toFixed(0) + ',' + W.lastKnown.z.toFixed(0) : '-'} R=${W.searchRadius} sees=${g.police.seesPlayer} veh=${!!p.vehicle} p=${p.pos.x.toFixed(0)},${p.pos.z.toFixed(0)}`; });
-await T(() => { const g = window.__sun.game; g.respawnPlayer(146.75, -200, Math.PI, { health: g.player.health }); const v = g.addVehicle('kestrel', 146.75, -200, Math.PI); g.seatCharacter(v, 0, g.player); window.__t.tick(0.3); });
+const wantedLine = () => T(() => { const g = window.__sun.game, W = g.wanted, p = g.player; return `lvl${W.level} ${W.state} left=${W.searchLeft.toFixed(1)} lk=${W.lastKnown ? W.lastKnown.x.toFixed(0) + ',' + W.lastKnown.z.toFixed(0) : '-'} R=${W.searchRadius} sees=${g.police.seesPlayer} veh=${!!p.vehicle} p=${p.pos.x.toFixed(0)},${p.pos.z.toFixed(0)} log=${W.log.slice(0, 4).map((l) => l.text).join(' / ')}`; });
+console.log('  before getaway:', await wantedLine());
+await T(() => { const g = window.__sun.game; g.respawnPlayer(330, -60, 0, { health: g.player.health }); window.__t.tick(0.3); }); // swim far offshore
 const escapeT = await T(() => window.__t.waitFor('g.wanted.level === 0', 90, 0.5));
 console.log('  after hiding:', await wantedLine());
 check('escape: the wanted level clears once out of sight and outside the search area', escapeT >= 0, `${escapeT}s`);
 st = await state();
 check('mission moves on to the safehouse', st.stage === 'return', st.stage);
-if (!(await T(() => !!window.__sun.game.player.vehicle))) {
-  await T(() => { const g = window.__sun.game; g.respawnPlayer(146.75, -40, Math.PI); const v = g.addVehicle('kestrel', 146.75, -40, Math.PI); g.seatCharacter(v, 0, g.player); window.__t.tick(0.5); });
-}
+// swim back: put the player in a car on Ocean Blvd for the drive home
+await T(() => { const g = window.__sun.game; g.respawnPlayer(146.75, -40, Math.PI); const v = g.addVehicle('kestrel', 146.75, -40, Math.PI); g.seatCharacter(v, 0, g.player); window.__t.tick(0.5); });
 
 // --- return & save ------------------------------------------------------------------------
 const sh = await T(() => window.__sun.game.world.places.safehouse);
 await T(() => window.__sun.debug.stop());
-await T(([x, z]) => window.__sun.debug.autopilot(x, z, { arrive: 30 }), [sh.door.x + 10, sh.door.z]);
+await T(([x, z]) => window.__sun.debug.autopilot(x, z, { arrive: 34 }), [sh.door.x + 10, sh.door.z]);
 const backT = await T(() => window.__t.waitFor('S.debug.arrived', 120, 0.5));
 if (backT < 0) await T(([x, z]) => { const v = window.__sun.game.player.vehicle; v.pos.set(x, 0, z); v.vel.set(0, 0); }, [sh.door.x + 22, sh.door.z]);
 check('drives back toward the motel', backT >= 0, `${backT}s`);

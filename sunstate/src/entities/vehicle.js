@@ -180,6 +180,10 @@ export class Vehicle {
     let FyR = THREE.MathUtils.clamp(-d.cornerStiffR * alphaR, -latCapR, latCapR);
     this.slip = THREE.MathUtils.clamp(Math.max(Math.abs(alphaR) - 0.09, Math.abs(alphaF) - 0.12, 0) * 3 + spin * 0.6 + (handbrake && speed > 4 ? 0.4 : 0), 0, 1) * (speed > 2 || spin > 0.3 ? 1 : 0);
 
+    // below walking pace the slip-angle model is ill-defined (huge slip angles at ~0 m/s);
+    // fade tyre side forces out there and let the kinematic model below do the steering
+    const kin = THREE.MathUtils.clamp(1 - (speed - 1.5) / 2.5, 0, 1);
+    FyF *= 1 - kin; FyR *= 1 - kin;
     // resistances
     const drag = d.drag * speed;
     const Flong = FxF * Math.cos(delta) - FyF * Math.sin(delta) + FxR - drag * vLong - d.rollRes * vLong;
@@ -189,7 +193,6 @@ export class Vehicle {
     if (!this.airborne) {
       let al = Flong / this.mass, at = Flat / this.mass;
       // low speed: blend toward a kinematic bicycle model to avoid jitter
-      const kin = THREE.MathUtils.clamp(1 - (speed - 1.5) / 2.5, 0, 1);
       let wTarget = this.w + (torque / this.inertia) * dt;
       if (kin > 0) {
         const wKin = -(vLong * Math.tan(delta)) / L;

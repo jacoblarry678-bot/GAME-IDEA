@@ -52,6 +52,7 @@ export class DriverAI {
     this.blockedBy = null;
     this.avoidPlayer = true;
     this.emergency = false; // responding police ignore signals
+    this.turning = false;
     const l = laneLine(edges[edge], from, lane);
     this.wp.push({ x: l.x0 + (l.x1 - l.x0) * t, z: l.z0 + (l.z1 - l.z0) * t, speed: speedLimit(edges[edge]) });
     this.wp.push({ x: l.x1, z: l.z1, speed: speedLimit(edges[edge]), stop: { node: l.b, axis: l.axis } });
@@ -159,6 +160,24 @@ export class DriverAI {
     const curv = (2 * lx) / Math.max(1, ld2);
     let steer = -Math.atan(curv * v.def.wheelbase) / v.def.steerMax; // local +x is left
     if (lz < 0) steer = lx > 0 ? -1 : 1; // target behind: full lock
+    // target well behind at low speed (parked nose-in, wrong way): gentle three-point turn,
+    // switching direction as soon as the car stalls against something; at most three cycles
+    const behind = Math.abs(Math.atan2(lx, lz)) > 1.9;
+    if (!behind) this.turnCycles = 0;
+    if (this.turning || (behind && speed < 3 && this.reverseT <= 0 && (this.turnCycles || 0) < 3)) {
+      if (!this.turning) { this.turning = true; this.turnPhase = 'back'; this.phaseT = 0; this.turnSide = lx >= 0 ? 1 : -1; this.turnCycles = (this.turnCycles || 0) + 1; }
+      this.phaseT += dt;
+      const stalled = this.phaseT > 0.6 && speed < 0.3;
+      if (this.turnPhase === 'back' && (this.phaseT > 1.8 || stalled)) { this.turnPhase = 'fwd'; this.phaseT = 0; }
+      else if (this.turnPhase === 'fwd' && (this.phaseT > 1.8 || stalled || !behind)) { this.turning = false; }
+      const back = this.turnPhase === 'back';
+      v.input.throttle = back ? 0 : 0.35;
+      v.input.brake = back ? 0.35 : 0;
+      v.input.handbrake = false;
+      // backing up with the wheels turned away from the target swings the nose toward it
+      v.input.steer = back ? this.turnSide : -this.turnSide;
+      if (this.turning) return;
+    }
 
     // target speed: path speed, upcoming turns, signals, obstacles
     let target = this.wp[0].speed;

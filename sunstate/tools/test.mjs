@@ -137,6 +137,8 @@ Object.assign(world, flatWorld);
   const lat = (hb) => { let peak = 0; runCar('ironhorse', 1.5, (t, v) => { const [fx, fz] = v.forward; peak = Math.max(peak, Math.abs(-fz * v.vel.x + fx * v.vel.y)); return { throttle: 0, steer: 1, handbrake: hb }; }, (v) => v.vel.set(0, 20)); return peak; };
   const slideHb = lat(true), slideNo = lat(false);
   check('handbrake makes the rear slide', slideHb > slideNo, `lateral ${slideHb.toFixed(1)} vs ${slideNo.toFixed(1)} m/s`);
+  const pull = runCar('kestrel', 3, { throttle: 0.45, steer: -1 });
+  check('pulls away from rest at full steering lock', pull.v.speed > 2 && Math.abs(pull.v.yaw) > 0.5, `${pull.v.speed.toFixed(1)} m/s, turned ${pull.v.yaw.toFixed(2)} rad`);
   const rev = runCar('kestrel', 6, { throttle: 0, brake: 1 });
   check('holding brake from rest reverses, capped', rev.v.vLong < -5 && rev.v.vLong > -11.5, `${rev.v.vLong.toFixed(1)} m/s`);
   const parked = runCar('kestrel', 3, {}, (v) => { v.seats[0] = null; v.vel.set(0, 3); });
