@@ -1,0 +1,25 @@
+{
+  "name": "sunstate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SUNSTATE — original browser 3D open-world crime prototype inspired by the atmosphere of a modern Florida-style coast.",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node tools/test.mjs",
+    "e2e": "node tools/e2e.mjs",
+    "shots": "node tools/shot.mjs",
+    "build:single": "vite build && node tools/build-single.mjs"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

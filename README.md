@@ -1,6 +1,8 @@
 # HELLRAISER: THE GAME
 
 > **Also in this repo:** [`ashline/`](ashline/) — **Operation Ashline**, an original browser 3D military FPS (six modes across three maps, offline vs bots or online on a self-hosted server). See [ashline/README.md](ashline/README.md).
+>
+> **Also in this repo:** [`sunstate/`](sunstate/) — **Sunstate: Ocean Mile**, an original browser 3D open-world crime prototype (driving, traffic, police, a store-robbery mission) inspired by the atmosphere of a modern sun-belt coast. See [sunstate/README.md](sunstate/README.md).
 
 A browser-based, asymmetrical multiplayer horror prototype. Four survivors are
 trapped in **The Labyrinth** performing a rite that will open the Gate. One

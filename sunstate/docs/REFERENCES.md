@@ -1,0 +1,39 @@
+# Reference ledger
+
+What this prototype draws on, where it came from, how sure we are, and what we did with it.
+
+**Labels**
+- **OFFICIAL INFORMATION**: stated by Rockstar Games (directly, or as reported from an official announcement).
+- **OBSERVED IN FOOTAGE**: seen in official stills or footage that was actually viewed.
+- **OUR DESIGN ADDITION**: a requirement for *this* prototype. It is not a claim about GTA VI.
+
+## How the research was done (and its limits)
+
+- **Rockstar's own pages could not be opened.** The build environment's network policy blocks `www.rockstargames.com`. The four official URLs in the brief (VI hub, media/videos, Only in Leonida, the *Extended Look* Newswire post) all returned `EGRESS_BLOCKED`. No Rockstar page text was read first-hand.
+- **No video was watched.** The environment has no video playback. Nothing here says "seen in Trailer 1/2 at mm:ss", and **no timestamps are claimed**.
+- **What was used:**
+  1. Six stills the user attached to the request: a beach and hotel skyline, a long two-span island bridge with a seaplane, a man in a white jacket under neon, a masked convenience-store robbery, a woman with cash in a car, and a mural-covered underpass with bikes and a lowrider. They are described only from what is visible. The tool did not tell us their source, so the labels say "user-supplied still".
+  2. Web-search result summaries from third-party news and fan sites. These are secondary sources, so their confidence is capped at *medium*.
+
+## Ledger
+
+| # | Label | Source | Observation | Confidence | Consequence in this build |
+|---|---|---|---|---|---|
+| 1 | OFFICIAL INFORMATION (secondary report) | Search summaries of rockstargames.com/VI coverage (gfinityesports.com, gosugamers.net, allthings.how) | The state is called Leonida. Six named destinations: Vice City, Leonida Keys, Grassrivers, Port Gellhorn, Ambrosia, Mount Kalaga. | Medium | Region *types* guide our expansion plan. We use our own names (Costa Vela, Ocean Mile) and our own geography. The real layout is unknown and is not copied. |
+| 2 | OFFICIAL INFORMATION (secondary report) | Same | Vice City is described with "pastel art deco hotels and bright white sands of Ocean Beach". | Medium | First district = an art-deco beach strip: pastel hotels, neon fins, a wide beach, a palm promenade. |
+| 3 | OFFICIAL INFORMATION (secondary report) | Same | Leonida Keys = tropical islands off the south coast. Grassrivers = wetlands, with airboats mentioned. Port Gellhorn = run-down motels, empty strip malls, a working port. Mount Kalaga = forests and canyons. Ambrosia = sugar-country / industrial. | Medium | Kept for Milestone 3+ region design (STATUS.md). Not built yet. |
+| 4 | OFFICIAL INFORMATION (secondary report) | Search summaries (kami-labs.fr, propakistani.pk, gtabase.com, gfinityesports.com) | *An Extended Look* was released 27 Aug 2026: ~27 minutes of in-game footage centred on Jason Duval and Lucia Caminos (shootouts, police chases, driving, quiet moments). Captured on a base PS5. Release date reported as 19 Nov 2026 on PS5 and Xbox Series X/S. | Medium | Confirms the two-protagonist partnership and the focus on chases and driving. Nothing in our build depends on details of the footage. |
+| 5 | OFFICIAL INFORMATION (secondary report) | Brief + search summaries | Protagonists are Jason Duval and Lucia Caminos, partners pulled into a criminal conspiracy across Leonida. | Medium–High | Partnership concept kept, with **original** characters: Cal Reyes and Marisol "Sol" Vega. No Rockstar plot is reproduced or guessed. |
+| 6 | OBSERVED IN FOOTAGE (user-supplied still) | Attached image 1 | A wide beach with clusters of blue, yellow and pink umbrellas, lifeguard huts, a palm belt, then pastel mid-rises and towers. A plane trailing a banner. | High (for the still) | Beach umbrella clusters coloured blue (north) / yellow (centre) / pink (south), pastel lifeguard towers, palm promenade, condo towers at the north end. Banner plane: not built yet. |
+| 7 | OBSERVED IN FOOTAGE (user-supplied still) | Attached image 2 | Two parallel long bridges over shallow turquoise water: a modern highway and an older, weathered span. Islands, boats, a seaplane. | High (for the still) | Shallow-water colour ramp and shoreline foam in the water shader. Our causeway is a raised bridge you can drive under by boat. A twin-span Keys bridge is planned for the Keys region. |
+| 8 | OBSERVED IN FOOTAGE (user-supplied still) | Attached image 3 | A night street with magenta/cyan neon, palms and nightclub patrons. | High (for the still) | Neon tubes and neon signs that brighten at night with bloom, lit windows, Club Halcyon frontage. |
+| 9 | OBSERVED IN FOOTAGE (user-supplied stills) | Attached images 4–5 | A masked couple robbing a convenience store, and a getaway car with cash. | High (for the stills) | First mission: an original two-person-crew store hold-up at the Sunny Stop, then the getaway. A store-robbery scene is not proof of a specific playable mechanic, so our hold-up rules are our own. |
+| 10 | OBSERVED IN FOOTAGE (user-supplied still) | Attached `.avif` | An underpass with murals, dirt bikes doing wheelies, a classic two-door on chrome wheels, a skyline beyond. | High (for the still) | Planned: an underpass/mural backstreet, motorcycles and a lowrider-style car (STATUS.md). |
+| 11 | OUR DESIGN ADDITION | Brief §9 | Police respond only to observed or reported crimes. Witness calls, last-known-position search, escape conditions. | — | Built: `src/game/wanted.js`, `src/ai/police.js`. The star scale is our own; it does not claim GTA VI's star count. |
+| 12 | OUR DESIGN ADDITION | Brief §6, §9 | A vehicle the police never saw speeds up the search timer. It does not break active line of sight. | — | Built (×1.6 search decay). |
+| 13 | OUR DESIGN ADDITION | Brief §8 | An ambient event director with bounded, cooled-down vignettes. | — | Built: roadside argument, broken-down car, beach party, street performer. |
+| 14 | OUR DESIGN ADDITION | Brief §12 | Fictional radio stations made of original music. | — | Two generative stations, *NEON TIDE 99.1* and *CALLE OCHO 104.5*, synthesised in code. |
+
+## Not used as requirements
+- Leaked material, datamined details and fan map reconstructions. None of these was consulted.
+- Exact trailer shots, music and UI. We never recreate them.
