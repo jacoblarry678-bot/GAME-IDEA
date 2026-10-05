@@ -97,7 +97,10 @@ function debugTools(app) {
       g.debugHook = (dt) => {
         if (!ai || g.player.vehicle !== v) { g.debugHook = null; return; }
         if (target && Math.hypot(v.pos.x - target.x, v.pos.z - target.z) < target.arrive) {
-          arrived = true; ai = null; v.input.throttle = 0; v.input.brake = 1; v.input.steer = 0; g.debugHook = null; return;
+          // arrived: brake to a full stop, then hand control back
+          arrived = true; ai = null;
+          g.debugHook = () => { v.input.throttle = 0; v.input.brake = v.vLong > 0.3 ? 1 : 0; v.input.handbrake = v.speed < 0.3; v.input.steer = 0; if (v.speed < 0.2 || g.player.vehicle !== v) g.debugHook = null; };
+          return;
         }
         ai.step(dt);
       };
