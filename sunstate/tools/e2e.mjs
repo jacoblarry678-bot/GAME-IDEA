@@ -223,7 +223,7 @@ await page.waitForTimeout(5200);
 await T(() => window.__t.tick(0.5));
 st = await state();
 const pd = await T(() => window.__sun.game.world.places.police);
-check('released at the police station with a clean record', st.state === 'playing' && st.wanted === 0 && Math.hypot(st.pos[0] - pd.x, st.pos[2] - pd.z) < 3 && st.units <= 1);
+check('released at the police station with a clean record', st.state === 'playing' && st.wanted === 0 && Math.hypot(st.pos[0] - pd.x, st.pos[2] - pd.z) < 3 && st.units <= 1, JSON.stringify({ state: st.state, wanted: st.wanted, pos: st.pos, station: [pd.x, pd.z], units: st.units, overlay: st.overlay }));
 
 // --- mission fail & retry --------------------------------------------------------------------
 await T(() => window.__sun.app.quitToTitle());
@@ -286,8 +286,8 @@ check('cannot enter a car through a wall', throughWall.blocked, `car ${throughWa
 // --- five minutes of driving without errors -------------------------------------------------
 const longRun = await T(() => {
   const g = window.__sun.game;
-  g.respawnPlayer(150 - 5.25, 60, Math.PI);
-  const v = g.addVehicle('ironhorse', 150 - 5.25, 60, Math.PI);
+  g.respawnPlayer(160, 60, Math.PI);
+  const v = g.addVehicle('ironhorse', 151.75, 60, Math.PI); // Ocean Blvd, northbound lane
   g.seatCharacter(v, 0, g.player);
   window.__sun.debug.autopilot(0, 0, { cruise: true });
   const t0 = performance.now();
@@ -298,7 +298,7 @@ const longRun = await T(() => {
     maxPeds = Math.max(maxPeds, g.peds.length + g.extras.length);
     const d = last.distanceTo(v.pos); dist += d; last.copy(v.pos);
     if (d < 0.5) stuck++; else stuck = 0;
-    if (stuck > 20) { v.pos.set(150 - 5.25, 0, 0); v.yaw = Math.PI; v.vel.set(0, 0); window.__sun.debug.autopilot(0, 0, { cruise: true }); stuck = 0; }
+    if (stuck > 20) { v.pos.set(151.75, 0, 0); v.yaw = Math.PI; v.vel.set(0, 0); window.__sun.debug.autopilot(0, 0, { cruise: true }); stuck = 0; }
   }
   return { ms: performance.now() - t0, maxVeh, maxPeds, dist, events: g.director.history.length, inVehicle: !!g.player.vehicle };
 });
