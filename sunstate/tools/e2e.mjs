@@ -198,7 +198,7 @@ const m0 = (await state()).money;
 await T(() => window.__sun.game.player.damage(500, null, 'test'));
 const wastedSeen = await T(() => window.__sun.app.overlay === 'wasted' && document.querySelector('.big').textContent.includes('WASTED'));
 check('death shows WASTED', wastedSeen);
-await page.waitForTimeout(5200);
+await page.waitForFunction(() => !window.__sun.app.overlay, null, { timeout: 30000, polling: 250 }).catch(() => {});
 await T(() => window.__t.tick(0.5));
 st = await state();
 const hosp = await T(() => window.__sun.game.world.places.hospital);
@@ -219,7 +219,7 @@ await T(() => {
 });
 const bustT = await T(() => window.__t.waitFor('S.app.overlay === "busted"', 12, 0.1));
 check('standing still next to an officer gets you BUSTED (1★)', unit >= 0 && bustT >= 0, `${bustT}s`);
-await page.waitForTimeout(5200);
+await page.waitForFunction(() => !window.__sun.app.overlay, null, { timeout: 30000, polling: 250 }).catch(() => {});
 await T(() => window.__t.tick(0.5));
 st = await state();
 const pd = await T(() => window.__sun.game.world.places.police);
