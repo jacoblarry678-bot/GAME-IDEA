@@ -37,7 +37,7 @@ async function installHelpers() {
           const d = Math.hypot(x - p.pos.x, z - p.pos.z);
           if (d < within) break;
           g.cameraRig.yaw = Math.atan2(x - p.pos.x, z - p.pos.z);
-          vi.move = { x: 0, y: d < 1.5 ? 0.5 : 1 };
+          vi.move = p.blockedT > 0.4 ? { x: 1, y: 0.4 } : { x: 0, y: d < 1.5 ? 0.5 : 1 }; // sidestep around obstacles
           vi.actions.clear(); if (sprint) vi.actions.add('sprint');
           tick(0.1); t += 0.1;
         }
@@ -117,7 +117,7 @@ check('drive stage completes near the store', st.stage === 'enter' || st.stage =
 // --- hold-up -----------------------------------------------------------------------------
 await T(() => { window.__t.press('nextWeapon'); });
 check('switches to the pistol', (await T(() => window.__sun.game.player.controller.inventory.current)) === 'pistol');
-await T(([d]) => { window.__t.walkTo(d.x, d.z - 2.5, { within: 0.6 }); window.__t.walkTo(d.x, d.z + 3, { within: 0.6 }); }, [store.door]);
+await T(([d]) => { window.__t.walkTo(d.x, d.z - 8, { within: 0.8 }); window.__t.walkTo(d.x, d.z - 2.5, { within: 0.6 }); window.__t.walkTo(d.x, d.z + 3, { within: 0.6 }); }, [store.door]);
 st = await state();
 check('walks into the store interior', (await T(() => window.__sun.game.store.inside)), JSON.stringify(st.pos));
 const hold = await T(([c]) => {
@@ -147,7 +147,7 @@ const visibleSpawn = await T(() => { const g = window.__sun.game; return g.polic
 check('police do not spawn right next to the player', !visibleSpawn);
 
 // --- escape: back to the car and drive away --------------------------------------------
-await T(([d]) => { window.__t.walkTo(d.x, d.z - 3, { within: 0.8, sprint: true }); }, [store.door]);
+await T(([d]) => { window.__t.walkTo(d.x, d.z - 3, { within: 0.8, sprint: true }); window.__t.walkTo(d.x, d.z - 8, { within: 0.8, sprint: true }); }, [store.door]);
 await T(() => { const g = window.__sun.game; const v = g.vehicles.filter((x) => !x.police && !x.ai && !x.occupied).sort((a, b) => Math.hypot(a.pos.x - g.player.pos.x, a.pos.z - g.player.pos.z) - Math.hypot(b.pos.x - g.player.pos.x, b.pos.z - g.player.pos.z))[0]; window.__t.walkTo(v.pos.x + 3, v.pos.z, { within: 1.5, sprint: true }); window.__t.press('enterVehicle'); window.__t.waitFor('g.player.vehicle', 8); });
 st = await state();
 check('gets back in a car during the alarm', st.inVehicle);
