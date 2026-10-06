@@ -85,9 +85,9 @@ The trade-off is visual fidelity. This is stylised, not photorealistic, and the 
 ## Tests
 
 ```bash
-npm test                                  # 52 rules/simulation checks in Node (no browser)
+npm test                                  # 54 rules/simulation checks in Node (no browser)
 npm run build && npm run preview &        # then:
-npm run e2e                               # full playthrough in headless Chromium
+npm run e2e                               # full playthrough in headless Chromium (49 checks)
 npm run shots                             # representative screenshots → shots/
 ```
 
