@@ -164,7 +164,8 @@ const chase = await T(() => {
     S.debug.stop();
   }
   t.press('switchCharacter'); // back: Cal rides, Sol (partner AI) drives
-  const back = { player: g.player.protagonist, seat: g.player.seat };
+  const car = g.vehicles.find((v) => v.persistentId === 'start-sedan');
+  const back = { player: g.player.protagonist, seat: g.player.seat, why: g.crew.switchBlocked(), swim: g.player.swim, car: car && { sunk: !!car.sunk, hp: Math.round(car.health), at: [Math.round(car.pos.x), Math.round(car.pos.z)] } };
   let t3 = 0; while (t3 < 150 && g.missions.stage?.id === 'chase') { t.aimAtEnemies(true); t.tick(0.5); t3 += 0.5; }
   t.aimAtEnemies(false);
   return { phase1, swapped, calShotsAsPartner, back, after: g.missions.stage?.id || g.missions.failed?.reason || 'none' };

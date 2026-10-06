@@ -240,6 +240,9 @@ export class DriverAI {
     }
     if (this.reverseT > 0) {
       this.reverseT -= dt;
+      // backing up toward the water (a pier, the edge of the key): stop instead
+      const [rx, rz] = v.localToWorld(0, -v.hz - 2.5);
+      if (this.game.world.isWater(rx, rz) && v.pos.y < 2) { this.reverseT = 0; v.input.throttle = 0; v.input.brake = v.vLong < -0.3 ? 1 : 0; return; }
       v.input.throttle = 0; v.input.brake = 0.7; v.input.steer = -steer; v.input.handbrake = false;
       return;
     }
@@ -289,6 +292,8 @@ export class DriverAI {
         const [bx, bz] = [sx - Math.sin(v.yaw) * 1, sz - Math.cos(v.yaw) * 1];
         const hit = g.world.collision.raycast(sx, v.pos.y + 0.5, sz, bx - sx, 0, bz - sz, 6, (c) => c.tag !== 'glass');
         if (hit) rear = Math.min(rear, hit.t);
+        // never back into the sea (the key, the marina)
+        for (let s2 = 0.5; s2 < rear; s2 += 0.5) if (g.world.isWater(sx + (bx - sx) * s2, sz + (bz - sz) * s2)) { rear = s2; break; }
       }
       if (rear > 1.6) {
         v.input.throttle = 0; v.input.handbrake = false;
