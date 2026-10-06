@@ -112,11 +112,13 @@ const outT = await T(() => window.__t.waitFor('!g.partner.vehicle', 8));
 check('the partner gets out when you do, and follows', outT >= 0 && (await T(() => window.__sun.game.partner.partnerAI.mode)) === 'follow', `${outT}s`);
 
 // ---- far switch: leave Cal waiting, walk away, switch back --------------------------------
-await T(() => window.__t.press('partner'));
+// (by a car, G would hand Sol the wheel; step away from it first)
+const gstate = await T(() => { const g = window.__sun.game; window.__t.walkTo(80, -135, { within: 2, maxSec: 20 }); window.__t.tick(2); const near = g.crew.wheelCandidate(); window.__t.press('partner'); return { near: !!near, at: [g.player.pos.x, g.player.pos.z].map(Math.round) }; });
+console.log('   wait command:', JSON.stringify(gstate));
 check('the partner key makes them wait', (await T(() => window.__t.who())).mode === 'wait');
 const calSpot = await T(() => ({ x: window.__sun.game.partner.pos.x, z: window.__sun.game.partner.pos.z }));
-// walk along Coral Ave, 50 m south of the waypoint junction
-const walked = await T(() => { const t = window.__t, p = window.__sun.game.player; t.walkTo(84, -160, { within: 2, maxSec: 25 }); t.walkTo(84, -100, { within: 2, maxSec: 40 }); return [p.pos.x, p.pos.z].map(Math.round); });
+// walk up the Coral Ave sidewalk, ~40 m from where Cal waits
+const walked = await T(() => { const t = window.__t, p = window.__sun.game.player; t.walkTo(80, -92, { within: 2, maxSec: 40 }); /* along the sidewalk, not the road */ return [p.pos.x, p.pos.z].map(Math.round); });
 d = await T(() => window.__t.dist());
 // witnesses of the drive-by may still have called it in; that's covered by the wanted tests, so wipe it here
 const why = await T(() => { const g = window.__sun.game; g.wanted.clear(true); g.police.clearAll(); return g.crew.switchBlocked(); });

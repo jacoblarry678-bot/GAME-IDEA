@@ -72,7 +72,7 @@ export class Input {
   code(action) { return this.settings.c.bindings[action]; }
 
   /** Gamepad button index per action (standard mapping). */
-  static PAD = { jump: 0, handbrake: 0, crouch: 1, interact: 2, enterVehicle: 3, nextWeapon: 5, reload: 2, horn: 10, radio: 15, map: 8, lookBehind: 11, headlights: 14, sprint: 10, skip: 0, switchCharacter: 12, partner: 13 };
+  static PAD = { jump: 0, handbrake: 0, crouch: 1, interact: 2, enterVehicle: 3, nextWeapon: 5, reload: 2, horn: 10, radio: 15, map: 8, lookBehind: 11, headlights: 14, sprint: 10, skip: 0, switchCharacter: 12, partner: 13, phone: 9 };
 
   down(action) {
     if (this.virtual.actions.has(action)) return true;

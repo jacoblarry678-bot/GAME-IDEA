@@ -22,6 +22,7 @@ import { Store } from './store.js';
 import { MissionManager, Markers } from './missions.js';
 import { Director } from '../ai/director.js';
 import { snapshot, writeSave } from './save.js';
+import { Social } from './social.js';
 
 export const PROTAGONIST_LOOK = PROTAGONISTS.cal.look;
 
@@ -57,6 +58,7 @@ export class Game {
     this.missions = new MissionManager(this);
     this.markers = new Markers(this);
     this.director = new Director(this);
+    this.social = new Social(this);
     this.spawnParked();
     this.bindEvents();
   }
@@ -235,6 +237,8 @@ export class Game {
     this.wanted?.step(dt);
     this.director?.step(dt);
     this.weather?.step(dt);
+    this.social.step(dt);
+    if (this.input.pressed('phone')) { this.social.toggle(); this.audio?.ui('select'); }
     this.input.endStep();
   }
 
@@ -260,6 +264,7 @@ export class Game {
         }
         ch.pos.x -= r.nx * r.depth;
         ch.pos.z -= r.nz * r.depth;
+        if (r.depth > 0.01 && Math.hypot(ch.wish.x, ch.wish.y) > 0.3) ch.carBlockT = 0.12; // walking into a car: "blocked
       }
     }
     // keep people from standing inside each other

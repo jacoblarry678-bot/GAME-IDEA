@@ -38,6 +38,9 @@ export class HUD {
     bars.append(this.hp, this.armor);
     bl.appendChild(bars);
     this.street = h('div', 'street');
+    // LOOP: the social feed, on the phone
+    this.loop = h('div', 'loopfeed');
+    this.loopBadge = h('div', 'loop-badge');
     bl.appendChild(this.street);
     r.appendChild(bl);
     // top-right: money, stars, wanted status, weapon, witness calls
@@ -48,7 +51,7 @@ export class HUD {
     this.wantedText = h('div', 'wanted-text');
     this.weaponEl = h('div', 'weapon');
     this.witnessEl = h('div', 'witness');
-    tr.append(this.moneyEl, this.moneyDelta, this.stars, this.wantedText, this.weaponEl, this.witnessEl);
+    tr.append(this.moneyEl, this.moneyDelta, this.stars, this.wantedText, this.weaponEl, this.witnessEl, this.loopBadge);
     r.appendChild(tr);
     // top-left: notification feed
     this.feed = h('div', 'hud-corner hud-tl feed');
@@ -69,6 +72,7 @@ export class HUD {
     this.bigEl = h('div', 'big');
     this.vignette = h('div', 'vignette');
     this.fps = h('div', 'fps');
+    r.append(this.loop);
     r.append(this.vignette, this.objective, this.progress, this.prompt, this.subtitleEl, this.crosshair, this.hitmarker, this.bigEl, this.fps);
 
     this.sub = null;
@@ -160,6 +164,7 @@ export class HUD {
     this.armor.classList.toggle('none', p.armor <= 0);
     this.vignette.classList.toggle('show', p.health < 30 && !p.dead);
     this.drawCrew();
+    this.drawLoop();
     // wanted
     const W = g.wanted;
     let stars = '';
@@ -191,7 +196,7 @@ export class HUD {
     // prompt
     const pr = pc.prompt;
     if (pr && !p.dead && !g.missions.cutscene) {
-      const html = `<span class="key">${Input.label(s.c.bindings[pr.key])}</span>${pr.text}`;
+      const html = `<span class="key">${Input.label(s.c.bindings[pr.key])}</span>${pr.text}${pr.alt ? ` &nbsp;·&nbsp; <span class="key">${Input.label(s.c.bindings[pr.alt.key])}</span>${pr.alt.text}` : ''}`;
       if (this._prompt !== html) { this.prompt.innerHTML = html; this._prompt = html; }
       this.prompt.classList.add('show');
     } else this.prompt.classList.remove('show');
@@ -253,6 +258,19 @@ export class HUD {
     }
     html += `<span class="key">${Input.label(this.app.settings.c.bindings.switchCharacter)}</span>`;
     setHTML(this.crewEl, html);
+  }
+
+  /** The LOOP feed (open) or its unread badge (closed). */
+  drawLoop() {
+    const so = this.game.social, key = Input.label(this.app.settings.c.bindings.phone);
+    this.loop.classList.toggle('show', so.open);
+    setHTML(this.loopBadge, so.unread ? `<span class="key">${key}</span>LOOP <b>${so.unread}</b>` : `<span class="key">${key}</span>LOOP`);
+    this.loopBadge.classList.toggle('hot', so.unread > 0);
+    if (!so.open) return;
+    const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+    const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : Math.floor(n));
+    const items = so.posts.slice(0, 14).map((p) => `<div class="post${p.about ? ' about' : ''}"><i style="background:${p.color}">${p.handle[0].toUpperCase()}</i><div><b>${esc(p.name)}</b>${p.verified ? ' <u>✔</u>' : ''} <small>@${esc(p.handle)} · ${so.age(p)}</small><p>${esc(p.text)}</p>${p.clip ? '<span class="clip">▶ clip</span>' : ''}<small>♥ ${fmt(p.likes)}</small></div></div>`).join('');
+    setHTML(this.loop, `<header>LOOP<small>Costa Vela · ${key} to close</small></header>${items}`);
   }
 
   /** GPS target: mission objective first, then the map waypoint. */

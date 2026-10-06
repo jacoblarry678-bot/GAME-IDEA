@@ -126,7 +126,9 @@ export class PartnerController {
     this.exitT = 0;
     a.talk = false;
     if (this.dodge()) { a.phone = false; return; }
-    if (this.engage(dt, false)) return;
+    // getting into the car beats standing and shooting: they fight on foot only while you do
+    const boarding = this.wheel || (this.mode === 'follow' && g.player.vehicle);
+    if (!boarding && this.engage(dt, false)) return;
     a.aim = false;
     a.armed = false;
     if (this.wheel && this.takeWheel(dt)) return;
@@ -209,7 +211,7 @@ export class PartnerController {
   takeWheel(dt) {
     const g = this.game, ch = this.ch, v = this.wheel;
     this.wheelT += dt;
-    if (!g.vehicles.includes(v) || v.seats[0] || v.sunk || v.destroyed || this.wheelT > 15) { this.wheel = null; return false; }
+    if (!g.vehicles.includes(v) || v.seats[0] || v.sunk || v.destroyed || this.wheelT > 25) { this.wheel = null; return false; }
     const [dx, dz] = v.doorPoint(0);
     const dd = ch.distanceTo(dx, dz);
     if (dd < 0.7 && v.speed < 1) {

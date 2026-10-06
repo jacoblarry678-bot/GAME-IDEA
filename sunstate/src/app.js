@@ -36,7 +36,7 @@ export class App {
     this.audio = new Audio(this.settings);
     this.weather = new Weather(this.settings);
     const M = this.world.mats;
-    this.weatherFX = new WeatherFX(this.engine, [M.asphalt, M.lot, M.concrete, M.pavers, M.curb, M.marking_w, M.marking_y, M.roof]);
+    this.weatherFX = new WeatherFX(this.engine, [M.asphalt, M.lot, M.concrete, M.pavers, M.curb, M.marking_w, M.marking_y, M.roof], this.world.water);
     this.weather.onThunder = (delay) => this.audio.thunder?.(delay);
     this.hud = new HUD(this, ui);
     this.menus = new Menus(this, ui);

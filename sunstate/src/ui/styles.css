@@ -191,3 +191,20 @@ kbd, .key { display: inline-block; min-width: 24px; padding: 2px 7px; margin-rig
   .bars { width: 150px; }
   .row { grid-template-columns: 1fr; }
 }
+
+/* LOOP: the in-game social feed */
+.loopfeed { position: absolute; right: 22px; top: 230px; width: 330px; max-height: 58vh; overflow: hidden; display: none; background: rgba(12, 14, 24, 0.9); border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; padding: 10px 12px; font: 13px Inter, Arial, sans-serif; color: #eef; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.loopfeed.show { display: block; }
+.loopfeed header { font: 900 20px 'Archivo Black', Inter, sans-serif; letter-spacing: 0.06em; background: linear-gradient(90deg, #ff4d6d, #ffd23f, #29e6ff); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 2px 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.loopfeed header small { display: block; font: 600 11px Inter, Arial; color: rgba(255,255,255,0.5); letter-spacing: 0; -webkit-text-fill-color: rgba(255,255,255,0.5); }
+.loopfeed .post { display: flex; gap: 9px; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.loopfeed .post.about { background: rgba(255, 77, 109, 0.08); border-radius: 10px; }
+.loopfeed .post > i { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 14px Inter; font-style: normal; color: #111; }
+.loopfeed .post b { font-weight: 800; }
+.loopfeed .post u { text-decoration: none; color: #29e6ff; }
+.loopfeed .post small { color: rgba(255,255,255,0.5); font-size: 11px; }
+.loopfeed .post p { margin: 2px 0 4px; line-height: 1.35; }
+.loopfeed .clip { display: inline-block; margin: 0 8px 2px 0; padding: 1px 7px; border-radius: 6px; background: rgba(255,255,255,0.12); font-size: 11px; font-weight: 700; }
+.loop-badge { margin-top: 8px; text-align: right; font: 700 12px Inter, Arial; color: rgba(255,255,255,0.7); text-shadow: 0 1px 2px #000; }
+.loop-badge.hot b { background: #ff4d6d; color: #fff; border-radius: 9px; padding: 0 6px; margin-left: 3px; }
+.note.loopfeed { border-left-color: #ff4d6d; }

@@ -30,6 +30,7 @@ export const DEFAULT_BINDINGS = {
   skip: 'Enter',
   switchCharacter: 'Tab',
   partner: 'KeyG',
+  phone: 'KeyP',
 };
 
 export const BINDING_LABELS = {
@@ -55,6 +56,7 @@ export const BINDING_LABELS = {
   skip: 'Skip dialogue',
   switchCharacter: 'Switch character (Cal / Sol)',
   partner: 'Partner: follow / wait (pull over / drive)',
+  phone: 'LOOP (social feed) on the phone',
 };
 
 export const PRESETS = {

@@ -42,7 +42,7 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
 | M | map (click to set a waypoint) | Esc | pause |
 | Enter | skip dialogue / retry a failed mission | RMB + LMB (passenger) | aim and shoot out of the window |
 | **Tab** | **switch between Cal and Sol** | **G** (partner driving) | **pull over / drive on** |
-| **G** | **partner: follow / wait** (by an empty car: **"you drive"**) | | |
+| **G** | **partner: follow / wait** (by an empty car: **"you drive"**) | **P** | **LOOP, the social feed** |
 
 ## What's new in Milestone 3
 
@@ -66,6 +66,7 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
   - Overcast skies and closer fog, rain streaks, thunder and lightning, and wet roads that are darker and glossy with about 30 % less tyre grip.
   - Cars switch their headlights on, people hurry, and the beach empties.
   - The rain sound is muffled inside cars and buildings.
+- **LOOP, an in-game social feed (P):** locals post about their day, the weather and what they see. A bystander who calls 911 about you also posts a clip (naming the street) that racks up likes. A news account reports your robberies and chases, and posts about the crew pop up in the notification feed. Every handle and post is invented.
 - **Save v2:** both protagonists are saved. v1 saves migrate: the old player becomes Cal.
 
 ## What's in this build (Milestones 1 and 2)
@@ -117,12 +118,12 @@ The trade-off is visual fidelity. This is stylised, not photorealistic, and the 
 ## Tests
 
 ```bash
-npm test                                  # 69 rules/simulation checks in Node (no browser)
+npm test                                  # 75 rules/simulation checks in Node (no browser)
 npm run build && npm run preview &        # then:
 npm run e2e                               # M1/M2 playthrough in headless Chromium (49 checks)
 node tools/e2e-crew.mjs                   # M3: two protagonists, partner AI, switching, save v2
 node tools/e2e-lowtide.mjs                # M3: the "Low Tide" mission end to end
-node tools/e2e-weather.mjs                # M3: rain on/off, wet roads, grip, visuals
+node tools/e2e-weather.mjs                # M3: rain on/off, wet roads, grip, visuals; the LOOP feed
 npm run shots                             # representative screenshots → shots/
 ```
 

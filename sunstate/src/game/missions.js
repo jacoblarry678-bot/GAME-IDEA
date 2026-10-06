@@ -109,7 +109,9 @@ export const MISSIONS = {
       ['sol', 'He\'s been skimming the Caldera brothers\' charter money. He wants out, and he\'ll pay four grand to get a cooler off the key.'],
       ['cal', 'And the Calderas?'],
       ['sol', 'Won\'t know a thing. Over the bridge, pick it up, back here. You drive — or I will.'],
+      ['sol', 'And put this vest on. Humour me.'],
     ],
+    onStart: (g) => { for (const ch of g.crew.list) ch.armor = Math.max(ch.armor, 60); },
     stages: [
       {
         id: 'drive', objective: 'Drive to the Cayo Lento Marina with Sol.', target: () => ({ x: MA.lot.x, z: MA.lot.z, label: 'Marina' }),
@@ -277,6 +279,7 @@ export class MissionManager {
       this.restoreCheckpoint(fromCheckpoint);
     } else {
       g.store.reset();
+      def.onStart?.(g);
       this.saveCheckpoint(0);
       if (def.intro) this.playDialogue(def.intro, def.introTitle || 'Bayside Motel');
     }

@@ -1,5 +1,5 @@
 /**
- * Milestone 3 weather checks in headless Chromium:
+ * Milestone 3 weather checks (and the LOOP social feed) in headless Chromium:
  *   npm run build && npm run preview &   then   node tools/e2e-weather.mjs
  * Settings → Weather pins rain on and off; checks the sky/fog/streaks, wet
  * road materials, tyre grip, headlights and the HUD label, and saves two
@@ -54,6 +54,20 @@ await T(() => { const S = window.__sun; S.app.settings.set('gameplay', 'weather'
 const after = await T(() => { const S = window.__sun, w = S.app.weather; return { state: w.state, rain: +w.rain.toFixed(2), wet: +w.wet.toFixed(2), streaks: S.app.weatherFX.rain.visible }; });
 check('Weather → Always clear stops the rain; the roads dry more slowly', after.state === 'clear' && after.rain < 0.05 && !after.streaks && after.wet > 0.2, JSON.stringify(after));
 await T(() => { window.__sun.app.settings.set('gameplay', 'weather', 'dynamic'); });
+
+// ---- LOOP (the in-game social feed) ----
+const loop = await T(() => {
+  const S = window.__sun, g = S.game;
+  g.events.emit('witnessCall', { crimeId: 'shooting', x: 90, z: -100 });
+  S.input.virtual.edges.add('phone'); S.advance(0.2, 1);
+  const panel = document.querySelector('.loopfeed');
+  return { open: g.social.open, shown: panel?.classList.contains('show'), posts: panel?.querySelectorAll('.post').length, note: [...document.querySelectorAll('.note')].some((n) => n.textContent.includes('LOOP')), unread: g.social.unread };
+});
+check('P opens LOOP; a witness clip shows in the feed and as a notification', loop.open && loop.shown && loop.posts >= 5 && loop.note && loop.unread === 0, JSON.stringify(loop));
+await T(() => { const S = window.__sun, g = S.game; g.respawnPlayer(92, -100, Math.PI); g.cameraRig.yaw = Math.PI; S.advance(1, 30); });
+await sun.shot('shots/loop.png');
+await T(() => { const S = window.__sun; S.input.virtual.edges.add('phone'); S.advance(0.2, 1); });
+check('P closes it again', !(await T(() => window.__sun.game.social.open)));
 
 const errs = logs.filter((l) => l.includes('PAGEERROR'));
 check('no page errors', errs.length === 0, errs.slice(0, 3).join('\n'));

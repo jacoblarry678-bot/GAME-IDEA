@@ -79,8 +79,9 @@ export class Weather {
  * pavements); their dry roughness/colour are remembered.
  */
 export class WeatherFX {
-  constructor(engine, materials) {
+  constructor(engine, materials, water = null) {
     this.engine = engine;
+    this.water = water;
     this.mats = materials.filter(Boolean).map((m) => ({ m, rough: m.roughness, color: m.color.clone(), env: m.envMapIntensity ?? 1 }));
     // rain: N short vertical streaks in a box that follows the camera; the shader wraps them
     const N = 3200, box = new THREE.Vector3(46, 26, 46);
@@ -153,6 +154,15 @@ export class WeatherFX {
     if (w.flash > 0) { e.hemi.intensity += w.flash * 1.5; sky.hor.value.lerp(this._tmp.setScalar(0.9), w.flash * 0.5); }
     e.scene.fog.far = Math.min(e.scene.fog.far, e.drawDistance * (1 - w.rain * 0.55));
     e.scene.fog.near = Math.min(e.scene.fog.near, e.scene.fog.far * 0.2);
+    // the sea under a grey sky: duller, darker, no sun glint
+    const wu = this.water?.material.uniforms;
+    if (wu) {
+      wu.skyTop.value.copy(sky.top.value); wu.skyHor.value.copy(sky.hor.value);
+      wu.fogColor.value.copy(e.scene.fog.color);
+      wu.fogNear.value = e.scene.fog.near; wu.fogFar.value = e.scene.fog.far;
+      wu.sunColor.value.multiplyScalar(1 - c * 0.85);
+      wu.night.value = Math.max(night, c * 0.4);
+    }
     // wet ground: darker and glossier (the environment map gives it reflections)
     for (const o of this.mats) {
       o.m.roughness = o.rough + (Math.min(o.rough, 0.28) - o.rough) * w.wet;

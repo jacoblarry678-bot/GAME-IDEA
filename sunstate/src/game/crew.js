@@ -6,8 +6,9 @@
  * The one you control is `game.player` (role 'player', PlayerController);
  * the other is `game.partner` (role 'partner', PartnerController).
  *
- * Switching (default Tab) is refused while the police are after you, during
- * dialogue, mid-way into or out of a car, or when a mission locks it. Close
+ * Switching (default Tab) is refused while the police are after you (except
+ * swapping seats with your partner in the same car), during dialogue, mid-way
+ * into or out of a car, or when a mission locks it. Close
  * by, the camera simply moves over to the other person; far away it cuts
  * with a short fade.
  */
@@ -78,7 +79,8 @@ export class Crew {
     const g = this.game, p = g.player, o = g.partner;
     if (this.lockReason) return this.lockReason;
     if (o.dead || this.downT > 0) return `${o.protagonistName} is at Ocean Mercy`;
-    if (g.wanted.level > 0) return 'Lose the police first';
+    // wanted: you can still swap seats in the same car (a role swap, not an escape)
+    if (g.wanted.level > 0 && !(p.vehicle && p.vehicle === o.vehicle)) return 'Lose the police first';
     if (p.dead || p.controller.frozen) return 'Not now';
     if (p.controller.enter || p.controller.exit) return 'Not now';
     if (g.missions.cutscene) return 'Not during a conversation';
@@ -123,20 +125,28 @@ export class Crew {
       return;
     }
     const d = Math.hypot(o.pos.x - p.pos.x, o.pos.z - p.pos.z);
-    // standing by an empty car with your partner along: they take the wheel and you ride
-    if (!p.vehicle && !o.vehicle && d < 45) {
-      const near = p.controller.findVehicle?.();
-      const v = near?.vehicle;
-      if (v && !v.seats[0] && !v.police && v.seats.length > 1 && !ai.wheel) {
-        ai.setMode('follow');
-        ai.wheel = v; ai.wheelT = 0;
-        g.hud?.subtitle(o.protagonistName, 'I\'ll drive. Get in.', 2.5);
-        return;
-      }
+    if (ai.mode !== 'follow') {
+      if (d > 40) { g.hud?.notify(`${o.protagonistName} is too far away to hear you. Go and get them, or switch.`, o.protagonistName, '', 4); return; }
+      ai.setMode('follow'); g.hud?.subtitle(o.protagonistName, 'Right behind you.', 2);
+      return;
     }
-    if (d > 40 && ai.mode !== 'follow') { g.hud?.notify(`${o.protagonistName} is too far away to hear you. Go and get them, or switch.`, o.protagonistName, '', 4); return; }
-    if (ai.mode === 'follow') { ai.setMode('wait'); g.hud?.subtitle(o.protagonistName, 'I\'ll wait here.', 2); }
-    else { ai.setMode('follow'); g.hud?.subtitle(o.protagonistName, 'Right behind you.', 2); }
+    // already with you, and you're at the door of an empty car: they take the wheel and you ride
+    const v = this.wheelCandidate();
+    if (v) {
+      ai.wheel = v; ai.wheelT = 0;
+      g.hud?.subtitle(o.protagonistName, 'I\'ll drive. Get in.', 2.5);
+      return;
+    }
+    ai.setMode('wait'); g.hud?.subtitle(o.protagonistName, 'I\'ll wait here.', 2);
+  }
+
+  /** The empty car you're standing at, if your following partner could drive it. */
+  wheelCandidate() {
+    const g = this.game, p = g.player, o = g.partner;
+    if (p.vehicle || o.vehicle || o.dead || o.partnerAI.mode !== 'follow' || o.partnerAI.wheel) return null;
+    if (Math.hypot(o.pos.x - p.pos.x, o.pos.z - p.pos.z) > 90) return null; // following: they'll come over
+    const v = p.controller.findVehicle?.()?.vehicle;
+    return v && !v.seats[0] && !v.police && v.seats.length > 1 ? v : null;
   }
 
   onPartnerDown() {

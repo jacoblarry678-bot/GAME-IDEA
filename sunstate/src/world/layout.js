@@ -269,7 +269,7 @@ export function buildRoadGraph() {
   link(ks, kw, 1, 'point');
 
   for (const n of nodes) {
-    n.signal = n.edges.length >= 3 && !n.keys; // the key's junctions are give-way, not signalised
+    n.signal = n.edges.length >= 3;
     // half-size of the intersection box: widest crossing road
     let hx = 0, hz = 0;
     for (const eid of n.edges) {

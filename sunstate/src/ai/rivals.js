@@ -100,6 +100,8 @@ export class RivalController {
       return;
     }
     if (sees) this.lostT = 0; else this.lostT += dt;
+    // close to a car that isn't going anywhere: stop short and let the gunner work (don't park on its bumper)
+    if (t.vehicle && d < 15 && t.vehicle.speed < 4) { this.ai = null; v.holdStill(); return; }
     if (d < 70 && this.lostT < 2) {
       this.ai = null;
       pursuitSteer(g, v, this.u, dt, t.pos, t.vehicle, { closeStop: 10 });

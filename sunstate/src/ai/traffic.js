@@ -63,6 +63,7 @@ export class TrafficManager {
     for (let attempt = 0; attempt < 12; attempt++) {
       const e = edges[Math.floor(Math.random() * edges.length)];
       if (e.road === 'causeway' && Math.random() < 0.7) continue;
+      if (['keyhwy', 'marina', 'shore', 'point', 'twinspan'].includes(e.road) && Math.random() < 0.6) continue; // quieter out on the key
       const from = Math.random() < 0.5 ? e.a : e.b;
       const lane = Math.floor(Math.random() * e.lanes);
       const t = 0.15 + Math.random() * 0.6;

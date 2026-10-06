@@ -209,7 +209,7 @@ export class DriverAI {
     if (obs && still && !pedPlayer && speed < 0.5) this.waitT = (this.waitT || 0) + dt; else this.waitT = 0;
     // ...except on a bridge deck, where "around" is the parapet or the gap: wait it out
     const onBridge = edges[this.edge] && (edges[this.edge].road === 'twinspan' || edges[this.edge].road === 'causeway');
-    if (this.waitT > 5 && !onBridge) { this.ignore = obs.who; this.ignoreT = 5; this.waitT = 0; this.reverseT = 1.0; }
+    if (this.waitT > (this.emergency ? 1.5 : 5) && !onBridge) { this.ignore = obs.who; this.ignoreT = 5; this.waitT = 0; this.reverseT = 1.0; }
     if (obs) target = Math.min(target, Math.max(0, Math.sqrt(2 * 5 * Math.max(0, obs.dist - 3)) - 0.5));
 
     // recover from being stuck (blocked by something static, pushed off the lane)

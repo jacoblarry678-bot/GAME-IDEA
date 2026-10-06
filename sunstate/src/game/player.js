@@ -204,7 +204,10 @@ export class PlayerController {
     }
     if (best) { this.interactTarget = best.it; this.prompt = { key: 'interact', text: best.label }; }
     const v = this.findVehicle();
-    if (v && !best) this.prompt = { key: 'enterVehicle', text: v.ride ? `Ride with ${g.partner.protagonistName}` : v.vehicle.seats[0] && !v.vehicle.seats[0].dead && v.seat === 0 ? `Take the ${v.vehicle.def.name}` : `Enter the ${v.vehicle.def.name}` };
+    if (v && !best) {
+      this.prompt = { key: 'enterVehicle', text: v.ride ? `Ride with ${g.partner.protagonistName}` : v.vehicle.seats[0] && !v.vehicle.seats[0].dead && v.seat === 0 ? `Take the ${v.vehicle.def.name}` : `Enter the ${v.vehicle.def.name}` };
+      if (g.crew?.wheelCandidate()) this.prompt.alt = { key: 'partner', text: `${g.partner.protagonistName} drives` };
+    }
   }
 
   lineClear(x, z) {
@@ -232,7 +235,8 @@ export class PlayerController {
       const d = Math.hypot(v.pos.x - ch.pos.x, v.pos.z - ch.pos.z) - v.hz * 0.6;
       if (d > bd || Math.abs(v.pos.y - ch.pos.y) > 1.6) continue;
       // driver door if it is clear; else passenger door (then slide across)
-      const ride = !!partner && v.seats[0] === partner && !partner.dead;
+      // your partner is at (or heading for) the wheel because you asked: you take a passenger seat
+      const ride = !!partner && !partner.dead && (v.seats[0] === partner || (partner.partnerAI?.wheel === v && !v.seats[0]));
       let seat = -1, door = null;
       for (const s of ride ? [1, 2, 3] : [0, 1]) {
         if (s >= v.seats.length) continue;
@@ -295,7 +299,7 @@ export class PlayerController {
       if (k >= 1) {
         this.game.seatCharacter(v, e.seat, ch);
         // slide over from the passenger seat when the driver door was blocked
-        if (e.seat === 1 && !v.seats[0]) { v.seats[1] = null; v.seats[0] = ch; ch.seat = 0; }
+        if (e.seat === 1 && !v.seats[0] && !e.ride) { v.seats[1] = null; v.seats[0] = ch; ch.seat = 0; }
         v.engineOn = !v.destroyed && !v.sunk;
         this.enter = null;
       }

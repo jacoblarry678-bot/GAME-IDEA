@@ -8,8 +8,9 @@
  * (partner down) and a retry from the checkpoint.
  *
  * Scripted parts (labelled below): the player's aim during the chase is
- * pointed at the nearest enemy car by the test, and after the role switch the
- * test autopilot (the traffic AI) drives the player's car.
+ * pointed at the nearest enemy car by the test, and while the player is Sol at
+ * the wheel the test autopilot (the traffic AI) drives her car. The partner's
+ * driving (there and back) and shooting are the real partner AI.
  */
 import { launch, checker } from './harness.mjs';
 
@@ -123,64 +124,67 @@ await T(() => window.__t.skipTalk());
 const car = await T(() => { const v = window.__sun.game.vehicles.find((x) => x.persistentId === 'start-sedan'); return { x: v.pos.x, z: v.pos.z }; });
 const toCar = await T(([x, z]) => {
   const t = window.__t, g = window.__sun.game, vi = window.__sun.input.virtual;
-  t.walkTo(262, 713, { maxSec: 30, within: 1.5, sprint: true }); t.walkTo(x - 3, z, { maxSec: 30, within: 1.5, sprint: true });
+  t.walkTo(262, 713, { maxSec: 30, within: 1.5, sprint: true });
+  // head for wherever the car is now (the Calderas may have shunted it)
+  const car = g.vehicles.find((v) => v.persistentId === 'start-sedan');
+  for (let k = 0; k < 6 && g.player.controller.findVehicle()?.vehicle !== car; k++) {
+    const [dx, dz] = car.doorPoint(0);
+    t.walkTo(dx + (dx - car.pos.x) * 0.6, dz + (dz - car.pos.z) * 0.6, { maxSec: 12, within: 1.2, sprint: true });
+  }
+  void x; void z;
+  const cand = !!g.crew.wheelCandidate(), solD = Math.round(g.partner.distanceTo(g.player.pos.x, g.player.pos.z));
   t.press('partner');
   // (if the Calderas get here first: shoot back while Sol gets behind the wheel)
-  t.waitFor('g.partner.vehicle && g.partner.seat === 0', 20, 0.25, () => { if (g.player.health < 60) t.fightBack(); });
+  t.waitFor('g.partner.vehicle && g.partner.seat === 0', 28, 0.25, () => { if (g.player.health < 60) t.fightBack(); });
   vi.actions.clear();
   let tries = 0;
   while (!g.player.vehicle && tries++ < 6) { t.press('enterVehicle'); t.waitFor('g.player.vehicle || !g.player.controller.enter', 6, 0.25, () => { if (!g.player.controller.enter && g.player.health < 60) t.fightBack(); }); vi.actions.clear(); }
-  return { hp: Math.round(g.player.health), sol: g.partner.seat, seat: g.player.seat, enemiesDown: g.extras.filter((c) => c.enemy && c.dead).length };
+  return { cand, solD, hp: Math.round(g.player.health), sol: g.partner.seat, seat: g.player.seat, enemiesDown: g.extras.filter((c) => c.enemy && c.dead).length };
 }, [car.x, car.z]);
 console.log('   back to the car:', JSON.stringify(toCar));
 const inChase = await T(() => window.__t.waitFor("g.missions.stage?.id === 'chase'", 5));
 check('both in the car: the chase begins', inChase >= 0, await T(() => window.__t.stage()));
 
-// ---- the chase: Sol drives home, Cal shoots (aim scripted at the nearest enemy car) ----
-const chase1 = await T(() => {
-  const g = window.__sun.game, t = window.__t;
-  let fired = 0;
-  g.events.on('gunshot', ({ shooter }) => { if (shooter === g.player) fired++; });
-  let closest = 1e9;
-  const rt = t.waitFor("g.missions.stage?.id !== 'chase' || g.player.controller.stats.shotsFired > 8", 45, 0.25, () => { const d = t.aimAtEnemies(true); if (d) closest = Math.min(closest, d); });
+// ---- the chase: Sol drives (partner AI), Cal shoots (aim scripted at the nearest enemy car);
+//      a few seconds in, Tab swaps the roles; later Tab swaps them back and Sol drives home ----
+const chase = await T(() => {
+  const g = window.__sun.game, t = window.__t, S = window.__sun;
+  let calShots = 0, calShotsAsPartner = 0, closest = 1e9;
+  g.events.on('gunshot', ({ shooter }) => { if (shooter?.protagonist === 'cal') { if (shooter === g.player) calShots++; else calShotsAsPartner++; } });
+  let tt = 0;
+  while (tt < 40 && g.missions.stage?.id === 'chase' && !(calShots >= 5 && tt >= 3)) { const d = t.aimAtEnemies(true); if (d) closest = Math.min(closest, d); t.tick(0.25); tt += 0.25; }
   t.aimAtEnemies(false);
-  const enemyHp = g.vehicles.filter((v) => v.enemy).map((v) => Math.round(v.health));
-  return { rt, fired, closest: Math.round(closest), enemyHp, hp: Math.round(g.player.health), y: +g.player.vehicle?.pos.y.toFixed(1), z: Math.round(g.player.pos.z) };
+  const phase1 = { calShots, closest: Math.round(closest), t: tt, stage: g.missions.stage?.id, enemyHp: g.vehicles.filter((v) => v.enemy).map((v) => Math.round(v.health)) };
+  t.press('switchCharacter');
+  const swapped = { player: g.player.protagonist, seat: g.player.seat, partnerSeat: g.partner.seat };
+  // Sol at the wheel (the test autopilot drives her car) while Cal shoots on his own
+  if (g.player.seat === 0) {
+    S.debug.autopilot(14, -30, { arrive: 22 });
+    let t2 = 0; while (t2 < 20 && g.missions.stage?.id === 'chase') { t.tick(0.5); t2 += 0.5; }
+    S.debug.stop();
+  }
+  t.press('switchCharacter'); // back: Cal rides, Sol (partner AI) drives
+  const back = { player: g.player.protagonist, seat: g.player.seat };
+  let t3 = 0; while (t3 < 150 && g.missions.stage?.id === 'chase') { t.aimAtEnemies(true); t.tick(0.5); t3 += 0.5; }
+  t.aimAtEnemies(false);
+  return { phase1, swapped, calShotsAsPartner, back, after: g.missions.stage?.id || g.missions.failed?.reason || 'none' };
 });
-check('the Calderas give chase and Cal shoots from the passenger seat while Sol drives', chase1.fired >= 5 && chase1.closest < 45, JSON.stringify(chase1));
-
-// ---- switch roles mid-chase: Tab → Sol (driving, player) / Cal (passenger, AI shooting) ----
-let roles = null;
-if (await T(() => window.__t.stage() === 'chase')) {
-  roles = await T(() => {
-    const g = window.__sun.game, t = window.__t;
-    let partnerShots = 0;
-    g.events.on('gunshot', ({ shooter }) => { if (shooter === g.partner && shooter.protagonist === 'cal') partnerShots++; });
-    t.press('switchCharacter');
-    const r = { player: g.player.protagonist, seat: g.player.seat, partnerSeat: g.partner.seat };
-    // the test autopilot (traffic AI) drives Sol's car toward the motel; Cal shoots on his own
-    window.__sun.debug.autopilot(14, -30, { arrive: 22 });
-    t.waitFor("g.missions.stage?.id !== 'chase'", 150, 0.5);
-    window.__sun.debug.stop();
-    r.partnerShots = partnerShots;
-    r.after = g.missions.stage?.id || (g.missions.failed?.reason ?? 'none');
-    return r;
-  });
-}
-check('Tab mid-chase swaps roles: Sol at the wheel, Cal shooting on his own', !roles || (roles.player === 'sol' && roles.seat === 0 && roles.partnerSeat > 0 && roles.partnerShots >= 1), JSON.stringify(roles));
+check('the Calderas give chase and Cal shoots from the passenger seat while Sol drives', chase.phase1.calShots >= 5 && chase.phase1.closest < 45, JSON.stringify(chase.phase1));
+check('Tab mid-chase swaps roles: Sol at the wheel, Cal shooting on his own', chase.phase1.stage === 'chase' && chase.swapped.player === 'sol' && chase.swapped.seat === 0 && chase.swapped.partnerSeat > 0 && chase.calShotsAsPartner >= 1, JSON.stringify({ ...chase.swapped, calShotsAsPartner: chase.calShotsAsPartner }));
+check('...and swaps back (Cal rides, Sol drives)', chase.back.player === 'cal' && chase.back.seat > 0, JSON.stringify(chase.back));
 const afterChase = await T(() => ({ stage: window.__t.stage(), failed: window.__sun.game.missions.failed?.reason || null, enemies: window.__sun.game.vehicles.filter((v) => v.enemy && !v.destroyed).length }));
 check('the Calderas are shaken off', ['escape', 'return'].includes(afterChase.stage), JSON.stringify(afterChase));
 
 // ---- police (if the gunfight drew them): cleared by the test, as in the M2 e2e ----
 if (await T(() => window.__sun.game.wanted.level > 0)) await T(() => { const g = window.__sun.game; g.wanted.clear(); g.police.clearAll(); window.__t.tick(1); });
 
-// ---- home: drive to the motel (test autopilot), walk to the door together ----
+// ---- home: Sol (partner AI) drives back over the twin-span to the motel; then walk to the door together ----
 const ret = await T(() => {
   const g = window.__sun.game, t = window.__t, S = window.__sun;
   if (!g.player.vehicle) return 'on foot';
-  if (g.player.seat !== 0) { t.press('switchCharacter'); }
-  if (g.player.seat === 0) { S.debug.autopilot(14, -30, { arrive: 22 }); t.waitFor('S.debug.arrived && g.player.vehicle.speed < 0.5', 150, 0.5); S.debug.stop(); }
-  return [Math.round(g.player.pos.x), Math.round(g.player.pos.z)];
+  if (g.player.seat === 0) { S.debug.autopilot(14, -30, { arrive: 22 }); t.waitFor('S.debug.arrived && g.player.vehicle.speed < 0.5', 200, 0.5); S.debug.stop(); return 'autopilot ' + [Math.round(g.player.pos.x), Math.round(g.player.pos.z)]; }
+  const w = t.waitFor('g.partner.partnerAI.arrived && g.player.vehicle.speed < 0.5', 240, 0.5);
+  return `Sol drove (${w}s) to ` + [Math.round(g.player.pos.x), Math.round(g.player.pos.z)];
 });
 const door = await T(() => { const d = window.__sun.game.interactables.find((i) => i.id === 'safehouse'); return { x: d.x, z: d.z }; });
 const passT = await T(([x, z]) => {

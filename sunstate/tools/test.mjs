@@ -31,6 +31,7 @@ const { sanitizeSave, defaultSave, writeSave, loadSave, SAVE_KEY } = await impor
 const { sanitizeSettings, Settings } = await import('../src/core/settings.js');
 const { laneLine } = await import('../src/ai/driver.js');
 const { Weather, WEATHER_CONFIG } = await import('../src/core/weather.js');
+const { Social } = await import('../src/game/social.js');
 
 const results = [];
 function check(name, ok, info = '') { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${info ? '  — ' + info : ''}`); }
@@ -277,6 +278,24 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   w2.set('rain', true); w2.step(0.5);
   check('the weather setting pins the sky (always clear / always rain)', w2.state === 'clear');
   check('wet grip loss is configurable and bounded', WEATHER_CONFIG.gripLoss > 0 && WEATHER_CONFIG.gripLoss < 0.4);
+}
+
+// ---- LOOP social feed (Milestone 3) ---------------------------------------------
+{
+  const notes = [];
+  const g = { time: 0, events: new Events(), hud: { notify: (t, from) => notes.push(from + ': ' + t) }, player: { pos: { x: 0, z: 0 } }, weather: { rain: 0 } };
+  const so = new Social(g);
+  check('LOOP starts with a few posts and nothing unread', so.posts.length >= 4 && so.unread === 0);
+  g.events.emit('witnessCall', { crimeId: 'carjack', x: 90, z: -100 });
+  const clip = so.posts[0];
+  check('a witness films the crime: a clip naming the street, flagged in the notifications', clip.clip && clip.about && /Coral Ave/.test(clip.text) && notes.length === 1 && so.unread === 1, clip.text);
+  for (let i = 0; i < 600; i++) { g.time += 0.1; so.step(0.1); }
+  check('clips gather likes faster than ordinary posts', clip.likes > 100, `${Math.round(clip.likes)} likes after 60 s`);
+  g.events.emit('missionPassed', { def: { id: 'small_change', title: 'Small Change' } });
+  check('the news account reports a finished job', so.posts[0].verified && /Sunny Stop/.test(so.posts[0].text));
+  for (let i = 0; i < 60; i++) so.post({ local: true, text: 'x' }, false);
+  so.toggle();
+  check('the feed is capped and opening it clears the unread count', so.posts.length === 40 && so.unread === 0);
 }
 
 const failed = results.filter((r) => !r).length;

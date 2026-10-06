@@ -98,7 +98,8 @@ export class Character {
       const vn = this.vel.x * nxn + this.vel.z * nzn;
       if (vn < 0) { this.vel.x -= vn * nxn; this.vel.z -= vn * nzn; }
       this.blockedT += dt;
-    } else this.blockedT = 0;
+    } else this.blockedT = this.carBlockT > 0 ? this.blockedT + dt : 0; // leaning on a car counts too
+    if (this.carBlockT > 0) this.carBlockT -= dt;
     this.pos.x = res.x; this.pos.z = res.z;
 
     // vertical

@@ -15,7 +15,7 @@ Every asset is made in code when the game starts. There are no image, model, aud
 | UI fonts | Google Fonts: *Archivo Black*, *Inter* (falls back to system fonts offline) | SIL Open Font License 1.1 | `index.html` |
 | Rendering library | three.js 0.169 | MIT | `package.json` |
 
-Nothing was extracted from Rockstar games or trailers: no models, textures, voices, music or animations. Place names (Costa Vela, Ocean Mile, Vela Bay, Cayo Lento, the Vela Keys), businesses (Lento Bait & Fuel, The Salt Hook, Palm Hammock RV Park, Cayo Lento Marina), characters (Cal, Sol, Teo, Rudy, the Caldera brothers) and dialogue are invented for this prototype.
+Nothing was extracted from Rockstar games or trailers: no models, textures, voices, music or animations. Place names (Costa Vela, Ocean Mile, Vela Bay, Cayo Lento, the Vela Keys), businesses (Lento Bait & Fuel, The Salt Hook, Palm Hammock RV Park, Cayo Lento Marina), characters (Cal, Sol, Teo, Rudy, the Caldera brothers), the LOOP app and its posts, and dialogue are invented for this prototype.
 
 ## Placeholder → upgrade list (most visible first)
 

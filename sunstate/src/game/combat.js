@@ -63,9 +63,9 @@ export class Combat {
       const r = rayCollider(col, ox, oy, oz, dx, dy, dz, bestT);
       if (r && r.t < bestT) {
         bestT = r.t; best = { ...r, kind: 'vehicle', vehicle: v };
-        // shots through the glass can hit occupants
-        const occ = v.seats.find(Boolean);
-        if (occ && r.y > v.pos.y + v.def.height * 0.62 && occ !== ignore && Math.random() < 0.5) best = { ...r, kind: 'character', character: occ };
+        // shots through the glass sometimes hit someone inside (anyone, not always the driver)
+        const occs = v.seats.filter((o) => o && o !== ignore && !o.dead);
+        if (occs.length && r.y > v.pos.y + v.def.height * 0.62 && Math.random() < 0.35) best = { ...r, kind: 'character', character: occs[Math.floor(Math.random() * occs.length)] };
       }
     }
     return best;
