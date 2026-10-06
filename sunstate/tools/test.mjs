@@ -77,6 +77,8 @@ function fakeGame() {
     if (c.length) bad++;
   }
   check('parked cars spawn clear of walls and props', bad === 0, `${bad}/${DISTRICT.parking.length} overlapping`);
+  const poles = cw.all.filter((c) => c.type === 'circle' && c.tag === 'prop' && L.roadAt(c.cx, c.cz) && !(c.cx < L.ISLAND.west - 1));
+  check('no street furniture stands on the road', poles.length === 0, poles.slice(0, 3).map((c) => `${c.cx.toFixed(1)},${c.cz.toFixed(1)}`).join(' '));
   check('causeway deck is continuous over the water', [-45, -50, -100, -200, -280, -298].every((x) => L.groundHeight(x, 0, 10) > -0.01) && L.groundHeight(-150, 0, 10) > 6);
   check('a boat can pass under the causeway', L.groundHeight(-150, 0, -1) < -4);
 }

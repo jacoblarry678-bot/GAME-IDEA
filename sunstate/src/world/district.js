@@ -164,9 +164,8 @@ function plan() {
   for (const a of AVENUES) {
     const off = roadHalfWidth(a.lanes) + 0.8;
     for (let z = STREETS[0].z + 14; z < STREETS[STREETS.length - 1].z; z += 26) {
-      if (nearAnyStreet(z, 9)) continue;
-      props.push({ type: 'streetlight', x: a.x - off, z, rot: Math.PI / 2 });
-      props.push({ type: 'streetlight', x: a.x + off, z: z + 13, rot: -Math.PI / 2 });
+      if (!nearAnyStreet(z, 9)) props.push({ type: 'streetlight', x: a.x - off, z, rot: Math.PI / 2 });
+      if (!nearAnyStreet(z + 13, 9)) props.push({ type: 'streetlight', x: a.x + off, z: z + 13, rot: -Math.PI / 2 });
     }
   }
   for (const s of STREETS) {
@@ -185,7 +184,7 @@ function plan() {
   for (const n of nodes) {
     if (!n.signal) continue;
     for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-      props.push({ type: 'signal', x: n.x + sx * (n.hx + 1.2), z: n.z + sz * (n.hz + 1.2), node: n.id, corner: `${sx},${sz}` });
+      props.push({ type: 'signal', x: n.x + sx * (n.hx + 2.6), z: n.z + sz * (n.hz + 2.6), node: n.id, corner: `${sx},${sz}` }); // set back from the kerb so turning cars clear it
     }
   }
   // palms: Ocean Blvd promenade and beach park, plus avenue sidewalks

@@ -30,7 +30,7 @@ export function laneLine(e, fromId, lane) {
   };
 }
 
-export function speedLimit(e) { return e.road === 'causeway' ? 22 : e.lanes === 2 ? 16 : 11.5; }
+export function speedLimit(e) { return e.road === 'causeway' ? 19 : e.lanes === 2 ? 15 : 11.5; }
 
 export class DriverAI {
   constructor(vehicle, game, { edge, from, lane = 0, t = 0.3, mode = 'cruise' } = {}) {
@@ -216,9 +216,18 @@ export class DriverAI {
     if (obs && obs.who === this.game.player && speed < 0.5) { this.honkT += dt; v.horn = this.honkT > 3 && this.honkT % 4 < 0.5; } else { this.honkT = 0; v.horn = false; }
 
     const err = target - v.vLong;
-    v.input.steer = Math.max(-1, Math.min(1, steer));
+    // smooth and speed-limit steering: pure pursuit oscillates at highway speeds otherwise
+    const maxSteer = 1 / (1 + speed / 14);
+    const want = Math.max(-maxSteer, Math.min(maxSteer, steer));
+    this.steerS = (this.steerS ?? want) + (want - (this.steerS ?? want)) * Math.min(1, dt * 8);
+    v.input.steer = speed < 4 ? Math.max(-1, Math.min(1, steer)) : this.steerS;
     v.input.handbrake = false;
-    if (err > 0.3) { v.input.throttle = Math.min(1, err * 0.35 + 0.15); v.input.brake = 0; }
+    if (err > 0.3) {
+      // AI "traction control": ease off when steering hard or when the tyres are sliding
+      const tc = (1 - 0.65 * Math.min(1, Math.abs(v.input.steer))) * (v.slip > 0.25 ? 0.3 : 1);
+      v.input.throttle = Math.min(1, err * 0.35 + 0.15) * Math.max(0.2, tc);
+      v.input.brake = 0;
+    }
     else if (err < -1.2 || target < 0.3) { v.input.throttle = 0; v.input.brake = target < 0.3 && v.vLong < 0.5 ? 0 : Math.min(1, -err * 0.3 + 0.2); if (target < 0.3 && v.vLong < 0.4) { v.input.handbrake = true; } }
     else { v.input.throttle = 0; v.input.brake = 0; }
   }

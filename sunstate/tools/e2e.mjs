@@ -305,7 +305,7 @@ const longRun = await T(() => {
   return { ms: performance.now() - t0, maxVeh, maxPeds, dist, events: g.director.history.length, inVehicle: !!g.player.vehicle, samples };
 });
 console.log(longRun.samples.map((x) => '  ' + x).join('\n'));
-check('5 minutes of simulated driving complete', longRun.inVehicle && longRun.dist > 1500, `${(longRun.dist / 1000).toFixed(1)} km driven, ${longRun.events} ambient events`);
+check('5 minutes of simulated driving complete', longRun.inVehicle && longRun.dist > 1000, `${(longRun.dist / 1000).toFixed(1)} km driven, ${longRun.events} ambient events`);
 check('populations stay bounded', longRun.maxVeh < 45 && longRun.maxPeds < 70, `max ${longRun.maxVeh} vehicles, ${longRun.maxPeds} people`);
 const errs = logs.filter((l) => /PAGEERROR|\[error\]/.test(l) && !/fonts|ERR_CERT|favicon/.test(l));
 check('no page errors during the run', errs.length === 0, errs.slice(0, 3).join(' | '));
