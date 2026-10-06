@@ -12,6 +12,9 @@ import { SIDEWALKS, BEACH_ZONE, PROMENADE_ZONE, KEYS_ZONES, PARK_ZONE } from '..
 import { CRIMES } from '../game/wanted.js';
 
 const SW = SIDEWALKS.nodes;
+const REACTIONS = new Set(['flee', 'cower', 'surrender', 'fight', 'call', 'walk', 'wander']);
+/** Pedestrians plus the civilians who live outside the population (the people inside Velvet Palms). */
+const civilians = (g) => (g.extras.some((e) => e.civilian) ? [...g.peds, ...g.extras.filter((e) => e.civilian)] : g.peds);
 const rand = (a, b) => a + Math.random() * (b - a);
 
 export class PedController {
@@ -38,7 +41,13 @@ export class PedController {
   /** People walk faster when it rains. */
   get hurry() { return 1 + 0.4 * (this.game.weather?.rain || 0); }
 
-  setState(s, dur = 0) { this.state = s; this.stateT = dur; const a = this.ch.anim_; a.phone = s === 'call' || (s === 'idle' && this.phoneIdle); a.cower = s === 'cower'; a.surrender = s === 'surrender'; a.talk = s === 'talk' || s === 'argue' || s === 'dance'; a.sitGround = s === 'sit'; }
+  setState(s, dur = 0) {
+    this.state = s; this.stateT = dur;
+    const a = this.ch.anim_;
+    a.phone = s === 'call' || (s === 'idle' && this.phoneIdle); a.cower = s === 'cower'; a.surrender = s === 'surrender'; a.talk = s === 'talk' || s === 'argue' || s === 'dance'; a.sitGround = s === 'sit';
+    // anything that makes them react drops a scripted pose (a booth seat, the stage, the bar)
+    if (REACTIONS.has(s)) { a.seated = false; a.dance = 0; a.pole = false; a.cheer = false; a.work = null; this.ch.pinned = false; }
+  }
 
   /** Run away from a point (or character). */
   panic(source, reason) {
@@ -348,7 +357,7 @@ export class PedManager {
 
   onGunshot({ shooter, x, z }) {
     const g = this.game;
-    for (const ch of g.peds) {
+    for (const ch of civilians(g)) {
       if (ch.dead || ch.vehicle || ch === shooter || !(ch.controller instanceof PedController)) continue;
       const d = ch.distanceTo(x, z);
       if (d > 70) continue;
@@ -363,7 +372,7 @@ export class PedManager {
   witness(crimeId, x, z, perpetrator, victim) {
     const g = this.game;
     let n = 0;
-    for (const ch of g.peds) {
+    for (const ch of civilians(g)) {
       if (ch.dead || ch.vehicle || ch === victim || !(ch.controller instanceof PedController)) continue;
       const d = ch.distanceTo(x, z);
       if (d > 45) continue;

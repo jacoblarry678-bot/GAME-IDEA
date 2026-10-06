@@ -89,7 +89,16 @@ await g(() => { const G = window.__sun.game; if (G.player.vehicle) G.unseatChara
 await place('12-bayshore-park.png', 16.5, (P) => [[P.park.bounds.x1 + 6, 14, P.park.bounds.z0 - 6], [P.park.x - 4, 0, P.park.z + 6], [P.park.x + 2, P.park.z - 4]]);
 await place('13-sunshine-gas.png', 17.2, (P) => [[P.gas.door.x + 34, 6, P.gas.door.z + 16], [P.gas.door.x + 4, 2, P.gas.door.z], [P.gas.door.x + 3, P.gas.door.z]]);
 await place('14-coral-auto-body.png', 15.5, (P) => [[P.autoshop.door.x + 16, 5, P.autoshop.door.z - 10], [P.autoshop.door.x - 6, 2.5, P.autoshop.door.z + 1], [P.autoshop.door.x + 3, P.autoshop.door.z + 7]]);
-await place('15-velvet-palms-night.png', 22.3, (P) => [[P.club.door.x - 16, 3.5, P.club.door.z - 10], [P.club.door.x + 2, 4, P.club.door.z + 1], [P.club.door.x - 3, P.club.door.z - 3, Math.PI / 2]]);
+await place('15-velvet-palms-night.png', 22.3, (P) => [[P.club.layout.door.x - 15, 2.2, P.club.layout.door.z - 9], [P.club.layout.door.x, 3.5, P.club.layout.door.z + 1], [P.club.layout.door.x - 4, P.club.layout.door.z + 5, -Math.PI / 2]]);
+// inside Velvet Palms, from just inside the door
+await g(() => {
+  const G = window.__sun.game, L = G.club.L, V = G.engine.camera.position.constructor;
+  G.engine.time.hour = 22.5; G.club.admit();
+  G.respawnPlayer(L.runway.x0 - 3, L.door.z + 3, Math.PI / 2);
+  G.cameraRig.override = { pos: new V(L.inner.x0 + 0.8, 2.6, L.door.z - 3.5), target: new V(L.stage.x1, 1.6, L.door.z + 1) };
+});
+await sun.advance(2, 30);
+await sun.shot(`${out}/16-velvet-palms-inside.png`);
 await g(() => { window.__sun.game.cameraRig.override = null; });
 await g(() => { window.__sun.app.settings.set('gameplay', 'weather', 'rain'); window.__sun.app.weather.set('rain', true); const G = window.__sun.game; G.respawnPlayer(92, -100, Math.PI); G.cameraRig.yaw = Math.PI; G.cameraRig.pitch = -0.05; G.engine.time.hour = 17.5; });
 await sun.advance(2, 30);

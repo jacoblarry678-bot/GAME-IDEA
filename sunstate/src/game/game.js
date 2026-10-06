@@ -25,6 +25,7 @@ import { snapshot, writeSave } from './save.js';
 import { Social } from './social.js';
 import { Memory } from './memory.js';
 import { Places } from './places.js';
+import { Club } from './club.js';
 
 export const PROTAGONIST_LOOK = PROTAGONISTS.cal.look;
 
@@ -63,6 +64,7 @@ export class Game {
     this.memory = new Memory(this);
     this.social = new Social(this);
     this.places = new Places(this);
+    this.club = new Club(this);
     this.spawnParked();
     this.bindEvents();
   }
@@ -214,6 +216,7 @@ export class Game {
     for (const e of this.extras) e.controller?.step?.(dt);
     this.store?.step(dt);
     this.places?.step(dt);
+    this.club?.step(dt);
     this.police?.step(dt);
     this.debugHook?.(dt);
     this.missions?.step(dt);
@@ -326,6 +329,7 @@ export class Game {
   dispose() {
     this.director.clearAll();
     this.memory.dispose();
+    this.club.dispose();
     this.police.clearAll();
     this.missions.cleanup();
     for (const v of [...this.vehicles]) { for (let i = 0; i < v.seats.length; i++) v.seats[i] = null; this.vehicles.splice(this.vehicles.indexOf(v), 1); v.dispose(); }

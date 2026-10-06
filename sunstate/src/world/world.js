@@ -25,9 +25,23 @@ export class World {
     this.signalClock = 0;
     this.places = PLACES;
     this.interiors = INTERIORS;
-    const store = INTERIORS.find((i) => i.id === 'store');
-    engine.interiorLight.position.set((store.x0 + store.x1) / 2, 3.6, (store.z0 + store.z1) / 2);
-    engine.interiorLight.intensity = 30;
+    // one point light serves whichever interior the camera is in (no shader recompiles):
+    // warm white over the Sunny Stop, magenta over Velvet Palms
+    const store = INTERIORS.find((i) => i.id === 'store'), club = INTERIORS.find((i) => i.id === 'club');
+    this.lightRigs = {
+      store: { x: (store.x0 + store.x1) / 2, y: 3.6, z: (store.z0 + store.z1) / 2, color: 0xfff4e0, intensity: 30 },
+      club: { x: (club.x0 + club.x1) / 2, y: club.ceiling - 0.9, z: (club.z0 + club.z1) / 2, color: 0xff4fd0, intensity: 22 },
+    };
+    this.clubPulse = 0; // set by the club's music (0..1 on each kick)
+    this.lightRig = null;
+    this.placeInteriorLight('store');
+  }
+
+  placeInteriorLight(id) {
+    if (this.lightRig === id) return;
+    const r = this.lightRigs[id], l = this.engine.interiorLight;
+    l.position.set(r.x, r.y, r.z); l.color.setHex(r.color); l.intensity = r.intensity;
+    this.lightRig = id;
   }
 
   /** A car hit a piece of street furniture hard enough to knock it over. */
@@ -75,6 +89,9 @@ export class World {
     this.mats.neon.color.setScalar(0.85 + night * 2.4);
     for (const s of this.signs) s.material.emissiveIntensity = s.userData.neonSign ? 0.35 + night * 1.8 : 0.08 + night * 0.45;
     updateProps(this.props, night, this.signalClock, dt);
+    const cam = this.engine.camera.position, inClub = this.interiorAt(cam.x, cam.z, cam.y)?.id === 'club';
+    this.placeInteriorLight(inClub ? 'club' : 'store');
+    if (inClub) this.engine.interiorLight.intensity = this.lightRigs.club.intensity * (0.75 + 0.45 * this.clubPulse);
     this.water.userData.update(dt);
     // gentle palm sway
     const crowns = this.props.crowns;

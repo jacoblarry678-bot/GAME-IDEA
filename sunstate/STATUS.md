@@ -59,7 +59,16 @@ Asked for: AI that remembers you, a more advanced LOOP with AI-written posts and
   - the Calderas' grudge hunts after *Low Tide*
   - all of it saved
 - **Places** (`src/game/places.js`): Bayfront Arms (guns), Threads on 5th (clothes), Sunshine Gas, Coral Auto Body (repair, respray and new plates), Velvet Palms, and Bayshore Park.
-  - Velvet Palms is an adults-only club, shown as the exterior and the door only, with nothing explicit. It is open from 8 PM to 4 AM.
+  - **Velvet Palms can be entered** (`src/game/club.js`). It is an adults-only club, open from 8 PM to 4 AM, and non-explicit: costumed dancers doing pole work and dancing.
+    - Pay the cover, or walk in as a regular or VIP; otherwise the rope stays closed.
+    - Inside are three dancers, about 20 regulars (seated, at the rail or dancing), a bartender, a DJ and a VIP host.
+    - The room has a mirror ball, light beams, a room light that pulses on the kick, and music that's muffled outside.
+    - **Bar:** drinks restore a little health and make the camera sway.
+    - **Stage rail:** tip the dancers, or "make it rain", which produces a LOOP reel.
+    - **DJ:** takes requests.
+    - **VIP host:** a booth for an hour or until close.
+    - **Trouble:** a fight gets you thrown out and refused for a day. A gunshot empties the room and gets witnesses calling 911.
+    - The club's staff remember your usual drink, your requests and VIP status, and this is saved.
   - Each place has a map blip.
   - The Sunny Stop clerk now remembers being robbed.
 - **LOOP:** witness and fan reels filmed from their phones (live 90×160 renders) that play in the feed, persona voices and replies, and trending topics.
@@ -69,7 +78,7 @@ Asked for: AI that remembers you, a more advanced LOOP with AI-written posts and
 
 Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU, so **frame rates measured here say nothing about real hardware**. The tests advance the simulation directly (`window.__sun.advance`) and render occasionally.
 
-- `npm test`: **75/75** Node checks. They cover:
+- `npm test`: **89/89** Node checks. They cover:
   - road connectivity, lanes on asphalt, sidewalks clear of buildings, no street furniture standing on roads, free spawn/marker points, the store doorway open and the walls solid, parked cars clear of walls, causeway continuity and boat clearance
   - ray, OBB and capsule maths
   - car physics: sedan 0–60 mph in 6.8 s, muscle car 5.7 s, pickup 7.3 s; top speed ~93 mph; 60–0 mph in ~40 m; a stable 10 m full-lock circle; pulling away from rest at full lock; a handbrake slide; reversing; parked cars staying put; no driving through a wall at 30 m/s; crash damage; momentum conserved in car–car collisions
@@ -85,6 +94,13 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
     - wet braking ~19 % longer (47 m vs 39.5 m from 60 mph)
     - an AI "hold still" never rolls back
     - LOOP: witness clips naming the street, likes growing, news posts, the feed cap and unread count
+  - **After M3:**
+    - memory: police descriptions and matching, notoriety and nicknames, people remembering Cal and Sol separately, and saving with bad data cleaned
+    - Velvet Palms:
+      - it's an interior with a ceiling; the doorway is walkable and the front wall is solid
+      - the stage and runway are raised; every counter has a free spot to stand at
+      - seats are inside the room, and there's a clear walk from the door to the rail
+      - the club's memories survive a save
 - `npm run e2e`: **49/49** in headless Chromium on the final M3 build (520 s wall time). The run covers:
   - title → New Game → walk, sprint, jump
   - mission marker prompt → mission start → skip dialogue
@@ -162,10 +178,25 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
 - How a chase goes varies run to run. Sometimes the Calderas catch up and trade shots on the twin-span. Sometimes they get boxed in by traffic and fall behind (the "200 m away for 6 s" rule then ends the chase). If you get out near them, they get out and fight.
 - Rain has no puddle reflections or splashes, the water surface doesn't react to it, and there are no umbrellas. Wet roads are a darker, glossier material using the sky reflection.
 - No phone UI yet (messages appear in the feed). The cooler in "Low Tide" isn't shown as an object.
+- **City memory and places:**
+  - "AI" here means scripted rules that remember things, not a learning model.
+  - Recognition needs an officer close by with a clear view. Fame sightings need a nickname and high notoriety, so they take a while to show up in normal play.
+  - The Caldera hunts are a single truck that drives at you.
+- **Velvet Palms:**
+  - The people inside are placed and animated by script: they sit, stand at the rail or dance on the spot, and don't mingle or walk around.
+  - After a shooting, people run with the generic flee logic, so some bump along the walls before they find the door.
+  - The light beams are additive cones, not real lights. One shared point light colours the room.
+  - Being tipsy only affects the camera, not the controls.
+  - There's no back room, and no upstairs.
+- **LOOP:**
+  - The real Claude call (Y) was only tested against a stub, never against the live claude.ai runtime.
+  - Reels are 10 low-resolution frames (90×160) rendered from the witness's eye position.
+- Fades run on the wall clock, so the fast sim-time tests can catch a black frame in a screenshot; play isn't affected.
 - Anti-aliasing changes apply after a page reload, and the menu says so.
 
 ## Next milestone (M4: depth): first concrete task
 1. **Boats** on the Cayo Lento flats and Vela Bay: a drivable skiff at the marina and water physics for it. The flats and the old bridge are already set up for this.
 2. **Phone UI:** contacts, messages, a map shortcut and mission replays.
 3. **A third mission:** the Calderas come to Ocean Mile. A defend-the-motel job where you switch between Cal on the roof and Sol in the lot.
-4. **Shops:** an ammo and armour counter, and a garage to repair cars and change their colour.
+4. **The city's memory in missions:** jobs that react to your nickname, banned places and grudges, and a phone call when the Calderas are coming.
+(Shops, a garage with respray, and an enterable club were built after M3: see above.)

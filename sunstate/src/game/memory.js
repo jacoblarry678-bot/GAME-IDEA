@@ -244,9 +244,19 @@ export function sanitizeMemory(m) {
   d.grudges.calderas = m.grudges?.calderas === true;
   if (m.people && typeof m.people === 'object') {
     for (const [id, who] of Object.entries(m.people)) {
-      if (!/^[a-z_]{1,24}$/.test(id) || !who || typeof who !== 'object') continue;
+      if (!/^[a-z_]{1,24}$/.test(id) || !who || typeof who !== 'object') continue; // (ids: clerk, gunshop, clubbar, ...)
       d.people[id] = {};
-      for (const w of ['cal', 'sol']) if (who[w]) d.people[id][w] = { visits: Math.round(num(who[w].visits, 0, 1e5)), robbed: Math.round(num(who[w].robbed, 0, 1e5)), trouble: Math.round(num(who[w].trouble, 0, 1e5)), last: null };
+      for (const w of ['cal', 'sol']) {
+        const r = who[w];
+        if (!r || typeof r !== 'object') continue;
+        const o = { visits: Math.round(num(r.visits, 0, 1e5)), robbed: Math.round(num(r.robbed, 0, 1e5)), trouble: Math.round(num(r.trouble, 0, 1e5)), last: null };
+        // what particular people remember (the auto shop's resprays, the club's regulars)
+        for (const k of ['resprays', 'drinks', 'tips', 'rains', 'rounds']) if (r[k] !== undefined) o[k] = Math.round(num(r[k], 0, 1e5));
+        if (r.vip === true) o.vip = true;
+        if (typeof r.usual === 'string' && /^[a-zA-Z ]{1,24}$/.test(r.usual)) o.usual = r.usual;
+        if (r.requests && typeof r.requests === 'object') { o.requests = {}; for (const k of ['house', 'dembow', 'synth']) if (r.requests[k] !== undefined) o.requests[k] = Math.round(num(r.requests[k], 0, 1e5)); }
+        d.people[id][w] = o; // (a ban's timestamp isn't kept: it's served by the next session)
+      }
     }
   }
   const ds = m.description;

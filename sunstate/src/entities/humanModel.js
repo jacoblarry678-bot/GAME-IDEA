@@ -200,13 +200,15 @@ const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
  * Procedural animation. Call update(dt, state) each frame. State fields:
  * speed (m/s), grounded, crouch, aim (0..1), aimPitch, sitting, surrender,
  * cower, phone, dead (0..1 fall progress), swim, punch (0..1), flinch (0..1),
- * talk, steer (-1..1 while sitting), lookYaw (head turn), sitGround.
+ * talk, steer (-1..1 while sitting), lookYaw (head turn), sitGround,
+ * dance (0 off, 1 floor, 2 stage), pole (holding a dance pole), cheer,
+ * work ('bartend' | 'dj'), beat (seconds per beat of the music).
  */
 export class HumanAnimator {
   constructor(model) {
     this.m = model;
     this.phase = Math.random() * 10;
-    this.w = { walk: 0, run: 0, air: 0, aim: 0, sit: 0, surrender: 0, cower: 0, phone: 0, swim: 0, crouch: 0, talk: 0 };
+    this.w = { walk: 0, run: 0, air: 0, aim: 0, sit: 0, surrender: 0, cower: 0, phone: 0, swim: 0, crouch: 0, talk: 0, dance: 0, pole: 0, cheer: 0, work: 0 };
     this.t = Math.random() * 10;
   }
 
@@ -226,6 +228,12 @@ export class HumanAnimator {
     w.swim = damp(w.swim, s.swim ? 1 : 0, 5, dt);
     w.crouch = damp(w.crouch, s.crouch ? 1 : 0, 10, dt);
     w.talk = damp(w.talk, s.talk ? 1 : 0, 4, dt);
+    w.dance = damp(w.dance, s.dance ? 1 : 0, 4, dt);
+    w.pole = damp(w.pole, s.pole ? 1 : 0, 5, dt);
+    w.cheer = damp(w.cheer, s.cheer ? 1 : 0, 6, dt);
+    w.work = damp(w.work, s.work ? 1 : 0, 4, dt);
+    if (s.work) this.workKind = s.work;
+    if (s.dance) this.danceKind = s.dance;
     const stride = 1.25 + w.run * 0.6;
     this.phase += (sp / stride) * Math.PI * dt * (s.swim ? 0.5 : 1);
     if (s.swim) this.phase += dt * 3;
@@ -286,6 +294,60 @@ export class HumanAnimator {
       B.foreArmR.rotation.x = lerp(B.foreArmR.rotation.x, -1.2 + g * 0.4, w.talk);
       B.head.rotation.y = Math.sin(this.t * 0.7) * 0.25 * w.talk;
     }
+    // dancing to the beat: knees, hips and shoulders on the beat, arms loose (floor) or up (stage)
+    if (w.dance > 0.01) {
+      const k = w.dance, beat = s.beat || 0.5, ph2 = (this.t / beat) * Math.PI, b1 = Math.sin(ph2), b2 = Math.sin(ph2 / 2);
+      const stage = this.danceKind === 2;
+      B.hips.position.y += (Math.abs(b1) - 0.6) * 0.06 * k * sc;
+      B.hips.rotation.z = lerp(B.hips.rotation.z, b2 * 0.14, k);
+      B.hips.rotation.y = lerp(B.hips.rotation.y, b2 * 0.25, k);
+      B.spine.rotation.z = lerp(B.spine.rotation.z, -b2 * 0.12, k);
+      B.thighL.rotation.x = lerp(B.thighL.rotation.x, -0.12 - 0.22 * Math.max(0, b2), k); B.shinL.rotation.x = lerp(B.shinL.rotation.x, 0.35 * Math.max(0, b2), k);
+      B.thighR.rotation.x = lerp(B.thighR.rotation.x, -0.12 - 0.22 * Math.max(0, -b2), k); B.shinR.rotation.x = lerp(B.shinR.rotation.x, 0.35 * Math.max(0, -b2), k);
+      const up = stage ? 2.5 + 0.3 * b2 : 0.55 + 0.35 * Math.abs(b2);
+      B.upperArmL.rotation.z = lerp(B.upperArmL.rotation.z, -up, k); B.upperArmR.rotation.z = lerp(B.upperArmR.rotation.z, stage ? 2.5 - 0.3 * b2 : up, k);
+      B.upperArmL.rotation.x = lerp(B.upperArmL.rotation.x, stage ? 0 : -0.5 + 0.3 * b1, k); B.upperArmR.rotation.x = lerp(B.upperArmR.rotation.x, stage ? 0 : -0.5 - 0.3 * b1, k);
+      B.foreArmL.rotation.x = lerp(B.foreArmL.rotation.x, stage ? -0.4 : -1.3, k); B.foreArmR.rotation.x = lerp(B.foreArmR.rotation.x, stage ? -0.4 : -1.3, k);
+      B.head.rotation.x = lerp(B.head.rotation.x, Math.abs(b1) * 0.12, k);
+    }
+    // holding a dance pole overhead with the right hand, leaning out into a slow spin
+    if (w.pole > 0.01) {
+      const k = w.pole, sw = Math.sin(this.t * 1.3);
+      B.upperArmR.rotation.set(lerp(B.upperArmR.rotation.x, -0.25, k), 0, lerp(B.upperArmR.rotation.z, 2.75, k));
+      B.foreArmR.rotation.set(lerp(B.foreArmR.rotation.x, -0.2, k), 0, 0);
+      B.upperArmL.rotation.set(lerp(B.upperArmL.rotation.x, -0.3, k), 0, lerp(B.upperArmL.rotation.z, -1.3 - 0.2 * sw, k));
+      B.foreArmL.rotation.x = lerp(B.foreArmL.rotation.x, -0.3, k);
+      B.spine.rotation.z = lerp(B.spine.rotation.z, -0.22, k);
+      B.chest.rotation.y = lerp(B.chest.rotation.y, 0.2 * sw, k);
+      B.thighL.rotation.x = lerp(B.thighL.rotation.x, -0.75 - 0.15 * sw, k); B.shinL.rotation.x = lerp(B.shinL.rotation.x, 1.1, k);
+      B.head.rotation.z = lerp(B.head.rotation.z, 0.2, k);
+    }
+    // cheering: both fists pumping overhead
+    if (w.cheer > 0.01) {
+      const k = w.cheer, p2 = Math.sin(this.t * 9);
+      B.upperArmL.rotation.set(lerp(B.upperArmL.rotation.x, -0.2, k), 0, lerp(B.upperArmL.rotation.z, -2.3 - 0.3 * p2, k));
+      B.upperArmR.rotation.set(lerp(B.upperArmR.rotation.x, -0.2, k), 0, lerp(B.upperArmR.rotation.z, 2.3 + 0.3 * p2, k));
+      B.foreArmL.rotation.x = lerp(B.foreArmL.rotation.x, -0.5 - 0.3 * p2, k); B.foreArmR.rotation.x = lerp(B.foreArmR.rotation.x, -0.5 - 0.3 * p2, k);
+      B.head.rotation.x = lerp(B.head.rotation.x, -0.2, k);
+    }
+    // working: wiping the bar, or hands on the decks with a nodding head
+    if (w.work > 0.01) {
+      const k = w.work;
+      if (this.workKind === 'dj') {
+        const nod = Math.sin((this.t / (s.beat || 0.5)) * Math.PI * 2);
+        for (const [ua, fa] of [[B.upperArmL, B.foreArmL], [B.upperArmR, B.foreArmR]]) { ua.rotation.x = lerp(ua.rotation.x, -0.75, k); fa.rotation.x = lerp(fa.rotation.x, -0.95, k); }
+        B.upperArmR.rotation.y = lerp(B.upperArmR.rotation.y, 0.25 * Math.sin(this.t * 5), k);
+        B.upperArmL.rotation.z = lerp(B.upperArmL.rotation.z, 0.15, k); B.upperArmR.rotation.z = lerp(B.upperArmR.rotation.z, -0.15, k);
+        B.head.rotation.x = lerp(B.head.rotation.x, 0.12 + nod * 0.12, k);
+        B.spine.rotation.x = lerp(B.spine.rotation.x, 0.12, k);
+      } else {
+        const c = this.t * 3.2;
+        B.upperArmR.rotation.set(lerp(B.upperArmR.rotation.x, -0.95 + 0.15 * Math.sin(c), k), 0, lerp(B.upperArmR.rotation.z, 0.25 + 0.2 * Math.cos(c), k));
+        B.foreArmR.rotation.x = lerp(B.foreArmR.rotation.x, -0.55, k);
+        B.spine.rotation.x = lerp(B.spine.rotation.x, 0.18, k);
+        B.head.rotation.x = lerp(B.head.rotation.x, 0.2, k);
+      }
+    }
     // phone to ear
     if (w.phone > 0.01) {
       const p = w.phone;
@@ -344,11 +406,13 @@ export class HumanAnimator {
       B.thighR.rotation.set(lerp(B.thighR.rotation.x, -1.45, k), 0, 0.06 * k);
       B.shinL.rotation.x = lerp(B.shinL.rotation.x, 1.35, k); B.shinR.rotation.x = lerp(B.shinR.rotation.x, 1.35, k);
       const st = (s.steer || 0) * 0.35;
-      B.upperArmL.rotation.set(lerp(B.upperArmL.rotation.x, -1.05 + st, k), 0, lerp(B.upperArmL.rotation.z, 0.25, k));
-      B.upperArmR.rotation.set(lerp(B.upperArmR.rotation.x, -1.05 - st, k), 0, lerp(B.upperArmR.rotation.z, -0.25, k));
-      B.foreArmL.rotation.set(lerp(B.foreArmL.rotation.x, -0.45, k), 0, 0);
-      B.foreArmR.rotation.set(lerp(B.foreArmR.rotation.x, -0.45, k), 0, 0);
-      if (s.passenger) { B.upperArmL.rotation.set(-0.5, 0, 0.1); B.upperArmR.rotation.set(-0.5, 0, -0.1); B.foreArmL.rotation.x = -1; B.foreArmR.rotation.x = -1; }
+      if (!s.cheer) { // (a seated fan cheering keeps their arms up)
+        B.upperArmL.rotation.set(lerp(B.upperArmL.rotation.x, -1.05 + st, k), 0, lerp(B.upperArmL.rotation.z, 0.25, k));
+        B.upperArmR.rotation.set(lerp(B.upperArmR.rotation.x, -1.05 - st, k), 0, lerp(B.upperArmR.rotation.z, -0.25, k));
+        B.foreArmL.rotation.set(lerp(B.foreArmL.rotation.x, -0.45, k), 0, 0);
+        B.foreArmR.rotation.set(lerp(B.foreArmR.rotation.x, -0.45, k), 0, 0);
+        if (s.passenger) { B.upperArmL.rotation.set(-0.5, 0, 0.1); B.upperArmR.rotation.set(-0.5, 0, -0.1); B.foreArmL.rotation.x = -1; B.foreArmR.rotation.x = -1; }
+      }
       // shooting from the seat: twist toward the target and extend the gun arm out of the window
       if (s.aim) {
         const rel = Math.max(-1.7, Math.min(1.7, s.carAimYaw || 0)), pitch = s.aimPitch || 0;

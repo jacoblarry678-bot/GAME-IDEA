@@ -47,6 +47,8 @@ export function makeMaterials(engine) {
     ceiling: std({ color: 0xeeeeea, roughness: 0.9 }),
     lightpanel: new THREE.MeshBasicMaterial({ color: 0xfffaf0 }),
     fridge: new THREE.MeshStandardMaterial({ color: 0xbfe6ff, emissive: 0x9fd3ff, emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.3 }),
+    clubfloor: std({ map: T.tiles(), color: 0x2a1a33, roughness: 0.22, metalness: 0.35 }),
+    mirror: std({ color: 0x8a7f99, roughness: 0.04, metalness: 1, envMapIntensity: 1.4 }),
   };
   m.lot.map = asphalt;
   // facades share a texture per style; per-building colour comes from vertex colours
@@ -527,6 +529,7 @@ function buildBuilding(B, b, cw, signs, group, rnd) {
   if (b.style === 'store') return buildStore(B, b, cw, signs, group);
   if (b.style === 'stilt') return buildStilt(B, b, cw);
   if (b.style === 'garage') return buildGarage(B, b, cw, signs, group);
+  if (b.style === 'club') return buildClub(B, b, cw, signs, group);
 
   if (hasShopfront) {
     const keys = { [fk]: b.style === 'deco' ? 'front:deco' : 'front:shop' };
@@ -728,6 +731,170 @@ function buildStore(B, b, cw, signs, group) {
   const open = makeSign('OPEN 24 HRS', { fg: '#ffe0f0', neon: '#ff3fa4' }, 2.4, 0.5);
   open.position.set(b.x0 + 3, y0 + 2.4, b.z0 - 0.05); open.rotation.y = Math.PI;
   group.add(open); signs.push(open);
+}
+
+/**
+ * Velvet Palms, enterable: a windowless deco front with a canopy, rope line and
+ * neon palm; inside, a dark lounge — bar with a lit back bar, a stage and
+ * runway with brass poles, a DJ booth, booths along the south wall and
+ * high-top tables. The layout comes from the district plan (b.layout); the
+ * moving parts (mirror ball, light beams, people) are added by game/club.js.
+ */
+function buildClub(B, b, cw, signs, group) {
+  const L = b.layout, I = L.inner, y0 = CURB, top = y0 + b.h, ceil = L.ceiling, w = L.wall;
+  const color = col(b.color), accent = col(b.accent);
+  const velvet = col(0x2a0f2e), dark = col(0x140a18), gold = col(0xd4af37), chrome = col(0xc8ccd2), red = col(0x7a1030);
+  const dz0 = L.door.z - L.door.w / 2, dz1 = L.door.z + L.door.w / 2, dh = y0 + L.door.h, band = y0 + 4.6;
+  const solid = (x0, x1, z0, z1, ya = -1, yb = top + 0.5, tag = 'wall') => cw.add({ type: 'box', cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, y0: ya, y1: yb, tag, material: 'concrete' });
+  const prop = (x0, x1, z0, z1, yb, material = 'wood') => cw.add({ type: 'box', cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, y0: -1, y1: yb, tag: 'prop', material, cameraBlock: false });
+  const fac = (x0, x1, ya, yb, z0, z1, sides) => B.box('fac:deco', x0, x1, ya, yb, z0, z1, { tile: T.FACADE_TILE, vBase: y0 + 4 - 0.6, color, sides });
+  const UV = [[0, 0], [1, 0], [1, 1], [0, 1]];
+
+  // ---- shell: north, south and east walls full height; the front is dark panels below, facade above
+  fac(b.x0, b.x1, y0, top, b.z0, b.z0 + w, { s: false }); solid(b.x0, b.x1, b.z0, b.z0 + w);
+  fac(b.x0, b.x1, y0, top, b.z1 - w, b.z1, { n: false }); solid(b.x0, b.x1, b.z1 - w, b.z1);
+  fac(b.x1 - w, b.x1, y0, top, b.z0, b.z1, { w: false }); solid(b.x1 - w, b.x1, b.z0, b.z1);
+  for (const [a0, a1] of [[b.z0, dz0], [dz1, b.z1]]) { B.box('trim', b.x0, b.x0 + w, y0, band, a0, a1, { color: dark, sides: { e: false } }); solid(b.x0, b.x0 + w, a0, a1); }
+  B.box('trim', b.x0, b.x0 + w, dh, band, dz0, dz1, { color: dark, sides: { e: false } }); solid(b.x0, b.x0 + w, dz0, dz1, dh, top + 0.5);
+  fac(b.x0, b.x0 + w, band, top, b.z0, b.z1, { e: false });
+  B.box('roof', b.x0, b.x1, top - 0.2, top, b.z0, b.z1, { sides: { n: false, s: false, e: false, w: false, top: true } });
+  B.box('trim', b.x0 - 0.18, b.x1 + 0.18, top - 0.3, top + 0.9, b.z0 - 0.18, b.z1 + 0.18, { color: col(0xffffff), sides: { top: false } });
+  // door frame (brass) and a padded door leaf folded back against the wall
+  for (const z of [dz0, dz1]) B.box('metal', b.x0 - 0.1, b.x0 + w + 0.05, y0, dh, z - 0.07, z + 0.07, { color: gold });
+  B.box('metal', b.x0 - 0.1, b.x0 + w + 0.05, dh - 0.12, dh, dz0, dz1, { color: gold });
+  B.box('trim', b.x0 + w, b.x0 + w + 0.08, y0, dh - 0.1, dz1 + 0.1, dz1 + 1.3, { color: red });
+
+  // ---- front: canopy, neon frame, rope line, neon palm, signs
+  B.box('trim', b.x0 - 2.8, b.x0, y0 + 3.3, y0 + 3.55, L.door.z - 3.2, L.door.z + 3.2, { color: accent, sides: { bottom: true } });
+  B.box('lightpanel', b.x0 - 2.6, b.x0 - 0.2, y0 + 3.27, y0 + 3.29, L.door.z - 3, L.door.z + 3, { sides: { bottom: true, top: false, n: false, s: false, e: false, w: false } });
+  neonLine(B, b.x0 - 2.85, y0 + 3.42, L.door.z - 3.2, b.x0 - 2.85, y0 + 3.42, L.door.z + 3.2, 0xff3fa4, 0.07);
+  neonLine(B, b.x0 - 0.06, y0 + 0.3, b.z0 + 0.5, b.x0 - 0.06, y0 + 0.3, b.z1 - 0.5, 0xb455ff, 0.06);
+  neonLine(B, b.x0 - 0.06, band - 0.2, b.z0 + 0.5, b.x0 - 0.06, band - 0.2, b.z1 - 0.5, 0xb455ff, 0.06);
+  for (const z of [b.z0 + 0.5, b.z1 - 0.5]) neonLine(B, b.x0 - 0.06, y0 + 0.3, z, b.x0 - 0.06, band - 0.2, z, 0xb455ff, 0.06);
+  for (let k = 0; k < 4; k++) { const z = L.door.z - 2.4 - k * 1.1; B.box('metal', b.x0 - 2.3, b.x0 - 2.18, y0, y0 + 0.95, z - 0.06, z + 0.06, { color: gold }); }
+  B.box('trim', b.x0 - 2.27, b.x0 - 2.21, y0 + 0.78, y0 + 0.84, L.door.z - 5.7, L.door.z - 2.4, { color: red });
+  // a neon palm on the dark panel north of the door
+  {
+    const px = b.x0 - 0.08, pz = L.door.z - 7.5, by = y0 + 0.4;
+    const trunk = [[0, 0], [0.25, 1.1], [0.15, 2.2], [-0.15, 3.0]];
+    for (let i = 0; i < trunk.length - 1; i++) neonLine(B, px, by + trunk[i][1], pz + trunk[i][0], px, by + trunk[i + 1][1], pz + trunk[i + 1][0], 0x49ff9a, 0.07);
+    const cz = pz - 0.15, cy = by + 3.0;
+    for (const [dzf, dyf] of [[-1.4, -0.5], [-0.9, 0.35], [0, 0.6], [0.9, 0.3], [1.4, -0.55]]) {
+      neonLine(B, px, cy, cz, px, cy + dyf * 0.6, cz + dzf * 0.55, 0x49ff9a, 0.06);
+      neonLine(B, px, cy + dyf * 0.6, cz + dzf * 0.55, px, cy + dyf, cz + dzf, 0x49ff9a, 0.06);
+    }
+  }
+  const name = makeSign(b.sign, { fg: '#fff0fa', neon: '#ff3fa4', script: true }, (b.z1 - b.z0) * 0.7, 2.4);
+  name.position.set(b.x0 - 0.06, top - 2.4, L.door.z); name.rotation.y = -Math.PI / 2;
+  group.add(name); signs.push(name);
+  const hours = makeSign('21+  ·  8 PM – 4 AM', { fg: '#e8fbff', neon: '#29e6ff' }, 3.2, 0.42);
+  hours.position.set(b.x0 - 0.07, y0 + 2.5, L.door.z + 3.9); hours.rotation.y = -Math.PI / 2;
+  group.add(hours); signs.push(hours);
+
+  // ---- inside: floor, velvet walls, ceiling
+  B.flat('clubfloor', I.x0, I.x1, I.z0, I.z1, y0 + 0.01, 1.2);
+  // an inner wall face from p0 to p1 (the room is on the left walking from p0 to p1)
+  const wallQ = (p0, p1, ya, yb, c = velvet) => B.quad('trim', [[p1[0], ya, p1[1]], [p0[0], ya, p0[1]], [p0[0], yb, p0[1]], [p1[0], yb, p1[1]]], UV, c);
+  wallQ([I.x1, I.z0], [I.x0, I.z0], y0, ceil); // north face (seen from the south)
+  wallQ([I.x0, I.z1], [I.x1, I.z1], y0, ceil); // south face
+  wallQ([I.x1, I.z1], [I.x1, I.z0], y0, ceil); // east face
+  wallQ([I.x0, I.z0], [I.x0, dz0], y0, ceil); wallQ([I.x0, dz1], [I.x0, I.z1], y0, ceil); wallQ([I.x0, dz0], [I.x0, dz1], dh, ceil);
+  B.quad('trim', [[I.x0, ceil, I.z0], [I.x1, ceil, I.z0], [I.x1, ceil, I.z1], [I.x0, ceil, I.z1]], UV, dark);
+  // a neon band around the room at 3.4 m, a gold dado rail at 1.1 m
+  const ring = (y, c, t) => { neonLine(B, I.x0 + 0.04, y, I.z0 + 0.04, I.x1 - 0.04, y, I.z0 + 0.04, c, t); neonLine(B, I.x0 + 0.04, y, I.z1 - 0.04, I.x1 - 0.04, y, I.z1 - 0.04, c, t); neonLine(B, I.x1 - 0.04, y, I.z0 + 0.04, I.x1 - 0.04, y, I.z1 - 0.04, c, t); };
+  ring(y0 + 3.4, 0xff3fa4, 0.06);
+  for (const [a, c] of [[[I.x0 + 0.03, I.z0 + 0.03], [I.x1 - 0.03, I.z0 + 0.06]], [[I.x0 + 0.03, I.z1 - 0.06], [I.x1 - 0.03, I.z1 - 0.03]]]) B.box('metal', a[0], c[0], y0 + 1.08, y0 + 1.14, a[1], c[1], { color: gold });
+  // ceiling truss over the stage and runway (the beams and the mirror ball hang from it)
+  B.box('metal', L.runway.x0 - 0.5, L.stage.x1 - 0.6, ceil - 0.35, ceil - 0.2, L.door.z - 0.15, L.door.z + 0.15, { color: col(0x222226), sides: { bottom: true } });
+  B.box('metal', L.stage.x0 + 0.4, L.stage.x0 + 0.7, ceil - 0.35, ceil - 0.2, L.stage.z0, L.stage.z1, { color: col(0x222226), sides: { bottom: true } });
+
+  // ---- stage and runway: black gloss with LED edges, brass poles, a mirror wall and curtains behind
+  for (const r of [L.stage, L.runway]) {
+    B.box('trim', r.x0, r.x1, y0, r.y, r.z0, r.z1, { color: col(0x0d0a10), sides: { top: false } });
+    B.flat('clubfloor', r.x0, r.x1, r.z0, r.z1, r.y, 0.8);
+  }
+  const st = L.stage, rw = L.runway, ly = st.y + 0.02;
+  neonLine(B, st.x0 - 0.02, ly, st.z0, st.x0 - 0.02, ly, rw.z0, 0xff3fa4, 0.05); neonLine(B, st.x0 - 0.02, ly, rw.z1, st.x0 - 0.02, ly, st.z1, 0xff3fa4, 0.05);
+  neonLine(B, st.x0, ly, st.z0 - 0.02, st.x1, ly, st.z0 - 0.02, 0xff3fa4, 0.05); neonLine(B, st.x0, ly, st.z1 + 0.02, st.x1, ly, st.z1 + 0.02, 0xff3fa4, 0.05);
+  neonLine(B, rw.x0, ly, rw.z0 - 0.02, rw.x1, ly, rw.z0 - 0.02, 0xff3fa4, 0.05); neonLine(B, rw.x0, ly, rw.z1 + 0.02, rw.x1, ly, rw.z1 + 0.02, 0xff3fa4, 0.05);
+  neonLine(B, rw.x0 - 0.02, ly, rw.z0, rw.x0 - 0.02, ly, rw.z1, 0xff3fa4, 0.05);
+  const poleGeo = new THREE.CylinderGeometry(0.045, 0.045, ceil - st.y, 10);
+  for (const p of L.poles) {
+    B.geometry('metal', poleGeo, new THREE.Matrix4().makeTranslation(p.x, (st.y + ceil) / 2, p.z), gold);
+    cw.add({ type: 'circle', cx: p.x, cz: p.z, r: 0.07, y0: st.y, y1: ceil, tag: 'prop', material: 'metal', cameraBlock: false });
+  }
+  B.quad('mirror', [[I.x1 - 0.02, st.y + 0.1, st.z0 + 2.2], [I.x1 - 0.02, st.y + 0.1, st.z1 - 2.2], [I.x1 - 0.02, st.y + 3.4, st.z1 - 2.2], [I.x1 - 0.02, st.y + 3.4, st.z0 + 2.2]], UV);
+  for (const [za, zb] of [[st.z0, st.z0 + 2.2], [st.z1 - 2.2, st.z1]]) B.box('trim', I.x1 - 0.35, I.x1, st.y, ceil, za, zb, { color: col(0x5a0f2a), sides: { e: false } });
+  const back = makeSign('Velvet Palms', { fg: '#fff0fa', neon: '#ff3fa4', script: true }, 5.5, 1.2);
+  back.position.set(I.x1 - 0.05, st.y + 3.9, L.door.z); back.rotation.y = -Math.PI / 2;
+  group.add(back); signs.push(back);
+  // speaker stacks either side of the stage front
+  for (const z of [st.z0 + 0.45, st.z1 - 0.45]) {
+    B.box('trim', st.x0 - 0.75, st.x0 - 0.05, y0, y0 + 1.9, z - 0.4, z + 0.4, { color: col(0x101012) });
+    B.box('metal', st.x0 - 0.77, st.x0 - 0.74, y0 + 0.4, y0 + 1.6, z - 0.28, z + 0.28, { color: col(0x2a2a30) });
+    prop(st.x0 - 0.75, st.x0 - 0.05, z - 0.4, z + 0.4, y0 + 1.9, 'metal');
+  }
+
+  // ---- the bar: counter with a gold top and an underglow; back bar with lit bottles and a mirror
+  const br = L.bar;
+  B.box('trim', br.x0, br.x1, y0, y0 + 1.08, br.z0, br.z1, { color: col(0x2a1630) });
+  B.box('metal', br.x0 - 0.12, br.x1 + 0.12, y0 + 1.08, y0 + 1.15, br.z0 - 0.08, br.z1 + 0.15, { color: gold });
+  neonLine(B, br.x0, y0 + 0.12, br.z1 + 0.04, br.x1, y0 + 0.12, br.z1 + 0.04, 0x29e6ff, 0.05);
+  prop(br.x0, br.x1, br.z0, br.z1, y0 + 1.15);
+  B.box('trim', br.x0 - 0.3, br.x1 + 0.3, y0, y0 + 0.95, I.z0, I.z0 + 0.5, { color: col(0x1d1022) });
+  prop(br.x0 - 0.3, br.x1 + 0.3, I.z0, I.z0 + 0.5, y0 + 0.95);
+  B.quad('mirror', [[br.x0 - 0.3, y0 + 1.0, I.z0 + 0.02], [br.x1 + 0.3, y0 + 1.0, I.z0 + 0.02], [br.x1 + 0.3, y0 + 2.9, I.z0 + 0.02], [br.x0 - 0.3, y0 + 2.9, I.z0 + 0.02]], UV);
+  const bottleC = [0xffb84d, 0x7dff9a, 0x6fc8ff, 0xff6fb5, 0xfff0c8, 0xc89cff];
+  for (let row = 0; row < 3; row++) {
+    const sy = y0 + 1.25 + row * 0.55;
+    B.box('metal', br.x0 - 0.2, br.x1 + 0.2, sy - 0.04, sy, I.z0 + 0.02, I.z0 + 0.32, { color: chrome });
+    let k = row * 2;
+    for (let x = br.x0; x < br.x1; x += 0.19) { const c = bottleC[k++ % bottleC.length], h = 0.24 + ((k * 7) % 5) * 0.025; B.box('neon', x, x + 0.08, sy, sy + h, I.z0 + 0.12, I.z0 + 0.2, { color: col(c).multiplyScalar(0.55) }); }
+  }
+  const stoolGeo = new THREE.CylinderGeometry(0.035, 0.05, 0.72, 8), seatGeo = new THREE.CylinderGeometry(0.22, 0.2, 0.08, 14);
+  for (const s of L.stools) {
+    B.geometry('metal', stoolGeo, new THREE.Matrix4().makeTranslation(s.x, y0 + 0.36, s.z), chrome);
+    B.geometry('trim', seatGeo, new THREE.Matrix4().makeTranslation(s.x, y0 + 0.76, s.z), red);
+  }
+
+  // ---- DJ booth: a raised platform, a desk with decks and a cyan front
+  const dj = L.dj;
+  B.box('trim', dj.x0, dj.x1, y0, dj.y, dj.z0, dj.z1, { color: col(0x0d0a10) });
+  B.box('trim', dj.x0, dj.x0 + 0.6, dj.y, dj.y + 1.0, dj.z0 + 0.3, dj.z1 - 0.3, { color: col(0x18101e) });
+  neonLine(B, dj.x0 - 0.02, dj.y + 0.5, dj.z0 + 0.35, dj.x0 - 0.02, dj.y + 0.5, dj.z1 - 0.35, 0x29e6ff, 0.06);
+  for (const z of [dj.z0 + 0.9, dj.z1 - 0.9]) B.box('metal', dj.x0 + 0.1, dj.x0 + 0.5, dj.y + 1.0, dj.y + 1.05, z - 0.2, z + 0.2, { color: col(0x3a3a44) });
+  prop(dj.x0, dj.x0 + 0.6, dj.z0 + 0.3, dj.z1 - 0.3, dj.y + 1.0);
+
+  // ---- booths along the south wall (the east one is VIP: gold velvet and a rope)
+  for (const bt of L.booths) {
+    const c = bt.vip ? col(0x8a6a1a) : col(0x6b1030), cx = (bt.x0 + bt.x1) / 2;
+    B.box('trim', bt.x0, bt.x1, y0, y0 + 1.2, bt.z1 - 0.5, bt.z1, { color: c });
+    B.box('trim', bt.x0, bt.x1, y0, y0 + 0.45, bt.z1 - 1.1, bt.z1 - 0.5, { color: c });
+    for (const [a0, a1] of [[bt.x0, bt.x0 + 0.45], [bt.x1 - 0.45, bt.x1]]) { B.box('trim', a0, a1, y0, y0 + 0.75, bt.z0, bt.z1 - 0.5, { color: c }); prop(a0, a1, bt.z0, bt.z1 - 0.5, y0 + 0.75); }
+    prop(bt.x0, bt.x1, bt.z1 - 1.1, bt.z1, y0 + 1.2);
+    B.box('trim', cx - 0.7, cx + 0.7, y0, y0 + 0.42, bt.z0 + 0.3, bt.z0 + 0.95, { color: dark });
+    B.box('metal', cx - 0.75, cx + 0.75, y0 + 0.42, y0 + 0.46, bt.z0 + 0.25, bt.z0 + 1.0, { color: gold });
+    prop(cx - 0.75, cx + 0.75, bt.z0 + 0.25, bt.z0 + 1.0, y0 + 0.46);
+    if (bt.vip) {
+      for (const x of [bt.x0 - 0.1, bt.x0 + 1.6]) B.box('metal', x - 0.05, x + 0.05, y0, y0 + 0.95, bt.z0 - 0.35, bt.z0 - 0.25, { color: gold });
+      B.box('trim', bt.x0 - 0.1, bt.x0 + 1.6, y0 + 0.78, y0 + 0.84, bt.z0 - 0.33, bt.z0 - 0.27, { color: red });
+      const v = makeSign('VIP', { fg: '#fff6d8', neon: '#ffd23f' }, 1.4, 0.55);
+      v.position.set(cx, y0 + 2.3, I.z1 - 0.05); v.rotation.y = Math.PI;
+      group.add(v); signs.push(v);
+    }
+  }
+  // high-top tables
+  const legGeo = new THREE.CylinderGeometry(0.05, 0.25, 1.05, 10), topGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.05, 18);
+  for (const t of L.tables) {
+    B.geometry('metal', legGeo, new THREE.Matrix4().makeTranslation(t.x, y0 + 0.52, t.z), chrome);
+    B.geometry('metal', topGeo, new THREE.Matrix4().makeTranslation(t.x, y0 + 1.07, t.z), gold);
+    cw.add({ type: 'circle', cx: t.x, cz: t.z, r: 0.45, y0: -1, y1: y0 + 1.1, tag: 'prop', material: 'metal', cameraBlock: false });
+  }
+  // restrooms door (not enterable) by the entrance
+  B.box('trim', I.x0 + 0.6, I.x0 + 1.7, y0, y0 + 2.2, I.z0, I.z0 + 0.05, { color: col(0x3a1f40) });
+  const rr = makeSign('RESTROOMS', { fg: '#ffe9f6', neon: '#b455ff' }, 1.3, 0.3);
+  rr.position.set(I.x0 + 1.15, y0 + 2.5, I.z0 + 0.06);
+  group.add(rr); signs.push(rr);
 }
 
 function buildBackdrop(B, cw, rnd) {

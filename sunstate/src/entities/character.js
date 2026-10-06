@@ -86,6 +86,8 @@ export class Character {
       return;
     }
     if (this.climbT > 0) { this.climbT -= dt; return; }
+    // placed by a script (seated in a booth, dancing on a stage): no physics until released
+    if (this.pinned) { this.vel.set(0, 0, 0); this.grounded = true; return; }
 
     // horizontal velocity toward the wish velocity
     const sp = this.swim ? Math.min(this.wishSpeed, 2.4) : this.wishSpeed;
@@ -189,8 +191,9 @@ export class Character {
       grounded: this.grounded || this.swim,
       crouch: this.crouch,
       aim: a.aim, aimPitch: a.aimPitch, armed: a.armed, carAimYaw: a.carAimYaw,
-      sitting: !!this.vehicle, passenger: this.seat > 0, steer: this.vehicle ? this.vehicle.steer : 0,
+      sitting: !!this.vehicle || (!!a.seated && !this.dead), passenger: this.seat > 0 || !!a.seated, steer: this.vehicle ? this.vehicle.steer : 0,
       surrender: a.surrender, cower: a.cower, phone: a.phone, talk: a.talk,
+      dance: this.dead ? 0 : a.dance || 0, pole: a.pole && !this.dead, cheer: a.cheer && !this.dead, work: this.dead ? null : a.work || null, beat: a.beat,
       swim: this.swim, punch: a.punch, flinch: a.flinch, lookYaw: a.lookYaw, sitGround: a.sitGround && !this.dead,
       dead: this.dead ? Math.min(1, this.deadT * 1.8) : knocked ? 1 : 0,
     });

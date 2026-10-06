@@ -72,6 +72,24 @@ function fakeGame() {
   check('store doorway is walkable (no wall in the opening)', !through || through.t > 5.5);
   const wall = cw.raycast(d.x + 5, 1.2, d.z - 3, 0, 0, 1, 6);
   check('store front wall blocks beside the door', !!wall && wall.t < 3.5);
+  // Velvet Palms: the doorway is open (the rope is added at runtime), the front wall is solid, the
+  // stage and runway are raised, every counter is reachable on the floor, and people sit inside the room
+  {
+    const C = PLACES.club, Lc = C.layout, I = Lc.inner;
+    const inClub = INTERIORS.find((i) => i.id === 'club');
+    check('Velvet Palms is an interior with a ceiling', !!inClub && inClub.ceiling > 4.5 && inClub.ceiling < 6);
+    const thru = cw.raycast(Lc.door.x - 3, 1.2, Lc.door.z, 1, 0, 0, 7);
+    const front = cw.raycast(Lc.door.x - 3, 1.2, Lc.door.z + 4, 1, 0, 0, 7);
+    check('Velvet Palms doorway is walkable and the front wall is solid', (!thru || thru.t > 6.5) && !!front && front.t < 3.5, `${thru?.t} ${front?.t}`);
+    check('the stage and runway are raised 0.7 m; the dance floor is not', Math.abs(L.groundHeight((Lc.stage.x0 + Lc.stage.x1) / 2, Lc.door.z + 4) - Lc.stage.y) < 1e-6 && Math.abs(L.groundHeight((Lc.runway.x0 + Lc.runway.x1) / 2, Lc.door.z) - Lc.runway.y) < 1e-6 && L.groundHeight(I.x0 + 3, Lc.door.z) < 0.2);
+    const counters = ['club', 'clubbar', 'clubdj', 'clubvip', 'clubstage'].map((id) => [id, PLACES[id].door]);
+    const blocked = counters.filter(([, d]) => cw.overlapsCircle(d.x, d.z, 0.35, L.groundHeight(d.x, d.z) + 0.2, 1.6)).map(([id]) => id);
+    check('every club counter has a free spot to stand at', blocked.length === 0, blocked.join());
+    const seats = [...Lc.stools, ...Lc.booths.map((b) => ({ x: (b.x0 + b.x1) / 2, z: b.z1 - 0.8 }))];
+    check('stools and booth seats are inside the room', seats.every((q) => q.x > I.x0 && q.x < I.x1 && q.z > I.z0 && q.z < I.z1), String(seats.length));
+    const path = cw.raycast(Lc.door.x + 1, 1.2, Lc.door.z, 1, 0, 0, Lc.runway.x0 - Lc.door.x - 1.6);
+    check('a clear walk from the door to the stage rail', !path, path ? `${path.t.toFixed(2)} ${path.collider?.tag}` : '');
+  }
   // parked cars don't spawn inside anything
   let bad = 0;
   for (const p of DISTRICT.parking) {
@@ -323,6 +341,8 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   check('people remember Cal and Sol separately', m.person('gunshop').visits === 0 && m.state.people.gunshop.cal.visits === 2);
   const saved = sanitizeMemory(JSON.parse(JSON.stringify(m.snapshot())));
   check('memory survives a save (and bad data is cleaned)', saved.nickname === m.state.nickname && saved.people.gunshop.cal.visits === 2 && JSON.stringify(sanitizeMemory({ notoriety: { 'Ocean Mile': 'lots' }, people: { '<script>': {} } })) === JSON.stringify(defaultMemory()));
+  const club = sanitizeMemory({ people: { clubbar: { cal: { visits: 3, usual: 'Velvet mojito', drinks: 7, vip: true, requests: { house: 2, evil: 9 }, troubleAt: 50 } }, clubdj: { sol: { usual: '<img onerror=x>' } } } });
+  check('the club remembers your usual, VIP status and requests across saves', club.people.clubbar.cal.usual === 'Velvet mojito' && club.people.clubbar.cal.vip === true && club.people.clubbar.cal.requests.house === 2 && club.people.clubbar.cal.requests.evil === undefined && club.people.clubbar.cal.troubleAt === undefined && club.people.clubdj.sol.usual === undefined);
 }
 
 const failed = results.filter((r) => !r).length;

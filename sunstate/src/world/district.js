@@ -145,13 +145,45 @@ function plan() {
     PLACES.gas = { name: 'Sunshine Gas', door: { x: b.lx0 + 13.6, z: (sz0 + sz1) / 2 - 1 }, staff: { x: b.lx0 + 12.9, z: (sz0 + sz1) / 2 + 2.5, rot: Math.PI / 2 } };
   }
 
-  // Velvet Palms (adults-only club), Coral Ave side of the Club Halcyon block
+  // Velvet Palms (adults-only club, enterable), Coral Ave side of the Club Halcyon block.
+  // Entrance on Coral Ave looks straight down the runway to the stage; the bar runs
+  // along the north wall, the DJ booth sits in the north-east corner, booths line
+  // the south wall. Everything here is shared by the mesh builder and the club runtime.
   {
     const b = blockAt(2, 3); special.add(b.id);
     const mid = (b.lx0 + b.lx1) / 2;
-    add({ x0: b.lx0, x1: mid - 5, z0: b.lz0, z1: b.lz0 + 22, h: 9.8, style: 'deco', frontage: 'w', sign: 'Velvet Palms', color: 0x3a2347, accent: 0xb455ff, neon: 0xff3fa4 });
-    PLACES.club = { name: 'Velvet Palms', door: { x: b.lx0 - 1.6, z: b.lz0 + 11 }, staff: { x: b.lx0 - 0.9, z: b.lz0 + 13.2, rot: -Math.PI / 2 } };
-    fillStrip(b.lx0, mid - 5, b.lz0 + 24, b.lz1, 'w');
+    const x0 = b.lx0, x1 = mid - 1, z0 = b.lz0, z1 = b.lz0 + 26, w = 0.3, y = 0.14, doorZ = z0 + 13;
+    const I = { x0: x0 + w, x1: x1 - w, z0: z0 + w, z1: z1 - w }; // inside faces of the walls
+    const L = {
+      inner: I, ceiling: y + 5.2, wall: w,
+      door: { x: x0, z: doorZ, w: 2.4, h: 3 },
+      stage: { x0: I.x1 - 5.6, x1: I.x1, z0: doorZ - 6.5, z1: doorZ + 6.5, y: y + 0.7 },
+      runway: { x0: I.x1 - 12, x1: I.x1 - 5.6, z0: doorZ - 1.2, z1: doorZ + 1.2, y: y + 0.7 },
+      poles: [{ x: I.x1 - 11.1, z: doorZ }, { x: I.x1 - 2.8, z: doorZ - 3.8 }, { x: I.x1 - 2.8, z: doorZ + 3.8 }],
+      bar: { x0: x0 + 3, x1: x0 + 11.5, z0: I.z0 + 1.6, z1: I.z0 + 2.4 },
+      dj: { x0: I.x1 - 3.4, x1: I.x1, z0: I.z0, z1: I.z0 + 3.4, y: y + 0.45 },
+      booths: [],
+      tables: [{ x: x0 + 3.4, z: doorZ - 5.2 }, { x: x0 + 3.4, z: doorZ + 5.2 }, { x: x0 + 8.2, z: doorZ + 6 }, { x: x0 + 8.2, z: doorZ - 6 }],
+      stools: [],
+    };
+    for (let k = 0; k < 4; k++) {
+      const bw = (I.x1 - I.x0) / 4;
+      L.booths.push({ x0: I.x0 + k * bw + 0.25, x1: I.x0 + (k + 1) * bw - 0.25, z0: I.z1 - 2.7, z1: I.z1, vip: k === 3 });
+    }
+    for (let x = L.bar.x0 + 0.7; x < L.bar.x1 - 0.4; x += 1.25) L.stools.push({ x, z: L.bar.z1 + 0.65, bar: true });
+    for (let x = L.runway.x0 + 1.4; x < L.runway.x1 - 0.2; x += 1.5) for (const side of [-1, 1]) L.stools.push({ x, z: doorZ + side * 1.95, face: -side });
+    add({ x0, x1, z0, z1, h: 9.8, style: 'club', frontage: 'w', sign: 'Velvet Palms', color: 0x3a2347, accent: 0xb455ff, neon: 0xff3fa4, layout: L });
+    INTERIORS.push({ id: 'club', name: 'Velvet Palms', x0, x1, z0, z1, ceiling: L.ceiling, door: { x: x0, z: doorZ, w: L.door.w, side: 'w' } });
+    for (const r of [L.stage, L.runway]) PLATFORMS.push({ x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1, y: r.y, indoor: true });
+    PLATFORMS.push({ x0: L.dj.x0, x1: L.dj.x1, z0: L.dj.z0, z1: L.dj.z1, y: L.dj.y, indoor: true });
+    const vip = L.booths[3];
+    PLACES.club = { name: 'Velvet Palms', door: { x: x0 - 1.6, z: doorZ - 2.2 }, staff: { x: x0 - 0.9, z: doorZ + 2.0, rot: -Math.PI / 2 }, layout: L, bounds: { x0, x1, z0, z1 } };
+    // the counters inside (the Places menus): the bar, the DJ booth, the VIP host, the stage rail
+    PLACES.clubbar = { name: 'The bar', door: { x: (L.bar.x0 + L.bar.x1) / 2, z: L.bar.z1 + 0.9 }, staff: { x: (L.bar.x0 + L.bar.x1) / 2, z: I.z0 + 0.85, rot: 0 } };
+    PLACES.clubdj = { name: 'DJ booth', door: { x: L.dj.x0 - 0.9, z: L.dj.z0 + 1.9 }, staff: { x: L.dj.x0 + 1.9, z: L.dj.z0 + 1.5, rot: -Math.PI / 2 } };
+    PLACES.clubvip = { name: 'VIP booth', door: { x: (vip.x0 + vip.x1) / 2 - 1.2, z: vip.z0 - 1.0 }, staff: { x: vip.x0 - 0.2, z: vip.z0 - 0.7, rot: Math.PI / 4 } };
+    PLACES.clubstage = { name: 'The stage', door: { x: L.runway.x0 - 0.8, z: doorZ }, staff: null };
+    fillStrip(b.lx0, x1, z1 + 2, b.lz1, 'w');
     fillStrip(mid + 1, b.lx1, b.lz0, b.lz1, 'e', 'Club Halcyon', 'deco');
   }
 

@@ -43,7 +43,7 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
 | Enter | skip dialogue / retry a failed mission | RMB + LMB (passenger) | aim and shoot out of the window |
 | **Tab** | **switch between Cal and Sol** | **G** (partner driving) | **pull over / drive on** |
 | **G** | **partner: follow / wait** (by an empty car: **"you drive"**) | **P** | **LOOP, the social feed** |
-| **1–6** | **pick from a shop menu** (E again to leave) | **Y** (LOOP open) | **ask Claude for new posts** (in the claude.ai page only) |
+| **1–6** | **pick from a shop or counter menu** (E again to leave) | **Y** (LOOP open) | **ask Claude for new posts** (in the claude.ai page only) |
 
 ## What's new in Milestone 3
 
@@ -87,7 +87,20 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
   - **Threads on 5th** (clothes): five outfits for each protagonist. A new outfit no longer matches the police description.
   - **Sunshine Gas** (mini-mart and pumps): snacks and coffee (restore health), and scratch tickets.
   - **Coral Auto Body:** drive into the bay. It offers repairs, and a respray with new plates. The respray makes the police lose the car if they can't see you (3★ or less).
-  - **Velvet Palms:** an adults-only club, shown as the exterior and the door only, with nothing explicit. It opens at 8 PM. An hour inside (or a VIP booth until close) passes time and restores health.
+  - **Velvet Palms:** an adults-only club you can walk into (open 8 PM – 4 AM). It's non-explicit: the dancers wear full sequined costumes, and the show is pole work and dancing.
+    - **The door:** pay Big Tomas the $20 cover. Regulars and VIPs walk in. Without paying, the rope stays closed.
+    - **Inside:** a dark lounge with:
+      - a stage and runway with three dancers, a mirror ball and sweeping light beams
+      - booths, a bar with a lit back bar, a DJ booth and a room full of regulars who cheer
+      - a house / dembow / synthwave set, muffled through the walls outside
+    - **Counters (E, then 1–5):**
+      - **Bar (Jules):** drinks restore a little health and make the camera sway; water sobers you up. You can also buy a round for the bar, or bottle service, which puts you on the VIP list.
+      - **Stage rail:** tip the dancers, or "make it rain". Someone films it for LOOP.
+      - **DJ Marea:** takes requests and remembers your favourite style.
+      - **Celeste:** a booth for an hour, or VIP until close. Time passes and your health is restored.
+    - **Trouble:**
+      - Start a fight and Big Tomas throws you out and won't let you back for a day.
+      - Fire a gun and the room empties: people run, cower and call 911, and the club is closed for the night.
   - **Bayshore Park:** lawns, a fountain, a basketball court, and people out for a walk.
 - **LOOP, now with reels:**
   - When a witness calls you in, or someone recognises you, they film a short clip from their own point of view. The clip plays in the feed.
@@ -144,13 +157,13 @@ The trade-off is visual fidelity. This is stylised, not photorealistic, and the 
 ## Tests
 
 ```bash
-npm test                                  # 82 rules/simulation checks in Node (no browser)
+npm test                                  # 89 rules/simulation checks in Node (no browser)
 npm run build && npm run preview &        # then:
 npm run e2e                               # M1/M2 playthrough in headless Chromium (49 checks)
 node tools/e2e-crew.mjs                   # M3: two protagonists, partner AI, switching, save v2
 node tools/e2e-lowtide.mjs                # M3: the "Low Tide" mission end to end
 node tools/e2e-weather.mjs                # M3: rain on/off, wet roads, grip, visuals; the LOOP feed
-node tools/e2e-city.mjs                   # places, staff memory, police descriptions, respray, reels, Claude posts (stubbed)
+node tools/e2e-city.mjs                   # places, staff memory, Velvet Palms inside, police descriptions, respray, reels, Claude posts (stubbed)
 npm run shots                             # representative screenshots → shots/
 ```
 
@@ -165,7 +178,8 @@ src/
   entities/  humans (model + animation + physics), vehicles (model + physics)
   ai/        traffic drivers, pedestrians, police, partner, mission enemies, ambient director
   game/      game loop, crew (Cal/Sol + switching), player controller, camera, combat, wanted, missions,
-             memory (what the city remembers), places (shops and staff), social (LOOP), store, economy, save
+             memory (what the city remembers), places (shops and staff), club (Velvet Palms inside),
+             social (LOOP), store, economy, save
   ui/        HUD, minimap/map, menus, styles
   audio/     procedural sound and radio
   data/      vehicles, weapons

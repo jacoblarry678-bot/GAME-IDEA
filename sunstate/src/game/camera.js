@@ -127,6 +127,14 @@ export class CameraRig {
     } else {
       this.cam.position.set(cx, cy, cz);
       this.cam.lookAt(sx + fx * 10, sy + fy * 10, sz + fz * 10);
+      // a few drinks in: the world sways a little
+      const tipsy = g.club?.tipsy || 0;
+      if (tipsy > 0.02) {
+        const t = g.time;
+        this.cam.rotateZ(Math.sin(t * 0.7) * 0.06 * tipsy);
+        this.cam.rotateY(Math.sin(t * 0.43) * 0.035 * tipsy);
+        this.cam.rotateX(Math.sin(t * 0.9 + 1) * 0.02 * tipsy);
+      }
     }
     const fov = g.settings.g.fov + fovAdd + this.fovKick;
     this.fovKick *= Math.exp(-6 * dt);

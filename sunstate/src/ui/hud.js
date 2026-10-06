@@ -233,9 +233,10 @@ export class HUD {
     // street name
     const pos = v ? v.pos : p.pos;
     const road = roadAt(pos.x, pos.z);
-    const area = pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Vela Keys Twin Span' : pos.x > ISLAND.sandStart ? 'Ocean Mile Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Mainland Landing' : 'Vela Bay') : DISTRICT_NAME;
+    const inside = !v && g.world.interiorAt(pos.x, pos.z, pos.y);
+    const area = inside ? inside.name : pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Vela Keys Twin Span' : pos.x > ISLAND.sandStart ? 'Ocean Mile Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Mainland Landing' : 'Vela Bay') : DISTRICT_NAME;
     const wl = g.weather?.label;
-    setHTML(this.street, `${road ? road.name : area}<small>${road ? area : ''} · ${g.engine.time.label()}${wl ? ' · ' + wl : ''}</small>`);
+    setHTML(this.street, `${road && !inside ? road.name : area}<small>${road && !inside ? area : ''} · ${g.engine.time.label()}${wl ? ' · ' + wl : ''}</small>`);
     // fps
     this.fps.classList.toggle('show', s.g.showFps);
     if (s.g.showFps) {
@@ -271,7 +272,7 @@ export class HUD {
     const def = SHOPS[o.id];
     const money = this.game.economy.money, ik = Input.label(this.app.settings.c.bindings.interact);
     const rows = P.items().map((it, i) => `<li class="${it.disabled || it.owned ? 'off' : it.price > money ? 'poor' : ''}"><span class="key">${i + 1}</span>${it.label}${it.owned ? ' <em>wearing</em>' : ''}<b>${it.price ? '$' + it.price.toLocaleString() : '—'}</b>${it.note ? `<small>${it.note}</small>` : ''}</li>`).join('');
-    setHTML(this.shop, `<header>${def.title}</header><p class="greet"><b>${def.staff}:</b> “${o.greeting}”</p><ul>${rows}</ul>${o.msg ? `<p class="msg">${o.msg}</p>` : ''}<footer><span class="key">${ik}</span>leave · $${money.toLocaleString()}</footer>`);
+    setHTML(this.shop, `<header>${def.title}</header><p class="greet">${def.staff ? `<b>${def.staff}:</b> “${o.greeting}”` : `<i>${o.greeting}</i>`}</p><ul>${rows}</ul>${o.msg ? `<p class="msg">${o.msg}</p>` : ''}<footer><span class="key">${ik}</span>leave · $${money.toLocaleString()}</footer>`);
   }
 
   /** The LOOP feed (open) or its unread badge (closed). */

@@ -1,8 +1,9 @@
 /**
  * The living city in headless Chromium:
  *   npm run build && npm run preview &   then   node tools/e2e-city.mjs
- * Places (gun shop, clothes, gas station, auto shop, club) and their staff's
- * memory of Cal and Sol; police descriptions and recognition; respray losing
+ * Places (gun shop, clothes, gas station, auto shop) and their staff's
+ * memory of Cal and Sol; Velvet Palms inside (door, bar, stage, DJ, VIP booth,
+ * getting thrown out); police descriptions and recognition; respray losing
  * the police; LOOP reels and Claude-written posts.
  *
  * Mocked: `window.claude` (the claude.ai artifact runtime) is replaced by a
@@ -102,19 +103,56 @@ const respray = await T(() => {
 check('Coral Auto Body: drive into the bay and the shop opens', respray.inBay && /Coral Auto Body/.test(respray.prompt || '') && respray.open === 'autoshop', JSON.stringify(respray));
 check('repair and respray: new paint, new plates, and the police lose the car', respray.repaired === 1000 && respray.color && respray.plate && respray.wanted === 0, JSON.stringify(respray));
 
-// ---- Velvet Palms: opening hours, an hour inside ----
+// ---- Velvet Palms: the door, the room, the counters, and getting thrown out ----
 const club = await T(() => {
-  const t = window.__t, g = window.__sun.game;
+  const t = window.__t, g = window.__sun.game, S = window.__sun;
   if (g.player.vehicle) g.unseatCharacter(g.player.vehicle, g.player, null);
+  const walkIn = () => { const d = g.club.L.door; g.respawnPlayer(d.x - 2.5, d.z, Math.PI / 2); g.cameraRig.yaw = Math.PI / 2; S.input.virtual.move = { x: 0, y: 1 }; S.advance(2.5); S.input.virtual.move = null; S.advance(0.3); return g.club.playerInside; };
   g.engine.time.hour = 13; t.at('club'); t.press('interact');
-  const day = { open: !!g.places.openShop, said: document.querySelector('.subtitle')?.textContent || '' };
-  g.engine.time.hour = 22.2; t.press('interact');
-  const night = t.shop();
-  g.player.health = 40; t.press('shop1');
-  return { day, night: night?.id, hour: +g.engine.time.hour.toFixed(1), hp: g.player.health, closed: !g.places.openShop };
+  const day = { open: !!g.places.openShop, said: document.querySelector('.subtitle')?.textContent || '', walkedIn: walkIn() };
+  g.engine.time.hour = 22.2; S.advance(0.3);
+  const unpaid = walkIn();
+  t.at('club'); t.press('interact');
+  const menu = t.shop();
+  t.press('shop1');
+  const night = { menu: menu?.items, admitted: g.club.admitted, inside: walkIn() };
+  const people = g.club.people.map((x) => x.role);
+  return { day, unpaid, night, performers: people.filter((r) => r === 'performer').length, patrons: people.filter((r) => r !== 'performer').length, staff: ['clubbar', 'clubdj', 'clubvip'].filter((k) => g.places.staff[k]), music: g.club.musicOn };
 });
-check('Velvet Palms: closed by day, the bouncer lets you in at night', !club.day.open && /8 PM/.test(club.day.said) && club.night === 'club', JSON.stringify(club));
-check('an hour inside passes time and restores health', Math.abs(club.hour - 23.2) < 0.05 && club.hp === 100 && club.closed, JSON.stringify(club));
+check('Velvet Palms: closed by day; at night you can\'t walk in without paying the cover', !club.day.open && /8 PM/.test(club.day.said) && !club.day.walkedIn && !club.unpaid, JSON.stringify(club.day) + ' unpaid ' + club.unpaid);
+check('pay Big Tomas and walk in: dancers on stage, a full room, staff and a DJ playing', club.night.admitted && club.night.inside && club.performers === 3 && club.patrons >= 6 && club.staff.length === 3 && club.music, JSON.stringify(club));
+const inside = await T(() => {
+  const t = window.__t, g = window.__sun.game, S = window.__sun, P = g.places.PLACES;
+  const use = (id, ...picks) => { const d = P[id].door; g.respawnPlayer(d.x, d.z, 0); S.advance(0.4); t.press('interact'); const o = t.shop(); for (const k of picks) t.press('shop' + k); const msg = g.places.openShop?.msg; if (g.places.openShop) t.press('interact'); S.advance(0.2); return { ...o, msg }; };
+  const money0 = g.economy.money;
+  const bar = use('clubbar', 1);
+  const tipsy = g.club.tipsy;
+  const posts0 = g.social.posts.length;
+  const stage = use('clubstage', 2);
+  S.advance(3, 1);
+  const rain = g.social.posts.find((p) => /made it rain/i.test(p.text));
+  const dj = use('clubdj', 2);
+  const h0 = g.engine.time.hour; g.player.health = 40;
+  const vip = use('clubvip', 1);
+  const after = { hour: +(g.engine.time.hour - h0).toFixed(2), hp: g.player.health, closed: !g.places.openShop, seated: g.player.pinned };
+  S.advance(3);
+  return { bar: bar.greeting, tipsy, stage: stage.msg, bills: g.club.bills.length, reel: rain?.reel?.frames.length || 0, newPosts: g.social.posts.length - posts0, style: g.club.style, dj: dj.msg, vip: vip.id, after, standing: !g.player.pinned, spent: money0 - g.economy.money };
+});
+check('the bar: Jules serves a drink, and it goes to your head', /welcome to the Palms/.test(inside.bar) && inside.tipsy > 0.2, JSON.stringify(inside));
+check('making it rain at the stage: bills fly, and someone at the rail films it for LOOP', inside.bills > 40 && inside.reel >= 6 && /make it rain|Bills everywhere/i.test(inside.stage), JSON.stringify(inside));
+check('the DJ takes a request; an hour in a booth passes time and restores health', inside.style === 'dembow' && /goes out to/.test(inside.dj) && inside.after.hour === 1 && inside.after.hp === 100 && inside.after.closed && inside.standing && inside.spent === 12 + 200 + 10 + 60, JSON.stringify(inside));
+const fight = await T(() => {
+  const t = window.__t, g = window.__sun.game, S = window.__sun, p = g.player;
+  const v = g.club.people.find((x) => x.role === 'floor' || x.role === 'booth');
+  p.pos.set(v.ch.pos.x - 0.9, p.pos.y, v.ch.pos.z); S.advance(0.1);
+  g.events.emit('assault', { attacker: p, victim: v.ch });
+  S.advance(0.5);
+  const out = { inside: g.club.playerInside, gate: !!g.club.gate };
+  t.at('club'); t.press('interact');
+  return { ...out, refused: !g.places.openShop, said: document.querySelector('.subtitle')?.textContent || '' };
+});
+check('start a fight inside and the bouncer throws you out (and won\'t let you back tonight)', !fight.inside && fight.gate && fight.refused && /what you did/.test(fight.said), JSON.stringify(fight));
+await T(() => { const g = window.__sun.game; g.engine.time.hour = 14; window.__sun.advance(0.5); });
 
 // ---- police recognise you from the description ----
 const rec = await T(() => {

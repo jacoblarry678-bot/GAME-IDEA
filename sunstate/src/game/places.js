@@ -6,7 +6,8 @@
  *   Threads on 5th     clothes: a new outfit (and a description that no longer fits)
  *   Sunshine Gas       mini-mart: snacks, coffee, scratch tickets
  *   Coral Auto Body    drive into the bay: repair, respray + new plates
- *   Velvet Palms       adults-only club (exterior and door only): an hour or a night inside
+ *   Velvet Palms       adults-only club (enterable; game/club.js): the door, the bar, the
+ *                      stage rail, the DJ booth and the VIP host
  *   Bayshore Park      lawns, a fountain, a basketball court (no shop)
  *
  * Shop menus: walk up and press E (drive into the auto-shop bay and press E),
@@ -70,15 +71,46 @@ export const SHOPS = {
   club: {
     title: 'Velvet Palms', staff: 'Big Tomas', verb: 'Talk to the bouncer',
     look: look({ height: 1.93, build: 1.32, skin: 0x5c3a21, hair: 0x111111, top: 0x111111, bottom: 0x111111, hairStyle: 'bald', beard: true }),
-    greet: (p, name, ctx) => (p.visits >= 3 ? `${name}. Your booth's waiting.` : p.visits > 0 ? 'Back again. Behave this time.' : 'Velvet Palms. Adults only, no cameras, no trouble.'),
+    greet: (p, name, ctx) => (p.trouble > 0 ? `${name}. One more incident and you're done here for good.` : p.vip ? `${name}! VIP list. Right this way.` : p.visits >= 3 ? `${name}. Your booth's waiting.` : p.visits > 0 ? 'Back again. Behave this time.' : 'Velvet Palms. Adults only, no cameras, no trouble.'),
     refuse: (g, p, ctx) => {
       const h = g.engine.time.hour;
       if (h > 4 && h < 20) return 'Doors open at 8 PM.';
       if (g.wanted.level > 0) return 'Not tonight. You\'ve got company.';
-      if (p.trouble > 0) return 'You know what you did. Not tonight.';
+      // trouble at the door gets you turned away for a day (memory outlives a save; an older timestamp counts as served)
+      const since = g.time - (p.troubleAt ?? -1e9);
+      if (p.trouble > 0 && since >= 0 && since < 24 * 60) return 'You know what you did. Not tonight.';
       if (ctx.fame > 75) return `You're ${ctx.nickname || 'all over LOOP'}. Not in here, friend.`;
+      if (g.club && !g.club.isOpen) return 'We\'re done for tonight. Go home.';
       return null;
     },
+  },
+  // inside Velvet Palms (game/club.js runs the room; these are its counters)
+  clubbar: {
+    title: 'Velvet Palms · The bar', staff: 'Jules', verb: 'Order a drink', interior: 'club', work: 'bartend',
+    look: look({ female: true, height: 1.7, skin: 0xe0ac69, hair: 0x7a1030, top: 0x111111, bottom: 0x111111, hairStyle: 'bun' }),
+    greet: (p, name, ctx) => (ctx.wanted ? 'Drink fast. Your friends with the sirens are outside.' : p.drinks > 5 && p.usual ? `${name}. Another ${p.usual}? I'm cutting you off after this one.`
+      : p.visits > 1 && p.usual ? `${name}! The usual? One ${p.usual}, coming up.` : p.visits > 0 ? 'Back again. What are we drinking?' : 'Hey, welcome to the Palms. What can I get you?'),
+    refuse: () => null,
+  },
+  clubstage: {
+    title: 'Velvet Palms · The stage', staff: '', verb: 'Tip the dancers', interior: 'club',
+    greet: (p, name, ctx) => (ctx.fame > 40 && ctx.nickname ? 'The rail goes quiet. Someone whispers your LOOP name.' : p.rains > 0 ? 'Lux spots you and grins. The big tipper is back.' : 'The bass is loud. The dancers are working.'),
+    refuse: (g) => (g.club?.people.some((x) => x.role === 'performer' && x.ch.controller.state === 'club') ? null : 'Nobody\'s on stage right now.'),
+  },
+  clubdj: {
+    title: 'Velvet Palms · DJ booth', staff: 'DJ Marea', verb: 'Request a song', interior: 'club', work: 'dj',
+    look: look({ female: true, height: 1.66, skin: 0x8d5524, hair: 0xb455ff, top: 0x29e6ff, bottom: 0x1c1c1c, hairStyle: 'short' }),
+    greet: (p, name) => {
+      const fav = p.requests && Object.entries(p.requests).sort((a, b) => b[1] - a[1])[0];
+      return fav && fav[1] >= 2 ? `${name}! Let me guess: more ${fav[0] === 'synth' ? 'synthwave' : fav[0]}?` : p.visits > 0 ? 'You again! What do you want to hear?' : 'Requests are ten bucks. Tips are welcome.';
+    },
+    refuse: () => null,
+  },
+  clubvip: {
+    title: 'Velvet Palms · VIP', staff: 'Celeste', verb: 'Ask about a booth', interior: 'club',
+    look: look({ female: true, height: 1.74, skin: 0x5c3a21, hair: 0x111111, top: 0xd4af37, bottom: 0x111111, hairStyle: 'long' }),
+    greet: (p, name, ctx) => (p.vip ? `${name}, darling. Your booth's ready. On the house.` : ctx.fame > 30 ? 'I know that face from LOOP. Discretion costs extra.' : 'Booths are by the hour. VIP until close if you\'re feeling generous.'),
+    refuse: () => null,
   },
 };
 
@@ -93,13 +125,14 @@ export class Places {
       const P = PLACES[id];
       if (def.inCar) continue;
       game.interactables.push({
-        id: 'shop:' + id, x: P.door.x, z: P.door.z, radius: 2.4,
-        label: () => (this.openShop ? null : `${def.title}: ${def.verb}`),
+        id: 'shop:' + id, x: P.door.x, z: P.door.z, radius: def.interior ? 1.6 : 2.4,
+        // the club's counters only work while it's open and you're inside
+        label: () => (this.openShop || (def.interior && !(game.club?.isOpen && game.club.playerInside)) ? null : `${def.interior ? def.staff || 'Stage' : def.title}: ${def.verb}`),
         onInteract: () => this.open(id),
       });
     }
     // trouble near the club is remembered by the bouncer
-    const trouble = ({ x, z }) => { const c = PLACES.club.door; if (Math.hypot(x - c.x, z - c.z) < 40) game.memory.person('club').trouble++; };
+    const trouble = ({ x, z }) => { const c = PLACES.club.door; if (Math.hypot(x - c.x, z - c.z) < 40) { const m = game.memory.person('club'); m.trouble++; m.troubleAt = Math.round(game.time); } };
     game.events.on('gunshot', ({ shooter, x, z }) => { if (shooter === game.player) trouble({ x, z }); });
     game.events.on('assault', ({ attacker, victim }) => { if (attacker === game.player) trouble(victim.pos); });
   }
@@ -112,12 +145,16 @@ export class Places {
   step(dt) {
     const g = this.game, p = g.player;
     // staff appear when you're near, and stay at their post
-    for (const id of Object.keys(SHOPS)) {
-      const P = PLACES[id], d = p.distanceTo(P.staff.x, P.staff.z);
+    for (const [id, def] of Object.entries(SHOPS)) {
+      const P = PLACES[id];
+      if (!P.staff) continue;
+      const d = p.distanceTo(P.staff.x, P.staff.z);
+      // the club's staff work its hours (and go home at closing once you're out of sight)
+      const onShift = !def.interior || !!g.club?.isOpen;
       let s = this.staff[id];
-      if (!s && d < 100) s = this.spawnStaff(id);
-      else if (s && d > 150 && this.openShop?.id !== id) { if (!s.removed) g.removeCharacter(s); delete this.staff[id]; continue; }
-      if (s && !s.dead && s.controller.state === 'idle') { s.pos.x = P.staff.x; s.pos.z = P.staff.z; s.faceYaw = P.staff.rot; }
+      if (!s && d < (def.interior ? 45 : 100) && onShift) s = this.spawnStaff(id);
+      else if (s && this.openShop?.id !== id && (d > 150 || (!onShift && d > 30 && !g.club?.playerInside && s.controller.state === 'idle'))) { if (!s.removed) g.removeCharacter(s); delete this.staff[id]; continue; }
+      if (s && !s.dead && s.controller.state === 'idle') { s.pos.x = P.staff.x; s.pos.z = P.staff.z; s.faceYaw = P.staff.rot; if (def.work) { s.anim_.work = def.work; s.anim_.beat = g.club?.beat; } }
     }
     // driving into the auto-shop bay
     const A = PLACES.autoshop.bay, v = p.vehicle;
@@ -132,7 +169,7 @@ export class Places {
     for (let i = 1; i <= 6; i++) if (g.input.edges.has('Digit' + i) || g.input.edges.has('Numpad' + i) || g.input.virtual.edges.has('shop' + i)) this.buy(i - 1);
     if (g.input.pressed('interact') && o.t > 0) this.close(); // (not the same press that opened it)
     o.t += dt;
-    if (p.dead || (g.wanted.level > 0 && ['gunshop', 'gas', 'club'].includes(o.id))) this.close();
+    if (p.dead || (g.wanted.level > 0 && (['gunshop', 'gas', 'club'].includes(o.id) || SHOPS[o.id].interior))) this.close();
   }
 
   spawnStaff(id) {
@@ -141,6 +178,7 @@ export class Places {
     s.controller = new PedController(g, s, 'clerk');
     s.controller.setState('idle', 1e9);
     s.missionActor = true; s.name = def.staff; s.staffOf = id;
+    if (def.interior) s.civilian = true; // reacts to trouble like everyone in the room
     g.extras.push(s);
     this.staff[id] = s;
     return s;
@@ -160,7 +198,7 @@ export class Places {
     if (!(g.time - (this.lastVisit[key] ?? -1e9) < 120)) { this.lastVisit[key] = g.time; g.memory.visit(id); }
     this.openShop = { id, greeting, msg: '', t: 0 };
     p.controller.frozen = true;
-    g.hud?.subtitle(def.staff, greeting, 3.5);
+    if (def.staff) g.hud?.subtitle(def.staff, greeting, 3.5);
     g.audio?.ui('select');
   }
 
@@ -213,11 +251,7 @@ export class Places {
           { label: 'Respray + new plates', price: 300, note: g.wanted.level > 0 ? 'loses the police if they can\'t see you' : 'the police won\'t know the car', act: () => this.respray(v) },
         ];
       }
-      case 'club': return [
-        { label: 'Cover and a drink (an hour inside)', price: 60, act: () => this.clubTime(1) },
-        { label: 'VIP booth (until close)', price: 250, act: () => { const h = g.engine.time.hour; this.clubTime(((4 - h) % 24 + 24) % 24); } },
-      ];
-      default: return [];
+      default: return o.id.startsWith('club') && g.club ? g.club.items(o.id, mem) : [];
     }
   }
 
@@ -226,8 +260,9 @@ export class Places {
     if (!o || !it || it.disabled || it.owned) return false;
     if (g.economy.money < it.price) { o.msg = 'You can\'t afford that.'; g.audio?.ui('empty'); return false; }
     if (it.price > 0) g.economy.take(it.price, `${SHOPS[o.id].title}: ${it.label}`);
-    it.act();
-    if (!o.msg || !/Winner|Nothing/.test(o.msg)) o.msg = `${it.label} — done.`;
+    o.msg = '';
+    it.act(); // (an item may say something of its own)
+    if (!o.msg) o.msg = `${it.label} — done.`;
     g.audio?.ui('select');
     g.events.emit('purchase', { shop: o.id, item: it.label, price: it.price });
     return true;
@@ -247,15 +282,7 @@ export class Places {
     if (g.wanted.level > 0 && g.wanted.level <= 3 && !g.police.canSeePlayer()) { g.wanted.clear(); g.hud?.notify('New paint, new plates. The police lost track of the car.', 'Coral Auto Body', '', 5); }
   }
 
-  clubTime(hours) {
-    const g = this.game, p = g.player;
-    g.engine.time.hour = (g.engine.time.hour + hours) % 24;
-    p.health = 100;
-    g.app?.fade(1.2);
-    this.close();
-    g.hud?.notify(hours > 1 ? 'You closed the place down. Big Tomas walks you to the door.' : 'An hour, a drink, and the bass still in your chest.', 'Velvet Palms', '', 5);
-    if (Math.random() < 0.5) g.social?.post({ local: true, text: 'Velvet Palms is PACKED tonight. line around the corner', likes: 9 }, false);
-  }
+
 }
 
 export { WEAPONS };

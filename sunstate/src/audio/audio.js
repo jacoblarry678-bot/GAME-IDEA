@@ -310,6 +310,30 @@ export class Audio {
     this.amb.rL.frequency.setTargetAtTime(inCar || indoor < 1 ? 2600 : 7000, t, 0.3); // muffled under a roof
     // radio in vehicles
     this.updateRadio(dt, !!v && !paused && this.radioOn && this.stationIndex > 0);
+    // Velvet Palms: the DJ's set, full inside, a muffled thump through the walls
+    this.updateVenue(paused ? null : game.club?.musicFor(cam.position) || null);
+  }
+
+  /** Club music on its own clock and filter (so it can be muffled by the walls). */
+  updateVenue(m) {
+    const c = this.ctx, t = c.currentTime;
+    if (!this.venue) {
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400;
+      const g = c.createGain(); g.gain.value = 0;
+      g.connect(f); f.connect(this.bus.music);
+      this.venue = { g, f, next: 0, step: 0 };
+    }
+    const V = this.venue;
+    V.g.gain.setTargetAtTime(m ? m.gain * 0.9 : 0, t, 0.25);
+    if (!m) { V.next = 0; return; }
+    V.f.frequency.setTargetAtTime(m.cutoff, t, 0.15);
+    const spb = 60 / m.bpm / 4;
+    if (!V.next || V.next < t) V.next = t + 0.05;
+    while (V.next < t + 0.15) {
+      this.playStep(m, V.step, V.next, V.g);
+      V.next += spb;
+      V.step = (V.step + 1) % 256;
+    }
   }
 
   nextStation() {
@@ -334,10 +358,9 @@ export class Audio {
     }
   }
 
-  playStep(st, s, when) {
+  playStep(st, s, when, out = this.bus.music) {
     const c = this.ctx;
     const bar = Math.floor(s / 16) % 4, i = s % 16;
-    const out = this.bus.music;
     const voice = (freq, dur, type, gain, filter = 0) => {
       const o = c.createOscillator(); o.type = type; o.frequency.value = freq;
       const g = c.createGain();
@@ -361,7 +384,16 @@ export class Audio {
       const g = c.createGain(); g.gain.setValueAtTime(gain, when); g.gain.exponentialRampToValueAtTime(0.0001, when + 0.3);
       o.connect(g); g.connect(out); o.start(when); o.stop(when + 0.35);
     };
-    if (st.style === 'synth') {
+    if (st.style === 'house') {
+      // four on the floor, off-beat open hats, claps on 2 and 4, minor-seventh stabs and a rolling bass
+      const roots = [57, 57, 50, 53][bar];
+      if (i % 4 === 0) kick(0.9);
+      if (i % 4 === 2) hit(0.09, 6500, 0.16);
+      if (i === 4 || i === 12) hit(0.16, 1400, 0.38, 'bandpass');
+      if (i % 2 === 1) hit(0.025, 9000, 0.05);
+      if ([2, 6, 10, 14].includes(i)) voice(NOTE(roots - 12), 0.16, 'sawtooth', 0.2, 500);
+      if (i === 3 || i === 10) for (const n of [0, 3, 7, 10]) voice(NOTE(roots + 12 + n), 0.18, 'square', 0.035, 1500 + 900 * Math.sin(s * 0.05));
+    } else if (st.style === 'synth') {
       // i–VI–III–VII in A minor; arpeggio, bass on eighths, gated pads
       const roots = [57, 53, 60, 55][bar];
       const chord = [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]][bar];
