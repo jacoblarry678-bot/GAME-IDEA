@@ -12,6 +12,7 @@ import { HUD } from './ui/hud.js';
 import { Menus } from './ui/menus.js';
 import { loadSave, applySave } from './game/save.js';
 import { Input } from './core/input.js';
+import { Weather, WeatherFX } from './core/weather.js';
 import { PLACES } from './world/district.js';
 import './ui/styles.css';
 
@@ -33,6 +34,10 @@ export class App {
   async init() {
     const ui = document.getElementById('ui');
     this.audio = new Audio(this.settings);
+    this.weather = new Weather(this.settings);
+    const M = this.world.mats;
+    this.weatherFX = new WeatherFX(this.engine, [M.asphalt, M.lot, M.concrete, M.pavers, M.curb, M.marking_w, M.marking_y, M.roof]);
+    this.weather.onThunder = (delay) => this.audio.thunder?.(delay);
     this.hud = new HUD(this, ui);
     this.menus = new Menus(this, ui);
     this.hud.setVisible(false);
@@ -80,6 +85,8 @@ export class App {
     this.world.restoreProps();
     this.game = new Game({ engine: this.engine, world: this.world, input: this.input, settings: this.settings, audio: this.audio });
     this.game.hud = this.hud;
+    this.game.app = this;
+    this.game.weather = this.weather;
     this.hud.bind(this.game);
     this.bindGame(this.game);
     this.engine.time.scale = 60;
@@ -241,10 +248,12 @@ export class App {
     if (this.state === 'title') {
       this.titleT += dt;
       this.titleCamera(dt);
+      this.weather.step(dt);
     } else if (this.game) {
       this.game.frame(this.state === 'playing' ? dt * this.timeScale : 0);
       this.hud.update(dt);
     }
+    this.weatherFX.update(this.state === 'paused' ? 0 : dt, this.weather);
     this.engine.render();
   }
 

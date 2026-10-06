@@ -8,14 +8,24 @@
 import * as THREE from 'three';
 import { PLACES } from '../world/district.js';
 import { Input } from '../core/input.js';
+import { Character } from '../entities/character.js';
+import { PedController } from '../ai/peds.js';
+import { spawnRivalCar } from '../ai/rivals.js';
 
 export const CAST = {
   cal: { name: 'Cal', full: 'Cal Reyes' },
   sol: { name: 'Sol', full: 'Marisol "Sol" Vega' },
   teo: { name: 'Teo', full: 'Teo Marchetti' },
+  rudy: { name: 'Rudy', full: 'Rudy Ojeda' },
 };
 
-const S = PLACES.safehouse, ST = PLACES.store;
+const S = PLACES.safehouse, ST = PLACES.store, MA = PLACES.marina;
+const RUDY_LOOK = { female: false, height: 1.74, build: 1.22, skin: 0xe0ac69, hair: 0x9a9a9a, top: 0x6a8caf, bottom: 0xc8b48a, shoes: 0x5a4a3a, hairStyle: 'short', shorts: true, sleeveless: false, hat: 0xe9e2d0, beard: true };
+
+/** The Caldera crew's cars still in the fight (not wrecked, sunk, driverless or emptied). */
+function rivalsActive(g, m) {
+  return (m.data.rivals || []).filter((r) => g.vehicles.includes(r.vehicle) && !r.vehicle.destroyed && !r.vehicle.sunk && r.crew.some((c) => !c.dead && !c.removed));
+}
 
 export const MISSIONS = {
   small_change: {
@@ -81,6 +91,113 @@ export const MISSIONS = {
     reward: { bonus: 0 },
     onPassMessage: { from: 'sol', text: 'Teo got paid. Stay off the radar for a bit. I\'ll call when the next thing comes up.' },
   },
+
+  // Milestone 3: a two-person job. One of you drives, the other shoots — and Tab swaps who does what.
+  low_tide: {
+    id: 'low_tide',
+    title: 'Low Tide',
+    giver: 'sol',
+    cast: ['cal', 'sol'],
+    partner: 'with',
+    allowSwitch: true,
+    requires: ['small_change'],
+    start: { x: S.x + 3.5, z: S.z + 2.5 },
+    summary: 'Rudy Ojeda wants out of Cayo Lento, and he\'ll pay to have a cooler carried back across the twin-span.',
+    intro: [
+      ['sol', 'Remember Rudy Ojeda? Runs fishing charters out of Cayo Lento.'],
+      ['cal', 'The guy whose boat never catches any fish.'],
+      ['sol', 'He\'s been skimming the Caldera brothers\' charter money. He wants out, and he\'ll pay four grand to get a cooler off the key.'],
+      ['cal', 'And the Calderas?'],
+      ['sol', 'Won\'t know a thing. Over the bridge, pick it up, back here. You drive — or I will.'],
+    ],
+    stages: [
+      {
+        id: 'drive', objective: 'Drive to the Cayo Lento Marina with Sol.', target: () => ({ x: MA.lot.x, z: MA.lot.z, label: 'Marina' }),
+        hint: 'Ocean Blvd runs south over the twin-span. Want your partner to drive? Press G by a car, then get in.',
+        checkpoint: true,
+        partnerDrive: () => ({ x: MA.lot.x, z: MA.lot.z, arrive: 16, line: 'Marina. Rudy said the end of the pier.' }),
+        done: (g) => Math.hypot((g.player.vehicle || g.player).pos.x - MA.lot.x, (g.player.vehicle || g.player).pos.z - MA.lot.z) < 22 && g.crew.partnerWithPlayer(),
+      },
+      {
+        id: 'pier', objective: 'Meet Rudy at the end of the pier.', target: () => ({ x: MA.pierEnd.x, z: MA.pierEnd.z, label: 'Rudy' }),
+        hint: 'Get out and walk down the pier.',
+        enter: (g, m) => {
+          if (m.data.rudy && !m.data.rudy.removed) return;
+          const r = g.missions.spawnActor(RUDY_LOOK, MA.pierEnd.x + 0.4, MA.pierEnd.z + 1.5, Math.PI);
+          r.controller.setState('idle', 999);
+          r.anim_.phone = true;
+          m.data.rudy = r;
+        },
+        fail: (g, m) => (m.data.rudy?.dead ? 'Rudy is dead. So is the deal.' : null),
+        done: (g, m) => !g.player.vehicle && !g.player.swim && g.player.distanceTo(m.data.rudy.pos.x, m.data.rudy.pos.z) < 4.5,
+      },
+      {
+        id: 'ambush', objective: 'The Calderas followed Rudy. Get to a car together.',
+        hint: 'One of you drives, the other shoots: press G by a car to let your partner drive. Tab swaps roles any time.',
+        target: () => ({ x: MA.lot.x, z: MA.lot.z, label: 'Car' }),
+        checkpoint: true,
+        enter: (g, m) => {
+          m.data.cooler = true;
+          g.missions.playDialogue([
+            ['rudy', 'You\'re Sol\'s people. Good. Take it — don\'t open it, don\'t drop it.'],
+            ['sol', 'Pleasure doing business, Rudy.'],
+            ['rudy', 'Oh, no. That\'s the Calderas\' truck at the fuel stop. They followed me here.'],
+            ['rudy', 'Go! Go!'],
+          ], 'Cayo Lento Marina');
+          const r = m.data.rudy;
+          if (r && !r.dead) { r.anim_.phone = false; r.controller.panic({ x: MA.lot.x, z: MA.lot.z - 30 }, 'gunfire'); }
+          // two cars come down from the fuel stop toward the marina
+          const dest = { x: MA.lot.x, z: MA.lot.z };
+          m.data.rivals = [
+            g.missions.spawnRivals('pickup', 108, 632.5, Math.PI / 2, 0x1a1a1a, dest),
+            g.missions.spawnRivals('kestrel', 93, 632.5, Math.PI / 2, 0x7a1f24, dest),
+          ];
+          // they pull out of the fuel stop a few seconds after Rudy spots them
+          for (const r of m.data.rivals) { r.crew[0].controller.holdT = 8; r.crew[1].controller.holdT = 8; }
+        },
+        fail: (g) => (g.partner.dead ? `${g.partner.protagonistName} is down.` : null),
+        done: (g) => !!g.player.vehicle && g.partner.vehicle === g.player.vehicle,
+      },
+      {
+        id: 'chase', objective: 'Lose the Calderas.', target: () => null,
+        hint: 'Wreck their cars, take out their crews, or put 200 m between you. Tab swaps driver and shooter.',
+        partnerDrive: () => ({ x: S.door.x + 8, z: S.door.z, arrive: 20, urgent: true, line: 'Are they gone? Tell me they\'re gone.' }),
+        enter: (g, m) => {
+          for (const r of m.data.rivals || []) for (const c of r.crew) if (c.controller) c.controller.alerted = true;
+          const sol = g.partner.vehicle && g.partner.seat === 0;
+          g.hud?.subtitle(g.partner.protagonistName, sol ? 'I\'ve got the wheel. Keep their heads down!' : 'Drive! I\'ll handle them.', 3);
+          m.data.farT = 0;
+        },
+        update: (g, m, dt) => {
+          const live = rivalsActive(g, m);
+          const ppos = (g.player.vehicle || g.player).pos;
+          const far = live.every((r) => Math.hypot(r.vehicle.pos.x - ppos.x, r.vehicle.pos.z - ppos.z) > 200);
+          m.data.farT = far ? (m.data.farT || 0) + dt : 0;
+        },
+        done: (g, m) => rivalsActive(g, m).length === 0 || m.data.farT > 6,
+      },
+      {
+        id: 'escape', objective: 'Lose the police.', target: () => null,
+        checkpoint: true,
+        hint: 'Break line of sight, get out of the search area and stay hidden until the stars go away.',
+        skipIf: (g) => g.wanted.level === 0,
+        done: (g) => g.wanted.level === 0,
+      },
+      {
+        id: 'return', objective: 'Bring the cooler back to the Bayside Motel.', target: () => ({ x: S.door.x + 1.5, z: S.door.z, label: 'Safehouse' }),
+        partnerDrive: () => ({ x: S.door.x + 9, z: S.door.z, arrive: 14, line: 'Home sweet motel.' }),
+        back: (g) => (g.wanted.level > 0 ? 'escape' : null),
+        done: (g) => g.player.distanceTo(S.door.x + 1.5, S.door.z) < 3.5 && !g.player.vehicle && g.crew.partnerWithPlayer(),
+      },
+    ],
+    outro: [
+      ['cal', 'Four grand to carry a cooler across a bridge.'],
+      ['sol', 'And to not get shot. Don\'t forget that part.'],
+      ['sol', 'Rudy\'s on a boat to anywhere. The Calderas are going to remember our faces, though.'],
+    ],
+    reward: { bonus: 4000 },
+    onPassMessage: { from: 'sol', text: 'The Calderas are asking around Ocean Mile. Keep your head down for a while. Love you.' },
+  },
 };
 
 let gameRef = null;
@@ -131,7 +248,7 @@ export class MissionManager {
     const g = this.game, cast = def.cast || ['cal'];
     const name = (id) => CAST[id].name;
     if (!cast.includes(g.player.protagonist)) return `switch to ${name(cast[0])} to start`;
-    if (cast.length > 1 && !g.crew.partnerWithPlayer()) return `bring ${g.partner.protagonistName} (${Input.label(g.settings.c.bindings.partner)}: follow)`;
+    if (cast.length > 1 && !g.crew.partnerWithPlayer() && g.player.distanceTo(g.partner.pos.x, g.partner.pos.z) > 8) return `bring ${g.partner.protagonistName} (${Input.label(g.settings.c.bindings.partner)}: follow)`;
     return null;
   }
 
@@ -150,6 +267,7 @@ export class MissionManager {
     this.failed = null;
     this.active = { def, stageIndex: 0, t: 0, stageT: 0, data: { taken: 0 }, actors: [], checkpoint: null };
     if (!def.allowSwitch) g.crew.lockReason = 'You can\'t switch during this mission';
+    if (def.partner === 'with' && !g.partner.dead && !(g.partner.vehicle && g.partner.vehicle === g.player.vehicle)) g.partner.partnerAI.setMode('follow');
     if (def.partner === 'stay' && !g.partner.dead) {
       // they head home and wait there
       if (g.partner.vehicle && g.partner.vehicle === g.player.vehicle) g.partner.partnerAI.getOut(g.partner.vehicle);
@@ -174,6 +292,7 @@ export class MissionManager {
     this.active.stageT = 0;
     if (st.skipIf && st.skipIf(this.game)) { this.next(); return; }
     if (st.checkpoint && this.active.stageIndex > 0) this.saveCheckpoint(this.active.stageIndex);
+    st.enter?.(this.game, this.active);
     this.game.events.emit('objective', { text: st.objective, hint: st.hint });
     this.game.audio?.ui('objective');
   }
@@ -190,7 +309,8 @@ export class MissionManager {
     if (!a) return;
     a.t += dt; a.stageT += dt;
     const g = this.game;
-    const reason = a.def.failIf?.(g) || this.stage.fail?.(g);
+    this.stage.update?.(g, a, dt);
+    const reason = a.def.failIf?.(g) || this.stage.fail?.(g, a);
     if (reason) { this.fail(reason); return; }
     const back = this.stage.back?.(g);
     if (back) {
@@ -215,6 +335,8 @@ export class MissionManager {
       taken: this.active.data.taken,
       pos: { x: (v || p).pos.x, z: (v || p).pos.z, yaw: (v || p).yaw },
       vehicle: v ? { model: v.modelId, color: v.color } : null,
+      partnerInCar: !!v && g.partner.vehicle === v,
+      cooler: !!this.active.data.cooler,
       wanted: g.wanted.level,
       health: p.health,
       hour: g.engine.time.hour,
@@ -234,8 +356,41 @@ export class MissionManager {
       a.actors.push(v);
       g.seatCharacter(v, 0, g.player);
     }
+    // a partner on this job comes back with you: in the car, or at your side
+    const o = g.partner, def = a.def;
+    if ((def.cast || []).includes(o.protagonist)) {
+      if (o.vehicle) g.unseatCharacter(o.vehicle, o, null);
+      o.dead = false; o.deadT = 0; o.knockT = 0; o.health = Math.max(o.health, 80);
+      o.partnerAI.reset();
+      o.partnerAI.setMode('follow');
+      g.crew.downT = 0;
+      const pv = g.player.vehicle;
+      if (cp.partnerInCar && pv) g.seatCharacter(pv, 1, o);
+      else g.crew.regroupAt(cp.pos.x, cp.pos.z, cp.pos.yaw, true);
+    }
+    a.data.cooler = cp.cooler;
     g.store.reset();
     if (cp.wanted > 0) g.wanted.report('robbery', cp.pos.x, cp.pos.z, 'alarm');
+  }
+
+  /** A mission character (cleaned up with the mission). */
+  spawnActor(look, x, z, yaw) {
+    const g = this.game;
+    const ch = new Character(g, look, { role: 'ped', x, z, yaw });
+    ch.controller = new PedController(g, ch, 'keys');
+    ch.controller.zone = { x0: x - 4, x1: x + 4, z0: z - 4, z1: z + 4 };
+    ch.missionActor = true;
+    ch.missionId = this.active.def.id;
+    g.extras.push(ch);
+    this.active.actors.push(ch);
+    return ch;
+  }
+
+  /** An enemy car with its crew (cleaned up with the mission). */
+  spawnRivals(model, x, z, yaw, color, dest) {
+    const r = spawnRivalCar(this.game, model, x, z, yaw, color, dest);
+    this.active.actors.push(r.vehicle, ...r.crew);
+    return r;
   }
 
   fail(reason) {
@@ -267,7 +422,7 @@ export class MissionManager {
     const g = this.game;
     if (def.reward.bonus) g.economy.add(def.reward.bonus, def.title);
     this.completed.add(def.id);
-    g.stats.robberies++;
+    if (def.id === 'small_change') g.stats.robberies++;
     this.active = null;
     g.crew.lockReason = null;
     g.events.emit('missionPassed', { def, earned: a.data.taken + (def.reward.bonus || 0) });
@@ -344,7 +499,7 @@ export class Markers {
     const g = this.game, M = g.missions;
     this.t += dt;
     const tgt = M.currentTarget();
-    const show = tgt && !M.cutscene && !(M.stage?.id === 'escape');
+    const show = tgt && !M.cutscene && !(M.stage?.id === 'escape' || M.stage?.id === 'chase');
     this.obj.visible = !!show;
     if (show) {
       this.obj.position.set(tgt.x, g.world.ground(tgt.x, tgt.z, g.player.pos.y + 1) + 0.02, tgt.z);

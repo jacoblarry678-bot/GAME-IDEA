@@ -86,7 +86,7 @@ export class Combat {
     this.flash(from);
     if (hit) {
       if (hit.kind === 'character') hit.character.damage(weapon.damage * (0.9 + Math.random() * 0.2), shooter, 'bullet');
-      else if (hit.kind === 'vehicle') { hit.vehicle.applyDamage(weapon.damage * 0.9, 'bullet'); this.puff(end, 0x999999, 0.2); }
+      else if (hit.kind === 'vehicle') { hit.vehicle.applyDamage(weapon.damage * 0.9 * (hit.vehicle.bulletMul || 1), 'bullet'); this.puff(end, 0x999999, 0.2); }
       else this.puff(end, 0xc8bfae, 0.35);
     }
     this.game.events.emit('gunshot', { shooter, x: from.x, y: from.y, z: from.z, hit, loudness: weapon.loudness });

@@ -30,6 +30,7 @@ const { Wanted, WANTED_CONFIG } = await import('../src/game/wanted.js');
 const { sanitizeSave, defaultSave, writeSave, loadSave, SAVE_KEY } = await import('../src/game/save.js');
 const { sanitizeSettings, Settings } = await import('../src/core/settings.js');
 const { laneLine } = await import('../src/ai/driver.js');
+const { Weather, WEATHER_CONFIG } = await import('../src/core/weather.js');
 
 const results = [];
 function check(name, ok, info = '') { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${info ? '  — ' + info : ''}`); }
@@ -89,7 +90,7 @@ function fakeGame() {
   check('a boat can pass under the twin-span', L.groundHeight(laneX(-1), 434, -1) < -4);
   check('Cayo Lento is dry land with roads at grade', !L.isWater(150, 660) && L.groundHeight(200, 640) === 0 && L.groundHeight(200, 625) > 0.1 && L.isClimbable(100, 615));
   check('the flats around the key are deep enough to swim, not wade', [[150, 590], [100, 730], [350, 650]].every(([x, z]) => L.isWater(x, z) && L.WATER_Y - L.terrainHeight(x, z) > 1.25));
-  const kn = L.ROAD_GRAPH.nodes.find((n) => n.x === L.KEYS.marinaX && n.z === L.KEYS.z1 - 14);
+  const kn = L.ROAD_GRAPH.nodes.find((n) => n.x === L.KEYS.marinaX && n.z === L.KEYS.shoreZ);
   const route = L.findRoute(L.nearestNode(PLACES.safehouse.x, PLACES.safehouse.z).id, kn.id);
   check('the marina is reachable by road from the motel (over the twin-span)', !!route && route.some((id) => L.ROAD_GRAPH.nodes[id].z === L.KEYS.hwyZ), route ? `${route.length} nodes` : 'no route');
   const twinEdge = L.ROAD_GRAPH.edges.find((e) => e.road === 'twinspan');
@@ -114,8 +115,9 @@ function fakeGame() {
 }
 
 // ---- vehicle physics --------------------------------------------------------------
-function runCar(model, seconds, input, setup) {
+function runCar(model, seconds, input, setup, weather = null) {
   const g = fakeGame();
+  g.weather = weather;
   const v = new Vehicle(g, model, { x: 0, z: 0, yaw: 0 });
   g.vehicles.push(v);
   v.seats[0] = { role: 'test' }; // a driver
@@ -140,6 +142,15 @@ Object.assign(world, flatWorld);
   const brake = runCar('kestrel', 12, (t, v) => (t < 0.05 ? {} : { throttle: 0, brake: 1 }), (v) => { v.vel.set(0, 26.8); });
   const stopAt = brake.hist.find((h) => h.speed < 0.3);
   check('60–0 mph braking distance is plausible', stopAt && stopAt.z > 25 && stopAt.z < 60, `${stopAt?.z.toFixed(1)} m`);
+  // AI stops must not select reverse (holding the brake at a standstill reverses, by design)
+  const held = runCar('kestrel', 6, (t, v) => { v.holdStill(); return {}; }, (v) => { v.vel.set(0, 8); });
+  check('an AI "hold still" stops the car and keeps it stopped (no rolling back)', held.v.speed < 0.2 && held.hist[held.hist.length - 1].z >= held.hist.reduce((m, h) => Math.max(m, h.z), 0) - 0.3, `stopped at z=${held.v.pos.z.toFixed(1)}`);
+  // Milestone 3: rain. Wet roads cut tyre grip, so braking takes longer
+  const wetW = new Weather({ gp: { weather: 'rain' } }, () => 0.5);
+  wetW.set('rain', true);
+  const wet = runCar('kestrel', 12, (t, v) => (t < 0.05 ? {} : { throttle: 0, brake: 1 }), (v) => { v.vel.set(0, 26.8); }, wetW);
+  const wetStop = wet.hist.find((h) => h.speed < 0.3);
+  check('braking takes longer on wet roads', wetStop && wetStop.z > stopAt.z * 1.1, `${wetStop?.z.toFixed(1)} m wet vs ${stopAt?.z.toFixed(1)} m dry (grip ×${wetW.grip.toFixed(2)})`);
   check('brakes never push the car backwards', brake.hist.every((h) => h.v > -0.5) || brake.hist.findIndex((h) => h.v < -0.5) > brake.hist.indexOf(stopAt) + 10);
   const turn = runCar('kestrel', 6, (t, v) => (t < 2 ? { throttle: 1, steer: 0 } : { throttle: 0.4, steer: 1 }));
   const last = turn.hist[turn.hist.length - 1];
@@ -248,6 +259,24 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   const S = new Settings();
   S.bind('jump', 'KeyE');
   check('rebinding swaps keys so no action is left unbound', S.c.bindings.jump === 'KeyE' && S.c.bindings.interact === 'Space');
+}
+
+// ---- weather (Milestone 3) ------------------------------------------------------
+{
+  const settings = { gp: { weather: 'dynamic' } };
+  const w = new Weather(settings, () => 0.5);
+  const seen = [];
+  for (let t = 0; t < 1400; t += 0.5) { w.step(0.5); if (seen[seen.length - 1] !== w.state) seen.push(w.state); }
+  check('dynamic weather cycles clear → cloudy → rain → clearing → clear', seen.join() .startsWith('clear,cloudy,rain,clearing,clear'), seen.join(' → '));
+  const w2 = new Weather(settings, () => 0.5);
+  w2.set('rain'); for (let t = 0; t < 60; t += 0.5) w2.step(0.5);
+  const soaked = w2.wet;
+  w2.set('clear'); for (let t = 0; t < 30; t += 0.5) w2.step(0.5);
+  check('roads get wet in rain and dry slowly afterwards', soaked > 0.9 && w2.rain < 0.05 && w2.wet > 0.4, `wet ${soaked.toFixed(2)} → ${w2.wet.toFixed(2)} 30 s after the rain stopped`);
+  settings.gp.weather = 'clear';
+  w2.set('rain', true); w2.step(0.5);
+  check('the weather setting pins the sky (always clear / always rain)', w2.state === 'clear');
+  check('wet grip loss is configurable and bounded', WEATHER_CONFIG.gripLoss > 0 && WEATHER_CONFIG.gripLoss < 0.4);
 }
 
 const failed = results.filter((r) => !r).length;

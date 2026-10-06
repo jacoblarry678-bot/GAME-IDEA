@@ -81,6 +81,7 @@ function makeSky() {
       sunDir: { value: new THREE.Vector3(0, 1, 0) },
       night: { value: 0 },
       time: { value: 0 },
+      overcast: { value: 0 },
     },
     vertexShader: /* glsl */`
       varying vec3 vDir;
@@ -91,7 +92,7 @@ function makeSky() {
       }`,
     fragmentShader: /* glsl */`
       uniform vec3 top, hor, sunColor, sunDir;
-      uniform float night, time;
+      uniform float night, time, overcast;
       varying vec3 vDir;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float noise(vec2 p) {
@@ -114,9 +115,9 @@ function makeSky() {
         col += sunColor * pow(1.0 - y, 6.0) * pow(sd, 2.0) * 0.35 * above;
         // drifting cumulus
         vec2 uv = d.xz / (d.y + 0.12) * 1.4 + vec2(time * 0.004, time * 0.0015);
-        float c = smoothstep(0.52, 0.8, fbm(uv));
-        float cm = c * smoothstep(0.02, 0.25, d.y);
-        vec3 cloudLit = mix(hor * 1.1, vec3(1.0), 0.55) * (1.0 - night * 0.8) + sunColor * pow(sd, 4.0) * 0.4;
+        float c = smoothstep(0.52 - overcast * 0.45, 0.8 - overcast * 0.25, fbm(uv));
+        float cm = c * smoothstep(0.02 - overcast * 0.1, 0.25, d.y);
+        vec3 cloudLit = mix(hor * 1.1, vec3(1.0), 0.55 - overcast * 0.35) * (1.0 - night * 0.8) * (1.0 - overcast * 0.35) + sunColor * pow(sd, 4.0) * 0.4 * (1.0 - overcast);
         col = mix(col, cloudLit, cm * 0.85);
         // stars
         if (night > 0.0) {

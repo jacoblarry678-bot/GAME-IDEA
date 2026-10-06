@@ -274,6 +274,7 @@ export class Menus {
     section('World');
     slider('gameplay', 'traffic', 0, 1.5, 0.05, pct, 'Number of ambient cars.');
     slider('gameplay', 'peds', 0, 1.5, 0.05, pct, 'Number of pedestrians.');
+    seg('gameplay', 'weather', ['dynamic', 'clear', 'rain'], 'Dynamic: passing showers. Rain makes roads slippery.', ['Dynamic', 'Always clear', 'Always rain']);
 
     const r = h('div', 'actions-row');
     for (const grp of ['graphics', 'audio', 'interface', 'gameplay']) {
@@ -289,7 +290,7 @@ export class Menus {
       renderScale: 'Render scale', shadows: 'Shadows', bloom: 'Bloom', drawDistance: 'Draw distance', antialias: 'Anti-aliasing', frameCap: 'Frame cap', fov: 'Field of view', showFps: 'Show FPS / stats',
       master: 'Master volume', music: 'Radio & music', sfx: 'Effects', ambient: 'Ambience', ui: 'Interface sounds',
       hudScale: 'HUD scale', subtitleSize: 'Subtitle size', cameraShake: 'Camera shake', minimapRotate: 'Rotate minimap', units: 'Speed units',
-      traffic: 'Traffic density', peds: 'Pedestrian density', sensitivity: 'Mouse sensitivity', aimSensitivity: 'Aiming sensitivity', invertY: 'Invert look Y', invertX: 'Invert look X', gamepad: 'Gamepad',
+      traffic: 'Traffic density', peds: 'Pedestrian density', weather: 'Weather', sensitivity: 'Mouse sensitivity', aimSensitivity: 'Aiming sensitivity', invertY: 'Invert look Y', invertX: 'Invert look X', gamepad: 'Gamepad',
     }[key] || key;
   }
 

@@ -234,6 +234,7 @@ export class Game {
     this.characterContacts();
     this.wanted?.step(dt);
     this.director?.step(dt);
+    this.weather?.step(dt);
     this.input.endStep();
   }
 
@@ -248,8 +249,9 @@ export class Game {
         if (ch.pos.y > v.pos.y + v.def.height - 0.2 || ch.pos.y + ch.height < v.pos.y) continue;
         const r = obbCircle(v.pos.x, v.pos.z, v.hx, v.hz, v.yaw, ch.pos.x, ch.pos.z, ch.radius);
         if (!r) continue;
-        // r.n points circle→box; push the character the other way
-        const pv = (v.vel.x - ch.vel.x) * -r.nx + (v.vel.y - ch.vel.z) * -r.nz;
+        // r.n points circle→box; push the character the other way. Only the car's own speed
+        // toward the person counts as an impact (running into a parked car doesn't knock you down)
+        const pv = v.vel.x * -r.nx + v.vel.y * -r.nz;
         if (pv > 4.5 && !ch.dead && ch.knockT <= 0) {
           ch.knockDown(v.vel.x, v.vel.y, pv, v.driver || null);
           this.events.emit('pedHit', { victim: ch, vehicle: v, speed: pv });

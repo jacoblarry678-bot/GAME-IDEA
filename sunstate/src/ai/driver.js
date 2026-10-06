@@ -74,7 +74,8 @@ export class DriverAI {
     if (!options.length) return e.id; // dead end: U-turn
     // ambient traffic avoids the dead-end causeway most of the time
     if (this.mode === 'cruise') {
-      const pref = options.filter((id) => edges[id].road !== 'causeway' || Math.random() < 0.25);
+      const other = (id) => nodes[edges[id].a === at ? edges[id].b : edges[id].a];
+      const pref = options.filter((id) => (edges[id].road !== 'causeway' || Math.random() < 0.25) && !(other(id).deadEnd && edges[id].road !== 'causeway'));
       if (pref.length) options = pref;
     }
     return options[Math.floor(Math.random() * options.length)];
@@ -99,8 +100,10 @@ export class DriverAI {
     if (uturn) { cx = cur.x1 + cur.dx * 8; cz = cur.z1 + cur.dz * 8; }
     else if (Math.abs(cross) > 0.5) {
       if (Math.abs(cur.dx) > 0.5) { cx = nl.x0; cz = cur.z1; } else { cx = cur.x1; cz = nl.z0; }
-    } else { cx = (cur.x1 + nl.x0) / 2; cz = (cur.z1 + nl.z0) / 2; }
-    const turnSpeed = uturn ? 4 : Math.abs(cross) > 0.5 ? (cross > 0 ? 5.5 : 7) : speedLimit(ne);
+    } else if (Math.abs(cur.dx) > 0.5) { cx = cur.x1 + (nl.x0 - cur.x1) * 0.35; cz = nl.z0; } // straight on: finish any
+    else { cx = nl.x0; cz = cur.z1 + (nl.z0 - cur.z1) * 0.35; } //                              lateral shift inside the junction
+    const shift = Math.abs(cur.dx) > 0.5 ? Math.abs(nl.z0 - cur.z1) : Math.abs(nl.x0 - cur.x1);
+    const turnSpeed = uturn ? 4 : Math.abs(cross) > 0.5 ? (cross > 0 ? 5.5 : 7) : shift > 1 ? 10 : speedLimit(ne);
     const N = uturn ? 8 : 5;
     for (let i = 1; i <= N; i++) {
       const t = i / (N + 1);
@@ -110,9 +113,11 @@ export class DriverAI {
     }
     const lim = speedLimit(ne);
     this.wp.push({ x: nl.x0, z: nl.z0, speed: Math.min(lim, turnSpeed + 3) });
+    // a point a car length into the new lane holds the line straight after the junction
+    this.wp.push({ x: nl.x0 + nl.dx * 7, z: nl.z0 + nl.dz * 7, speed: Math.min(lim, turnSpeed + 5) });
     // intermediate points keep pure pursuit on long straights
     const steps = Math.max(1, Math.floor(nd.len / 25));
-    for (let i = 1; i < steps; i++) this.wp.push({ x: nl.x0 + (nl.x1 - nl.x0) * (i / steps), z: nl.z0 + (nl.z1 - nl.z0) * (i / steps), speed: lim });
+    for (let i = 1; i < steps; i++) if (Math.hypot(nl.x1 - nl.x0, nl.z1 - nl.z0) * (i / steps) > 9) this.wp.push({ x: nl.x0 + (nl.x1 - nl.x0) * (i / steps), z: nl.z0 + (nl.z1 - nl.z0) * (i / steps), speed: lim });
     this.wp.push({ x: nl.x1, z: nl.z1, speed: lim, stop: { node: nl.b, axis: nl.axis } });
     this.edge = nextId;
     this.from = at;
@@ -128,7 +133,7 @@ export class DriverAI {
 
   step(dt) {
     const v = this.v;
-    if (!v.driver || v.driver.dead) { v.input.throttle = 0; v.input.brake = 1; return; }
+    if (!v.driver || v.driver.dead) { v.holdStill(); return; }
     if (v.sunk || v.destroyed) { v.input.throttle = 0; return; }
     // drop waypoints we've reached or passed (measured along the path, so a car
     // facing the wrong way keeps its route and turns around instead)
@@ -202,7 +207,9 @@ export class DriverAI {
     const still = obs && (obs.who.vel ? Math.hypot(obs.who.vel.x, obs.who.vel.y ?? obs.who.vel.z) < 0.4 : true);
     const pedPlayer = obs && obs.who === this.game.player;
     if (obs && still && !pedPlayer && speed < 0.5) this.waitT = (this.waitT || 0) + dt; else this.waitT = 0;
-    if (this.waitT > 5) { this.ignore = obs.who; this.ignoreT = 5; this.waitT = 0; this.reverseT = 1.0; }
+    // ...except on a bridge deck, where "around" is the parapet or the gap: wait it out
+    const onBridge = edges[this.edge] && (edges[this.edge].road === 'twinspan' || edges[this.edge].road === 'causeway');
+    if (this.waitT > 5 && !onBridge) { this.ignore = obs.who; this.ignoreT = 5; this.waitT = 0; this.reverseT = 1.0; }
     if (obs) target = Math.min(target, Math.max(0, Math.sqrt(2 * 5 * Math.max(0, obs.dist - 3)) - 0.5));
 
     // recover from being stuck (blocked by something static, pushed off the lane)
@@ -260,6 +267,8 @@ export class DriverAI {
         const hit = g.world.collision.raycast(sx, v.pos.y + 0.5, sz, dx, 0, dz, range, (c) => c.tag !== 'glass');
         if (hit) free = Math.min(free, hit.t);
       }
+      // water is a wall too (the edge of a key, a canal)
+      for (let s2 = 1; s2 < free; s2 += 1) if (g.world.isWater(fx + dx * s2, fz + dz * s2)) { free = s2; break; }
       for (const o of g.vehicles) {
         if (o === v || Math.abs(o.pos.x - v.pos.x) > range + 8 || Math.abs(o.pos.z - v.pos.z) > range + 8) continue;
         for (let s = 0.5; s < free; s += 0.75) {
@@ -362,4 +371,46 @@ export function attachDriver(v, game, dest = null) {
     ai.route = len(viaA) <= len(viaB) ? [...(viaA || [to]), B] : [...(viaB || [to]), A];
   }
   return ai;
+}
+
+/**
+ * Direct pursuit (police, mission enemies): steer at a target's predicted
+ * position, picking the clearest heading with feelers, backing off when stuck.
+ * `st` holds stuckT/reverseT between calls.
+ */
+export function pursuitSteer(g, v, u, dt, target, targetVehicle, { closeStop = 18 } = {}) {
+  let tx = target.x, tz = target.z;
+  if (targetVehicle) {
+    const lead = Math.min(1.5, Math.hypot(tx - v.pos.x, tz - v.pos.z) / (v.speed + 8));
+    tx += targetVehicle.vel.x * lead; tz += targetVehicle.vel.y * lead;
+  }
+  const desired = Math.atan2(tx - v.pos.x, tz - v.pos.z);
+  // feelers: pick the heading closest to the target that isn't blocked
+  const coll = g.world.collision;
+  const range = 8 + v.speed * 0.8;
+  let best = desired, bestScore = -Infinity;
+  for (const off of [0, 0.3, -0.3, 0.65, -0.65, 1.1, -1.1]) {
+    const h = desired + off;
+    const dx = Math.sin(h), dz = Math.cos(h);
+    const [fx, fz] = v.localToWorld(0, v.hz);
+    const hit = coll.raycast(fx, v.pos.y + 0.7, fz, dx, 0, dz, range, (c) => c.tag !== 'prop' || c.r > 0.2);
+    let freeT = hit ? hit.t : range;
+    for (let s = 2; s < freeT; s += 2) if (g.world.isWater(fx + dx * s, fz + dz * s) && v.pos.y < 2) { freeT = s; break; } // don't chase anyone into the sea
+    const free = freeT / range;
+    const score = free * 2 - Math.abs(off) * 0.8;
+    if (score > bestScore) { bestScore = score; best = h; }
+  }
+  let dy = best - v.yaw;
+  dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  const dist = Math.hypot(tx - v.pos.x, tz - v.pos.z);
+  v.input.steer = Math.max(-1, Math.min(1, -dy * 2.2));
+  v.input.handbrake = Math.abs(dy) > 1.3 && v.speed > 10;
+  const close = !targetVehicle && dist < closeStop;
+  const tooFast = Math.abs(dy) > 0.9 && v.speed > 14;
+  v.input.throttle = close || tooFast ? 0 : 1;
+  v.input.brake = close && v.speed > 3 ? 1 : tooFast ? 0.6 : 0;
+  // stuck recovery
+  if (v.speed < 1 && v.input.throttle > 0) u.stuckT += dt; else u.stuckT = Math.max(0, u.stuckT - dt);
+  if (u.stuckT > 1.6) { u.reverseT = 1.4; u.stuckT = 0; }
+  if (u.reverseT > 0) { u.reverseT -= dt; v.input.throttle = 0; v.input.brake = 1; v.input.steer = -v.input.steer; v.input.handbrake = false; }
 }

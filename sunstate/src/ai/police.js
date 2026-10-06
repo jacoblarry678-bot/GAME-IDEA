@@ -10,7 +10,7 @@
  */
 import * as THREE from 'three';
 import { Character } from '../entities/character.js';
-import { DriverAI, laneLine } from './driver.js';
+import { DriverAI, laneLine, pursuitSteer } from './driver.js';
 import { ROAD_GRAPH, nearestNode, findRoute } from '../world/layout.js';
 import { WANTED_CONFIG } from '../game/wanted.js';
 import { WEAPONS } from '../data/weapons.js';
@@ -206,42 +206,7 @@ export class PoliceManager {
   }
 
   /** Direct pursuit: steer at the player's predicted position, avoiding walls with feelers. */
-  drivePursuit(u, dt, target, targetVehicle) {
-    const v = u.vehicle;
-    const g = this.game;
-    let tx = target.x, tz = target.z;
-    if (targetVehicle) {
-      const lead = Math.min(1.5, Math.hypot(tx - v.pos.x, tz - v.pos.z) / (v.speed + 8));
-      tx += targetVehicle.vel.x * lead; tz += targetVehicle.vel.y * lead;
-    }
-    const desired = Math.atan2(tx - v.pos.x, tz - v.pos.z);
-    // feelers: pick the heading closest to the target that isn't blocked
-    const coll = g.world.collision;
-    const range = 8 + v.speed * 0.8;
-    let best = desired, bestScore = -Infinity;
-    for (const off of [0, 0.3, -0.3, 0.65, -0.65, 1.1, -1.1]) {
-      const h = desired + off;
-      const dx = Math.sin(h), dz = Math.cos(h);
-      const [fx, fz] = v.localToWorld(0, v.hz);
-      const hit = coll.raycast(fx, v.pos.y + 0.7, fz, dx, 0, dz, range, (c) => c.tag !== 'prop' || c.r > 0.2);
-      const free = hit ? hit.t / range : 1;
-      const score = free * 2 - Math.abs(off) * 0.8;
-      if (score > bestScore) { bestScore = score; best = h; }
-    }
-    let dy = best - v.yaw;
-    dy = Math.atan2(Math.sin(dy), Math.cos(dy));
-    const dist = Math.hypot(tx - v.pos.x, tz - v.pos.z);
-    v.input.steer = THREE.MathUtils.clamp(-dy * 2.2, -1, 1);
-    v.input.handbrake = Math.abs(dy) > 1.3 && v.speed > 10;
-    const close = !targetVehicle && dist < 18;
-    const tooFast = Math.abs(dy) > 0.9 && v.speed > 14;
-    v.input.throttle = close || tooFast ? 0 : 1;
-    v.input.brake = close && v.speed > 3 ? 1 : tooFast ? 0.6 : 0;
-    // stuck recovery
-    if (v.speed < 1 && v.input.throttle > 0) u.stuckT += dt; else u.stuckT = Math.max(0, u.stuckT - dt);
-    if (u.stuckT > 1.6) { u.reverseT = 1.4; u.stuckT = 0; }
-    if (u.reverseT > 0) { u.reverseT -= dt; v.input.throttle = 0; v.input.brake = 1; v.input.steer = -v.input.steer; v.input.handbrake = false; }
-  }
+  drivePursuit(u, dt, target, targetVehicle) { pursuitSteer(this.game, u.vehicle, u, dt, target, targetVehicle); }
 
   deploy(u) {
     u.mode = 'deploy';

@@ -6,16 +6,16 @@ Every asset is made in code when the game starts. There are no image, model, aud
 |---|---|---|---|
 | Road, concrete, pavers, sand, grass, wood and tile textures | Procedural canvas drawing | Original (same license as this repo) | `src/world/textures.js` |
 | Building facades (4×4-bay tiles with night-lit windows), storefronts, shelving, palm fronds, water normal map, signs and plates | Procedural canvas drawing | Original | `src/world/textures.js` |
-| Buildings, roads, bridge, beach terrain, props | Generated geometry from the district plan | Original | `src/world/build.js`, `src/world/props.js` |
+| Buildings, roads, bridges (causeway and twin-span), beach terrain, the Cayo Lento key (stilt houses, fuel canopy, RV trailers, marina pier, water tower, mangroves, the old bridge), shallow flats, props | Generated geometry from the district plan | Original | `src/world/build.js`, `src/world/props.js`, `src/world/district.js` |
 | Cars (sedan, muscle car, pickup, police cruiser) | Extruded side profiles + primitives | Original designs and names | `src/entities/vehicleModel.js`, `src/data/vehicles.js` |
 | People | Rigidly skinned primitive bodies on an 18-bone skeleton, with procedural animation | Original | `src/entities/humanModel.js` |
-| Sky, water | GLSL shaders | Original | `src/core/engine.js`, `src/world/build.js` |
-| Engine, tyre, siren, horn, gunshot, impact, footstep and ambience sounds | Web Audio synthesis | Original | `src/audio/audio.js` |
+| Sky (with overcast), water, rain streaks | GLSL shaders | Original | `src/core/engine.js`, `src/world/build.js`, `src/core/weather.js` |
+| Engine, tyre, siren, horn, gunshot, impact, footstep, ambience, rain and thunder sounds | Web Audio synthesis | Original | `src/audio/audio.js` |
 | Radio music (two stations) | Generative sequencer (original chord progressions and rhythms) | Original | `src/audio/audio.js` |
 | UI fonts | Google Fonts: *Archivo Black*, *Inter* (falls back to system fonts offline) | SIL Open Font License 1.1 | `index.html` |
 | Rendering library | three.js 0.169 | MIT | `package.json` |
 
-Nothing was extracted from Rockstar games or trailers: no models, textures, voices, music or animations. Place names (Costa Vela, Ocean Mile, Vela Bay), businesses, characters and dialogue are invented for this prototype.
+Nothing was extracted from Rockstar games or trailers: no models, textures, voices, music or animations. Place names (Costa Vela, Ocean Mile, Vela Bay, Cayo Lento, the Vela Keys), businesses (Lento Bait & Fuel, The Salt Hook, Palm Hammock RV Park, Cayo Lento Marina), characters (Cal, Sol, Teo, Rudy, the Caldera brothers) and dialogue are invented for this prototype.
 
 ## Placeholder → upgrade list (most visible first)
 

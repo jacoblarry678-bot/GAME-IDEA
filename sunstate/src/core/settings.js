@@ -70,7 +70,7 @@ export function defaultSettings() {
     controls: { sensitivity: 1, aimSensitivity: 0.65, invertY: false, invertX: false, gamepad: true, bindings: { ...DEFAULT_BINDINGS } },
     audio: { master: 0.8, music: 0.55, sfx: 0.8, ambient: 0.7, ui: 0.6 },
     interface: { hudScale: 1, subtitleSize: 'medium', subtitles: true, cameraShake: 1, minimapRotate: true, units: 'mph' },
-    gameplay: { traffic: 1, peds: 1 },
+    gameplay: { traffic: 1, peds: 1, weather: 'dynamic' },
   };
 }
 
@@ -81,6 +81,7 @@ const ENUMS = {
   'graphics.frameCap': [0, 30, 60, 120],
   'interface.subtitleSize': ['small', 'medium', 'large'],
   'interface.units': ['mph', 'kmh'],
+  'gameplay.weather': ['dynamic', 'clear', 'rain'],
 };
 const RANGES = {
   'graphics.renderScale': [0.4, 1.5],

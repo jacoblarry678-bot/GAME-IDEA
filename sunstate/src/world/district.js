@@ -280,7 +280,7 @@ function planKeys({ add, props, parking, lots, rnd, pick }) {
   for (const x of [172, 200, 252, 280, 306]) add({ x0: x, x1: x + 14, z0: north0 + 1, z1: north0 + 11, h: 7.2, style: 'stilt', color: pick(STILT), accent: 0xffffff, frontage: 's', keys: true });
   // south side, west: The Salt Hook (bar) and the Palm Hammock RV park
   add({ x0: 64, x1: 90, z0: south0 + 6, z1: south0 + 20, h: 5.5, style: 'shop', color: 0x6d8f9c, accent: 0xf2a03d, frontage: 'n', sign: 'THE SALT HOOK', neon: 0xff3fa4, keys: true, bar: true });
-  lots.push({ x0: 60, x1: 96, z0: south0 - 1.5, z1: south0 + 6 });
+  lots.push({ x0: K.pointX + rw + 0.5, x1: 96, z0: south0 - 1.5, z1: south0 + 6 });
   parking.push({ x: 70, z: south0 + 2, rot: 0, model: 'ironhorse', color: 0x2a5aa8 });
   parking.push({ x: 84, z: south0 + 2, rot: 0, model: 'pickup', color: 0x2b2b2b });
   for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) props.push({ type: 'trailer', x: 104 + j * 18, z: south0 + 8 + i * 13, rot: Math.PI / 2, color: pick([0xf4f1ea, 0xe9e2d0, 0xdfe8ee, 0xf2e3c6]) });
@@ -289,15 +289,14 @@ function planKeys({ add, props, parking, lots, rnd, pick }) {
   for (const x of [166, 190]) add({ x0: x, x1: x + 14, z0: south0 + 8, z1: south0 + 19, h: 7.2, style: 'stilt', color: pick(STILT), accent: 0xffffff, frontage: 'n', keys: true });
   add({ x0: 238, x1: 262, z0: south0 + 8, z1: south0 + 22, h: 6, style: 'shop', color: 0xf3efe2, accent: 0x1d6fa8, frontage: 'w', sign: 'CAYO LENTO MARINA', neon: 0x29e6ff, keys: true });
   lots.push({ x0: K.marinaX + rw, x1: 304, z0: K.z1 - 30, z1: K.z1 - 3 });
-  lots.push({ x0: K.marinaX - 18, x1: K.marinaX - rw, z0: K.z1 - 26, z1: K.z1 - 3 });
-  parking.push({ x: 246, z: K.z1 - 18, rot: Math.PI / 2, model: 'pickup', color: 0xf2f2f2 });
+  parking.push({ x: 292, z: K.z1 - 18, rot: Math.PI / 2, model: 'pickup', color: 0xf2f2f2 });
   parking.push({ x: 275, z: K.z1 - 10, rot: -Math.PI / 2, model: 'kestrel', color: 0x1f4b3a });
   // the long pier south off the marina, with boats alongside
   const pierX = 262, pierLen = 46;
   props.push({ type: 'dock', axis: 'z', x: pierX, z: K.z1 + pierLen / 2 - 1, len: pierLen });
   PLATFORMS.push({ x0: pierX - 1.5, x1: pierX + 1.5, z0: K.z1 - 1, z1: K.z1 + pierLen - 1, y: 0.1 });
   for (const [dx, dz, c] of [[-6, 12, 0xffffff], [6, 22, 0x1d3557], [-6, 34, 0xf1efe8], [6, 40, 0xffffff]]) props.push({ type: 'boat', x: pierX + dx, z: K.z1 + dz, rot: (rnd() - 0.5) * 0.2, color: c });
-  PLACES.marina = { name: 'Cayo Lento Marina', x: pierX, z: K.z1 + 4, pierEnd: { x: pierX, z: K.z1 + pierLen - 4 }, lot: { x: 270, z: K.z1 - 16 } };
+  PLACES.marina = { name: 'Cayo Lento Marina', x: pierX, z: K.z1 + 4, pierEnd: { x: pierX, z: K.z1 + pierLen - 4 }, lot: { x: 246, z: K.shoreZ - 4 } };
   PLACES.baitShop = { name: 'Lento Bait & Fuel', x: 99, z: north0 + 4 };
   PLACES.saltHook = { name: 'The Salt Hook', x: 77, z: south0 + 3 };
   PLACES.keys = { name: K.name, x: TWIN.x, z: hz };
@@ -315,12 +314,13 @@ function planKeys({ add, props, parking, lots, rnd, pick }) {
   for (let x = K.x0 + 10; x < K.x1 - 10; x += 9 + rnd() * 9) {
     if (Math.abs(x - TWIN.x) < 12 || Math.abs(x - K.marinaX) < 6) continue;
     const south = rnd() < 0.5;
-    if ((south && x > 56 && x < 100) || (!south && x > 84 && x < 134)) continue; // keep the lots clear
+    if ((south && x > 56 && x < 140) || (!south && x > 80 && x < 138)) continue; // keep the lots and their exits clear
     const zz = south ? hz + rw + 1.6 : hz - rw - 1.6;
     if (rnd() < 0.7) props.push({ type: 'palm', x, z: zz, h: 7 + rnd() * 5, lean: rnd() * 0.8 });
   }
-  for (let x = 66; x < 96; x += 7) props.push({ type: 'palm', x, z: K.z1 - 5 - rnd() * 3, h: 8 + rnd() * 4, lean: 0.4 + rnd() * 0.6 });
-  for (let x = K.x0 + 30; x < K.x1 - 10; x += 34) props.push({ type: 'streetlight', x, z: hz + rw + 0.8, rot: Math.PI, keys: true });
+  for (let x = 70; x < 200; x += 7 + rnd() * 6) props.push({ type: 'palm', x, z: K.z1 - 3 - rnd() * 2, h: 8 + rnd() * 4, lean: 0.4 + rnd() * 0.6 });
+  // highway lights, set well back on the verge and away from the junctions (cars swing wide out here)
+  for (const x of [168, 200, 254, 286]) props.push({ type: 'streetlight', x, z: hz + rw + 2.6, rot: Math.PI, keys: true });
   // lights along the outer parapets of the twin-span
   const tw = TWIN.median / 2 + TWIN.deckW + 0.25; // standing on the outer parapet
   for (let z = TWIN.zStart + 18; z < TWIN.zEnd - 10; z += 36) {

@@ -62,7 +62,7 @@ export const MAINLAND = { east: -300, west: -420, north: -70, south: 70, barrier
  * open gap between them) that carries Ocean Blvd south over the water. The
  * shallow turquoise flats around it are swimmable, not wadeable.
  */
-export const KEYS = { x0: 40, x1: 330, z0: 612, z1: 716, hwyZ: 640, marinaX: 230, name: 'Cayo Lento' };
+export const KEYS = { x0: 40, x1: 330, z0: 612, z1: 716, hwyZ: 640, shoreZ: 704, pointX: 60, marinaX: 230, name: 'Cayo Lento' };
 export const TWIN = { x: 150, median: 5, deckW: 5, zStart: ISLAND.south, zEnd: KEYS.z0, rampLen: 60, deckY: 7.5 };
 export const FLATS = { x0: -20, x1: 470, z0: 540, z1: 820, y: -2.4 }; // shallow water around the keys
 
@@ -126,6 +126,7 @@ export function terrainHeight(x, z) {
 
 /** Can a swimmer climb out onto this land? (backdrop shores are sea walls) */
 export function isClimbable(x, z) {
+  for (const p of PLATFORMS) if (x >= p.x0 - 0.5 && x <= p.x1 + 0.5 && z >= p.z0 - 0.5 && z <= p.z1 + 0.5) return true; // docks and piers
   if (x <= MAINLAND.east + 1 && x >= MAINLAND.west - 1 && z >= MAINLAND.north - 1 && z <= MAINLAND.south + 1) return true;
   if (x >= KEYS.x0 - 1 && x <= KEYS.x1 + 1 && z >= KEYS.z0 - 1 && z <= KEYS.z1 + 1) return true;
   return x >= ISLAND.west - 1 && x <= 400 && z >= ISLAND.north - 1 && z <= ISLAND.south + 1;
@@ -197,8 +198,10 @@ export function roadSegments() {
   segs.push({ id: 'causeway', name: 'Vela Causeway', dir: 'ew', c: CAUSEWAY.z, from: MAINLAND.barrierX + 12, to: xMin, lanes: 2, bridge: true });
   // Milestone 3: the twin-span south to Cayo Lento, and the key's own roads
   segs.push({ id: 'twinspan', name: 'Vela Keys Twin Span', dir: 'ns', c: TWIN.x, from: zMax, to: KEYS.hwyZ, lanes: 1, twin: true, hw: TWIN.median / 2 + TWIN.deckW });
-  segs.push({ id: 'keyhwy', name: 'Overseas Rd', dir: 'ew', c: KEYS.hwyZ, from: KEYS.x0 + 20, to: KEYS.x1 - 10, lanes: 1, keys: true });
-  segs.push({ id: 'marina', name: 'Marina Rd', dir: 'ns', c: KEYS.marinaX, from: KEYS.hwyZ, to: KEYS.z1 - 14, lanes: 1, keys: true });
+  segs.push({ id: 'keyhwy', name: 'Overseas Rd', dir: 'ew', c: KEYS.hwyZ, from: KEYS.pointX, to: KEYS.x1 - 10, lanes: 1, keys: true });
+  segs.push({ id: 'marina', name: 'Marina Rd', dir: 'ns', c: KEYS.marinaX, from: KEYS.hwyZ, to: KEYS.shoreZ, lanes: 1, keys: true });
+  segs.push({ id: 'shore', name: 'Shore Rd', dir: 'ew', c: KEYS.shoreZ, from: KEYS.pointX, to: KEYS.marinaX, lanes: 1, keys: true });
+  segs.push({ id: 'point', name: 'Lento Point Rd', dir: 'ns', c: KEYS.pointX, from: KEYS.hwyZ, to: KEYS.shoreZ, lanes: 1, keys: true });
   return segs;
 }
 
@@ -250,17 +253,20 @@ export function buildRoadGraph() {
   link(byKey.get(`${AVENUES[0].x},${CAUSEWAY.z}`), west, 2, 'causeway');
   // the twin-span and Cayo Lento
   const K = KEYS;
-  const kw = addNode(K.x0 + 20, K.hwyZ, { deadEnd: true, keys: true });
+  const kw = addNode(K.pointX, K.hwyZ, { keys: true });
   const kj = addNode(TWIN.x, K.hwyZ, { keys: true });
   const km = addNode(K.marinaX, K.hwyZ, { keys: true });
   const ke = addNode(K.x1 - 10, K.hwyZ, { deadEnd: true, keys: true });
-  const kd = addNode(K.marinaX, K.z1 - 14, { deadEnd: true, keys: true });
+  const kd = addNode(K.marinaX, K.shoreZ, { keys: true });
+  const ks = addNode(K.pointX, K.shoreZ, { keys: true });
   link(byKey.get(`${TWIN.x},${STREETS[STREETS.length - 1].z}`), kj, 1, 'twinspan');
   Object.assign(edges[edges.length - 1], { median: TWIN.median, hw: TWIN.median / 2 + TWIN.deckW, limit: 21 });
   link(kw, kj, 1, 'keyhwy');
   link(kj, km, 1, 'keyhwy');
   link(km, ke, 1, 'keyhwy');
   link(km, kd, 1, 'marina');
+  link(kd, ks, 1, 'shore');
+  link(ks, kw, 1, 'point');
 
   for (const n of nodes) {
     n.signal = n.edges.length >= 3 && !n.keys; // the key's junctions are give-way, not signalised

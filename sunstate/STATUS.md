@@ -25,6 +25,25 @@ Updated at each milestone handoff: what works, what was verified and how, what's
 - Mission failure (killed, arrested, clerk dead, alarm before payout) shows the reason and offers a retry from the checkpoint. Actors are cleaned up and never duplicated.
 - Versioned save: validation, a backup copy, corrupt-data recovery, owned cars without duplicates.
 
+## Milestone 3: World and partner (complete)
+**Gate:** both protagonists playable with switching; a second region reached by a twin-span bridge; a two-person mission with driver/passenger roles; rain. **Met** (e2e runs below).
+
+- **Cal and Sol**, with switching on Tab. Each keeps their own health, armour, weapons and ammo, position and car; money is shared.
+  - The switch rules are our own design (see docs/REFERENCES.md #15).
+  - Save v2 stores both protagonists; v1 saves migrate.
+- **Partner AI:**
+  - follows you or waits (G), and dodges cars
+  - boards your car, or takes the wheel when you press G by an empty car
+  - drives to the objective or your waypoint, and parks on request
+  - gets out with you and shoots back at mission enemies
+  - is taken to hospital when downed
+- **Passenger drive-by** shooting.
+- **Cayo Lento**, reached by the twin-span bridge.
+  - The key has a loop of roads, a marina and pier, shops and houses, and mangroves.
+  - Around it are shallow swimmable flats and the further keys as backdrop.
+- **Mission "Low Tide":** drive to the marina, meet Rudy on the pier, then the ambush and a chase where one drives and the other shoots (Tab swaps). Then the police if any, the return to the motel, and the $4,000 payout. It has checkpoints, a failure reason and a retry.
+- **Rain:** a weather cycle with overcast skies, rain streaks, thunder, wet glossy roads with 30 % less grip, headlights, hurrying pedestrians and rain audio. A setting pins it to clear or rain.
+
 ## Verification
 
 Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU, so **frame rates measured here say nothing about real hardware**. The tests advance the simulation directly (`window.__sun.advance`) and render occasionally.

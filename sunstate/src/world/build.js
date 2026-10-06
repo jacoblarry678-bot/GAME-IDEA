@@ -8,7 +8,7 @@ import { Batcher } from './geo.js';
 import * as T from './textures.js';
 import {
   AVENUES, STREETS, ROADS, ROAD_GRAPH, BLOCKS, ISLAND, CAUSEWAY, MAINLAND, BACKDROP, CURB, WATER_Y, LANE_W,
-  roadHalfWidth, segHalfWidth, terrainHeight, causewayDeck, KEYS, TWIN, FLATS, twinDeck,
+  roadHalfWidth, segHalfWidth, roadAt, terrainHeight, causewayDeck, KEYS, TWIN, FLATS, twinDeck,
 } from './layout.js';
 import { DISTRICT, mulberry32 } from './district.js';
 
@@ -298,22 +298,25 @@ function buildCauseway(B, cw) {
  * shallow flats around it, and the further keys of the chain (backdrop).
  */
 function buildKeys(B, group, mats, cw) {
-  const K = KEYS, top = CURB, rw = roadHalfWidth(1), tw = TWIN.median / 2 + TWIN.deckW;
-  const hz = K.hwyZ, hwyX0 = K.x0 + 20 - rw, hwyX1 = K.x1 - 10 + rw, mx = K.marinaX, mEnd = K.z1 - 14 + rw;
-  const slabs = [
-    // north strip (between the shore and the highway), cut for the bridge approach
-    [K.x0, TWIN.x - tw, K.z0, hz - rw], [TWIN.x - TWIN.median / 2, TWIN.x + TWIN.median / 2, K.z0, hz - rw], [TWIN.x + tw, K.x1, K.z0, hz - rw],
-    // highway row ends
-    [K.x0, hwyX0, hz - rw, hz + rw], [hwyX1, K.x1, hz - rw, hz + rw],
-    // south strip, cut for Marina Rd
-    [K.x0, mx - rw, hz + rw, K.z1], [mx + rw, K.x1, hz + rw, K.z1], [mx - rw, mx + rw, mEnd, K.z1],
-  ];
-  for (const [x0, x1, z0, z1] of slabs) {
+  const K = KEYS, top = CURB, tw = TWIN.median / 2 + TWIN.deckW;
+  // land = the key's rectangle minus its roads: split on every road edge and keep the non-road cells
+  const xs = new Set([K.x0, K.x1, TWIN.x - tw, TWIN.x - TWIN.median / 2, TWIN.x + TWIN.median / 2, TWIN.x + tw]);
+  const zs = new Set([K.z0, K.z1]);
+  for (const sg of ROADS) {
+    if (!sg.keys && !sg.twin) continue;
+    const hw = sg.twin ? 0 : roadHalfWidth(sg.lanes);
+    if (sg.dir === 'ns') { if (!sg.twin) { xs.add(sg.c - hw); xs.add(sg.c + hw); } zs.add(sg.from - hw); zs.add(sg.to + (sg.twin ? roadHalfWidth(1) : hw)); }
+    else { zs.add(sg.c - hw); zs.add(sg.c + hw); xs.add(sg.from - hw); xs.add(sg.to + hw); }
+  }
+  const X = [...xs].filter((x) => x >= K.x0 && x <= K.x1).sort((a, b) => a - b), Z = [...zs].filter((z) => z >= K.z0 && z <= K.z1).sort((a, b) => a - b);
+  for (let i = 0; i < X.length - 1; i++) for (let j = 0; j < Z.length - 1; j++) {
+    const x0 = X[i], x1 = X[i + 1], z0 = Z[j], z1 = Z[j + 1];
+    if (x1 - x0 < 0.01 || z1 - z0 < 0.01 || roadAt((x0 + x1) / 2, (z0 + z1) / 2)) continue;
     B.box('curb', x0, x1, 0, top, z0, z1, { sides: { top: false }, tile: [2, 2] });
     B.flat('grass', x0, x1, z0, z1, top, 6);
   }
   // sandy south shore and a coral-rock edge all round, down to the flats
-  B.flat('sand', K.x0 + 1, K.x1 - 1, K.z1 - 9, K.z1, top + 0.01, 5);
+  B.flat('sand', K.x0 + 1, K.x1 - 1, K.shoreZ + roadHalfWidth(1) + 0.5, K.z1, top + 0.01, 5);
   const fy = FLATS.y;
   B.box('keyrock', K.x0 - 0.8, K.x0, fy, top, K.z0, K.z1, { tile: [3, 3] });
   B.box('keyrock', K.x1, K.x1 + 0.8, fy, top, K.z0, K.z1, { tile: [3, 3] });
@@ -351,6 +354,13 @@ function buildKeys(B, group, mats, cw) {
  */
 function buildTwinSpan(B, cw) {
   const T0 = TWIN, step = 6;
+  const nodeSouth = STREETS[STREETS.length - 1].z + roadHalfWidth(STREETS[STREETS.length - 1].lanes);
+  medianPlanter(B, cw, nodeSouth + 6, T0.zStart + 0.6);
+  medianPlanter(B, cw, T0.zEnd - 0.8, KEYS.hwyZ - roadHalfWidth(1) - 2);
+  // guide walls funnel each lane onto its deck (southbound at the Ocean Mile end, northbound at the key)
+  const inner = T0.median / 2 + 0.12;
+  guideWall(B, cw, T0.x - 1, nodeSouth + 2.5, T0.x - inner, T0.zStart + 0.2);
+  guideWall(B, cw, T0.x + 1, KEYS.hwyZ - roadHalfWidth(1) - 2.5, T0.x + inner, T0.zEnd - 0.2);
   for (let z = T0.zStart; z < T0.zEnd; z += step) {
     const za = z, zb = Math.min(T0.zEnd, z + step);
     const ya = twinDeck(za), yb = twinDeck(zb);
@@ -387,6 +397,24 @@ function buildTwinSpan(B, cw) {
       B.box('seawall', cx - T0.deckW / 2 - 0.4, cx + T0.deckW / 2 + 0.4, y - 1.9, y - 1.1, z - 0.9, z + 0.9, { tile: [3, 3] });
     }
   }
+}
+
+/** A raised planter along the median where the twin-span meets land: cars can't mount it and drop into the gap. */
+function medianPlanter(B, cw, z0, z1) {
+  // narrower than the median so cars turning in from the junction clear it; the gap that's left
+  // beside it is closed off by the ends of the deck railings
+  const x0 = TWIN.x - 1, x1 = TWIN.x + 1, h = 0.6;
+  B.box('curb', x0, x1, 0, h, z0, z1, { sides: { top: false }, tile: [2, 2] });
+  B.flat('grass', x0 + 0.15, x1 - 0.15, z0 + 0.15, z1 - 0.15, h, 4);
+  cw.add({ type: 'box', cx: TWIN.x, cz: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, y0: -1, y1: h + 0.5, tag: 'railing', material: 'concrete', cameraBlock: false });
+}
+
+/** A low concrete guide wall between two points: deflects a car that strays toward the gap back into its lane. */
+function guideWall(B, cw, x0, z0, x1, z1) {
+  const len = Math.hypot(x1 - x0, z1 - z0), ang = Math.atan2(x1 - x0, z1 - z0);
+  const g = new THREE.BoxGeometry(0.4, 0.9, len);
+  B.geometry('curb', g, new THREE.Matrix4().compose(new THREE.Vector3((x0 + x1) / 2, 0.45, (z0 + z1) / 2), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ang), new THREE.Vector3(1, 1, 1)));
+  cw.add({ type: 'box', cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, hx: 0.2, hz: len / 2, angle: ang, y0: -1, y1: 1.1, tag: 'railing', material: 'concrete', cameraBlock: false });
 }
 
 /** A raised wooden stilt house with a pitched tin roof, stairs and a porch. */

@@ -38,6 +38,8 @@ export class PartnerController {
     this.sideDir = 1;
     this.idleT = rand(4, 10);
     this.engaging = null;
+    this.wheel = null; // a car you asked them to drive
+    this.wheelT = 0;
   }
 
   get name() { return this.ch.protagonistName; }
@@ -99,6 +101,7 @@ export class PartnerController {
     this.releaseDriving();
     this.hold = false;
     this.engaging = null;
+    this.wheel = null;
     const a = this.ch.anim_;
     a.aim = false; a.phone = false; a.talk = false;
     this.ch.wishSpeed = 0;
@@ -126,6 +129,7 @@ export class PartnerController {
     if (this.engage(dt, false)) return;
     a.aim = false;
     a.armed = false;
+    if (this.wheel && this.takeWheel(dt)) return;
     if (this.mode === 'follow' && !p.dead) {
       a.phone = false;
       const pv = p.vehicle;
@@ -148,9 +152,14 @@ export class PartnerController {
     const g = this.game, ch = this.ch, p = g.player;
     const dP = ch.distanceTo(p.pos.x, p.pos.z);
     if (dP > 80 && !this.onScreen()) { this.warpNear(p.pos.x, p.pos.z, p.yaw); return; }
-    // a spot just behind and to the right of the player
+    // a spot just behind and to the right of the player — or straight behind, or right on their
+    // heels, when the side spot would be off a pier, over water or down a level
     const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw), rx = -fz, rz = fx;
-    const tx = p.pos.x - fx * 1.5 + rx * 1.1, tz = p.pos.z - fz * 1.5 + rz * 1.1;
+    const w = g.world;
+    const ok = (x, z) => !w.isWater(x, z) && Math.abs(w.ground(x, z, p.pos.y + 0.5) - p.pos.y) < 0.4;
+    let tx = p.pos.x - fx * 1.5 + rx * 1.1, tz = p.pos.z - fz * 1.5 + rz * 1.1;
+    if (!ok(tx, tz)) { tx = p.pos.x - fx * 1.6; tz = p.pos.z - fz * 1.6; }
+    if (!ok(tx, tz)) { tx = p.pos.x; tz = p.pos.z; }
     const d = ch.distanceTo(tx, tz);
     const pSpeed = Math.hypot(p.vel.x, p.vel.z);
     if (d < 0.8 || (dP < 2.4 && pSpeed < 0.5)) {
@@ -194,6 +203,26 @@ export class PartnerController {
     if (dCar > 70 && !this.onScreen()) { this.warpNear(dx, dz, pv.yaw); return; }
     const [ax, az] = doorApproachPoint(pv, seat, ch);
     this.moveTo(ax, az, dd > 3 ? SPEED.run : 2.2, dt);
+  }
+
+  /** Walk round to the driver's door of the car you pointed at and get behind the wheel. */
+  takeWheel(dt) {
+    const g = this.game, ch = this.ch, v = this.wheel;
+    this.wheelT += dt;
+    if (!g.vehicles.includes(v) || v.seats[0] || v.sunk || v.destroyed || this.wheelT > 15) { this.wheel = null; return false; }
+    const [dx, dz] = v.doorPoint(0);
+    const dd = ch.distanceTo(dx, dz);
+    if (dd < 0.7 && v.speed < 1) {
+      ch.wishSpeed = 0;
+      g.seatCharacter(v, 0, ch);
+      g.audio?.door(v.pos);
+      v.engineOn = true;
+      this.wheelT = 0; // now waiting for you to get in
+      return true;
+    }
+    const [ax, az] = doorApproachPoint(v, 0, ch);
+    this.moveTo(ax, az, dd > 3 ? SPEED.run : 2.2, dt);
+    return true;
   }
 
   pickSeat(v, p) {
@@ -242,9 +271,16 @@ export class PartnerController {
     const together = v.seats.includes(p) && !p.dead;
     ch.anim_.phone = false;
     if (ch.seat === 0) {
-      if (together) { this.engage(dt, true); this.drive(dt, v); return; }
+      if (together) { this.wheel = null; this.engage(dt, true); this.drive(dt, v); return; }
       this.releaseDriving();
       this.park(v);
+      // behind the wheel because you asked: wait a while for you to get in
+      if (this.wheel === v) {
+        this.wheelT += dt;
+        const dP = Math.hypot(p.pos.x - v.pos.x, p.pos.z - v.pos.z);
+        if (this.wheelT < 20 && dP < 25 && !p.vehicle) return;
+        this.wheel = null;
+      }
       // you walked off or took another car: they get out and follow
       const leave = this.mode === 'follow' && (!p.vehicle || p.vehicle !== v) && v.speed < 1;
       this.exitT = leave ? this.exitT + dt : 0;

@@ -1,6 +1,12 @@
 # SUNSTATE: Ocean Mile
 
-A playable browser prototype of a third-person, open-world crime game set on a fictional sun-belt coast. You explore an art-deco beach district, steal and drive cars through living traffic, hold up a convenience store, shake off the police, and make it back to your motel room to save.
+A playable browser prototype of a third-person, open-world crime game set on a fictional sun-belt coast. You play two partners, Cal and Sol, and switch between them. You can:
+- explore an art-deco beach district and drive a twin-span bridge out to a sleepy island key
+- steal and drive cars through living traffic
+- hold up a convenience store
+- run a two-person job where one of you drives and the other shoots
+- get caught in passing rainstorms
+- shake off the police and make it back to your motel room to save
 
 > **Fan prototype, original content.** This was built as an homage to the *atmosphere* of Rockstar's Grand Theft Auto VI reveals: a Florida-style coast, a criminal couple, neon nights. It is **not** Rockstar's game. It uses no Rockstar code, assets, characters, music or story, and it is not affiliated with or endorsed by Rockstar Games or Take-Two. Every model, texture, sound and line of dialogue is generated in code or written for this project (see [docs/ASSETS.md](docs/ASSETS.md)). For what was referenced and how reliable each source is, see [docs/REFERENCES.md](docs/REFERENCES.md).
 
@@ -34,7 +40,33 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
 | E | interact (prompts show the key) | | |
 | F | enter the nearest car (takes it if occupied) | | |
 | M | map (click to set a waypoint) | Esc | pause |
-| Enter | skip dialogue / retry a failed mission | | |
+| Enter | skip dialogue / retry a failed mission | RMB + LMB (passenger) | aim and shoot out of the window |
+| **Tab** | **switch between Cal and Sol** | **G** (partner driving) | **pull over / drive on** |
+| **G** | **partner: follow / wait** (by an empty car: **"you drive"**) | | |
+
+## What's new in Milestone 3
+
+- **Two protagonists: Cal and Sol.**
+  - Press **Tab** to switch. Each keeps their own health, armour, weapons and ammo, position and car; money is shared.
+  - Close by, the camera glides across to the other person. Far away it cuts with a fade.
+  - Switching is refused while the police are after you, in dialogue, mid-way into or out of a car, or during a one-person mission.
+- **Partner AI** (whoever you're not playing):
+  - On foot: follows you (**G** toggles follow / wait), dodges cars, waits off the road, and catches up off-screen.
+  - Cars: gets in as your passenger, or takes the wheel if you press **G** by an empty car. They drive you to the objective or your map waypoint, and park when you ask (**G**).
+  - Combat: shoots back at mission enemies.
+  - If they go down, they're patched up at Ocean Mercy.
+- **Passenger drive-by:** as a passenger, aim (RMB) and shoot (LMB) out of the side window.
+- **Cayo Lento, the first of the Vela Keys:**
+  - Reached by a **twin-span bridge**: two decks with an open gap, parapets, piers and lights, carrying Ocean Blvd south over shallow turquoise flats.
+  - On the key: Lento Bait & Fuel, stilt houses, The Salt Hook (a dive bar), the Palm Hammock RV park and a marina with a long pier.
+  - Also a water tower, mangroves, a loop of roads, and the closed, half-collapsed old bridge onward to the rest of the chain.
+- **Mission "Low Tide":** a two-person job, unlocked after *Small Change*. Drive to the marina and meet Rudy on the pier, then get away from the Caldera brothers' two cars. One of you drives while the other shoots, and **Tab** swaps roles mid-chase. Lose them, then bring the cooler home for **$4,000**. It has checkpoints, fails if either partner goes down, and retries without duplicates.
+- **Rain:**
+  - Passing showers cycle through clear, clouding over, rain and clearing; Settings → World → Weather can pin it to clear or rain.
+  - Overcast skies and closer fog, rain streaks, thunder and lightning, and wet roads that are darker and glossy with about 30 % less tyre grip.
+  - Cars switch their headlights on, people hurry, and the beach empties.
+  - The rain sound is muffled inside cars and buildings.
+- **Save v2:** both protagonists are saved. v1 saves migrate: the old player becomes Cal.
 
 ## What's in this build (Milestones 1 and 2)
 
@@ -85,9 +117,12 @@ The trade-off is visual fidelity. This is stylised, not photorealistic, and the 
 ## Tests
 
 ```bash
-npm test                                  # 54 rules/simulation checks in Node (no browser)
+npm test                                  # 69 rules/simulation checks in Node (no browser)
 npm run build && npm run preview &        # then:
-npm run e2e                               # full playthrough in headless Chromium (49 checks)
+npm run e2e                               # M1/M2 playthrough in headless Chromium (49 checks)
+node tools/e2e-crew.mjs                   # M3: two protagonists, partner AI, switching, save v2
+node tools/e2e-lowtide.mjs                # M3: the "Low Tide" mission end to end
+node tools/e2e-weather.mjs                # M3: rain on/off, wet roads, grip, visuals
 npm run shots                             # representative screenshots → shots/
 ```
 
@@ -97,11 +132,11 @@ The browser tools need Playwright (`npm i -D playwright`, or link a global insta
 
 ```
 src/
-  core/      engine (renderer, sky, time of day), input, settings, storage, events
+  core/      engine (renderer, sky, time of day), weather, input, settings, storage, events
   world/     layout (roads, terrain), district plan, collision, mesh builders, props, textures
   entities/  humans (model + animation + physics), vehicles (model + physics)
-  ai/        traffic drivers, pedestrians, police, ambient director
-  game/      game loop, player controller, camera, combat, wanted, missions, store, economy, save
+  ai/        traffic drivers, pedestrians, police, partner, mission enemies, ambient director
+  game/      game loop, crew (Cal/Sol + switching), player controller, camera, combat, wanted, missions, store, economy, save
   ui/        HUD, minimap/map, menus, styles
   audio/     procedural sound and radio
   data/      vehicles, weapons

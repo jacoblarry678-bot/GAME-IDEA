@@ -77,6 +77,16 @@ export class Vehicle {
   get forward() { return [Math.sin(this.yaw), Math.cos(this.yaw)]; }
   get vLong() { const [fx, fz] = this.forward; return this.vel.x * fx + this.vel.y * fz; }
   get driver() { return this.seats[0]; }
+
+  /** AI "stop and stay stopped": brake while rolling forward, then the handbrake (holding the
+   *  brake at a standstill would select reverse, as it does for the player). */
+  holdStill() {
+    const i = this.input;
+    i.throttle = 0; i.steer = 0;
+    i.brake = this.vLong > 1 ? 1 : 0;
+    i.handbrake = true;
+    this.holding = 0.15; // the physics treats the car as parked (brakes on) for a moment
+  }
   get occupied() { return this.seats.some(Boolean); }
 
   /** Seat or door position in world space. side -1 = left (driver in LHD). */
@@ -114,7 +124,8 @@ export class Vehicle {
     const world = this.game.world;
     if (this.impactCooldown > 0) this.impactCooldown -= dt;
     let { throttle, brake, steer, handbrake } = this.input;
-    const parked = !this.driver && !this.ai;
+    if (this.holding > 0) this.holding -= dt;
+    const parked = (!this.driver && !this.ai) || (this.holding > 0 && throttle === 0 && Math.abs(this.vLong) < 1.2);
     if (parked) { throttle = 0; brake = 0; steer = 0; handbrake = true; }
     if (this.destroyed || this.sunk) { throttle = 0; }
     const [fx, fz] = this.forward;
@@ -152,8 +163,9 @@ export class Vehicle {
     let Nr = (this.mass * G * this.a) / L + shift;
     Nf = Math.max(Nf, this.mass * G * 0.15); Nr = Math.max(Nr, this.mass * G * 0.15);
     const healthGrip = this.sunk ? 0.1 : 1;
-    const muF = d.grip * healthGrip;
-    const muR = d.grip * d.rearGripScale * healthGrip * (handbrake ? d.handbrakeGrip / d.grip : 1);
+    const wet = this.game.weather?.grip ?? 1; // wet roads are slippery
+    const muF = d.grip * healthGrip * wet;
+    const muR = d.grip * d.rearGripScale * healthGrip * wet * (handbrake ? d.handbrakeGrip / d.grip : 1);
 
     // longitudinal tyre forces split by drive layout, limited by traction
     let FxF = 0, FxR = 0;
@@ -401,7 +413,8 @@ export class Vehicle {
       wh.spin.rotation.x = this.wheelSpin;
     }
     const night = this.game.engine.time.night;
-    const lights = this.lightsOn || night > 0.4 || (this.ai && night > 0.3);
+    const rainy = (this.game.weather?.rain || 0) > 0.4;
+    const lights = this.lightsOn || night > 0.4 || (this.ai && (night > 0.3 || rainy));
     m.parts.head.emissiveIntensity = (this.destroyed ? 0 : lights ? 2.6 : 0.15);
     m.parts.tail.emissiveIntensity = this.braking ? 3 : lights ? 1.2 : 0.25;
     m.parts.reverse.emissiveIntensity = this.reversing && this.vLong < -0.2 ? 2 : 0;

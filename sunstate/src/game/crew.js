@@ -123,6 +123,17 @@ export class Crew {
       return;
     }
     const d = Math.hypot(o.pos.x - p.pos.x, o.pos.z - p.pos.z);
+    // standing by an empty car with your partner along: they take the wheel and you ride
+    if (!p.vehicle && !o.vehicle && d < 45) {
+      const near = p.controller.findVehicle?.();
+      const v = near?.vehicle;
+      if (v && !v.seats[0] && !v.police && v.seats.length > 1 && !ai.wheel) {
+        ai.setMode('follow');
+        ai.wheel = v; ai.wheelT = 0;
+        g.hud?.subtitle(o.protagonistName, 'I\'ll drive. Get in.', 2.5);
+        return;
+      }
+    }
     if (d > 40 && ai.mode !== 'follow') { g.hud?.notify(`${o.protagonistName} is too far away to hear you. Go and get them, or switch.`, o.protagonistName, '', 4); return; }
     if (ai.mode === 'follow') { ai.setMode('wait'); g.hud?.subtitle(o.protagonistName, 'I\'ll wait here.', 2); }
     else { ai.setMode('follow'); g.hud?.subtitle(o.protagonistName, 'Right behind you.', 2); }

@@ -228,7 +228,24 @@ export class Audio {
     a.cF = c.createBiquadFilter(); a.cF.type = 'lowpass'; a.cF.frequency.value = 220;
     a.cG = c.createGain(); a.cG.gain.value = 0;
     a.city.connect(a.cF); a.cF.connect(a.cG); a.cG.connect(this.bus.ambient); a.city.start(0.7);
+    // rain: band-passed white noise, plus a softer low layer for rain on roofs and cars
+    a.rain = this.noiseSrc(this.noiseBuf);
+    a.rH = c.createBiquadFilter(); a.rH.type = 'highpass'; a.rH.frequency.value = 900;
+    a.rL = c.createBiquadFilter(); a.rL.type = 'lowpass'; a.rL.frequency.value = 7000;
+    a.rG = c.createGain(); a.rG.gain.value = 0;
+    a.rain.connect(a.rH); a.rH.connect(a.rL); a.rL.connect(a.rG); a.rG.connect(this.bus.ambient); a.rain.start(0.3);
     this.amb = a;
+  }
+
+  /** A roll of thunder `delay` seconds after the flash. */
+  thunder(delay = 2) {
+    if (!this.ok) return;
+    const c = this.ctx, t = c.currentTime + delay;
+    const src = this.noiseSrc(this.brownBuf, false);
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(380, t); f.frequency.exponentialRampToValueAtTime(90, t + 3.5);
+    const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.9, t + 0.25); g.gain.exponentialRampToValueAtTime(0.001, t + 4.5);
+    src.connect(f); f.connect(g); g.connect(this.bus.ambient);
+    src.start(t, Math.random()); src.stop(t + 4.6);
   }
 
   /** Per-frame update from game state. */
@@ -288,6 +305,9 @@ export class Audio {
     const surf = Math.max(0, 1 - shoreD / 140) * (0.75 + 0.25 * Math.sin(t * 0.55));
     this.amb.wG.gain.setTargetAtTime(paused ? 0 : surf * 0.5 * indoor, t, 0.2);
     this.amb.cG.gain.setTargetAtTime(paused ? 0 : (0.12 + Math.min(0.2, game.vehicles.length * 0.006)) * indoor * (1 - surf * 0.5), t, 0.3);
+    const rain = game.weather?.rain || 0, inCar = !!v;
+    this.amb.rG.gain.setTargetAtTime(paused ? 0 : rain * (inCar ? 0.32 : 0.42) * (indoor < 1 ? 0.4 : 1), t, 0.4);
+    this.amb.rL.frequency.setTargetAtTime(inCar || indoor < 1 ? 2600 : 7000, t, 0.3); // muffled under a roof
     // radio in vehicles
     this.updateRadio(dt, !!v && !paused && this.radioOn && this.stationIndex > 0);
   }

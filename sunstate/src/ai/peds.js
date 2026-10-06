@@ -35,6 +35,9 @@ export class PedController {
     this.wasKnocked = false;
   }
 
+  /** People walk faster when it rains. */
+  get hurry() { return 1 + 0.4 * (this.game.weather?.rain || 0); }
+
   setState(s, dur = 0) { this.state = s; this.stateT = dur; const a = this.ch.anim_; a.phone = s === 'call' || (s === 'idle' && this.phoneIdle); a.cower = s === 'cower'; a.surrender = s === 'surrender'; a.talk = s === 'talk' || s === 'argue' || s === 'dance'; a.sitGround = s === 'sit'; }
 
   /** Run away from a point (or character). */
@@ -188,7 +191,7 @@ export class PedController {
     const d = Math.hypot(dx, dz);
     if (d < 1 || this.stateT <= 0 || ch.blockedT > 1.5) { this.target = null; this.pickActivity(); return; }
     ch.wish.set(dx / d, dz / d);
-    ch.wishSpeed = this.walkSpeed * 0.85;
+    ch.wishSpeed = this.walkSpeed * 0.85 * this.hurry;
   }
 
   walk(dt) {
@@ -226,7 +229,7 @@ export class PedController {
       return;
     }
     ch.wish.set(dx / d, dz / d);
-    ch.wishSpeed = this.walkSpeed;
+    ch.wishSpeed = this.walkSpeed * this.hurry;
     if (ch.blockedT > 2) { this.node = null; ch.blockedT = 0; }
     void g;
   }
@@ -314,7 +317,7 @@ export class PedManager {
         let x, z, kind, zone = null;
         const r = Math.random();
         if (p.z > KEYS_ZONES[0].z0 - 160) { zone = KEYS_ZONES[Math.random() < 0.75 ? 0 : 1]; const q = randomIn(zone); x = q.x; z = q.z; kind = 'keys'; }
-        else if (r < 0.3) { const q = randomIn(BEACH_ZONE); x = q.x; z = q.z; kind = 'beach'; }
+        else if (r < 0.3 && (this.game.weather?.rain || 0) < 0.3) { const q = randomIn(BEACH_ZONE); x = q.x; z = q.z; kind = 'beach'; }
         else if (r < 0.45) { const q = randomIn(PROMENADE_ZONE); x = q.x; z = q.z; kind = 'walker'; }
         else { const node = SW[Math.floor(Math.random() * SW.length)]; x = node.x + rand(-1, 1); z = node.z + rand(-1, 1); kind = 'walker'; }
         const d = Math.hypot(x - p.x, z - p.z);

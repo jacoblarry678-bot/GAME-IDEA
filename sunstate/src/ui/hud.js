@@ -226,7 +226,8 @@ export class HUD {
     const pos = v ? v.pos : p.pos;
     const road = roadAt(pos.x, pos.z);
     const area = pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Vela Keys Twin Span' : pos.x > ISLAND.sandStart ? 'Ocean Mile Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Mainland Landing' : 'Vela Bay') : DISTRICT_NAME;
-    setHTML(this.street, `${road ? road.name : area}<small>${road ? area : ''} · ${g.engine.time.label()}</small>`);
+    const wl = g.weather?.label;
+    setHTML(this.street, `${road ? road.name : area}<small>${road ? area : ''} · ${g.engine.time.label()}${wl ? ' · ' + wl : ''}</small>`);
     // fps
     this.fps.classList.toggle('show', s.g.showFps);
     if (s.g.showFps) {
