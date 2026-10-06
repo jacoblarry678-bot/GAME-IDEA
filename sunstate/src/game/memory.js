@@ -177,7 +177,9 @@ export class Memory {
       const alive = h.crew.some((c) => !c.dead && !c.removed);
       const pp = g.player.vehicle ? g.player.vehicle.pos : g.player.pos;
       const far = Math.hypot(h.vehicle.pos.x - pp.x, h.vehicle.pos.z - pp.z) > 320;
-      if (!alive || h.t > 180 || far || g.player.dead) {
+      // a timed-out hunt only ends once none of them is on screen (no vanishing mid-fight)
+      const seen = h.t > 180 && [h.vehicle, ...h.crew].some((o) => !o.removed && g.traffic?.visible(o.pos.x, (o.pos.y || 0) + 1, o.pos.z, 3));
+      if (!alive || (h.t > 180 && !seen) || far || g.player.dead) {
         if (!alive) g.social?.post({ handle: 'OceanMileNow', name: 'Ocean Mile Now', color: '#ff4d6d', verified: true, text: 'Two men linked to the Caldera family were found injured after a shootout in Ocean Mile. No arrests.', about: true, likes: 80 });
         this.endHunt();
       }
