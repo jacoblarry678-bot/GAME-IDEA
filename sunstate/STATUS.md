@@ -161,6 +161,14 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
   - cars clipped the bridge-mouth railing ends (lane shifts now finish inside the junction; there are guide walls and a raised median planter)
   - every shot through a car window hit the driver
   - the sea stayed tropical turquoise under a storm sky
+- Bugs found after M3 and fixed:
+  - **A crashed AI car could wedge itself nose-first into the gap between two towers and rock between "back up" and "go" indefinitely.** The 5-minute drive in `tools/e2e.mjs` caught it: 0.8 km instead of 1.7 km.
+    - A progress watchdog now switches a car that has wanted to move for 12 s without getting 5 m to the off-road mode.
+    - The off-road mode backs out toward a way out that's behind it.
+    - Verified from three wedged starts: all three got out, in 13–29 s.
+  - The partner's drive home in "Low Tide" stalled on the bridge. The driver AI treated the bridge railing as hiding the road.
+  - Destinations off the road (a lot, a door) now count as reached from the nearest road point.
+  - Caldera hunters no longer vanish while on screen when a hunt times out.
 - `npm run shots`: screenshots of the title, the spawn, Ocean Blvd driving, the store interior, a sunset and night neon. They were reviewed by eye, which is how the stretched-suspension bug, the opaque shop windows and the dull sand were caught.
 
 ### Implemented but not verified on real hardware

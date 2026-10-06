@@ -144,6 +144,8 @@ export class DriverAI {
       if (Math.hypot(v.pos.x - a.x, v.pos.z - a.z) < 3.5 || t > 0.02) this.wp.shift(); else break;
     }
     if (this.offroad && this.stepOffroad(dt)) return;
+    this.progT = (this.progT || 0) + dt; // (progress watchdog, below)
+    if (this.progX === undefined) { this.progX = v.pos.x; this.progZ = v.pos.z; }
     let total = 0;
     for (let i = 1; i < this.wp.length; i++) total += Math.hypot(this.wp[i].x - this.wp[i - 1].x, this.wp[i].z - this.wp[i - 1].z);
     if (total < 60 || this.wp.length < 4) this.extend();
@@ -182,6 +184,7 @@ export class DriverAI {
       v.input.handbrake = false;
       // backing up with the wheels turned away from the target swings the nose toward it
       v.input.steer = back ? this.turnSide : -this.turnSide;
+      this.wantT = (this.wantT || 0) + dt;
       if (this.turning) return;
     }
 
@@ -215,6 +218,14 @@ export class DriverAI {
     // recover from being stuck (blocked by something static, pushed off the lane)
     if (speed < 0.6 && target > 3 && !obs) this.stuckT += dt; else this.stuckT = Math.max(0, this.stuckT - dt * 2);
     if (this.stuckT > 2.5) { this.reverseT = 1.6; this.stuckT = 0; this.ignore = null; this.ignoreT = 3; } // back up, then take a line offset to the side
+    // watchdog: wanting to drive for most of 12 s but still within 5 m of where we were (wedged
+    // off the lane after a crash, rocking between "back up" and "go"): feel the way out instead
+    if (target > 3 && !obs) this.wantT = (this.wantT || 0) + dt;
+    if (this.progT > 12) {
+      const moved = Math.hypot(v.pos.x - this.progX, v.pos.z - this.progZ);
+      if (moved < 5 && this.wantT > 8 && !onBridge) { this.offroad = true; this.offT = 0; this.failed = []; this.reverseT = 0; this.turning = false; this.unwedged = (this.unwedged || 0) + 1; }
+      this.progT = 0; this.wantT = 0; this.progX = v.pos.x; this.progZ = v.pos.z;
+    }
     if (this.reverseT > 0) {
       this.reverseT -= dt;
       v.input.throttle = 0; v.input.brake = 0.7; v.input.steer = -steer; v.input.handbrake = false;
@@ -254,6 +265,26 @@ export class DriverAI {
       this.reverseT -= dt;
       v.input.throttle = 0; v.input.brake = 0.6; v.input.handbrake = false; v.input.steer = this.backSteer || 0;
       return true;
+    }
+    // nosed into a dead end with the way out behind us: back out toward it while the rear is clear,
+    // swinging the tail toward it (the forward feelers only look ahead)
+    const [wlx, wlz] = v.worldToLocal(w.x, w.z);
+    const offBack = Math.PI - Math.abs(Math.atan2(wlx, wlz)); // 0 = straight behind
+    if (wlz < 0 && offBack < 1.1 && Math.hypot(wlx, wlz) > 4) {
+      let rear = 6;
+      for (const side of [-1, 0, 1]) {
+        const [sx, sz] = v.localToWorld(side * (v.hx - 0.1), -v.hz + 0.3);
+        const [bx, bz] = [sx - Math.sin(v.yaw) * 1, sz - Math.cos(v.yaw) * 1];
+        const hit = g.world.collision.raycast(sx, v.pos.y + 0.5, sz, bx - sx, 0, bz - sz, 6, (c) => c.tag !== 'glass');
+        if (hit) rear = Math.min(rear, hit.t);
+      }
+      if (rear > 1.6) {
+        v.input.throttle = 0; v.input.handbrake = false;
+        v.input.brake = v.vLong < -2.5 ? 0 : 0.6;
+        // backing with the wheels turned away from the tail's target swings the tail toward it
+        v.input.steer = Math.max(-1, Math.min(1, -Math.sign(wlx) * offBack * 1.5));
+        return true;
+      }
     }
     const desired = Math.atan2(w.x - v.pos.x, w.z - v.pos.z);
     const range = 9;
