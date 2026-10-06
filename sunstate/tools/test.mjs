@@ -32,6 +32,7 @@ const { sanitizeSettings, Settings } = await import('../src/core/settings.js');
 const { laneLine } = await import('../src/ai/driver.js');
 const { Weather, WEATHER_CONFIG } = await import('../src/core/weather.js');
 const { Social } = await import('../src/game/social.js');
+const { sanitizeAccounts } = await import('../src/game/creator.js');
 const { Memory, sanitizeMemory, defaultMemory } = await import('../src/game/memory.js');
 
 const results = [];
@@ -315,6 +316,21 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   for (let i = 0; i < 60; i++) so.post({ local: true, text: 'x' }, false);
   so.toggle();
   check('the feed is capped and opening it clears the unread count', so.posts.length === 40 && so.unread === 0);
+}
+
+// ---- your LOOP accounts (after M3) -------------------------------------------------
+{
+  const notes = [];
+  const g = { time: 0, events: new Events(), hud: { notify: (t, from) => notes.push(from + ': ' + t) }, player: { pos: { x: 0, z: 0 }, protagonist: 'sol' }, memory: { state: { people: {} } }, weather: { rain: 0 } };
+  const so = new Social(g);
+  const me = so.me;
+  check('Cal and Sol start with their own LOOP accounts', me.accounts.cal.followers === 37 && me.accounts.sol.followers === 212 && me.profile.handle === 'sol.vega');
+  me.follow('sol', 40);
+  check('crossing 250 followers unlocks brand DMs (a milestone, announced once)', me.me.milestones.includes(250) && notes.filter((n) => /250 followers/.test(n)).length === 1);
+  me.me.followers = 9999; me.follow('sol', 5);
+  check('10,000 followers: on the Velvet Palms VIP list', g.memory.state.people.club.sol.vip === true && g.memory.state.people.clubvip.sol.vip === true);
+  const clean = sanitizeAccounts({ cal: { followers: 'lots', posts: 3, milestones: [100, 7, 100], verified: 'yes' }, sol: { followers: 1e12 } });
+  check('saved accounts are cleaned (bad numbers, unknown milestones)', clean.cal.followers === 37 && clean.cal.posts === 3 && clean.cal.milestones.join() === '100' && clean.cal.verified === false && clean.sol.followers === 1e7);
 }
 
 // ---- city memory (Milestone 3) -----------------------------------------------------

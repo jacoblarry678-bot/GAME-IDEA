@@ -14,11 +14,14 @@
  *     you press Y in the open feed): the same memory goes to Claude, which
  *     writes a batch of new posts. It spends the viewer's own Claude usage,
  *     so it never runs by itself.
+ *  4. YOU: Cal and Sol have accounts of their own (creator.js): selfies,
+ *     photos and clips, likes, followers, milestones and brand deals.
  *
  * All handles, posts and the app itself are invented for this prototype.
  */
 import * as THREE from 'three';
 import { roadAt, KEYS, ISLAND } from '../world/layout.js';
+import { Creator } from './creator.js';
 
 const NEWS = { handle: 'OceanMileNow', name: 'Ocean Mile Now', color: '#ff4d6d', verified: true };
 const SCANNER = { handle: 'VelaScanner', name: 'Vela Scanner (unofficial)', color: '#6ea0ff', verified: false };
@@ -130,6 +133,9 @@ export class Social {
     this.fameT = 60;
     this.rainPosted = false;
     this.reels = game.engine?.renderer ? new ReelCam(game.engine) : null;
+    this.myCam = game.engine?.renderer ? new ReelCam(game.engine, 135, 240) : null; // your own phone (sharper)
+    this.personas = PERSONAS;
+    this.me = new Creator(game, this); // your LOOP accounts: posting, likes, followers, brand deals
     this.ai = { available: false, busy: false, status: '', sample: null };
     // Claude writes posts only inside a claude.ai artifact viewer (see the header comment)
     try { window.claude?.use?.('sample')?.then((s) => { if (s) { this.ai.sample = s; this.ai.available = true; } }).catch(() => {}); } catch { /* not in a viewer */ }
@@ -242,6 +248,8 @@ export class Social {
   step(dt) {
     const g = this.game;
     this.reels?.update(dt);
+    this.myCam?.update(dt);
+    this.me.step(dt);
     for (const p of this.posts) {
       if (g.time - p.t < 600) p.likes += p.rate * dt * (p.clip ? 1 + p.likes / 200 : 1);
       if (p.reel) p.reel.views = Math.round(p.likes * 9);

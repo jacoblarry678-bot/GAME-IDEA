@@ -44,6 +44,8 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
 | **Tab** | **switch between Cal and Sol** | **G** (partner driving) | **pull over / drive on** |
 | **G** | **partner: follow / wait** (by an empty car: **"you drive"**) | **P** | **LOOP, the social feed** |
 | **1–6** | **pick from a shop or counter menu** (E again to leave) | **Y** (LOOP open) | **ask Claude for new posts** (in the claude.ai page only) |
+| | | **1 / 2 / 3** (LOOP open) | **post a selfie / photo / clip** from your own account |
+| | | **4** (LOOP open) | **selfie with a Claude-written caption** (in the claude.ai page only) |
 
 ## What's new in Milestone 3
 
@@ -108,6 +110,41 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
   - There is a trending line and a nickname, plus the news account.
   - **Y** asks Claude to write a few new posts from what the city currently remembers (your nickname, recent crimes, the weather, the time). This works only in the claude.ai page, where you approve it first and it uses your own Claude usage. Anywhere else, LOOP uses its built-in posts.
 
+## Your own LOOP account (added after Milestone 3)
+
+- **Cal and Sol each have an account:** @cal.reyes (37 followers to start) and @sol.vega (212). Tab switches who's posting.
+- **Posting:** open LOOP with **P**, then:
+  - **1** takes a selfie (the phone at arm's length, so you're in it).
+  - **2** takes a photo of what your camera sees.
+  - **3** films a 2.5-second clip.
+  - **4** takes a selfie and lets Claude write the caption (only in the claude.ai page).
+  - Otherwise the caption comes from the moment, in Cal's or Sol's voice.
+- **What gets likes:**
+  - **Places:**
+    - golden hour on the beach
+    - Velvet Palms at night
+    - the twin span and Cayo Lento
+    - neon streets after dark
+  - **Who's in it:** the two of you together.
+  - **The moment:** a fast car, or posting in the middle of a chase.
+  - **What hurts:** posting the same thing again, or posting too often (your audience gets tired), and a #ad tag.
+  - **Virality:** strong posts can go viral, getting 6–15× the likes.
+- **Likes and followers:**
+  - Likes roll in over a minute or two and turn into followers.
+  - Locals reply, and you get "@keys.kat and 23 others followed you" notifications.
+- **Milestones:**
+  - 250 followers: brands start DMing you.
+  - 1,000: sponsorships pay 50% more.
+  - 10,000: Big Tomas puts you on the Velvet Palms VIP list.
+  - 50,000: you get a verified ✔.
+- **Brand deals:** a DM offers money for a specific post before a 4-minute deadline, and the GPS points there. Examples:
+  - a selfie at Threads on 5th
+  - your car in the Coral Auto Body bay
+  - a clip from inside Velvet Palms
+  - a photo out on Cayo Lento
+- **Risk:** posting while the police are after you tells them exactly where you are.
+- Followers, posts, likes and badges are saved.
+
 ## What's in this build (Milestones 1 and 2)
 
 - **Ocean Mile**, a connected island district of Costa Vela:
@@ -157,13 +194,14 @@ The trade-off is visual fidelity. This is stylised, not photorealistic, and the 
 ## Tests
 
 ```bash
-npm test                                  # 89 rules/simulation checks in Node (no browser)
+npm test                                  # 93 rules/simulation checks in Node (no browser)
 npm run build && npm run preview &        # then:
 npm run e2e                               # M1/M2 playthrough in headless Chromium (49 checks)
 node tools/e2e-crew.mjs                   # M3: two protagonists, partner AI, switching, save v2
 node tools/e2e-lowtide.mjs                # M3: the "Low Tide" mission end to end
 node tools/e2e-weather.mjs                # M3: rain on/off, wet roads, grip, visuals; the LOOP feed
 node tools/e2e-city.mjs                   # places, staff memory, Velvet Palms inside, police descriptions, respray, reels, Claude posts (stubbed)
+node tools/e2e-loop.mjs                   # your LOOP account: posting, likes → followers, deals, wanted posts, milestones
 npm run shots                             # representative screenshots → shots/
 ```
 
@@ -179,7 +217,7 @@ src/
   ai/        traffic drivers, pedestrians, police, partner, mission enemies, ambient director
   game/      game loop, crew (Cal/Sol + switching), player controller, camera, combat, wanted, missions,
              memory (what the city remembers), places (shops and staff), club (Velvet Palms inside),
-             social (LOOP), store, economy, save
+             social (LOOP) and creator (your LOOP accounts), store, economy, save
   ui/        HUD, minimap/map, menus, styles
   audio/     procedural sound and radio
   data/      vehicles, weapons

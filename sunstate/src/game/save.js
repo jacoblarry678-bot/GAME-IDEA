@@ -16,6 +16,7 @@ import { WEAPONS } from '../data/weapons.js';
 import { MISSIONS } from './missions.js';
 import { PLACES } from '../world/district.js';
 import { sanitizeMemory, defaultMemory } from './memory.js';
+import { sanitizeAccounts, defaultAccounts } from './creator.js';
 
 export const SAVE_KEY = 'sunstate.save';
 export const SAVE_VERSION = 2;
@@ -37,6 +38,7 @@ export function defaultSave() {
     crew: { cal: defaultMember(), sol: defaultMember() },
     missions: { completed: [] },
     memory: defaultMemory(),
+    loop: defaultAccounts(),
     vehicles: [],
     stats: { robberies: 0, escapes: 0, busted: 0, wasted: 0, distanceDriven: 0 },
   };
@@ -78,6 +80,7 @@ export function sanitizeSave(raw) {
   d.active = CREW_IDS.includes(migrated.active) ? migrated.active : 'cal';
   for (const id of CREW_IDS) d.crew[id] = sanitizeMember(migrated.crew?.[id]);
   d.memory = sanitizeMemory(migrated.memory);
+  d.loop = sanitizeAccounts(migrated.loop);
   if (Array.isArray(migrated.missions?.completed)) d.missions.completed = [...new Set(migrated.missions.completed.filter((id) => MISSIONS[id]))];
   if (Array.isArray(migrated.vehicles)) {
     const seen = new Set();
@@ -134,6 +137,7 @@ export function snapshot(game) {
     crew: members,
     missions: { completed: [...game.missions.completed] },
     memory: game.memory.snapshot(),
+    loop: game.social.me.snapshot(),
     vehicles: game.vehicles.filter((v) => v.owner === 'player' && v.persistentId && !v.sunk).map((v) => ({ id: v.persistentId, model: v.modelId, color: v.color, plate: v.plate, health: Math.max(300, v.health), x: v.pos.x, z: v.pos.z, yaw: v.yaw })),
     stats: { ...game.stats, distanceDriven: Math.round(game.stats.distanceDriven + walked) },
   };
@@ -167,6 +171,7 @@ export function applySave(game, s) {
   game.cameraRig.snapBehind(sp.rot);
   game.missions.completed = new Set(s.missions.completed);
   game.memory.apply(s.memory);
+  game.social.me.apply(s.loop);
   Object.assign(game.stats, s.stats);
   for (const sv of s.vehicles) {
     let v = game.vehicles.find((x) => x.persistentId === sv.id);

@@ -15,6 +15,7 @@ Every asset is made in code when the game starts. There are no image, model, aud
 | Club dance, pole spin, cheering, bartending and DJ animations | Procedural bone animation | Original | `src/entities/humanModel.js` |
 | Club music (house set, plus the dembow and synth styles) | Generative sequencer, low-passed outside | Original | `src/audio/audio.js` |
 | LOOP reels | Rendered live from the game at 90×160 into canvases | Original | `src/game/social.js` |
+| Your LOOP posts (selfies, photos, clips) | Rendered live from the game at 135×240 by an in-game phone camera | Original | `src/game/creator.js`, `src/game/social.js` |
 | LOOP posts | Written for this project; on request, generated at play time by Claude in the viewer's own claude.ai session (not stored in the repo) | Original / generated per session | `src/game/social.js` |
 | Sky (with overcast), water, rain streaks | GLSL shaders | Original | `src/core/engine.js`, `src/world/build.js`, `src/core/weather.js` |
 | Engine, tyre, siren, horn, gunshot, impact, footstep, ambience, rain and thunder sounds | Web Audio synthesis | Original | `src/audio/audio.js` |
@@ -22,7 +23,7 @@ Every asset is made in code when the game starts. There are no image, model, aud
 | UI fonts | Google Fonts: *Archivo Black*, *Inter* (falls back to system fonts offline) | SIL Open Font License 1.1 | `index.html` |
 | Rendering library | three.js 0.169 | MIT | `package.json` |
 
-Nothing was extracted from Rockstar games or trailers: no models, textures, voices, music or animations. Place names (Costa Vela, Ocean Mile, Vela Bay, Cayo Lento, the Vela Keys), businesses (Lento Bait & Fuel, The Salt Hook, Palm Hammock RV Park, Cayo Lento Marina), characters (Cal, Sol, Teo, Rudy, the Caldera brothers), the places (Bayfront Arms, Threads on 5th, Sunshine Gas, Coral Auto Body, Velvet Palms, Bayshore Park) and their staff (Dee, Ines, Raj, Hector, Big Tomas; inside Velvet Palms: Jules, DJ Marea, Celeste, and the dancers Lux, Nova and Rio), the LOOP app, its personas and posts, and dialogue are invented for this prototype.
+Nothing was extracted from Rockstar games or trailers: no models, textures, voices, music or animations. Place names (Costa Vela, Ocean Mile, Vela Bay, Cayo Lento, the Vela Keys), businesses (Lento Bait & Fuel, The Salt Hook, Palm Hammock RV Park, Cayo Lento Marina), characters (Cal, Sol, Teo, Rudy, the Caldera brothers), the places (Bayfront Arms, Threads on 5th, Sunshine Gas, Coral Auto Body, Velvet Palms, Bayshore Park) and their staff (Dee, Ines, Raj, Hector, Big Tomas; inside Velvet Palms: Jules, DJ Marea, Celeste, and the dancers Lux, Nova and Rio), the LOOP app, its personas and posts, the accounts @cal.reyes and @sol.vega, the brand deals, and dialogue are invented for this prototype.
 
 ## Placeholder → upgrade list (most visible first)
 

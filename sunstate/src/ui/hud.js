@@ -277,18 +277,28 @@ export class HUD {
 
   /** The LOOP feed (open) or its unread badge (closed). */
   drawLoop() {
-    const so = this.game.social, key = Input.label(this.app.settings.c.bindings.phone);
+    const g = this.game, so = g.social, key = Input.label(this.app.settings.c.bindings.phone);
     this.loop.classList.toggle('show', so.open);
     setHTML(this.loopBadge, so.unread ? `<span class="key">${key}</span>LOOP <b>${so.unread}</b>` : `<span class="key">${key}</span>LOOP`);
     this.loopBadge.classList.toggle('hot', so.unread > 0);
     if (!so.open) return;
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : Math.floor(n));
-    const one = (p, reply = false) => `<div class="post${p.about ? ' about' : ''}${reply ? ' reply' : ''}"><i style="background:${esc(p.color || '#ccc')}">${esc(p.handle[0].toUpperCase())}</i><div><b>${esc(p.name)}</b>${p.verified ? ' <u>✔</u>' : ''}${p.ai ? ' <s title="written by Claude">✨</s>' : ''} <small>@${esc(p.handle)} · ${so.age(p)}</small><p>${esc(p.text)}</p>${p.reel?.frames.length ? `<canvas class="reel" width="90" height="160" data-reel="${p.id}"></canvas>` : p.clip ? '<span class="clip">▶ clip</span>' : ''}<small>♥ ${fmt(p.likes)}${p.reel ? ` · ▶ ${fmt(p.reel.views)} views` : ''}</small></div></div>`;
+    const one = (p, reply = false) => {
+      const f = p.reel?.frames[0];
+      const media = p.reel?.frames.length ? `<canvas class="reel${p.mine ? ' mine' : ''}" width="${f.width}" height="${f.height}" data-reel="${p.id}"></canvas>` : p.clip ? '<span class="clip">▶ clip</span>' : '';
+      const stats = `♥ ${fmt(p.likes)}${p.reel && (p.clip || !p.mine) ? ` · ▶ ${fmt(p.reel.views)} views` : ''}`;
+      return `<div class="post${p.about ? ' about' : ''}${p.mine ? ' mine' : ''}${reply ? ' reply' : ''}"><i style="background:${esc(p.color || '#ccc')}">${esc(p.handle[0].toUpperCase())}</i><div><b>${esc(p.name)}</b>${p.verified ? ' <u>✔</u>' : ''}${p.ai ? ' <s title="written by Claude">✨</s>' : ''} <small>@${esc(p.handle)} · ${so.age(p)}</small><p>${esc(p.text)}</p>${media}<small>${stats}</small></div></div>`;
+    };
     const items = so.posts.slice(0, 12).map((p) => one(p) + p.replies.slice(0, 3).map((r) => one(r, true)).join('')).join('');
     const aiKey = Input.label(this.app.settings.c.bindings.loopAI);
     const ai = so.ai.available ? `<div class="ai">${so.ai.busy ? '✨ Claude is writing…' : so.ai.status ? esc(so.ai.status) : ''} <span><span class="key">${aiKey}</span>ask Claude for fresh posts</span></div>` : '';
-    setHTML(this.loop, `<header>LOOP<small>Costa Vela · trending <em>${esc(so.trending)}</em> · ${key} to close</small></header>${ai}${items}`);
+    // your account: who's posting, the compose keys, any brand deal on the table
+    const me = so.me, acc = me.me, prof = me.profile;
+    const deal = me.deal ? `<div class="deal">💼 <b>${esc(me.deal.def.brand)}</b>: $${me.deal.pay.toLocaleString()} for ${esc(me.deal.def.what)} · ${Math.max(0, Math.ceil(me.deal.until - g.time))}s</div>` : '';
+    const compose = `<div class="compose"><span class="key">1</span>Selfie <span class="key">2</span>Photo <span class="key">3</span>Clip${so.ai.available ? ' <span class="key">4</span>✨ Claude caption' : ''}${me.status ? `<em>${esc(me.status)}</em>` : ''}</div>`;
+    const profile = `<div class="me"><i style="background:${prof.color}">${prof.name[0]}</i><div><b>${esc(prof.name)}</b>${acc.verified ? ' <u>✔</u>' : ''} <small>@${prof.handle}</small><span><b>${fmt(acc.followers)}</b> followers · <b>${acc.posts}</b> post${acc.posts === 1 ? '' : 's'} · <b>${fmt(acc.likes)}</b> like${Math.floor(acc.likes) === 1 ? '' : 's'}</span></div></div>`;
+    setHTML(this.loop, `<header>LOOP<small>Costa Vela · trending <em>${esc(so.trending)}</em> · ${key} to close</small></header>${profile}${compose}${deal}${ai}${items}`);
     // play the reels
     const reels = new Map(); for (const p of so.posts) if (p.reel) reels.set(String(p.id), p.reel);
     const frame = Math.floor(performance.now() / 220);

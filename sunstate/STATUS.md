@@ -74,11 +74,25 @@ Asked for: AI that remembers you, a more advanced LOOP with AI-written posts and
 - **LOOP:** witness and fan reels filmed from their phones (live 90×160 renders) that play in the feed, persona voices and replies, and trending topics.
   - Claude-written posts on Y, through the claude.ai `sample` capability. They need the viewer's consent and use the viewer's own Claude usage. If the runtime isn't there, the key does nothing and the feed stays on built-in text.
 
+## After M3: your own LOOP account (complete)
+Asked for: "add where we can post and get likes and follows".
+
+- **Accounts:** @cal.reyes and @sol.vega (`src/game/creator.js`), each with followers, posts, likes and badges. They're saved.
+- **Posting:** with LOOP open, **1** selfie, **2** photo, **3** clip, and **4** a selfie with a Claude caption (claude.ai only, on the key press).
+  - Shots come from an in-game phone camera at 135×240. Captions match the moment, in Cal's or Sol's voice.
+- **Engagement model** (ours):
+  - Each post gets a score from the place and the time, who's in it, a fast car, a chase, rain, and how tired your audience is.
+  - The score sets the likes your followers give it, plus discovery by everyone else and a chance to go viral. Likes come in over about a minute and become followers.
+  - Locals reply, and follow notifications are grouped.
+- **Milestones:** brand DMs at 250, better sponsor pay at 1k, the Velvet Palms VIP list at 10k, verified at 50k.
+- **Brand deals:** a DM offers money for a specific post from a specific place within 4 minutes, and the GPS points there. The post is tagged #ad.
+- **Risk:** posting while wanted moves the police search to where you are.
+
 ## Verification
 
 Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU, so **frame rates measured here say nothing about real hardware**. The tests advance the simulation directly (`window.__sun.advance`) and render occasionally.
 
-- `npm test`: **89/89** Node checks. They cover:
+- `npm test`: **93/93** Node checks. They cover:
   - road connectivity, lanes on asphalt, sidewalks clear of buildings, no street furniture standing on roads, free spawn/marker points, the store doorway open and the walls solid, parked cars clear of walls, causeway continuity and boat clearance
   - ray, OBB and capsule maths
   - car physics: sedan 0–60 mph in 6.8 s, muscle car 5.7 s, pickup 7.3 s; top speed ~93 mph; 60–0 mph in ~40 m; a stable 10 m full-lock circle; pulling away from rest at full lock; a handbrake slide; reversing; parked cars staying put; no driving through a wall at 30 m/s; crash damage; momentum conserved in car–car collisions
@@ -101,6 +115,7 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
       - the stage and runway are raised; every counter has a free spot to stand at
       - seats are inside the room, and there's a clear walk from the door to the rail
       - the club's memories survive a save
+    - LOOP accounts: starting followers, the 250 milestone announced once, 10k → VIP list, and saved accounts cleaned
 - `npm run e2e`: **49/49** in headless Chromium on the final M3 build (520 s wall time). The run covers:
   - title → New Game → walk, sprint, jump
   - mission marker prompt → mission start → skip dialogue
@@ -197,7 +212,8 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
   - Being tipsy only affects the camera, not the controls.
   - There's no back room, and no upstairs.
 - **LOOP:**
-  - The real Claude call (Y) was only tested against a stub, never against the live claude.ai runtime.
+  - The real Claude calls (Y for posts, 4 for a caption) were only tested against a stub, never against the live claude.ai runtime.
+  - Your own posts aren't kept in the save (only the account numbers), and the engagement numbers are tuned by feel, not balanced over long play.
   - Reels are 10 low-resolution frames (90×160) rendered from the witness's eye position.
 - Fades run on the wall clock, so the fast sim-time tests can catch a black frame in a screenshot; play isn't affected.
 - Anti-aliasing changes apply after a page reload, and the menu says so.
