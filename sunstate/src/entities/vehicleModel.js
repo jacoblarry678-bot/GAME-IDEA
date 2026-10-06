@@ -149,6 +149,7 @@ export function buildCarModel(def, color, opts = {}) {
   plate.position.set(0, bumpY + 0.17, ox - 0.03);
   plate.rotation.y = Math.PI;
   body.add(plate);
+  parts.plate = plate;
 
   if (def.stripes) {
     const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.012, L * 0.98), new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.3, metalness: 0.3 }));

@@ -31,6 +31,7 @@ export const DEFAULT_BINDINGS = {
   switchCharacter: 'Tab',
   partner: 'KeyG',
   phone: 'KeyP',
+  loopAI: 'KeyY',
 };
 
 export const BINDING_LABELS = {
@@ -57,6 +58,7 @@ export const BINDING_LABELS = {
   switchCharacter: 'Switch character (Cal / Sol)',
   partner: 'Partner: follow / wait (pull over / drive)',
   phone: 'LOOP (social feed) on the phone',
+  loopAI: 'LOOP: ask Claude for fresh posts (claude.ai only)',
 };
 
 export const PRESETS = {

@@ -11,10 +11,14 @@
 import * as THREE from 'three';
 import { VEHICLES } from '../data/vehicles.js';
 import { buildCarModel } from './vehicleModel.js';
+import { plateTexture } from '../world/textures.js';
 import { obbObb } from '../world/collision.js';
 
 const G = 9.81;
 let nextId = 1;
+
+const PLATE_L = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+export function randomPlate() { const L = () => PLATE_L[Math.floor(Math.random() * PLATE_L.length)]; return `${L()}${L()}${L()} ${100 + Math.floor(Math.random() * 900)}`; }
 
 export class Vehicle {
   constructor(game, model, { x = 0, z = 0, yaw = 0, color = null, plate = null } = {}) {
@@ -25,7 +29,8 @@ export class Vehicle {
     const d = this.def;
     this.color = color ?? d.colors[Math.floor(Math.random() * d.colors.length)];
     this.police = !!d.police;
-    const m = buildCarModel(d, this.color, { police: this.police, plate });
+    this.plate = plate || randomPlate();
+    const m = buildCarModel(d, this.color, { police: this.police, plate: this.plate });
     this.mesh = m;
     this.group = m.root;
     game.engine.scene.add(this.group);
@@ -77,6 +82,13 @@ export class Vehicle {
   get forward() { return [Math.sin(this.yaw), Math.cos(this.yaw)]; }
   get vLong() { const [fx, fz] = this.forward; return this.vel.x * fx + this.vel.y * fz; }
   get driver() { return this.seats[0]; }
+
+  /** New number plates (respray at the auto shop, loading a save). */
+  setPlate(text) {
+    this.plate = text;
+    const m = this.mesh.parts.plate?.material;
+    if (m) { m.map?.dispose(); m.map = plateTexture(text); m.needsUpdate = true; }
+  }
 
   /** AI "stop and stay stopped": brake while rolling forward, then the handbrake (holding the
    *  brake at a standstill would select reverse, as it does for the player). */

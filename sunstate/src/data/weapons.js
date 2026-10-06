@@ -6,4 +6,10 @@ export const WEAPONS = {
     cooldown: 0.2, reload: 1.35, range: 110, spread: 0.010, moveSpread: 0.03, hipSpread: 0.045,
     recoil: 0.028, loudness: 70, icon: '🔫',
   },
+  // Milestone 3 (Bayfront Arms): a compact SMG — fast, light, less accurate
+  smg: {
+    id: 'smg', name: 'Vela Viper', melee: false, damage: 21, mag: 30, startReserve: 90, maxReserve: 300,
+    cooldown: 0.085, reload: 1.9, range: 80, spread: 0.022, moveSpread: 0.035, hipSpread: 0.06,
+    recoil: 0.016, loudness: 75, icon: '🔫',
+  },
 };

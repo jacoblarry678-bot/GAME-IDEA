@@ -100,11 +100,17 @@ export function routeBetween(ax, az, bx, bz) {
   return pts;
 }
 
-export const ICONS = { safehouse: '⌂', store: '$', mission: '★', hospital: '+', police: '⛨', marina: '⚓' };
+export const ICONS = { safehouse: '⌂', store: '$', mission: '★', hospital: '+', police: '⛨', marina: '⚓', gunshop: '⌖', clothes: 'T', gas: '⛽', autoshop: '⚙', club: '♦', park: '♣' };
 export const STATIC_BLIPS = [
   { ...PLACES.safehouse, icon: 'safehouse', color: '#29e6ff', label: 'Safehouse' },
   { ...PLACES.store, icon: 'store', color: '#ffd23f', label: 'Sunny Stop' },
   { ...PLACES.hospital, icon: 'hospital', color: '#ff5566', label: 'Hospital' },
   { ...PLACES.police, icon: 'police', color: '#6ea0ff', label: 'Police' },
   { ...PLACES.marina, icon: 'marina', color: '#9fd8ff', label: 'Cayo Lento Marina' },
+  { ...PLACES.gunshop.door, icon: 'gunshop', color: '#ff8a5c', label: 'Bayfront Arms' },
+  { ...PLACES.clothes.door, icon: 'clothes', color: '#c77dff', label: 'Threads on 5th' },
+  { ...PLACES.gas.door, icon: 'gas', color: '#ffd23f', label: 'Sunshine Gas' },
+  { ...PLACES.autoshop.door, icon: 'autoshop', color: '#4cc9f0', label: 'Coral Auto Body' },
+  { ...PLACES.club.door, icon: 'club', color: '#ff3fa4', label: 'Velvet Palms' },
+  { x: PLACES.park.x, z: PLACES.park.z, icon: 'park', color: '#80ed99', label: 'Bayshore Park' },
 ];

@@ -32,6 +32,7 @@ const { sanitizeSettings, Settings } = await import('../src/core/settings.js');
 const { laneLine } = await import('../src/ai/driver.js');
 const { Weather, WEATHER_CONFIG } = await import('../src/core/weather.js');
 const { Social } = await import('../src/game/social.js');
+const { Memory, sanitizeMemory, defaultMemory } = await import('../src/game/memory.js');
 
 const results = [];
 function check(name, ok, info = '') { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${info ? '  — ' + info : ''}`); }
@@ -288,7 +289,7 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   check('LOOP starts with a few posts and nothing unread', so.posts.length >= 4 && so.unread === 0);
   g.events.emit('witnessCall', { crimeId: 'carjack', x: 90, z: -100 });
   const clip = so.posts[0];
-  check('a witness films the crime: a clip naming the street, flagged in the notifications', clip.clip && clip.about && /Coral Ave/.test(clip.text) && notes.length === 1 && so.unread === 1, clip.text);
+  check('a witness films the crime: a clip naming the street, flagged in the notifications', clip.clip && clip.about && /coral ave/i.test(clip.text) && notes.length === 1 && so.unread === 1, clip.text);
   for (let i = 0; i < 600; i++) { g.time += 0.1; so.step(0.1); }
   check('clips gather likes faster than ordinary posts', clip.likes > 100, `${Math.round(clip.likes)} likes after 60 s`);
   g.events.emit('missionPassed', { def: { id: 'small_change', title: 'Small Change' } });
@@ -296,6 +297,32 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   for (let i = 0; i < 60; i++) so.post({ local: true, text: 'x' }, false);
   so.toggle();
   check('the feed is capped and opening it clears the unread count', so.posts.length === 40 && so.unread === 0);
+}
+
+// ---- city memory (Milestone 3) -----------------------------------------------------
+{
+  const ev = new Events();
+  const car = { persistentId: 'start-muscle', id: 7, def: { name: 'Ironhorse 455' }, color: 0xb5332e, plate: 'ABC 123', pos: { x: 90, z: -100 } };
+  const player = { protagonist: 'cal', protagonistName: 'Cal', look: { female: false, top: 0xe9e2d0 }, vehicle: car, pos: { x: 90, y: 0, z: -100 } };
+  const g = { time: 0, events: ev, player, wanted: { level: 0 }, cops: [], peds: [], missions: { cutscene: null, active: null } };
+  const m = new Memory(g);
+  ev.emit('crimeReported', { crimeId: 'carjack', x: 90, z: -100, by: 'police', level: 1 });
+  check('police who saw a crime keep a description: clothes and car', /man in a cream top, driving a red Ironhorse 455/.test(m.describe()) && m.matchScore() === 1, m.describe());
+  player.vehicle = null; player.look = { ...player.look, top: 0x1c1c1c };
+  check('changing clothes (out of the car) breaks the match', m.matchScore() === 0);
+  player.look = { ...player.look, top: 0xe9e2d0 };
+  check('...the old clothes still match', m.matchScore() === 1);
+  ev.emit('crimeReported', { crimeId: 'carjack', x: 90, z: -120, by: 'witness', level: 1 });
+  ev.emit('crimeReported', { crimeId: 'shooting', x: 90, z: -90, by: 'witness', level: 2 });
+  check('a nickname forms from what you do most and where', m.state.nickname === 'the Coral Ave Carjacker', m.state.nickname);
+  const fame = m.notoriety(90, -100);
+  for (let i = 0; i < 620; i++) { g.time += 1; m.step(1); }
+  check('notoriety rises with crimes and fades over time; old descriptions expire', fame > 15 && m.notoriety(90, -100) < fame && m.state.description === null, `${fame.toFixed(0)} → ${m.notoriety(90, -100).toFixed(0)}`);
+  m.visit('gunshop'); m.visit('gunshop');
+  player.protagonist = 'sol';
+  check('people remember Cal and Sol separately', m.person('gunshop').visits === 0 && m.state.people.gunshop.cal.visits === 2);
+  const saved = sanitizeMemory(JSON.parse(JSON.stringify(m.snapshot())));
+  check('memory survives a save (and bad data is cleaned)', saved.nickname === m.state.nickname && saved.people.gunshop.cal.visits === 2 && JSON.stringify(sanitizeMemory({ notoriety: { 'Ocean Mile': 'lots' }, people: { '<script>': {} } })) === JSON.stringify(defaultMemory()));
 }
 
 const failed = results.filter((r) => !r).length;

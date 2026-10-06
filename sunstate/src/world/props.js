@@ -256,6 +256,36 @@ export function buildProps(collision, mats) {
     // the approach from the key: a short ramp up to the old deck height
     Bt.quad('seawall', [[p.x0, CURB, p.z - 4], [p.x0, CURB, p.z + 4], [p.x0 + 12, deckY, p.z + 4], [p.x0 + 12, deckY, p.z - 4]].reverse(), [[0, 0], [1, 0], [1, 1], [0, 1]]);
   }
+  // Bayshore Park: the fountain, basketball hoops and shade trees
+  for (const p of by('fountain')) {
+    const y = CURB;
+    const basin = new THREE.CylinderGeometry(3.2, 3.4, 0.6, 28); basin.translate(p.x, y + 0.3, p.z);
+    Bt.geometry('trim', basin, new THREE.Matrix4(), C(0xe8e2d0));
+    const water = new THREE.CylinderGeometry(2.95, 2.95, 0.05, 28); water.translate(p.x, y + 0.52, p.z);
+    Bt.geometry('glass', water, new THREE.Matrix4());
+    const column = new THREE.CylinderGeometry(0.35, 0.5, 2.2, 12); column.translate(p.x, y + 1.1, p.z);
+    Bt.geometry('trim', column, new THREE.Matrix4(), C(0xe8e2d0));
+    const bowl = new THREE.CylinderGeometry(1.1, 0.4, 0.4, 16); bowl.translate(p.x, y + 2.2, p.z);
+    Bt.geometry('trim', bowl, new THREE.Matrix4(), C(0xe8e2d0));
+    collision.add({ type: 'circle', cx: p.x, cz: p.z, r: 3.35, y0: -1, y1: y + 0.6, material: 'concrete', cameraBlock: false, tag: 'prop' });
+  }
+  for (const p of by('hoop')) {
+    const dz = Math.cos(p.rot), y = CURB;
+    Bt.box('metal', p.x - 0.09, p.x + 0.09, y, y + 3.4, p.z - dz * 0.9 - 0.09, p.z - dz * 0.9 + 0.09, { color: C(0x555b61) });
+    Bt.box('trim', p.x - 0.9, p.x + 0.9, y + 2.9, y + 3.95, p.z - 0.05, p.z + 0.05, { color: C(0xf4f4f4) });
+    Bt.box('metal', p.x - 0.23, p.x + 0.23, y + 3.04, y + 3.07, p.z + dz * 0.1, p.z + dz * 0.5, { color: C(0xe8602c) });
+    collision.add({ type: 'circle', cx: p.x, cz: p.z - dz * 0.9, r: 0.12, y0: -1, y1: y + 3.4, material: 'metal', cameraBlock: false, tag: 'prop' });
+  }
+  const trees = by('tree');
+  const trunk = merge([part(new THREE.CylinderGeometry(0.16, 0.24, 3.2, 7), 0x6b5440, 0, 1.6, 0)]);
+  group.add(instanced(trunk, vc, trees, (p, m) => m.compose(V(p.x, CURB, p.z), new THREE.Quaternion(), V(p.s, p.s, p.s))));
+  const crown = merge([
+    part(new THREE.IcosahedronGeometry(1.9, 1), 0x3f7f3a, 0, 4.0, 0), part(new THREE.IcosahedronGeometry(1.4, 1), 0x4f8f45, 0.9, 4.6, 0.5),
+    part(new THREE.IcosahedronGeometry(1.3, 1), 0x356f34, -0.8, 4.4, -0.6),
+  ]);
+  group.add(instanced(crown, vc, trees, (p, m) => m.compose(V(p.x, CURB, p.z), new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), p.x), V(p.s, p.s, p.s))));
+  for (const p of trees) collision.add({ type: 'circle', cx: p.x, cz: p.z, r: 0.26 * p.s, y0: -1, y1: CURB + 3, material: 'wood', cameraBlock: false, tag: 'prop' });
+
   const mangroveGeo = merge([
     part(new THREE.IcosahedronGeometry(1.3, 0), 0x3f6b3a, 0, 1.3, 0),
     part(new THREE.IcosahedronGeometry(1.0, 0), 0x4c7a40, 1.1, 1.0, 0.4),

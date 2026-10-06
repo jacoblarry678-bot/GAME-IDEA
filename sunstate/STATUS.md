@@ -49,6 +49,22 @@ Updated at each milestone handoff: what works, what was verified and how, what's
   - posts about the crew also appear as notifications
 - **Rain:** a weather cycle with overcast skies, rain streaks, thunder, wet glossy roads with 30 % less grip, headlights, hurrying pedestrians and rain audio. A setting pins it to clear or rain.
 
+## After M3: the living city (complete)
+Asked for: AI that remembers you, a more advanced LOOP with AI-written posts and reels, and places such as gas stations, parks, an auto shop and a strip club.
+
+- **City memory** (`src/game/memory.js`):
+  - police descriptions (outfit and car, lasting ten in-game hours) and recognition by patrol officers
+  - notoriety per area, a nickname, and street fame (people film you, and at the top end call it in)
+  - staff who remember Cal and Sol separately
+  - the Calderas' grudge hunts after *Low Tide*
+  - all of it saved
+- **Places** (`src/game/places.js`): Bayfront Arms (guns), Threads on 5th (clothes), Sunshine Gas, Coral Auto Body (repair, respray and new plates), Velvet Palms, and Bayshore Park.
+  - Velvet Palms is an adults-only club, shown as the exterior and the door only, with nothing explicit. It is open from 8 PM to 4 AM.
+  - Each place has a map blip.
+  - The Sunny Stop clerk now remembers being robbed.
+- **LOOP:** witness and fan reels filmed from their phones (live 90×160 renders) that play in the feed, persona voices and replies, and trending topics.
+  - Claude-written posts on Y, through the claude.ai `sample` capability. They need the viewer's consent and use the viewer's own Claude usage. If the runtime isn't there, the key does nothing and the feed stays on built-in text.
+
 ## Verification
 
 Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU, so **frame rates measured here say nothing about real hardware**. The tests advance the simulation directly (`window.__sun.advance`) and render occasionally.

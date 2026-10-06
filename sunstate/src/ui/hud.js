@@ -8,6 +8,7 @@ import { staticMap, toMap, routeBetween, STATIC_BLIPS, ICONS, MAP } from './mapd
 import { roadAt, ISLAND, KEYS } from '../world/layout.js';
 import { WANTED_CONFIG } from '../game/wanted.js';
 import { PROTAGONISTS } from '../game/crew.js';
+import { SHOPS } from '../game/places.js';
 import { DISTRICT_NAME } from '../world/layout.js';
 
 /** Set innerHTML only when it changed (avoids per-frame layout work). */
@@ -40,6 +41,7 @@ export class HUD {
     this.street = h('div', 'street');
     // LOOP: the social feed, on the phone
     this.loop = h('div', 'loopfeed');
+    this.shop = h('div', 'shopmenu');
     this.loopBadge = h('div', 'loop-badge');
     bl.appendChild(this.street);
     r.appendChild(bl);
@@ -72,7 +74,7 @@ export class HUD {
     this.bigEl = h('div', 'big');
     this.vignette = h('div', 'vignette');
     this.fps = h('div', 'fps');
-    r.append(this.loop);
+    r.append(this.loop, this.shop);
     r.append(this.vignette, this.objective, this.progress, this.prompt, this.subtitleEl, this.crosshair, this.hitmarker, this.bigEl, this.fps);
 
     this.sub = null;
@@ -165,6 +167,7 @@ export class HUD {
     this.vignette.classList.toggle('show', p.health < 30 && !p.dead);
     this.drawCrew();
     this.drawLoop();
+    this.drawShop();
     // wanted
     const W = g.wanted;
     let stars = '';
@@ -260,6 +263,17 @@ export class HUD {
     setHTML(this.crewEl, html);
   }
 
+  /** An open shop: who's talking, what they said, and what's for sale. */
+  drawShop() {
+    const P = this.game.places, o = P?.openShop;
+    this.shop.classList.toggle('show', !!o);
+    if (!o) return;
+    const def = SHOPS[o.id];
+    const money = this.game.economy.money, ik = Input.label(this.app.settings.c.bindings.interact);
+    const rows = P.items().map((it, i) => `<li class="${it.disabled || it.owned ? 'off' : it.price > money ? 'poor' : ''}"><span class="key">${i + 1}</span>${it.label}${it.owned ? ' <em>wearing</em>' : ''}<b>${it.price ? '$' + it.price.toLocaleString() : '—'}</b>${it.note ? `<small>${it.note}</small>` : ''}</li>`).join('');
+    setHTML(this.shop, `<header>${def.title}</header><p class="greet"><b>${def.staff}:</b> “${o.greeting}”</p><ul>${rows}</ul>${o.msg ? `<p class="msg">${o.msg}</p>` : ''}<footer><span class="key">${ik}</span>leave · $${money.toLocaleString()}</footer>`);
+  }
+
   /** The LOOP feed (open) or its unread badge (closed). */
   drawLoop() {
     const so = this.game.social, key = Input.label(this.app.settings.c.bindings.phone);
@@ -267,10 +281,20 @@ export class HUD {
     setHTML(this.loopBadge, so.unread ? `<span class="key">${key}</span>LOOP <b>${so.unread}</b>` : `<span class="key">${key}</span>LOOP`);
     this.loopBadge.classList.toggle('hot', so.unread > 0);
     if (!so.open) return;
-    const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : Math.floor(n));
-    const items = so.posts.slice(0, 14).map((p) => `<div class="post${p.about ? ' about' : ''}"><i style="background:${p.color}">${p.handle[0].toUpperCase()}</i><div><b>${esc(p.name)}</b>${p.verified ? ' <u>✔</u>' : ''} <small>@${esc(p.handle)} · ${so.age(p)}</small><p>${esc(p.text)}</p>${p.clip ? '<span class="clip">▶ clip</span>' : ''}<small>♥ ${fmt(p.likes)}</small></div></div>`).join('');
-    setHTML(this.loop, `<header>LOOP<small>Costa Vela · ${key} to close</small></header>${items}`);
+    const one = (p, reply = false) => `<div class="post${p.about ? ' about' : ''}${reply ? ' reply' : ''}"><i style="background:${esc(p.color || '#ccc')}">${esc(p.handle[0].toUpperCase())}</i><div><b>${esc(p.name)}</b>${p.verified ? ' <u>✔</u>' : ''}${p.ai ? ' <s title="written by Claude">✨</s>' : ''} <small>@${esc(p.handle)} · ${so.age(p)}</small><p>${esc(p.text)}</p>${p.reel?.frames.length ? `<canvas class="reel" width="90" height="160" data-reel="${p.id}"></canvas>` : p.clip ? '<span class="clip">▶ clip</span>' : ''}<small>♥ ${fmt(p.likes)}${p.reel ? ` · ▶ ${fmt(p.reel.views)} views` : ''}</small></div></div>`;
+    const items = so.posts.slice(0, 12).map((p) => one(p) + p.replies.slice(0, 3).map((r) => one(r, true)).join('')).join('');
+    const aiKey = Input.label(this.app.settings.c.bindings.loopAI);
+    const ai = so.ai.available ? `<div class="ai">${so.ai.busy ? '✨ Claude is writing…' : so.ai.status ? esc(so.ai.status) : ''} <span><span class="key">${aiKey}</span>ask Claude for fresh posts</span></div>` : '';
+    setHTML(this.loop, `<header>LOOP<small>Costa Vela · trending <em>${esc(so.trending)}</em> · ${key} to close</small></header>${ai}${items}`);
+    // play the reels
+    const reels = new Map(); for (const p of so.posts) if (p.reel) reels.set(String(p.id), p.reel);
+    const frame = Math.floor(performance.now() / 220);
+    for (const c of this.loop.querySelectorAll('canvas[data-reel]')) {
+      const r = reels.get(c.dataset.reel);
+      if (r?.frames.length) c.getContext('2d').drawImage(r.frames[frame % r.frames.length], 0, 0);
+    }
   }
 
   /** GPS target: mission objective first, then the map waypoint. */

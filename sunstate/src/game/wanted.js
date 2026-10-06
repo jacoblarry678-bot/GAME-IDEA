@@ -18,6 +18,7 @@ export const CRIMES = {
   assault: { label: 'Assault', level: 1 },
   hitAndRun: { label: 'Hit and run', level: 1 },
   shooting: { label: 'Shots fired', level: 2 },
+  recognized: { label: 'Matched a suspect description', level: 1 },
   robbery: { label: 'Armed robbery', level: 2 },
   assaultOfficer: { label: 'Assaulting an officer', level: 2 },
   murder: { label: 'Homicide', level: 3 },
@@ -111,6 +112,7 @@ export class Wanted {
       this.lastKnown = { x, z };
       this.searchLeft = WANTED_CONFIG.searchTime(this.level);
     }
+    this.game.events.emit('crimeReported', { crimeId, x, z, by, level: c.level });
     if (this.level !== before) this.game.events.emit('wantedLevel', { level: this.level, before });
     this.game.audio?.wantedUp?.();
   }

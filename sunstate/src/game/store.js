@@ -45,6 +45,18 @@ export class Store {
       if (this.aimingAtClerk() && this.inside && g.time > this.cooldownUntil) this.startHoldup();
       else if (this.aimingAtClerk() && this.inside) this.clerk.controller.setState('cower', 3);
     }
+    // walking back in: the clerk remembers you
+    const inside = this.inside;
+    if (inside && !this.wasInside && this.clerk && !this.clerk.dead && !this.holdup && g.memory) {
+      const m = g.memory.person('clerk');
+      if (m.robbed > 0) {
+        g.hud?.subtitle('Clerk', m.robbed > 1 ? 'No. No no no. Not AGAIN.' : 'You... you\'re the one who— please, I don\'t want any trouble.', 3.5);
+        this.clerk.controller.setState('cower', 4);
+        if (!this.postedBack) { this.postedBack = true; g.social?.post({ local: true, text: 'the guy who robbed the Sunny Stop just walked back IN. like nothing happened. the audacity', about: true, likes: 6, clip: true }); }
+      } else if (m.visits > 2) g.hud?.subtitle('Clerk', `Hey, ${g.player.protagonistName}. The usual?`, 2.5);
+      if (!m.robbed) g.memory.visit('clerk');
+    }
+    this.wasInside = inside;
     if (this.holdup) this.stepHoldup(dt);
     if (this.alarmT > 0) {
       this.alarmT -= dt;
@@ -100,6 +112,7 @@ export class Store {
     this.clerk.controller.setState('surrender', 1e9);
     for (const c of this.customers) if (!c.dead) { c.controller.setState('cower', 1e9); }
     g.events.emit('holdupStarted');
+    g.memory?.person('clerk') && g.memory.person('clerk').robbed++;
     g.hud?.subtitle('Clerk', 'Okay, okay! Take it — just don\'t shoot!', 3);
   }
 

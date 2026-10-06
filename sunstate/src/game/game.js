@@ -23,6 +23,8 @@ import { MissionManager, Markers } from './missions.js';
 import { Director } from '../ai/director.js';
 import { snapshot, writeSave } from './save.js';
 import { Social } from './social.js';
+import { Memory } from './memory.js';
+import { Places } from './places.js';
 
 export const PROTAGONIST_LOOK = PROTAGONISTS.cal.look;
 
@@ -58,7 +60,9 @@ export class Game {
     this.missions = new MissionManager(this);
     this.markers = new Markers(this);
     this.director = new Director(this);
+    this.memory = new Memory(this);
     this.social = new Social(this);
+    this.places = new Places(this);
     this.spawnParked();
     this.bindEvents();
   }
@@ -209,6 +213,7 @@ export class Game {
     this.peds_?.step(dt);
     for (const e of this.extras) e.controller?.step?.(dt);
     this.store?.step(dt);
+    this.places?.step(dt);
     this.police?.step(dt);
     this.debugHook?.(dt);
     this.missions?.step(dt);
@@ -237,6 +242,7 @@ export class Game {
     this.wanted?.step(dt);
     this.director?.step(dt);
     this.weather?.step(dt);
+    this.memory.step(dt);
     this.social.step(dt);
     if (this.input.pressed('phone')) { this.social.toggle(); this.audio?.ui('select'); }
     this.input.endStep();
@@ -319,6 +325,7 @@ export class Game {
   /** Remove everything this game created from the scene (quit / new game). */
   dispose() {
     this.director.clearAll();
+    this.memory.dispose();
     this.police.clearAll();
     this.missions.cleanup();
     for (const v of [...this.vehicles]) { for (let i = 0; i < v.seats.length; i++) v.seats[i] = null; this.vehicles.splice(this.vehicles.indexOf(v), 1); v.dispose(); }

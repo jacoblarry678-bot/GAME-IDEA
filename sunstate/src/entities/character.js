@@ -51,6 +51,20 @@ export class Character {
 
   get alive() { return !this.dead; }
 
+  /** Change clothes (rebuilds the body mesh with the new look). */
+  setLook(look) {
+    const scene = this.game.engine.scene;
+    scene.remove(this.group);
+    this.model.dispose();
+    this.look = look;
+    this.model = new HumanModel(look);
+    this.anim = new HumanAnimator(this.model);
+    this.group = this.model.group;
+    this.group.position.copy(this.pos);
+    this.group.rotation.set(0, this.yaw, 0);
+    scene.add(this.group);
+  }
+
   /** One fixed physics step. */
   step(dt) {
     if (this.vehicle) {

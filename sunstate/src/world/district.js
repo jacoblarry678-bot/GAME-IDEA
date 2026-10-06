@@ -97,6 +97,64 @@ function plan() {
     for (let i = 0; i < 4; i++) parking.push({ x: b.lx0 + 6 + i * 6, z: b.lz1 - 8, rot: 0, model: 'police', color: 0xffffff, police: true });
   }
 
+  // --- Milestone 3: more places to go --------------------------------------------
+  // Bayshore Park: lawns, paths, a fountain, a basketball court, shade trees
+  {
+    const b = blockAt(0, 3); special.add(b.id);
+    const cx = (b.lx0 + b.lx1) / 2, cz = (b.lz0 + b.lz1) / 2;
+    PLACES.park = { name: 'Bayshore Park', x: cx, z: cz, fountain: { x: cx, z: cz + 4 }, court: { x0: b.lx0 + 2.5, x1: b.lx0 + 17.5, z0: b.lz0 + 3, z1: b.lz0 + 27 }, bounds: { x0: b.lx0, x1: b.lx1, z0: b.lz0, z1: b.lz1 } };
+    props.push({ type: 'fountain', x: cx, z: cz + 4 });
+    for (const z of [PLACES.park.court.z0 + 1.2, PLACES.park.court.z1 - 1.2]) props.push({ type: 'hoop', x: (PLACES.park.court.x0 + PLACES.park.court.x1) / 2, z, rot: z < cz ? 0 : Math.PI });
+    for (let i = 0; i < 16; i++) {
+      const x = b.lx0 + 3 + rnd() * (b.lx1 - b.lx0 - 6), z = b.lz0 + 3 + rnd() * (b.lz1 - b.lz0 - 6);
+      if (Math.abs(x - cx) < 3.5 || Math.abs(z - (cz + 4)) < 3.5 || Math.hypot(x - cx, z - cz - 4) < 7) continue; // paths and fountain
+      if (x < PLACES.park.court.x1 + 2 && z < PLACES.park.court.z1 + 2) continue; // the court
+      props.push(rnd() < 0.55 ? { type: 'tree', x, z, s: 0.8 + rnd() * 0.6 } : { type: 'palm', x, z, h: 7 + rnd() * 4, lean: rnd() * 0.4 });
+    }
+    for (const [x, z, rot] of [[cx - 3, cz - 12, Math.PI / 2], [cx + 3, cz - 12, -Math.PI / 2], [cx - 3, cz + 20, Math.PI / 2], [cx + 3, cz + 20, -Math.PI / 2], [cx + 10, cz + 2, 0], [cx - 10, cz + 6, Math.PI]]) props.push({ type: 'bench', x, z, rot });
+  }
+
+  // Bayfront Arms (gun shop), Palmetto Ave between 1st and 5th
+  const shopFront = (b, face, x0, x1, z0, z1, extra) => add({ x0, x1, z0, z1, h: 7.4, style: 'shop', frontage: face, ...extra });
+  {
+    const b = blockAt(1, 0); special.add(b.id);
+    const mid = (b.lx0 + b.lx1) / 2;
+    shopFront(b, 'w', b.lx0, mid - 4, b.lz0, b.lz0 + 20, { sign: 'BAYFRONT ARMS', color: 0x5a6470, accent: 0x7a1f24 });
+    PLACES.gunshop = { name: 'Bayfront Arms', door: { x: b.lx0 - 1.6, z: b.lz0 + 10 }, staff: { x: b.lx0 - 0.9, z: b.lz0 + 13.5, rot: -Math.PI / 2 } };
+    fillStrip(b.lx0, mid - 4, b.lz0 + 22, b.lz1, 'w');
+    fillStrip(mid + 2, b.lx1, b.lz0, b.lz1, 'e');
+  }
+
+  // Block (1,1): Coral Auto Body (drive-in garage), Threads on 5th (clothes), Sunshine Gas
+  {
+    const b = blockAt(1, 1); special.add(b.id);
+    const mid = (b.lx0 + b.lx1) / 2;
+    const gz0 = b.lz0, gz1 = b.lz0 + 18, bay = { z0: gz0 + 5, z1: gz0 + 13 };
+    add({ x0: mid + 2, x1: b.lx1, z0: gz0, z1: gz1, h: 7, style: 'garage', frontage: 'e', sign: 'CORAL AUTO BODY', color: 0xdedad0, accent: 0x2b7fd1, bay });
+    PLACES.autoshop = { name: 'Coral Auto Body', door: { x: b.lx1 + 2, z: (bay.z0 + bay.z1) / 2 }, bay: { x0: mid + 3, x1: b.lx1 + 1, z0: bay.z0 + 0.3, z1: bay.z1 - 0.3 }, staff: { x: b.lx1 + 0.8, z: bay.z1 + 1.6, rot: Math.PI / 2 } };
+    fillStrip(mid + 2, b.lx1, gz1 + 2, b.lz1 - 26, 'e');
+    shopFront(b, 'w', b.lx0, mid - 4, b.lz0, b.lz0 + 18, { sign: 'THREADS ON 5TH', color: 0xf6d6c2, accent: 0x6f5bd6 });
+    PLACES.clothes = { name: 'Threads on 5th', door: { x: b.lx0 - 1.6, z: b.lz0 + 9 }, staff: { x: b.lx0 - 0.9, z: b.lz0 + 12.5, rot: -Math.PI / 2 } };
+    fillStrip(b.lx0, mid - 4, b.lz0 + 20, b.lz1 - 26, 'w');
+    // Sunshine Gas across the south end of the block, open to Coral Ave and 9th St
+    const sz0 = b.lz1 - 24, sz1 = b.lz1;
+    lots.push({ x0: b.lx0 + 12, x1: b.lx1, z0: sz0, z1: sz1 });
+    add({ x0: b.lx0, x1: b.lx0 + 12, z0: sz0 + 2, z1: sz1 - 4, h: 4.6, style: 'shop', frontage: 'e', sign: 'SUNSHINE GAS', color: 0xf7e3a1, accent: 0xe86b2a });
+    props.push({ type: 'canopy', x: b.lx1 - 11, z: (sz0 + sz1) / 2, w: 14, d: 9, color: 0xf2a03d });
+    for (const x of [b.lx1 - 15, b.lx1 - 7]) props.push({ type: 'pump', x, z: (sz0 + sz1) / 2 });
+    PLACES.gas = { name: 'Sunshine Gas', door: { x: b.lx0 + 13.6, z: (sz0 + sz1) / 2 - 1 }, staff: { x: b.lx0 + 12.9, z: (sz0 + sz1) / 2 + 2.5, rot: Math.PI / 2 } };
+  }
+
+  // Velvet Palms (adults-only club), Coral Ave side of the Club Halcyon block
+  {
+    const b = blockAt(2, 3); special.add(b.id);
+    const mid = (b.lx0 + b.lx1) / 2;
+    add({ x0: b.lx0, x1: mid - 5, z0: b.lz0, z1: b.lz0 + 22, h: 9.8, style: 'deco', frontage: 'w', sign: 'Velvet Palms', color: 0x3a2347, accent: 0xb455ff, neon: 0xff3fa4 });
+    PLACES.club = { name: 'Velvet Palms', door: { x: b.lx0 - 1.6, z: b.lz0 + 11 }, staff: { x: b.lx0 - 0.9, z: b.lz0 + 13.2, rot: -Math.PI / 2 } };
+    fillStrip(b.lx0, mid - 5, b.lz0 + 24, b.lz1, 'w');
+    fillStrip(mid + 1, b.lx1, b.lz0, b.lz1, 'e', 'Club Halcyon', 'deco');
+  }
+
   // Tidewater Diner + nightclub + garage frontages are placed in generic strips
   // with fixed names so they read as landmarks.
   const named = {
@@ -256,7 +314,17 @@ function plan() {
   for (let z = -14; z <= 14; z += 2.4) props.push({ type: 'barrier', x: MAINLAND.barrierX, z, rot: Math.PI / 2 });
   props.push({ type: 'roadSign', x: MAINLAND.barrierX + 3, z: -12, text: 'ROAD CLOSED — MAINLAND EXPRESSWAY UNDER CONSTRUCTION' });
 
-  return { buildings, props, parking, lots };
+  // keep shop doors, the garage bay mouth and the gas station entrances clear of street furniture
+  const clear = [];
+  for (const k of ['gunshop', 'clothes', 'gas', 'club', 'autoshop']) {
+    const P = PLACES[k];
+    clear.push({ x0: P.door.x - 3, x1: P.door.x + 3, z0: P.door.z - 3.5, z1: P.door.z + 3.5 });
+    clear.push({ x0: P.staff.x - 1.5, x1: P.staff.x + 1.5, z0: P.staff.z - 1.5, z1: P.staff.z + 1.5 });
+  }
+  const A = PLACES.autoshop.bay; clear.push({ x0: A.x1 - 2, x1: A.x1 + 6, z0: A.z0 - 2, z1: A.z1 + 2 });
+  const gb = blockAt(1, 1); clear.push({ x0: gb.lx1 - 2, x1: gb.x1 + 1, z0: gb.lz1 - 24, z1: gb.lz1 }, { x0: gb.lx0 + 12, x1: gb.lx1, z0: gb.lz1 - 1, z1: gb.z1 + 1 });
+  const kept = props.filter((p) => p.bridge || !['streetlight', 'bench', 'bin', 'hydrant', 'newsbox', 'planter', 'palm', 'tree'].includes(p.type) || !clear.some((c) => p.x > c.x0 && p.x < c.x1 && p.z > c.z0 && p.z < c.z1));
+  return { buildings, props: kept, parking, lots };
 }
 
 /**
@@ -378,6 +446,7 @@ export const SIDEWALKS = buildSidewalkGraph();
 
 /** Rectangles where beach-goers wander and lounge. */
 export const BEACH_ZONE = { x0: ISLAND.sandStart + 6, x1: ISLAND.shore - 8, z0: ISLAND.north + 20, z1: ISLAND.south - 20 };
+export const PARK_ZONE = PLACES.park.bounds;
 export const PROMENADE_ZONE = { x0: ISLAND.promenade + 1, x1: ISLAND.sandStart - 1, z0: ISLAND.north + 10, z1: ISLAND.south - 10 };
 
 export { SIDEWALK_W };

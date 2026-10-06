@@ -350,7 +350,8 @@ export function attachDriver(v, game, dest = null) {
     const px = A.x + dx * t, pz = A.z + dz * t;
     const dist = Math.hypot(px - v.pos.x, pz - v.pos.z);
     if (rp && dist >= rp.dist) continue;
-    const hit = game.world.collision.raycast(v.pos.x, v.pos.y + 0.8, v.pos.z, px - v.pos.x, 0, pz - v.pos.z, 1, (c) => c.tag !== 'prop');
+    // (bridge railings and median planters are part of the road: they don't hide it)
+    const hit = game.world.collision.raycast(v.pos.x, v.pos.y + 0.8, v.pos.z, px - v.pos.x, 0, pz - v.pos.z, 1, (c) => c.tag !== 'prop' && c.tag !== 'railing');
     if (hit && hit.t < 0.98) continue;
     rp = { edge: e, t, x: px, z: pz, dist };
   }

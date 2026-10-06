@@ -10,7 +10,7 @@ import {
   AVENUES, STREETS, ROADS, ROAD_GRAPH, BLOCKS, ISLAND, CAUSEWAY, MAINLAND, BACKDROP, CURB, WATER_Y, LANE_W,
   roadHalfWidth, segHalfWidth, roadAt, terrainHeight, causewayDeck, KEYS, TWIN, FLATS, twinDeck,
 } from './layout.js';
-import { DISTRICT, mulberry32 } from './district.js';
+import { DISTRICT, PLACES, mulberry32 } from './district.js';
 
 const col = (hex) => new THREE.Color(hex);
 
@@ -74,6 +74,7 @@ export function buildWorld(engine, collision, mats) {
   buildBeach(group, mats);
   buildCauseway(B, collision);
   buildKeys(B, group, mats, collision);
+  buildPark(B);
   buildTwinSpan(B, collision);
   for (const b of DISTRICT.buildings) buildBuilding(B, b, collision, signs, group, rnd);
   buildBackdrop(B, collision, rnd);
@@ -409,6 +410,48 @@ function medianPlanter(B, cw, z0, z1) {
   cw.add({ type: 'box', cx: TWIN.x, cz: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, y0: -1, y1: h + 0.5, tag: 'railing', material: 'concrete', cameraBlock: false });
 }
 
+/** Bayshore Park: lawns, crossing paths, a basketball court. */
+function buildPark(B) {
+  const P = PLACES.park, b = P.bounds, y = CURB + 0.012;
+  B.flat('grass', b.x0, b.x1, b.z0, b.z1, y, 6);
+  B.flat('pavers', P.x - 1.6, P.x + 1.6, b.z0, b.z1, y + 0.004, 4);
+  B.flat('pavers', b.x0, b.x1, P.fountain.z - 1.6, P.fountain.z + 1.6, y + 0.004, 4);
+  const c = P.court;
+  B.flat('trim', c.x0 - 1, c.x1 + 1, c.z0 - 1, c.z1 + 1, y + 0.006, 1, col(0x2f7a54));
+  B.flat('trim', c.x0, c.x1, c.z0, c.z1, y + 0.008, 1, col(0x3a6fb5));
+  const line = (x0, x1, z0, z1) => B.flat('marking_w', x0, x1, z0, z1, y + 0.012);
+  line(c.x0, c.x1, c.z0, c.z0 + 0.1); line(c.x0, c.x1, c.z1 - 0.1, c.z1); line(c.x0, c.x0 + 0.1, c.z0, c.z1); line(c.x1 - 0.1, c.x1, c.z0, c.z1);
+  line(c.x0, c.x1, (c.z0 + c.z1) / 2 - 0.05, (c.z0 + c.z1) / 2 + 0.05);
+  for (const z of [c.z0, c.z1 - 5.8]) { const cx = (c.x0 + c.x1) / 2; line(cx - 2.4, cx + 2.4, z, z + 0.1); line(cx - 2.4, cx + 2.4, z + 5.7, z + 5.8); line(cx - 2.4, cx - 2.3, z, z + 5.8); line(cx + 2.3, cx + 2.4, z, z + 5.8); }
+}
+
+/**
+ * Coral Auto Body: a workshop with an open drive-in bay on its frontage
+ * (three walls and a roof around the bay), a roller door above it and a sign.
+ */
+function buildGarage(B, b, cw, signs, group) {
+  const y0 = CURB, top = y0 + b.h, color = col(b.color), accent = col(b.accent), t = 0.3;
+  const wall = (x0, x1, z0, z1, ya = y0, yb = top) => {
+    B.box('fac:shop', x0, x1, ya, yb, z0, z1, { tile: [6, 4], vBase: y0, color });
+    cw.add({ type: 'box', cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, y0: -1, y1: yb + 0.5, material: 'concrete', tag: 'wall' });
+  };
+  const { z0: bz0, z1: bz1 } = b.bay, bh = 4.4;
+  wall(b.x0, b.x0 + t, b.z0, b.z1); // back
+  wall(b.x0, b.x1, b.z0, b.z0 + t); wall(b.x0, b.x1, b.z1 - t, b.z1); // ends
+  wall(b.x0, b.x1, bz0 - t, bz0); wall(b.x0, b.x1, bz1, bz1 + t); // bay sides
+  wall(b.x1 - t, b.x1, b.z0, bz0 - t); wall(b.x1 - t, b.x1, bz1 + t, b.z1); // front either side of the bay
+  B.box('fac:shop', b.x1 - t, b.x1, y0 + bh, top, bz0, bz1, { tile: [6, 4], vBase: y0, color }); // header over the opening
+  B.box('roof', b.x0, b.x1, top, top + 0.25, b.z0, b.z1, { tile: [6, 6] });
+  B.box('trim', b.x1 - 0.05, b.x1 + 0.35, y0 + bh - 0.1, y0 + bh + 0.5, bz0 - 0.3, bz1 + 0.3, { color: accent }); // rolled-up door
+  B.flat('concrete', b.x0 + t, b.x1, bz0, bz1, y0 + 0.01, 3);
+  B.box('lightpanel', b.x0 + 1, b.x1 - 1, y0 + bh - 0.06, y0 + bh - 0.02, bz0 + 1, bz1 - 1, { sides: { bottom: true, top: false, n: false, s: false, e: false, w: false } });
+  B.box('metal', b.x0 + 0.4, b.x0 + 1.2, y0, y0 + 1.6, bz0 + 1, bz0 + 3.5, { color: col(0xc0392b) }); // tool chests
+  cw.add({ type: 'box', cx: b.x0 + 0.8, cz: bz0 + 2.25, hx: 0.4, hz: 1.25, y0: -1, y1: y0 + 1.6, material: 'metal', tag: 'prop', cameraBlock: false });
+  const s = makeSign(b.sign, { fg: '#ffffff', bg: '#' + accent.clone().multiplyScalar(0.8).getHexString(), font: '700 60px "Trebuchet MS", Arial' }, (b.z1 - b.z0) * 0.8, 1.0);
+  s.position.set(b.x1 + 0.08, top - 1.1, (b.z0 + b.z1) / 2); s.rotation.y = Math.PI / 2;
+  group.add(s); signs.push(s);
+}
+
 /** A low concrete guide wall between two points: deflects a car that strays toward the gap back into its lane. */
 function guideWall(B, cw, x0, z0, x1, z1) {
   const len = Math.hypot(x1 - x0, z1 - z0), ang = Math.atan2(x1 - x0, z1 - z0);
@@ -483,6 +526,7 @@ function buildBuilding(B, b, cw, signs, group, rnd) {
 
   if (b.style === 'store') return buildStore(B, b, cw, signs, group);
   if (b.style === 'stilt') return buildStilt(B, b, cw);
+  if (b.style === 'garage') return buildGarage(B, b, cw, signs, group);
 
   if (hasShopfront) {
     const keys = { [fk]: b.style === 'deco' ? 'front:deco' : 'front:shop' };

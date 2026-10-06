@@ -208,3 +208,26 @@ kbd, .key { display: inline-block; min-width: 24px; padding: 2px 7px; margin-rig
 .loop-badge { margin-top: 8px; text-align: right; font: 700 12px Inter, Arial; color: rgba(255,255,255,0.7); text-shadow: 0 1px 2px #000; }
 .loop-badge.hot b { background: #ff4d6d; color: #fff; border-radius: 9px; padding: 0 6px; margin-left: 3px; }
 .note.loopfeed { border-left-color: #ff4d6d; }
+
+/* shop menus (Bayfront Arms, Threads on 5th, Sunshine Gas, Coral Auto Body, Velvet Palms) */
+.shopmenu { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, 92vw); display: none; background: rgba(12, 14, 24, 0.94); border: 1px solid rgba(255,255,255,0.14); border-radius: 16px; padding: 16px 18px; font: 14px Inter, Arial, sans-serif; color: #eef; box-shadow: 0 16px 40px rgba(0,0,0,0.55); }
+.shopmenu.show { display: block; }
+.shopmenu header { font: 900 22px 'Archivo Black', Inter, sans-serif; color: var(--yellow, #ffd23f); margin-bottom: 6px; }
+.shopmenu .greet { margin: 0 0 10px; color: rgba(255,255,255,0.8); line-height: 1.4; }
+.shopmenu ul { list-style: none; margin: 0; padding: 0; }
+.shopmenu li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 2px 10px; padding: 7px 4px; border-top: 1px solid rgba(255,255,255,0.08); }
+.shopmenu li b { color: #8dffb0; }
+.shopmenu li small { grid-column: 2 / 4; color: rgba(255,255,255,0.5); font-size: 11px; }
+.shopmenu li em { font-style: normal; color: #29e6ff; font-size: 11px; font-weight: 700; }
+.shopmenu li.off { opacity: 0.45; }
+.shopmenu li.poor b { color: #ff6b7a; }
+.shopmenu .msg { margin: 10px 0 0; color: #ffd23f; font-weight: 700; }
+.shopmenu footer { margin-top: 12px; color: rgba(255,255,255,0.55); font-size: 12px; }
+
+.loopfeed { overflow-y: auto; }
+.loopfeed header em { font-style: normal; color: #ffd23f; -webkit-text-fill-color: #ffd23f; }
+.loopfeed .post.reply { margin-left: 34px; padding-top: 4px; border-bottom: none; }
+.loopfeed .post.reply > i { width: 22px; height: 22px; font-size: 11px; }
+.loopfeed .post s { text-decoration: none; }
+.loopfeed canvas.reel { display: block; width: 90px; height: 160px; border-radius: 10px; margin: 2px 0 6px; background: #000; box-shadow: 0 0 0 2px rgba(255,77,109,0.6); }
+.loopfeed .ai { margin: 8px 2px; padding: 6px 8px; border-radius: 8px; background: rgba(180,85,255,0.15); font-size: 12px; display: flex; justify-content: space-between; gap: 6px; }

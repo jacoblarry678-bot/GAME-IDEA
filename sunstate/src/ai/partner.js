@@ -15,7 +15,7 @@ import * as THREE from 'three';
 import { attachDriver } from './driver.js';
 import { WEAPONS } from '../data/weapons.js';
 import { doorApproachPoint } from '../game/player.js';
-import { roadAt } from '../world/layout.js';
+import { roadAt, nearestRoadPoint } from '../world/layout.js';
 
 const SPEED = { walk: 1.7, run: 4.1, sprint: 6.6 };
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -328,8 +328,11 @@ export class PartnerController {
       this.ai.emergency = !!dest?.urgent; // in a getaway they don't wait at red lights
       this.aiKey = key;
       this.arrived = false;
+      this.arriveR = undefined;
     }
-    if (dest && Math.hypot(v.pos.x - dest.x, v.pos.z - dest.z) < (dest.arrive || 18)) {
+    // a destination off the road (a lot, a door) counts as reached from the nearest road point
+    if (dest && this.aiKey === key && this.arriveR === undefined) this.arriveR = Math.max(dest.arrive || 18, nearestRoadPoint(dest.x, dest.z).dist + 8);
+    if (dest && Math.hypot(v.pos.x - dest.x, v.pos.z - dest.z) < this.arriveR) {
       if (!this.arrived) { this.arrived = true; g.hud?.subtitle(this.name, dest.line || 'We\'re here.', 2.5); }
       this.park(v);
       return;

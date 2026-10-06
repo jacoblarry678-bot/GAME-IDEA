@@ -15,6 +15,7 @@ import { VEHICLES } from '../data/vehicles.js';
 import { WEAPONS } from '../data/weapons.js';
 import { MISSIONS } from './missions.js';
 import { PLACES } from '../world/district.js';
+import { sanitizeMemory, defaultMemory } from './memory.js';
 
 export const SAVE_KEY = 'sunstate.save';
 export const SAVE_VERSION = 2;
@@ -35,6 +36,7 @@ export function defaultSave() {
     active: 'cal',
     crew: { cal: defaultMember(), sol: defaultMember() },
     missions: { completed: [] },
+    memory: defaultMemory(),
     vehicles: [],
     stats: { robberies: 0, escapes: 0, busted: 0, wasted: 0, distanceDriven: 0 },
   };
@@ -75,13 +77,14 @@ export function sanitizeSave(raw) {
   d.hour = num(migrated.hour, d.hour, 0, 23.99);
   d.active = CREW_IDS.includes(migrated.active) ? migrated.active : 'cal';
   for (const id of CREW_IDS) d.crew[id] = sanitizeMember(migrated.crew?.[id]);
+  d.memory = sanitizeMemory(migrated.memory);
   if (Array.isArray(migrated.missions?.completed)) d.missions.completed = [...new Set(migrated.missions.completed.filter((id) => MISSIONS[id]))];
   if (Array.isArray(migrated.vehicles)) {
     const seen = new Set();
     for (const v of migrated.vehicles) {
       if (!v || typeof v.id !== 'string' || seen.has(v.id) || !VEHICLES[v.model]) continue;
       seen.add(v.id);
-      d.vehicles.push({ id: v.id, model: v.model, color: Math.round(num(v.color, 0xffffff, 0, 0xffffff)), health: num(v.health, 1000, 0, 1000), x: num(v.x, null), z: num(v.z, null), yaw: num(v.yaw, 0) });
+      d.vehicles.push({ id: v.id, model: v.model, plate: typeof v.plate === 'string' ? v.plate.slice(0, 10) : null, color: Math.round(num(v.color, 0xffffff, 0, 0xffffff)), health: num(v.health, 1000, 0, 1000), x: num(v.x, null), z: num(v.z, null), yaw: num(v.yaw, 0) });
     }
   }
   for (const k of Object.keys(d.stats)) d.stats[k] = num(migrated.stats?.[k], 0, 0);
@@ -130,7 +133,8 @@ export function snapshot(game) {
     active: crew.activeId,
     crew: members,
     missions: { completed: [...game.missions.completed] },
-    vehicles: game.vehicles.filter((v) => v.owner === 'player' && v.persistentId && !v.sunk).map((v) => ({ id: v.persistentId, model: v.modelId, color: v.color, health: Math.max(300, v.health), x: v.pos.x, z: v.pos.z, yaw: v.yaw })),
+    memory: game.memory.snapshot(),
+    vehicles: game.vehicles.filter((v) => v.owner === 'player' && v.persistentId && !v.sunk).map((v) => ({ id: v.persistentId, model: v.modelId, color: v.color, plate: v.plate, health: Math.max(300, v.health), x: v.pos.x, z: v.pos.z, yaw: v.yaw })),
     stats: { ...game.stats, distanceDriven: Math.round(game.stats.distanceDriven + walked) },
   };
 }
@@ -162,6 +166,7 @@ export function applySave(game, s) {
   }
   game.cameraRig.snapBehind(sp.rot);
   game.missions.completed = new Set(s.missions.completed);
+  game.memory.apply(s.memory);
   Object.assign(game.stats, s.stats);
   for (const sv of s.vehicles) {
     let v = game.vehicles.find((x) => x.persistentId === sv.id);
@@ -174,5 +179,6 @@ export function applySave(game, s) {
     v.health = sv.health;
     v.color = sv.color;
     v.mesh.parts.paint.color.setHex(sv.color);
+    if (sv.plate) v.setPlate(sv.plate);
   }
 }
