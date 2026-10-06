@@ -191,7 +191,16 @@ someone runs the server, and others connect to it.
 - Also: the main-menu status line no longer says online play is unavailable (stale since M5); the version label reads *Update 0.6.0*; kill feed and death screen name **the zone** as the killer when it is.
 
 **Verification run**
-- RESULTS_PLACEHOLDER
+- `npm test`: **218/218** (224/224 with `VAULT_TEST_CODE`). New tests cover the weather cycle, fixed weather, fog sight range, network round-trip and range lock. They check Supercharged XP: claim once, ×2 player/weapon XP, used only by time played, survives reload, tamper clamp, last minutes, and no boost after. For Battle Royale they cover start loadout, loot, no respawns, zone shrink, zone damage through spawn protection, interact swap, ammo/medkit pickup, regen cap at 60, unique placements, last one standing, time-up rule, weapons cold, and full bot matches on all three maps reaching a winner.
+- `nettest`: **29/29**. Adds snapshot weather plus Battle Royale on the dedicated server: zone/next/cold timer in snapshots, slot takeover, a loot list sent only on change, a server-authoritative interact swap, zone damage and visible placements.
+- `node tools/weather.mjs`: **17/17**. Storm: overcast sky, dimmed sun, rain on, no rain below roofs or through a roof onto the player, thicker fog, wet ground, shorter bot sight, lightning. Also: the Weather Effects toggle, full restore on leaving, fog and rain matches, and dynamic weather changing during a match with HUD announcements.
+- `node tools/br.mjs`: **25/25**. Covers the claim → badge → ×2 results line for Supercharged XP, and Battle Royale setup, drop-in, loot prompt, one press = one swap, ammo, zone damage and tint, eliminated #8, spectating, skip to a real winner, placement results and a win.
+- `node tools/onlinebr.mjs`: **11/11**. A browser player on a BR server sees the server's loot, zone and weather; F swaps on the server; the zone hurts; elimination shows the placement with no respawn.
+- Regression: `e2e` 31/31, `m3` 15/15, `m4` 16/16, `modes` 27/27, `maps` 4/4, `vm` clean, `online` 22/22, `vaultui` 8/8, `sun` 17/17, map validation (all paths ok on 3 maps).
+- `sun` first scored 15/17 because the test didn't choose a weather and the new dynamic default can start cloudy, which dims the flare by design. The test now fixes clear weather and passes 17/17.
+- Bugs found and fixed while testing: a held interact key ping-ponged the weapon swap across physics substeps (now edge-triggered, with a cooldown); the gift map was dropped on reload, which would have allowed re-claiming; rain spawned inside tall buildings; the weather popup handler sat in the wrong switch; and bot-only BR first ended in about 45 s. That led to the weapons-cold phase and bots holding spread-out positions.
+- Screenshots reviewed: storm, fog and rain; main-menu gift; loot prompt and minimap circles; outside-zone tint; results with placement and ×2 line; online zone.
+- The built bundle still contains no plaintext ids or names from the sealed drop.
 
 **Known issues / limits**
 - Battle Royale uses the existing three maps, which are compact for 10 players: bot-only matches run about 2–4 minutes. A purpose-built large map is a natural follow-up.
