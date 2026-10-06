@@ -50,6 +50,9 @@ export class DriverAI {
     this.cautious = 1;
     this.yieldT = 0;
     this.blockedBy = null;
+    this.rank = Math.random(); // who gives way when two cars block each other
+    this.mutualT = 0;
+    vehicle.driverAI = this; // (traffic keeps it as v.ai; the partner, rivals and the test autopilot don't)
     this.avoidPlayer = true;
     this.emergency = false; // responding police ignore signals
     this.turning = false;
@@ -133,6 +136,7 @@ export class DriverAI {
 
   step(dt) {
     const v = this.v;
+    this.stepAt = this.game.time;
     if (!v.driver || v.driver.dead) { v.holdStill(); return; }
     if (v.sunk || v.destroyed) { v.input.throttle = 0; return; }
     // drop waypoints we've reached or passed (measured along the path, so a car
@@ -206,6 +210,14 @@ export class DriverAI {
     target *= this.speedScale * this.cautious;
     const obs = this.obstacleAhead(speed);
     this.blockedBy = obs ? obs.who : null;
+    // nose to nose (a car cutting a corner into our lane, both waiting on the other): the lower
+    // rank backs off a couple of metres so the other can pass; the go-around below would only
+    // send both of them into the oncoming lane
+    const other = obs?.who?.driverAI;
+    const live = other && other !== this && this.game.time - (other.stepAt ?? -1) < 0.5;
+    if (live && other.blockedBy === v && speed < 0.6) this.mutualT += dt; else this.mutualT = 0;
+    // (once per encounter: after that the usual go-around below sorts it out with the room it made)
+    if (this.mutualT > 1.5 && this.rank < other.rank && this.reverseT <= 0 && this.game.time - (this.yieldAt ?? -1e9) > 12) { this.reverseT = 1.2; this.mutualT = 0; this.yieldAt = this.game.time; this.yielded = (this.yielded || 0) + 1; }
     // stuck behind something that isn't moving (parked car, broken-down car): back up and go around
     const still = obs && (obs.who.vel ? Math.hypot(obs.who.vel.x, obs.who.vel.y ?? obs.who.vel.z) < 0.4 : true);
     const pedPlayer = obs && obs.who === this.game.player;

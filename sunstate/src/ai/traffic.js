@@ -4,7 +4,7 @@
  * Also cleans up abandoned vehicles nobody owns.
  */
 import * as THREE from 'three';
-import { ROAD_GRAPH } from '../world/layout.js';
+import { ROAD_GRAPH, ISLAND } from '../world/layout.js';
 import { DriverAI, laneLine } from './driver.js';
 import { Character } from '../entities/character.js';
 import { randomLook } from '../entities/humanModel.js';
@@ -54,8 +54,10 @@ export class TrafficManager {
     }
     this.cleanupAbandoned(ppos);
     if (!this.enabled) return;
+    // out on the twin span and Cayo Lento every spawn lands on the key's few short roads: keep it to a handful
+    const target = ppos.z > ISLAND.south + 30 ? Math.min(this.target, 7) : this.target;
     let n = 0;
-    while (this.cars.size < this.target && n++ < 2) this.trySpawn(ppos);
+    while (this.cars.size < target && n++ < 2) this.trySpawn(ppos);
   }
 
   trySpawn(ppos) {
