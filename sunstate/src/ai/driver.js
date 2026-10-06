@@ -147,7 +147,8 @@ export class DriverAI {
   waterGuard() {
     const v = this.v, w = this.game.world;
     if (v.sunk || v.pos.y > 2 || !(this.offroad || this.turning || this.reverseT > 0 || v.speed < 5)) return;
-    const wet = (lz) => { const [x, z] = v.localToWorld(0, lz); return w.isWater(x, z) && !roadAt(x, z); };
+    // open water: no road, and nothing to drive on above the water there (bridge decks, ramps, piers)
+    const wet = (lz) => { const [x, z] = v.localToWorld(0, lz); return w.isWater(x, z) && !roadAt(x, z) && w.ground(x, z, v.pos.y + 0.6) < w.waterY + 0.2; };
     const forward = v.input.throttle > 0 && v.vLong > -0.5;
     const backward = v.input.throttle === 0 && v.input.brake > 0 && v.vLong < 0.5; // brake at rest = reverse
     if ((forward && wet(v.hz + 2.5)) || (backward && wet(-v.hz - 2.5))) { v.holdStill(); this.reverseT = 0; this.wetT = (this.wetT || 0) + 1; }

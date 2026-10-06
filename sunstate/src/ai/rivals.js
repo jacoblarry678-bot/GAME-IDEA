@@ -100,8 +100,14 @@ export class RivalController {
       return;
     }
     if (sees) this.lostT = 0; else this.lostT += dt;
-    // close to a car that isn't going anywhere: stop short and let the gunner work (don't park on its bumper)
-    if (t.vehicle && d < 15 && t.vehicle.speed < 4) { this.ai = null; v.holdStill(); return; }
+    // close to a car that isn't going anywhere: stop short and let the gunner work (don't park on its
+    // bumper, and don't ram it: at 20 m/s that shoved the crew's car off the end of Marina Rd into the
+    // sea). Start braking with room for the speed we're carrying.
+    if (t.vehicle && t.vehicle.speed < 4 && d < Math.max(15, 8 + (v.speed * v.speed) / 12)) {
+      this.ai = null;
+      if (v.speed > 3) { v.input.throttle = 0; v.input.brake = 1; v.input.handbrake = false; } else v.holdStill();
+      return;
+    }
     if (d < 70 && this.lostT < 2) {
       this.ai = null;
       pursuitSteer(g, v, this.u, dt, t.pos, t.vehicle, { closeStop: 10 });
