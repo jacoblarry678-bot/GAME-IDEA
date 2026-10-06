@@ -181,6 +181,10 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
     - A progress watchdog now switches a car that has wanted to move for 12 s without getting 5 m to the off-road mode.
     - The off-road mode backs out toward a way out that's behind it.
     - Verified from three wedged starts: all three got out, in 13–29 s.
+  - **Traffic gridlocked the marina road on Cayo Lento** in 2 of 4 traced "Low Tide" drives. With the player out there, all 16 traffic cars spawned onto the key's few short roads.
+    - Traffic is now capped at 7 cars on the twin span and the key; 2 of 2 drives after the change were clear.
+  - **Head-on standoffs:** a car cutting a corner into the oncoming lane left both cars waiting on each other. The lower-ranked one now backs off once, and the usual go-around finishes it.
+    - Staged on six edges: 14–15 s to pass with no crash damage. Before, it took 9–12 s, with crash damage in 3 of 6.
   - The partner's drive home in "Low Tide" stalled on the bridge. The driver AI treated the bridge railing as hiding the road.
   - Destinations off the road (a lot, a door) now count as reached from the nearest road point.
   - Caldera hunters no longer vanish while on screen when a hunt times out.
