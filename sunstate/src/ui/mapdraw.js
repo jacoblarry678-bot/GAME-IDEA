@@ -2,10 +2,10 @@
  * Static map image (drawn once from the layout) used by the minimap and the
  * full-screen map. 2 pixels per metre; north is up (−z).
  */
-import { ROADS, roadHalfWidth, ISLAND, MAINLAND, BACKDROP, CAUSEWAY, BLOCKS, AVENUES, STREETS, ROAD_GRAPH, nearestRoadPoint, findRoute } from '../world/layout.js';
+import { ROADS, roadHalfWidth, segHalfWidth, ISLAND, MAINLAND, BACKDROP, CAUSEWAY, BLOCKS, AVENUES, STREETS, ROAD_GRAPH, nearestRoadPoint, findRoute, KEYS, TWIN, FLATS } from '../world/layout.js';
 import { DISTRICT, PLACES } from '../world/district.js';
 
-export const MAP = { x0: -470, z0: -380, x1: 480, z1: 380, ppm: 2 };
+export const MAP = { x0: -470, z0: -380, x1: 620, z1: 900, ppm: 2 };
 export const MAP_COLORS = { water: '#1a5a72', deep: '#123f55', land: '#d9d2c3', block: '#c9c0ad', building: '#9e9483', road: '#3a3d44', roadEdge: '#f2efe8', sand: '#efdcae', grass: '#8fb36a', lot: '#b5aea0' };
 
 let cached = null;
@@ -22,6 +22,13 @@ export function staticMap() {
   // backdrop lands
   rect(MAP.x0, MAP.z0, BACKDROP.downtownX, MAP.z1, '#b9b2a4');
   for (const R of [BACKDROP.north, BACKDROP.south]) rect(R.x0, R.z0, R.x1, R.z1, '#b9b2a4');
+  // the Vela Keys: turquoise flats, Cayo Lento, and the further keys
+  x.fillStyle = '#2a8f9a'; x.beginPath();
+  x.roundRect?.(X(FLATS.x0), Z(FLATS.z0), (FLATS.x1 - FLATS.x0) * MAP.ppm, (FLATS.z1 - FLATS.z0) * MAP.ppm, 160);
+  x.fill();
+  for (const k of BACKDROP.keys) rect(k.x0, k.z0, k.x1, k.z1, '#8fb36a');
+  rect(KEYS.x0, KEYS.z0, KEYS.x1, KEYS.z1, MAP_COLORS.grass);
+  rect(KEYS.x0, KEYS.z1 - 9, KEYS.x1, KEYS.z1, MAP_COLORS.sand);
   // island and beach
   rect(ISLAND.west, ISLAND.north, ISLAND.sandStart, ISLAND.south, MAP_COLORS.land);
   rect(ISLAND.sandStart, ISLAND.north, ISLAND.shore - 10, ISLAND.south, MAP_COLORS.sand);
@@ -35,7 +42,11 @@ export function staticMap() {
     for (const s of ROADS) {
       const hw = roadHalfWidth(s.lanes) + (pass ? 0 : 0.8);
       const col = pass ? MAP_COLORS.road : MAP_COLORS.roadEdge;
-      if (s.dir === 'ns') rect(s.c - hw, s.from - hw, s.c + hw, s.to + hw, col);
+      if (s.twin) {
+        const w = segHalfWidth(s) + (pass ? 0 : 0.8), m = TWIN.median / 2 - (pass ? 0 : 0.8);
+        rect(s.c - w, s.from, s.c - m, s.to + roadHalfWidth(1), col);
+        rect(s.c + m, s.from, s.c + w, s.to + roadHalfWidth(1), col);
+      } else if (s.dir === 'ns') rect(s.c - hw, s.from - hw, s.c + hw, s.to + hw, col);
       else rect(s.from - hw, s.c - hw, s.to + hw, s.c + hw, col);
     }
   }
@@ -47,6 +58,14 @@ export function staticMap() {
   x.fillText('DOWNTOWN COSTA VELA', X(BACKDROP.downtownX - 150), Z(-200));
   x.fillText('VELA BAY', X(-200), Z(-180));
   x.fillText('ATLANTIC', X(380), Z(0));
+  // the old bridge onward (closed)
+  x.setLineDash([6, 6]); x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = 8;
+  x.beginPath(); x.moveTo(X(KEYS.x1), Z(KEYS.hwyZ)); x.lineTo(X(BACKDROP.keys[0].x0), Z(KEYS.hwyZ)); x.stroke(); x.setLineDash([]);
+  x.save(); x.fillStyle = 'rgba(30,60,40,0.65)'; x.font = '800 24px Inter, Arial';
+  x.fillText('CAYO LENTO', X(110), Z(KEYS.z1 - 16));
+  x.restore();
+  x.fillText('VELA KEYS', X(520), Z(720));
+  x.save(); x.translate(X(TWIN.x + 22), Z(430)); x.rotate(-Math.PI / 2); x.font = '600 14px Inter, Arial'; x.fillText('TWIN SPAN', 0, 0); x.restore();
   x.save(); x.fillStyle = 'rgba(60,50,40,0.55)'; x.font = '800 26px Inter, Arial';
   x.fillText('OCEAN MILE', X(60), Z(-262));
   x.restore();
@@ -81,10 +100,11 @@ export function routeBetween(ax, az, bx, bz) {
   return pts;
 }
 
-export const ICONS = { safehouse: '⌂', store: '$', mission: '★', hospital: '+', police: '⛨' };
+export const ICONS = { safehouse: '⌂', store: '$', mission: '★', hospital: '+', police: '⛨', marina: '⚓' };
 export const STATIC_BLIPS = [
   { ...PLACES.safehouse, icon: 'safehouse', color: '#29e6ff', label: 'Safehouse' },
   { ...PLACES.store, icon: 'store', color: '#ffd23f', label: 'Sunny Stop' },
   { ...PLACES.hospital, icon: 'hospital', color: '#ff5566', label: 'Hospital' },
   { ...PLACES.police, icon: 'police', color: '#6ea0ff', label: 'Police' },
+  { ...PLACES.marina, icon: 'marina', color: '#9fd8ff', label: 'Cayo Lento Marina' },
 ];

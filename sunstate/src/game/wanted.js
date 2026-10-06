@@ -54,7 +54,7 @@ export class Wanted {
 
   /** A crime happened at (x, z). Police who see it report at once; civilians may call it in. */
   crime(id, x, z, { perpetrator = this.game.player, victim = null } = {}) {
-    if (perpetrator !== this.game.player) return;
+    if (perpetrator !== this.game.player && perpetrator !== this.game.partner) return; // the crew's crimes only
     const c = CRIMES[id];
     const police = this.game.police;
     if (police && police.canSeePoint(x, z, perpetrator)) {
@@ -173,11 +173,11 @@ export class Wanted {
     }
   }
 
-  /** Crime detection from game events (only the player's actions count as crimes here). */
+  /** Crime detection from game events (only the crew's actions count as crimes here). */
   bindEvents() {
     const g = this.game;
     const ev = g.events;
-    const isPlayer = (c) => c === g.player;
+    const isPlayer = (c) => !!c && (c === g.player || c === g.partner); // either of the crew
     ev.on('gunshot', ({ shooter, x, z }) => { if (isPlayer(shooter)) this.crime('shooting', x, z); });
     ev.on('carjack', ({ thief, vehicle }) => { if (isPlayer(thief)) this.crime(vehicle.police ? 'assaultOfficer' : 'carjack', vehicle.pos.x, vehicle.pos.z); });
     ev.on('assault', ({ attacker, victim }) => { if (isPlayer(attacker)) this.crime(victim.role === 'cop' ? 'assaultOfficer' : 'assault', victim.pos.x, victim.pos.z, { victim }); });
@@ -185,11 +185,11 @@ export class Wanted {
       if (!isPlayer(source)) return;
       this.crime(victim.role === 'cop' ? 'officerDown' : 'murder', victim.pos.x, victim.pos.z, { victim });
     });
-    ev.on('pedHit', ({ victim, vehicle, speed }) => { if (vehicle.driver === g.player && speed > 7 && victim.role !== 'player') this.crime(victim.role === 'cop' ? 'assaultOfficer' : 'hitAndRun', victim.pos.x, victim.pos.z, { victim }); });
+    ev.on('pedHit', ({ victim, vehicle, speed }) => { if (isPlayer(vehicle.driver) && speed > 7 && !victim.protagonist) this.crime(victim.role === 'cop' ? 'assaultOfficer' : 'hitAndRun', victim.pos.x, victim.pos.z, { victim }); });
     ev.on('damaged', ({ victim, source, kind }) => { if (isPlayer(source) && victim.role === 'cop' && kind !== 'melee' && !victim.dead) this.crime('assaultOfficer', victim.pos.x, victim.pos.z, { victim }); });
     ev.on('playerEnteredVehicle', (v) => {
       // taking a parked car that isn't yours: only a crime if an officer sees it
-      if (v.police || (v.owner !== 'player' && !v.mission && v.prevDriverRole !== 'player')) this.crime('vehicleTheft', v.pos.x, v.pos.z);
+      if (v.police || (v.owner !== 'player' && !v.mission && v.prevDriverRole !== 'player' && v.prevDriverRole !== 'partner')) this.crime('vehicleTheft', v.pos.x, v.pos.z);
     });
   }
 }

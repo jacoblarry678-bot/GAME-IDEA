@@ -6,12 +6,11 @@
  */
 import * as THREE from 'three';
 import { Events } from '../core/events.js';
-import { Character } from '../entities/character.js';
 import { Vehicle } from '../entities/vehicle.js';
 import { randomLook } from '../entities/humanModel.js';
 import { CameraRig } from './camera.js';
 import { Combat } from './combat.js';
-import { PlayerController } from './player.js';
+import { Crew, PROTAGONISTS } from './crew.js';
 import { DISTRICT, PLACES } from '../world/district.js';
 import { obbCircle } from '../world/collision.js';
 import { TrafficManager } from '../ai/traffic.js';
@@ -24,10 +23,7 @@ import { MissionManager, Markers } from './missions.js';
 import { Director } from '../ai/director.js';
 import { snapshot, writeSave } from './save.js';
 
-export const PROTAGONIST_LOOK = {
-  female: false, height: 1.83, build: 1.08, skin: 0xc68642, hair: 0x1b1410, top: 0xe9e2d0, bottom: 0x2e3b55,
-  shoes: 0xf0f0f0, hairStyle: 'long', shorts: false, sleeveless: false, hat: null, beard: true,
-};
+export const PROTAGONIST_LOOK = PROTAGONISTS.cal.look;
 
 export class Game {
   constructor({ engine, world, input, settings, audio }) {
@@ -47,8 +43,9 @@ export class Game {
     this.combat = new Combat(this);
     this.cameraRig = new CameraRig(this);
     const sp = PLACES.safehouse.spawn;
-    this.player = new Character(this, PROTAGONIST_LOOK, { role: 'player', x: sp.x, z: sp.z, yaw: sp.rot });
-    this.player.controller = new PlayerController(this, this.player);
+    this.player = null; // the protagonist you control (set by the crew)
+    this.partner = null; // the other one
+    this.crew = new Crew(this);
     this.cameraRig.snapBehind(sp.rot);
     this.stats = { robberies: 0, escapes: 0, busted: 0, wasted: 0, distanceDriven: 0 };
     this.economy = new Economy(this);
@@ -101,7 +98,7 @@ export class Game {
   }
 
   allCharacters() {
-    const out = [this.player];
+    const out = [this.player, this.partner];
     for (const p of this.peds) out.push(p);
     for (const c of this.cops) out.push(c);
     for (const e of this.extras) out.push(e);
@@ -129,6 +126,7 @@ export class Game {
       const o = v.seats[i];
       if (!o) continue;
       if (o === this.player) return false;
+      if (o === this.partner) { this.unseatCharacter(v, o, null); continue; }
       this.unseatCharacter(v, o, null);
       this.removeCharacter(o);
     }
@@ -202,6 +200,7 @@ export class Game {
   /** Fixed simulation step. */
   step(dt) {
     this.time += dt;
+    this.crew.step(dt); // switching / partner commands, then the partner's AI
     const p = this.player;
     p.controller.step(dt);
     this.traffic?.step(dt);
@@ -316,7 +315,7 @@ export class Game {
     this.police.clearAll();
     this.missions.cleanup();
     for (const v of [...this.vehicles]) { for (let i = 0; i < v.seats.length; i++) v.seats[i] = null; this.vehicles.splice(this.vehicles.indexOf(v), 1); v.dispose(); }
-    for (const ch of [...this.peds, ...this.cops, ...this.extras, this.player]) ch.dispose();
+    for (const ch of [...this.peds, ...this.cops, ...this.extras, ...this.crew.list]) ch.dispose();
     this.peds.length = 0; this.cops.length = 0; this.extras.length = 0;
     this.markers.dispose();
     this.combat.dispose();

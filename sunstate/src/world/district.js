@@ -3,7 +3,7 @@
  * landmarks the game refers to, interiors, parking and street furniture.
  * Deterministic (seeded) so collision, AI, minimap and meshes always agree.
  */
-import { AVENUES, STREETS, BLOCKS, blockAt, roadHalfWidth, SIDEWALK_W, ISLAND, CAUSEWAY, MAINLAND, ROAD_GRAPH, PLATFORMS } from './layout.js';
+import { AVENUES, STREETS, BLOCKS, blockAt, roadHalfWidth, SIDEWALK_W, ISLAND, CAUSEWAY, MAINLAND, ROAD_GRAPH, PLATFORMS, KEYS, TWIN, BACKDROP } from './layout.js';
 
 export function mulberry32(seed) {
   let a = seed >>> 0;
@@ -250,12 +250,92 @@ function plan() {
     props.push({ type: 'boat', x: ISLAND.west - 14, z: z + 5, rot: Math.PI / 2 + (rnd() - 0.5) * 0.2, color: pick([0xffffff, 0xf1efe8, 0x1d3557]) });
     if (rnd() < 0.7) props.push({ type: 'boat', x: ISLAND.west - 22, z: z - 5, rot: Math.PI / 2, color: 0xffffff });
   }
+  planKeys({ add, props, parking, lots, rnd, pick });
+
   // mainland construction barrier at the end of the causeway
   for (let z = -14; z <= 14; z += 2.4) props.push({ type: 'barrier', x: MAINLAND.barrierX, z, rot: Math.PI / 2 });
   props.push({ type: 'roadSign', x: MAINLAND.barrierX + 3, z: -12, text: 'ROAD CLOSED — MAINLAND EXPRESSWAY UNDER CONSTRUCTION' });
 
   return { buildings, props, parking, lots };
 }
+
+/**
+ * Cayo Lento (Milestone 3): a bait-and-fuel stop, stilt houses, a dive bar,
+ * an RV park, a marina with a long pier, mangroves, and the closed old bridge
+ * east toward the rest of the chain. Names and businesses are invented.
+ */
+function planKeys({ add, props, parking, lots, rnd, pick }) {
+  const K = KEYS, hz = K.hwyZ, rw = roadHalfWidth(1);
+  const north0 = K.z0 + 3, north1 = hz - rw - 2; // strip between the north shore and the highway
+  const south0 = hz + rw + 2; // south side starts here
+  const STILT = [0xf3e6c8, 0xbfe3e0, 0xf6d6c2, 0xe8eef0, 0xd8e6c4, 0xf2d7e0];
+  // Lento Bait & Fuel, west of the bridge landing
+  add({ x0: 112, x1: 128, z0: north0 + 1, z1: north0 + 13, h: 5, style: 'shop', color: 0xf4efe2, accent: 0x2b7fd1, frontage: 's', sign: 'LENTO BAIT & FUEL', neon: 0x49ff9a, keys: true });
+  lots.push({ x0: 86, x1: 132, z0: north0 - 1, z1: north1 + 1.5 });
+  props.push({ type: 'canopy', x: 99, z: north0 + 9, w: 14, d: 8, color: 0xd8443c });
+  for (const x of [95, 103]) props.push({ type: 'pump', x, z: north0 + 9 });
+  parking.push({ x: 99, z: north0 + 9, rot: Math.PI / 2, model: 'pickup', color: 0x9a8a6a });
+  parking.push({ x: 120, z: north1 - 1.5, rot: Math.PI / 2, model: 'kestrel', color: 0xe8e2d0 });
+  // stilt houses along the north shore, east of the bridge
+  for (const x of [172, 200, 252, 280, 306]) add({ x0: x, x1: x + 14, z0: north0 + 1, z1: north0 + 11, h: 7.2, style: 'stilt', color: pick(STILT), accent: 0xffffff, frontage: 's', keys: true });
+  // south side, west: The Salt Hook (bar) and the Palm Hammock RV park
+  add({ x0: 64, x1: 90, z0: south0 + 6, z1: south0 + 20, h: 5.5, style: 'shop', color: 0x6d8f9c, accent: 0xf2a03d, frontage: 'n', sign: 'THE SALT HOOK', neon: 0xff3fa4, keys: true, bar: true });
+  lots.push({ x0: 60, x1: 96, z0: south0 - 1.5, z1: south0 + 6 });
+  parking.push({ x: 70, z: south0 + 2, rot: 0, model: 'ironhorse', color: 0x2a5aa8 });
+  parking.push({ x: 84, z: south0 + 2, rot: 0, model: 'pickup', color: 0x2b2b2b });
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) props.push({ type: 'trailer', x: 104 + j * 18, z: south0 + 8 + i * 13, rot: Math.PI / 2, color: pick([0xf4f1ea, 0xe9e2d0, 0xdfe8ee, 0xf2e3c6]) });
+  props.push({ type: 'roadSignKeys', x: 100, z: south0 - 0.5, text: 'PALM HAMMOCK RV PARK' });
+  // south side, east of the bridge: more stilt houses, then the marina
+  for (const x of [166, 190]) add({ x0: x, x1: x + 14, z0: south0 + 8, z1: south0 + 19, h: 7.2, style: 'stilt', color: pick(STILT), accent: 0xffffff, frontage: 'n', keys: true });
+  add({ x0: 238, x1: 262, z0: south0 + 8, z1: south0 + 22, h: 6, style: 'shop', color: 0xf3efe2, accent: 0x1d6fa8, frontage: 'w', sign: 'CAYO LENTO MARINA', neon: 0x29e6ff, keys: true });
+  lots.push({ x0: K.marinaX + rw, x1: 304, z0: K.z1 - 30, z1: K.z1 - 3 });
+  lots.push({ x0: K.marinaX - 18, x1: K.marinaX - rw, z0: K.z1 - 26, z1: K.z1 - 3 });
+  parking.push({ x: 246, z: K.z1 - 18, rot: Math.PI / 2, model: 'pickup', color: 0xf2f2f2 });
+  parking.push({ x: 275, z: K.z1 - 10, rot: -Math.PI / 2, model: 'kestrel', color: 0x1f4b3a });
+  // the long pier south off the marina, with boats alongside
+  const pierX = 262, pierLen = 46;
+  props.push({ type: 'dock', axis: 'z', x: pierX, z: K.z1 + pierLen / 2 - 1, len: pierLen });
+  PLATFORMS.push({ x0: pierX - 1.5, x1: pierX + 1.5, z0: K.z1 - 1, z1: K.z1 + pierLen - 1, y: 0.1 });
+  for (const [dx, dz, c] of [[-6, 12, 0xffffff], [6, 22, 0x1d3557], [-6, 34, 0xf1efe8], [6, 40, 0xffffff]]) props.push({ type: 'boat', x: pierX + dx, z: K.z1 + dz, rot: (rnd() - 0.5) * 0.2, color: c });
+  PLACES.marina = { name: 'Cayo Lento Marina', x: pierX, z: K.z1 + 4, pierEnd: { x: pierX, z: K.z1 + pierLen - 4 }, lot: { x: 270, z: K.z1 - 16 } };
+  PLACES.baitShop = { name: 'Lento Bait & Fuel', x: 99, z: north0 + 4 };
+  PLACES.saltHook = { name: 'The Salt Hook', x: 77, z: south0 + 3 };
+  PLACES.keys = { name: K.name, x: TWIN.x, z: hz };
+  // water tower at the west point, the old bridge east (closed), shoreline mangroves and palms
+  props.push({ type: 'watertower', x: 50, z: 690 });
+  for (let z = hz - 8; z <= hz + 8; z += 2.4) props.push({ type: 'barrier', x: K.x1 - 4, z, rot: Math.PI / 2 });
+  props.push({ type: 'roadSignKeys', x: K.x1 - 6, z: hz - 9, text: 'OLD LENTO BRIDGE — CLOSED TO TRAFFIC' });
+  props.push({ type: 'oldBridge', x0: K.x1, x1: BACKDROP.keys[0].x0, z: hz });
+  for (let x = K.x0 + 4; x < K.x1 - 4; x += 5 + rnd() * 6) {
+    if (Math.abs(x - TWIN.x) < 14) continue;
+    if (rnd() < 0.8) props.push({ type: 'mangrove', x, z: K.z0 + 1.2 + rnd() * 1.5, s: 0.8 + rnd() * 0.8 });
+    if (rnd() < 0.5 && !(x > K.marinaX - 22 && x < 306)) props.push({ type: 'mangrove', x, z: K.z1 - 1.2 - rnd() * 1.5, s: 0.8 + rnd() * 0.8 });
+  }
+  for (let z = K.z0 + 6; z < K.z1 - 4; z += 6 + rnd() * 5) { props.push({ type: 'mangrove', x: K.x0 + 1.5, z, s: 1 + rnd() * 0.6 }); }
+  for (let x = K.x0 + 10; x < K.x1 - 10; x += 9 + rnd() * 9) {
+    if (Math.abs(x - TWIN.x) < 12 || Math.abs(x - K.marinaX) < 6) continue;
+    const south = rnd() < 0.5;
+    if ((south && x > 56 && x < 100) || (!south && x > 84 && x < 134)) continue; // keep the lots clear
+    const zz = south ? hz + rw + 1.6 : hz - rw - 1.6;
+    if (rnd() < 0.7) props.push({ type: 'palm', x, z: zz, h: 7 + rnd() * 5, lean: rnd() * 0.8 });
+  }
+  for (let x = 66; x < 96; x += 7) props.push({ type: 'palm', x, z: K.z1 - 5 - rnd() * 3, h: 8 + rnd() * 4, lean: 0.4 + rnd() * 0.6 });
+  for (let x = K.x0 + 30; x < K.x1 - 10; x += 34) props.push({ type: 'streetlight', x, z: hz + rw + 0.8, rot: Math.PI, keys: true });
+  // lights along the outer parapets of the twin-span
+  const tw = TWIN.median / 2 + TWIN.deckW + 0.25; // standing on the outer parapet
+  for (let z = TWIN.zStart + 18; z < TWIN.zEnd - 10; z += 36) {
+    props.push({ type: 'streetlight', x: TWIN.x - tw, z, rot: Math.PI / 2, bridge: true });
+    props.push({ type: 'streetlight', x: TWIN.x + tw, z: z + 18, rot: -Math.PI / 2, bridge: true });
+  }
+  // palms on the further keys (backdrop)
+  for (const k of BACKDROP.keys) for (let i = 0; i < 9; i++) props.push({ type: 'palm', x: k.x0 + 6 + rnd() * (k.x1 - k.x0 - 12), z: k.z0 + 4 + rnd() * (k.z1 - k.z0 - 8), h: 7 + rnd() * 6, lean: rnd() });
+}
+
+/** Where people wander on Cayo Lento (no sidewalk grid out here). */
+export const KEYS_ZONES = [
+  { x0: KEYS.x0 + 30, x1: KEYS.x1 - 30, z0: KEYS.hwyZ + 7, z1: KEYS.z1 - 6 },
+  { x0: 86, x1: 132, z0: KEYS.z0 + 3, z1: KEYS.hwyZ - 7 },
+];
 
 function nearAnyStreet(z, d) { return STREETS.some((s) => Math.abs(s.z - z) < d + roadHalfWidth(s.lanes)); }
 function nearAnyAvenue(x, d) { return AVENUES.some((a) => Math.abs(a.x - x) < d + roadHalfWidth(a.lanes)); }

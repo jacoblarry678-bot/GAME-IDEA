@@ -7,8 +7,7 @@ import { Engine } from './core/engine.js';
 import { Input } from './core/input.js';
 import { World } from './world/world.js';
 import { App } from './app.js';
-import { DriverAI } from './ai/driver.js';
-import * as Layout from './world/layout.js';
+import { attachDriver } from './ai/driver.js';
 
 const STEP = 1 / 60;
 
@@ -68,36 +67,7 @@ function debugTools(app) {
     autopilot(x, z, { arrive = 18, cruise = false } = {}) {
       const g = app.game, v = g.player.vehicle;
       if (!v) return false;
-      const L = Layout;
-      // nearest road point the car can actually see (not one behind a building)
-      let rp = null;
-      for (const e of L.ROAD_GRAPH.edges) {
-        const A = L.ROAD_GRAPH.nodes[e.a], B = L.ROAD_GRAPH.nodes[e.b];
-        const dx = B.x - A.x, dz = B.z - A.z;
-        const t = Math.max(0.05, Math.min(0.95, ((v.pos.x - A.x) * dx + (v.pos.z - A.z) * dz) / (dx * dx + dz * dz)));
-        const px = A.x + dx * t, pz = A.z + dz * t;
-        const dist = Math.hypot(px - v.pos.x, pz - v.pos.z);
-        if (rp && dist >= rp.dist) continue;
-        const hit = g.world.collision.raycast(v.pos.x, v.pos.y + 0.8, v.pos.z, px - v.pos.x, 0, pz - v.pos.z, 1, (c) => c.tag !== 'prop');
-        if (hit && hit.t < 0.98) continue;
-        rp = { edge: e, t, x: px, z: pz, dist };
-      }
-      if (!rp) rp = L.nearestRoadPoint(v.pos.x, v.pos.z);
-      const e = rp.edge, a = L.ROAD_GRAPH.nodes[e.a], b = L.ROAD_GRAPH.nodes[e.b];
-      const [fx, fz] = v.forward;
-      const from = ((b.x - a.x) * fx + (b.z - a.z) * fz) >= 0 ? e.a : e.b;
-      const to = from === e.a ? e.b : e.a;
-      const t = Math.max(0.05, Math.min(0.95, from === e.a ? rp.t : 1 - rp.t));
-      ai = new DriverAI(v, g, { edge: e.id, from, lane: 0, t: Math.min(0.95, t + 0.15) });
-      ai.mode = cruise ? 'cruise' : 'route';
-      if (!cruise) {
-        // drive along the road segment nearest the destination, so the car actually passes it
-        const tp = L.nearestRoadPoint(x, z);
-        const [A, B] = [tp.edge.a, tp.edge.b];
-        const viaA = L.findRoute(to, A), viaB = L.findRoute(to, B);
-        const len = (r) => (r ? r.length : 1e9);
-        ai.route = len(viaA) <= len(viaB) ? [...viaA, B] : [...viaB, A];
-      }
+      ai = attachDriver(v, g, cruise ? null : { x, z });
       ai.speedScale = 1.1;
       target = cruise ? null : { x, z, arrive };
       arrived = false;

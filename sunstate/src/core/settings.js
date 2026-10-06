@@ -28,6 +28,8 @@ export const DEFAULT_BINDINGS = {
   fire: 'Mouse0',
   aim: 'Mouse2',
   skip: 'Enter',
+  switchCharacter: 'Tab',
+  partner: 'KeyG',
 };
 
 export const BINDING_LABELS = {
@@ -51,6 +53,8 @@ export const BINDING_LABELS = {
   fire: 'Fire / punch',
   aim: 'Aim',
   skip: 'Skip dialogue',
+  switchCharacter: 'Switch character (Cal / Sol)',
+  partner: 'Partner: follow / wait (pull over / drive)',
 };
 
 export const PRESETS = {

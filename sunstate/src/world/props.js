@@ -183,8 +183,95 @@ export function buildProps(collision, mats) {
   for (const p of by('lifeguard')) lifeguardTower(Bt, p, collision);
   for (const p of by('dock')) {
     const y = 0.1;
+    if (p.axis === 'z') {
+      Bt.box('wood', p.x - 1.5, p.x + 1.5, y - 0.25, y, p.z - p.len / 2, p.z + p.len / 2, { tile: [3, 3], topTile: 3 });
+      for (let z = p.z - p.len / 2 + 1; z < p.z + p.len / 2; z += 4) for (const s of [-1.3, 1.3]) Bt.box('wood', p.x + s - 0.15, p.x + s + 0.15, -4.3, y, z - 0.15, z + 0.15, { tile: [1, 1] });
+      for (const s of [-1.45, 1.45]) Bt.box('wood', p.x + s - 0.05, p.x + s + 0.05, y, y + 0.9, p.z - p.len / 2 + 6, p.z + p.len / 2, { tile: [1, 1] });
+      continue;
+    }
     Bt.box('wood', p.x - p.len / 2, p.x + p.len / 2, y - 0.25, y, p.z - 1.5, p.z + 1.5, { tile: [3, 3], topTile: 3 });
     for (let x = p.x - p.len / 2 + 1; x < p.x + p.len / 2; x += 4) for (const s of [-1.3, 1.3]) Bt.box('wood', x - 0.15, x + 0.15, -4.3, y, p.z + s - 0.15, p.z + s + 0.15, { tile: [1, 1] });
+  }
+  // --- Cayo Lento (Milestone 3) ----------------------------------------------------
+  const C = (hex) => new THREE.Color(hex);
+  for (const p of by('canopy')) {
+    const y0 = CURB, y1 = CURB + 4.6;
+    for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const cx = p.x + dx * (p.w / 2 - 1.2), cz = p.z + dz * (p.d / 2 - 1.2);
+      Bt.box('metal', cx - 0.2, cx + 0.2, y0, y1, cz - 0.2, cz + 0.2, { color: C(0xe9e9e6) });
+      collision.add({ type: 'circle', cx, cz, r: 0.25, y0: -1, y1, material: 'metal', cameraBlock: false, tag: 'prop' });
+    }
+    Bt.box('trim', p.x - p.w / 2, p.x + p.w / 2, y1, y1 + 0.9, p.z - p.d / 2, p.z + p.d / 2, { color: C(p.color) });
+    Bt.box('lightpanel', p.x - p.w / 2 + 1, p.x + p.w / 2 - 1, y1 - 0.02, y1, p.z - p.d / 2 + 1, p.z + p.d / 2 - 1, { sides: { bottom: true, top: false, n: false, s: false, e: false, w: false } });
+    collision.add({ type: 'box', cx: p.x, cz: p.z, hx: p.w / 2, hz: p.d / 2, y0: y1, y1: y1 + 0.9, material: 'metal', cameraBlock: true });
+  }
+  for (const p of by('pump')) {
+    Bt.box('trim', p.x - 0.35, p.x + 0.35, CURB, CURB + 0.25, p.z - 1.2, p.z + 1.2, { color: C(0xcfcac0) });
+    Bt.box('trim', p.x - 0.3, p.x + 0.3, CURB + 0.25, CURB + 1.75, p.z - 0.45, p.z + 0.45, { color: C(0xf2f2ee) });
+    Bt.box('trim', p.x - 0.31, p.x + 0.31, CURB + 1.35, CURB + 1.75, p.z - 0.46, p.z + 0.46, { color: C(0xd8443c) });
+    collision.add({ type: 'box', cx: p.x, cz: p.z, hx: 0.38, hz: 1.2, y0: -1, y1: CURB + 1.8, material: 'metal', cameraBlock: false, tag: 'prop' });
+  }
+  for (const p of by('trailer')) {
+    const m = new THREE.Matrix4().compose(V(p.x, CURB + 1.75, p.z), new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), p.rot), V(1, 1, 1));
+    Bt.geometry('trim', new THREE.BoxGeometry(2.5, 2.5, 9), m, C(p.color));
+    const stripe = new THREE.BoxGeometry(2.52, 0.25, 9.02); stripe.translate(0, -0.3, 0);
+    Bt.geometry('trim', stripe, m, C(0x2b7fd1));
+    const win = new THREE.BoxGeometry(2.54, 0.7, 2.2); win.translate(0, 0.35, 1.8);
+    Bt.geometry('glass', win, m);
+    const blocks = new THREE.BoxGeometry(2.2, 0.5, 8); blocks.translate(0, -1.5, 0);
+    Bt.geometry('trim', blocks, m, C(0x8f8b84));
+    collision.add({ type: 'box', cx: p.x, cz: p.z, hx: 1.25, hz: 4.5, angle: p.rot, y0: -1, y1: CURB + 3.1, material: 'metal' });
+  }
+  for (const p of by('watertower')) {
+    const leg = 3.2, top = CURB + 13;
+    for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      Bt.box('metal', p.x + dx * leg - 0.15, p.x + dx * leg + 0.15, CURB, top, p.z + dz * leg - 0.15, p.z + dz * leg + 0.15, { color: C(0xd8dcdf) });
+      collision.add({ type: 'circle', cx: p.x + dx * leg, cz: p.z + dz * leg, r: 0.2, y0: -1, y1: top, material: 'metal', cameraBlock: false, tag: 'prop' });
+    }
+    const tank = new THREE.CylinderGeometry(4.2, 4.2, 5, 20); tank.translate(p.x, top + 2.5, p.z);
+    Bt.geometry('trim', tank, new THREE.Matrix4(), C(0xeef2f3));
+    const cap = new THREE.ConeGeometry(4.4, 1.6, 20); cap.translate(p.x, top + 5.8, p.z);
+    Bt.geometry('trim', cap, new THREE.Matrix4(), C(0x7fb7c9));
+    const t = T.signTexture('CAYO LENTO', { fg: '#1d6fa8', font: '800 64px Arial' });
+    for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      const sgn = new THREE.Mesh(new THREE.PlaneGeometry(6, 6 / t.userData.aspect), new THREE.MeshStandardMaterial({ map: t, transparent: true, alphaTest: 0.1 }));
+      sgn.position.set(p.x + Math.sin(a) * 4.25, top + 2.6, p.z + Math.cos(a) * 4.25); sgn.rotation.y = a;
+      group.add(sgn);
+    }
+  }
+  for (const p of by('oldBridge')) {
+    // an old, narrower bridge on rusting piers; a span in the middle has fallen into the water
+    const deckY = 4.2, mid = (p.x0 + p.x1) / 2;
+    for (let x = p.x0 + 6; x < p.x1; x += 13) {
+      Bt.box('seawall', x - 0.6, x + 0.6, -4.3, deckY - 0.6, p.z - 2.6, p.z - 1.4, { tile: [3, 3] });
+      Bt.box('seawall', x - 0.6, x + 0.6, -4.3, deckY - 0.6, p.z + 1.4, p.z + 2.6, { tile: [3, 3] });
+      collision.add({ type: 'box', cx: x, cz: p.z, hx: 0.6, hz: 2.6, y0: -6, y1: deckY, material: 'concrete' });
+      if (Math.abs(x - mid) < 14) continue;
+      Bt.box('seawall', x - 6.5, x + 6.5, deckY - 0.6, deckY, p.z - 4, p.z + 4, { tile: [4, 4] });
+      for (const s of [-1, 1]) Bt.box('metal', x - 6.5, x + 6.5, deckY, deckY + 1, p.z + s * 3.9 - 0.06, p.z + s * 3.9 + 0.06, { color: C(0x8c5a3c) });
+    }
+    // the fallen span, tilted into the water
+    const fallen = new THREE.BoxGeometry(13, 0.6, 8);
+    Bt.geometry('seawall', fallen, new THREE.Matrix4().compose(V(mid, -0.8, p.z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.06, 0, 0.32)), V(1, 1, 1)));
+    // the approach from the key: a short ramp up to the old deck height
+    Bt.quad('seawall', [[p.x0, CURB, p.z - 4], [p.x0, CURB, p.z + 4], [p.x0 + 12, deckY, p.z + 4], [p.x0 + 12, deckY, p.z - 4]].reverse(), [[0, 0], [1, 0], [1, 1], [0, 1]]);
+  }
+  const mangroveGeo = merge([
+    part(new THREE.IcosahedronGeometry(1.3, 0), 0x3f6b3a, 0, 1.3, 0),
+    part(new THREE.IcosahedronGeometry(1.0, 0), 0x4c7a40, 1.1, 1.0, 0.4),
+    part(new THREE.IcosahedronGeometry(0.9, 0), 0x355f33, -1.0, 0.9, -0.3),
+    part(new THREE.CylinderGeometry(0.05, 0.08, 1.0, 4), 0x6b5a45, 0.5, 0.2, 0.6, 0.4, 0, 0.3),
+    part(new THREE.CylinderGeometry(0.05, 0.08, 1.0, 4), 0x6b5a45, -0.6, 0.2, 0.5, -0.4, 0, -0.3),
+  ]);
+  mangroveGeo.scale(1, 0.75, 1);
+  group.add(instanced(mangroveGeo, vc, by('mangrove'), (p, m) => m.compose(V(p.x, groundHeight(p.x, p.z, 1) - 0.2, p.z), new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), p.x * 1.7), V(p.s, p.s, p.s)), { shadow: true }));
+  for (const p of by('roadSignKeys')) {
+    const t = T.signTexture(p.text, { fg: '#ffffff', bg: '#1f6b45', font: '700 44px Arial' });
+    const w = Math.min(7, 0.9 * t.userData.aspect);
+    const sgn = new THREE.Mesh(new THREE.PlaneGeometry(w, w / t.userData.aspect), new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide }));
+    sgn.position.set(p.x, CURB + 2.4, p.z);
+    group.add(sgn);
+    for (const dx of [-w / 2 + 0.3, w / 2 - 0.3]) Bt.box('metal', p.x + dx - 0.05, p.x + dx + 0.05, CURB, CURB + 2.4, p.z - 0.05, p.z + 0.05, { color: C(0x777777) });
   }
   for (const p of by('boat')) boat(Bt, p, collision);
   for (const p of by('barrier')) {

@@ -39,7 +39,7 @@ export class CameraRig {
     const input = g.input;
     const s = g.settings.c;
     const look = input.takeLook(dt);
-    const aiming = p.controller?.aiming && !p.vehicle;
+    const aiming = !!p.controller?.aiming;
     const sens = 0.0024 * s.sensitivity * (aiming ? s.aimSensitivity : 1);
     if (!g.paused && !this.override) {
       this.yaw -= look.x * sens;
@@ -65,8 +65,9 @@ export class CameraRig {
       desiredDist = d.length * 1.15 + 2.6 + Math.min(2.2, sp * 0.05);
       shoulder = 0; height = 0;
       fovAdd = Math.min(12, Math.max(0, sp - 15) * 0.35);
+      if (aiming) { desiredDist = d.length * 0.55 + 1.6; shoulder = 0.7; height = 0.25; fovAdd = -10; }
       // auto-centre behind the car when the player isn't steering the camera
-      if (this.idleLook > 1.0 && sp > 3 && !g.paused) {
+      if (this.idleLook > 1.0 && sp > 3 && !g.paused && !aiming) {
         const vl = veh.vLong;
         const head = vl >= -0.5 ? veh.yaw : veh.yaw + Math.PI;
         let dy = head - this.yaw;

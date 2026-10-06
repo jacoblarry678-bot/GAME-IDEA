@@ -158,8 +158,8 @@ export class Character {
     // distance LOD: no shadow far away, and animate distant people less often
     const cam = this.game.engine.camera.position;
     const dc = Math.abs(this.pos.x - cam.x) + Math.abs(this.pos.z - cam.z);
-    this.model.mesh.castShadow = dc < 60 || this.role === 'player';
-    if (dc > 80 && this.role !== 'player') {
+    this.model.mesh.castShadow = dc < 60 || !!this.protagonist;
+    if (dc > 80 && !this.protagonist) {
       this._lodAcc = (this._lodAcc || 0) + dt;
       if (this._lodAcc < 0.1) return;
       dt = this._lodAcc;
@@ -173,7 +173,7 @@ export class Character {
       speed: this.vehicle ? 0 : Math.hypot(this.vel.x, this.vel.z),
       grounded: this.grounded || this.swim,
       crouch: this.crouch,
-      aim: a.aim, aimPitch: a.aimPitch, armed: a.armed,
+      aim: a.aim, aimPitch: a.aimPitch, armed: a.armed, carAimYaw: a.carAimYaw,
       sitting: !!this.vehicle, passenger: this.seat > 0, steer: this.vehicle ? this.vehicle.steer : 0,
       surrender: a.surrender, cower: a.cower, phone: a.phone, talk: a.talk,
       swim: this.swim, punch: a.punch, flinch: a.flinch, lookYaw: a.lookYaw, sitGround: a.sitGround && !this.dead,

@@ -11,6 +11,7 @@ import { Audio } from './audio/audio.js';
 import { HUD } from './ui/hud.js';
 import { Menus } from './ui/menus.js';
 import { loadSave, applySave } from './game/save.js';
+import { Input } from './core/input.js';
 import { PLACES } from './world/district.js';
 import './ui/styles.css';
 
@@ -60,6 +61,7 @@ export class App {
   get simulating() { return this.state === 'playing' && !!this.game; }
 
   hasSave() { return !!loadSave(); }
+  keyLabel(action) { return Input.label(this.settings.c.bindings[action]); }
   saveInfo() { return loadSave(); }
 
   // ------------------------------------------------------------ transitions
@@ -91,7 +93,8 @@ export class App {
     this.begin();
     if (!quick) {
       this.menus.showCard('Ocean Mile', 'Costa Vela', 3.5);
-      setTimeout(() => this.game === g && g.events.emit('phoneMessage', { from: 'sol', text: 'You up? Come find me at the motel lot — blue marker by your door. We need to talk about Teo.' }), 2500);
+      setTimeout(() => this.game === g && g.events.emit('phoneMessage', { from: 'sol', text: 'You up? I\'m out by the motel lot — blue marker by your door. We need to talk about Teo.' }), 2500);
+      setTimeout(() => this.game === g && this.hud.notify(`<span class="key">${this.keyLabel('switchCharacter')}</span> switches between Cal and Sol · <span class="key">${this.keyLabel('partner')}</span> tells your partner to follow or wait.`, 'Tip', '', 10), 9000);
     }
     g.hud.setObjective('Explore Ocean Mile, or start the mission at the blue <span class="hl">S</span> marker by the motel.');
   }
@@ -131,6 +134,7 @@ export class App {
     const g = this.game;
     g.engine.time.hour = (g.engine.time.hour + 6) % 24;
     g.player.health = 100;
+    if (g.crew.partnerWithPlayer()) g.partner.health = 100;
     g.saveGame('safehouse');
     this.fade(0.8);
   }
@@ -163,6 +167,7 @@ export class App {
   respawnAfter(kind) {
     const g = this.game;
     const place = kind === 'wasted' ? PLACES.hospital : PLACES.police;
+    const partnerWasWith = g.crew.partnerWithPlayer();
     g.wanted.clear(true);
     g.police.clearAll();
     const fee = kind === 'wasted' ? Math.min(500, Math.round(g.economy.money * 0.1)) : Math.min(1000, Math.round(g.economy.money * 0.15));
@@ -172,6 +177,7 @@ export class App {
       if (a) { a.reserve = 0; a.mag = Math.min(a.mag, 12); }
     }
     g.respawnPlayer(place.x, place.z, place.rot, { health: 100 });
+    g.crew.regroupAt(place.x, place.z, place.rot, partnerWasWith);
     g.engine.time.hour = (g.engine.time.hour + (kind === 'wasted' ? 4 : 8)) % 24;
     this.canvas.classList.remove('grayscale');
     this.overlay = null;

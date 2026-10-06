@@ -33,6 +33,8 @@ export const STREETS = [
 ];
 
 export const roadHalfWidth = (lanes) => lanes * LANE_W + 0.5;
+/** Half width of a road segment or graph edge (the twin-span is wider: two decks and a gap). */
+export const segHalfWidth = (s) => s.hw ?? roadHalfWidth(s.lanes);
 
 export const ISLAND = {
   west: -30 - roadHalfWidth(1) - SIDEWALK_W - 3.5, // bay seawall
@@ -53,6 +55,16 @@ export const CAUSEWAY = {
   deckY: 6.5,
 };
 export const MAINLAND = { east: -300, west: -420, north: -70, south: 70, barrierX: -385 };
+
+/**
+ * Cayo Lento, the first of the Vela Keys (Milestone 3): a low, flat key south
+ * of Ocean Mile, reached by a twin-span bridge (one deck per direction with an
+ * open gap between them) that carries Ocean Blvd south over the water. The
+ * shallow turquoise flats around it are swimmable, not wadeable.
+ */
+export const KEYS = { x0: 40, x1: 330, z0: 612, z1: 716, hwyZ: 640, marinaX: 230, name: 'Cayo Lento' };
+export const TWIN = { x: 150, median: 5, deckW: 5, zStart: ISLAND.south, zEnd: KEYS.z0, rampLen: 60, deckY: 7.5 };
+export const FLATS = { x0: -20, x1: 470, z0: 540, z1: 820, y: -2.4 }; // shallow water around the keys
 
 // ---------------------------------------------------------------------------
 // Terrain
@@ -76,7 +88,9 @@ export function onCauseway(x, z) {
 export const BACKDROP = {
   downtownX: -620, // everything west of this is downtown Costa Vela
   north: { x0: -200, x1: 215, z0: -1100, z1: -300 },
-  south: { x0: -200, x1: 215, z0: 300, z1: 1100 },
+  south: { x0: -260, x1: -50, z0: 300, z1: 1100 }, // Vela Point; open water and the keys to its east
+  // further keys of the chain, low and green, seen from Cayo Lento but not reachable
+  keys: [{ x0: 430, x1: 560, z0: 600, z1: 660 }, { x0: 640, x1: 760, z0: 520, z1: 570 }, { x0: 200, x1: 300, z0: 860, z1: 905 }],
 };
 
 function beachProfile(x, z) {
@@ -86,13 +100,22 @@ function beachProfile(x, z) {
   return -0.12 - d * 0.055 - Math.max(0, d - 30) * 0.05;
 }
 
+export const inKeys = (x, z) => x >= KEYS.x0 && x <= KEYS.x1 && z >= KEYS.z0 && z <= KEYS.z1;
+
 /** Natural ground / seabed height, ignoring bridges. */
 export function terrainHeight(x, z) {
   // mainland stub across the bay
   if (x <= MAINLAND.east && x >= MAINLAND.west && z >= MAINLAND.north && z <= MAINLAND.south) return 0;
   if (x < BACKDROP.downtownX) return CURB;
   const n = BACKDROP.north, s = BACKDROP.south;
-  if (x > n.x0 && x < n.x1 && (z < n.z1 || z > s.z0)) return CURB;
+  if ((x > n.x0 && x < n.x1 && z < n.z1) || (x > s.x0 && x < s.x1 && z > s.z0)) return CURB;
+  if (inKeys(x, z)) return roadAt(x, z) ? 0 : CURB;
+  for (const k of BACKDROP.keys) if (x > k.x0 && x < k.x1 && z > k.z0 && z < k.z1) return CURB;
+  if (x > FLATS.x0 && x < FLATS.x1 && z > FLATS.z0 && z < FLATS.z1) {
+    // the flats shelve gently down from the key's shore (always deep enough to swim)
+    const dx = Math.max(KEYS.x0 - x, 0, x - KEYS.x1), dz = Math.max(KEYS.z0 - z, 0, z - KEYS.z1);
+    return -1.9 - Math.min(0.9, Math.hypot(dx, dz) * 0.008);
+  }
   if (x < ISLAND.west || z < ISLAND.north || z > ISLAND.south) {
     if (x >= ISLAND.sandStart) return Math.min(-4.2, beachProfile(x, z));
     return -4.2; // bay and canal floor
@@ -104,6 +127,7 @@ export function terrainHeight(x, z) {
 /** Can a swimmer climb out onto this land? (backdrop shores are sea walls) */
 export function isClimbable(x, z) {
   if (x <= MAINLAND.east + 1 && x >= MAINLAND.west - 1 && z >= MAINLAND.north - 1 && z <= MAINLAND.south + 1) return true;
+  if (x >= KEYS.x0 - 1 && x <= KEYS.x1 + 1 && z >= KEYS.z0 - 1 && z <= KEYS.z1 + 1) return true;
   return x >= ISLAND.west - 1 && x <= 400 && z >= ISLAND.north - 1 && z <= ISLAND.south + 1;
 }
 
@@ -123,18 +147,37 @@ export function groundHeight(x, z, y = 100) {
     const d = causewayDeck(x);
     if (y >= d - 1.2) return Math.max(d, t);
   }
+  if (onTwin(x, z)) {
+    const d = twinDeck(z);
+    if (y >= d - 1.2) return Math.max(d, t);
+  }
   return t;
 }
 
+/** Deck height of the twin-span at z (null off the span). Both decks share the profile. */
+export function twinDeck(z) {
+  const t = TWIN;
+  if (z < t.zStart - 2 || z > t.zEnd + 2) return null;
+  const k = Math.max(0, Math.min(1, Math.min(z - t.zStart, t.zEnd - z) / t.rampLen));
+  return k * k * (3 - 2 * k) * t.deckY;
+}
+
+/** On one of the two decks (not in the open gap between them, not past the railings). */
+export function onTwin(x, z) {
+  const d = Math.abs(x - TWIN.x);
+  return d >= TWIN.median / 2 - 0.4 && d <= TWIN.median / 2 + TWIN.deckW + 0.4 && twinDeck(z) !== null; // incl. the parapets
+}
+
 export function isWater(x, z) {
-  return terrainHeight(x, z) < WATER_Y - 0.05 && !onCauseway(x, z);
+  return terrainHeight(x, z) < WATER_Y - 0.05 && !onCauseway(x, z) && !onTwin(x, z);
 }
 
 /** Surface type for footsteps and tyre audio. */
 export function surfaceAt(x, z, y = 100) {
-  if (onCauseway(x, z) && y > 0.5) return 'asphalt';
+  if ((onCauseway(x, z) || onTwin(x, z)) && y > 0.5) return 'asphalt';
   const t = terrainHeight(x, z);
   if (t < WATER_Y) return 'water';
+  if (inKeys(x, z)) return roadAt(x, z) ? 'asphalt' : z > KEYS.z1 - 10 ? 'sand' : 'grass';
   if (x >= ISLAND.sandStart && x < 400) return 'sand';
   if (roadAt(x, z)) return 'asphalt';
   return 'concrete';
@@ -152,14 +195,19 @@ export function roadSegments() {
   for (const s of STREETS) segs.push({ id: s.id, name: s.name, dir: 'ew', c: s.z, from: xMin, to: xMax, lanes: s.lanes });
   // causeway continues Causeway Blvd west across the bay to the mainland
   segs.push({ id: 'causeway', name: 'Vela Causeway', dir: 'ew', c: CAUSEWAY.z, from: MAINLAND.barrierX + 12, to: xMin, lanes: 2, bridge: true });
+  // Milestone 3: the twin-span south to Cayo Lento, and the key's own roads
+  segs.push({ id: 'twinspan', name: 'Vela Keys Twin Span', dir: 'ns', c: TWIN.x, from: zMax, to: KEYS.hwyZ, lanes: 1, twin: true, hw: TWIN.median / 2 + TWIN.deckW });
+  segs.push({ id: 'keyhwy', name: 'Overseas Rd', dir: 'ew', c: KEYS.hwyZ, from: KEYS.x0 + 20, to: KEYS.x1 - 10, lanes: 1, keys: true });
+  segs.push({ id: 'marina', name: 'Marina Rd', dir: 'ns', c: KEYS.marinaX, from: KEYS.hwyZ, to: KEYS.z1 - 14, lanes: 1, keys: true });
   return segs;
 }
 
 /** Is (x, z) on a road surface? Returns the segment or null. */
 export function roadAt(x, z) {
   for (const s of ROADS) {
-    const hw = roadHalfWidth(s.lanes);
+    const hw = segHalfWidth(s);
     if (s.dir === 'ns') {
+      if (s.twin) { const d = Math.abs(x - s.c); if (d <= hw && d >= TWIN.median / 2 && z >= s.from && z <= s.to + roadHalfWidth(1)) return s; continue; }
       if (Math.abs(x - s.c) <= hw && z >= s.from - hw && z <= s.to + hw) return s;
     } else if (Math.abs(z - s.c) <= hw && x >= s.from - hw && x <= s.to + hw) return s;
   }
@@ -200,15 +248,28 @@ export function buildRoadGraph() {
     for (let i = 0; i < AVENUES.length - 1; i++) link(byKey.get(`${AVENUES[i].x},${s.z}`), byKey.get(`${AVENUES[i + 1].x},${s.z}`), s.lanes, s.id);
   }
   link(byKey.get(`${AVENUES[0].x},${CAUSEWAY.z}`), west, 2, 'causeway');
+  // the twin-span and Cayo Lento
+  const K = KEYS;
+  const kw = addNode(K.x0 + 20, K.hwyZ, { deadEnd: true, keys: true });
+  const kj = addNode(TWIN.x, K.hwyZ, { keys: true });
+  const km = addNode(K.marinaX, K.hwyZ, { keys: true });
+  const ke = addNode(K.x1 - 10, K.hwyZ, { deadEnd: true, keys: true });
+  const kd = addNode(K.marinaX, K.z1 - 14, { deadEnd: true, keys: true });
+  link(byKey.get(`${TWIN.x},${STREETS[STREETS.length - 1].z}`), kj, 1, 'twinspan');
+  Object.assign(edges[edges.length - 1], { median: TWIN.median, hw: TWIN.median / 2 + TWIN.deckW, limit: 21 });
+  link(kw, kj, 1, 'keyhwy');
+  link(kj, km, 1, 'keyhwy');
+  link(km, ke, 1, 'keyhwy');
+  link(km, kd, 1, 'marina');
 
   for (const n of nodes) {
-    n.signal = n.edges.length >= 3;
+    n.signal = n.edges.length >= 3 && !n.keys; // the key's junctions are give-way, not signalised
     // half-size of the intersection box: widest crossing road
     let hx = 0, hz = 0;
     for (const eid of n.edges) {
       const e = edges[eid];
       const o = nodes[e.a === n.id ? e.b : e.a];
-      const hw = roadHalfWidth(e.lanes);
+      const hw = e.hw ?? roadHalfWidth(e.lanes);
       if (o.x !== n.x) hz = Math.max(hz, hw); else hx = Math.max(hx, hw);
     }
     n.hx = hx || 4;

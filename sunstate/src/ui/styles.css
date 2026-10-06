@@ -30,6 +30,15 @@
 .minimap canvas { width: 220px; height: 220px; display: block; }
 .minimap .northmark { position: absolute; font: 800 11px Inter, Arial; color: #fff; text-shadow: 0 1px 2px #000; transform: translate(-50%, -50%); }
 .bars { display: flex; gap: 4px; margin-top: 6px; width: 220px; }
+.crew { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; width: 220px; font: 800 11px Inter, Arial, sans-serif; letter-spacing: 0.08em; }
+.crew .m { flex: 1; position: relative; padding: 4px 7px 7px; border-radius: 6px; background: rgba(0,0,0,0.45); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; overflow: hidden; }
+.crew .m.on { color: #fff; border-color: var(--c); box-shadow: 0 0 10px -2px var(--c); }
+.crew .m b { color: var(--c); }
+.crew .m i { position: absolute; left: 7px; right: 7px; bottom: 3px; height: 2px; background: rgba(255,255,255,0.15); border-radius: 2px; }
+.crew .m i u { display: block; height: 100%; background: var(--c); border-radius: 2px; }
+.crew .m em { font-style: normal; font-weight: 600; letter-spacing: 0; opacity: 0.8; margin-left: 4px; }
+.crew .m.down em { color: #ff6b7a; }
+.crew .key { flex: none; }
 .bar { height: 7px; border-radius: 4px; background: rgba(0,0,0,0.5); overflow: hidden; flex: 1; box-shadow: 0 0 0 1px rgba(255,255,255,0.12) inset; }
 .bar > i { display: block; height: 100%; width: 100%; transition: width 0.2s; }
 .bar.hp > i { background: linear-gradient(90deg, #3fdc7a, #8dffb0); }

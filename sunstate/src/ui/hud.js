@@ -5,8 +5,9 @@
  */
 import { Input } from '../core/input.js';
 import { staticMap, toMap, routeBetween, STATIC_BLIPS, ICONS, MAP } from './mapdraw.js';
-import { roadAt, ISLAND } from '../world/layout.js';
+import { roadAt, ISLAND, KEYS } from '../world/layout.js';
 import { WANTED_CONFIG } from '../game/wanted.js';
+import { PROTAGONISTS } from '../game/crew.js';
 import { DISTRICT_NAME } from '../world/layout.js';
 
 /** Set innerHTML only when it changed (avoids per-frame layout work). */
@@ -29,6 +30,8 @@ export class HUD {
     this.north = h('div', 'northmark', 'N');
     this.mm.appendChild(this.north);
     bl.appendChild(this.mm);
+    this.crewEl = h('div', 'crew');
+    bl.appendChild(this.crewEl);
     const bars = h('div', 'bars');
     this.hp = h('div', 'bar hp', '<i></i>');
     this.armor = h('div', 'bar armor none', '<i></i>');
@@ -88,7 +91,8 @@ export class HUD {
     ev.on('missionPassed', ({ def, earned }) => { this.setObjective(''); this.big('MISSION PASSED', `${def.title}${earned ? ` · +$${earned.toLocaleString()}` : ''}`, 'pass', 5); });
     ev.on('missionFailed', ({ reason }) => { this.setObjective(''); this.failInfo = { reason, t: 12 }; });
     ev.on('missionStarted', (def) => { this.failInfo = null; this.big(def.title.toUpperCase(), 'Mission', 'pass', 2.5); });
-    ev.on('phoneMessage', (m) => { this.notify(m.text, m.from === 'sol' ? 'Sol' : m.from, 'phone', 9); game.audio?.ui('message'); });
+    ev.on('phoneMessage', (m) => { this.notify(m.text, PROTAGONISTS[m.from]?.name || m.from, 'phone', 9); game.audio?.ui('message'); });
+    ev.on('switched', ({ to, far }) => { if (far) this.app.menus.showCard(to.protagonistName, PROTAGONISTS[to.protagonist].full, 1.8); });
     ev.on('wantedNote', (text) => this.notify(text, 'Police', 'warn', 5));
     ev.on('witnessCall', () => this.notify('Someone is calling 911 about you. Stop them, or get out of sight.', 'Witness', 'warn', 5));
     ev.on('saved', ({ reason }) => this.notify(reason === 'mission' ? 'Progress saved.' : 'Game saved at the safehouse.', 'Autosave', '', 4));
@@ -155,6 +159,7 @@ export class HUD {
     this.armor.firstChild.style.width = p.armor + '%';
     this.armor.classList.toggle('none', p.armor <= 0);
     this.vignette.classList.toggle('show', p.health < 30 && !p.dead);
+    this.drawCrew();
     // wanted
     const W = g.wanted;
     let stars = '';
@@ -180,7 +185,7 @@ export class HUD {
     const w = pc.weapon, ammo = pc.ammo;
     setHTML(this.weaponEl, w.melee ? `<b>${w.icon}</b> ${w.name}` : `<b>${w.icon}</b> ${w.name} &nbsp;<b>${ammo.mag}</b> / ${ammo.reserve}${pc.reloadT > 0 ? ' <span class="reload">RELOADING</span>' : ''}`);
     // crosshair
-    const showX = !p.vehicle && !p.dead && (pc.aiming || pc.hipT > 0) && !w.melee;
+    const showX = (!p.vehicle || p.seat > 0) && !p.dead && (pc.aiming || pc.hipT > 0) && !w.melee;
     this.crosshair.classList.toggle('show', showX);
     this.crosshair.classList.toggle('target', !!pc.aimTarget);
     // prompt
@@ -220,7 +225,7 @@ export class HUD {
     // street name
     const pos = v ? v.pos : p.pos;
     const road = roadAt(pos.x, pos.z);
-    const area = pos.x > ISLAND.sandStart ? 'Ocean Mile Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Mainland Landing' : 'Vela Bay') : DISTRICT_NAME;
+    const area = pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Vela Keys Twin Span' : pos.x > ISLAND.sandStart ? 'Ocean Mile Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Mainland Landing' : 'Vela Bay') : DISTRICT_NAME;
     setHTML(this.street, `${road ? road.name : area}<small>${road ? area : ''} · ${g.engine.time.label()}</small>`);
     // fps
     this.fps.classList.toggle('show', s.g.showFps);
@@ -229,6 +234,24 @@ export class HUD {
       this.fps.textContent = `${g.engine.fps.toFixed(0)} fps · ${g.engine.frameMs.toFixed(1)} ms\n${i.calls} calls · ${(i.tris / 1000).toFixed(0)}k tris\n${g.vehicles.length} veh · ${g.peds.length + g.extras.length} peds · ${g.cops.length} cops`;
     }
     this.drawMinimap(dt);
+  }
+
+  /** Both protagonists: who you are, how the other one is doing and what they're up to. */
+  drawCrew() {
+    const g = this.game, crew = g.crew;
+    let html = '';
+    for (const ch of crew.list) {
+      const def = PROTAGONISTS[ch.protagonist];
+      const on = ch === g.player;
+      let status = '';
+      if (!on) {
+        const ai = ch.partnerAI;
+        status = ch.dead || crew.downT > 0 ? 'down' : ch.vehicle && ch.vehicle === g.player.vehicle ? (ch.seat === 0 ? (ai.hold ? 'parked' : 'driving') : 'riding') : ai.mode === 'follow' ? 'with you' : 'waiting';
+      }
+      html += `<span class="m${on ? ' on' : ''}${status === 'down' ? ' down' : ''}" style="--c:${def.color}"><b>${def.name.toUpperCase()}</b>${status ? `<em>${status}</em>` : ''}<i><u style="width:${Math.max(0, Math.round(ch.health))}%"></u></i></span>`;
+    }
+    html += `<span class="key">${Input.label(this.app.settings.c.bindings.switchCharacter)}</span>`;
+    setHTML(this.crewEl, html);
   }
 
   /** GPS target: mission objective first, then the map waypoint. */
@@ -308,6 +331,12 @@ export class HUD {
     for (const b of STATIC_BLIPS) blip(b.x, b.z, b.color, ICONS[b.icon], 24, b.icon === 'safehouse');
     for (const def of g.missions.available) if (g.missions.canStart(def.id)) blip(def.start.x, def.start.z, '#29e6ff', 'S', 26, true);
     if (tgt) blip(tgt.x, tgt.z, g.missions.active ? '#ffd23f' : '#d36bff', g.missions.active ? '●' : '⚑', 24, true);
+    // the partner, when they're not riding with you
+    const o = g.partner;
+    if (o && !o.dead && !(o.vehicle && o.vehicle === p.vehicle)) {
+      const op = o.vehicle ? o.vehicle.pos : o.pos;
+      blip(op.x, op.z, PROTAGONISTS[o.protagonist].color, o.protagonistName[0], 22, true);
+    }
     // police and witnesses
     const flash = Math.floor(g.time * 4) % 2;
     for (const c of g.cops) {

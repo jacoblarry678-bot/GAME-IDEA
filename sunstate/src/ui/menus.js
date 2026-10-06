@@ -6,6 +6,7 @@
 import { Input } from '../core/input.js';
 import { BINDING_LABELS, PRESETS } from '../core/settings.js';
 import { staticMap, toMap, STATIC_BLIPS, ICONS, MAP } from './mapdraw.js';
+import { PROTAGONISTS } from '../game/crew.js';
 import { MISSIONS, CAST } from '../game/missions.js';
 import { CRIMES, WANTED_CONFIG } from '../game/wanted.js';
 
@@ -156,7 +157,7 @@ export class Menus {
     const wrap = h('div', 'mapview');
     const c = document.createElement('canvas');
     wrap.appendChild(c);
-    wrap.appendChild(h('div', 'legend', `<b style="color:#29e6ff">${ICONS.safehouse}</b> Safehouse &nbsp; <b style="color:#ffd23f">$</b> Sunny Stop &nbsp; <b style="color:#ff5566">+</b> Hospital &nbsp; <b style="color:#6ea0ff">⛨</b> Police<br><b style="color:#29e6ff">S</b> Mission start &nbsp; <b style="color:#ffd23f">●</b> Objective &nbsp; <b style="color:#d36bff">⚑</b> Waypoint<br>Click: set waypoint · Right-click: clear · Wheel: zoom · Drag: pan`));
+    wrap.appendChild(h('div', 'legend', `<b style="color:#29e6ff">${ICONS.safehouse}</b> Safehouse &nbsp; <b style="color:#ffd23f">$</b> Sunny Stop &nbsp; <b style="color:#ff5566">+</b> Hospital &nbsp; <b style="color:#6ea0ff">⛨</b> Police &nbsp; <b style="color:#9fd8ff">⚓</b> Marina<br><b style="color:#29e6ff">S</b> Mission start &nbsp; <b style="color:#ffd23f">●</b> Objective &nbsp; <b style="color:#d36bff">⚑</b> Waypoint &nbsp; <b style="color:${PROTAGONISTS[g.partner.protagonist].color}">${g.partner.protagonistName[0]}</b> ${g.partner.protagonistName}<br>Click: set waypoint · Right-click: clear · Wheel: zoom · Drag: pan`));
     this.body.appendChild(wrap);
     const img = staticMap();
     const p = g.player.vehicle ? g.player.vehicle.pos : g.player.pos;
@@ -183,6 +184,8 @@ export class Menus {
       const t = g.missions.currentTarget();
       if (t) dot(t.x, t.z, '#ffd23f', '●');
       if (hud.waypoint) dot(hud.waypoint.x, hud.waypoint.z, '#d36bff', '⚑');
+      const o = g.partner;
+      if (o && !o.dead && !(o.vehicle && o.vehicle === g.player.vehicle)) { const op = o.vehicle ? o.vehicle.pos : o.pos; dot(op.x, op.z, PROTAGONISTS[o.protagonist].color, o.protagonistName[0]); }
       const [px, py] = toMap(p.x, p.z);
       x.beginPath(); x.arc(px, py, 9 / view.zoom, 0, Math.PI * 2); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 3 / view.zoom; x.strokeStyle = '#000'; x.stroke();
       x.restore();

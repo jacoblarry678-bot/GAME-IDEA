@@ -74,13 +74,27 @@ function fakeGame() {
   for (const p of DISTRICT.parking) {
     const def = (await import('../src/data/vehicles.js')).VEHICLES[p.model];
     const c = cw.boxContacts(p.x, p.z, def.width / 2, def.length / 2, p.rot, 0.3, 1.2).filter((c) => c.collider.tag !== 'railing');
-    if (c.length) bad++;
+    if (c.length) { bad++; console.log('   overlapping:', p.model, p.x.toFixed(1), p.z.toFixed(1), c.map((k) => k.collider.tag || k.collider.type).join()); }
   }
   check('parked cars spawn clear of walls and props', bad === 0, `${bad}/${DISTRICT.parking.length} overlapping`);
   const poles = cw.all.filter((c) => c.type === 'circle' && c.tag === 'prop' && L.roadAt(c.cx, c.cz) && !(c.cx < L.ISLAND.west - 1));
   check('no street furniture stands on the road', poles.length === 0, poles.slice(0, 3).map((c) => `${c.cx.toFixed(1)},${c.cz.toFixed(1)}`).join(' '));
   check('causeway deck is continuous over the water', [-45, -50, -100, -200, -280, -298].every((x) => L.groundHeight(x, 0, 10) > -0.01) && L.groundHeight(-150, 0, 10) > 6);
   check('a boat can pass under the causeway', L.groundHeight(-150, 0, -1) < -4);
+  // Milestone 3: the twin-span and Cayo Lento
+  const T = L.TWIN, laneX = (s) => T.x + s * (T.median / 2 + L.LANE_W / 2);
+  const deckOk = [-1, 1].every((s) => [250, 258, 300, 434, 560, 605, 615].every((z) => L.groundHeight(laneX(s), z, 12) > -0.01 && !L.isWater(laneX(s), z)));
+  check('both twin-span decks are continuous from Ocean Mile to the key', deckOk && L.groundHeight(laneX(1), 434, 12) > 7);
+  check('the gap between the decks is open water (railings keep cars out)', L.isWater(T.x, 434) && cw.all.some((c) => c.tag === 'railing' && Math.abs(c.cx - (T.x + T.median / 2)) < 0.5 && Math.abs(c.cz - 434) < 4));
+  check('a boat can pass under the twin-span', L.groundHeight(laneX(-1), 434, -1) < -4);
+  check('Cayo Lento is dry land with roads at grade', !L.isWater(150, 660) && L.groundHeight(200, 640) === 0 && L.groundHeight(200, 625) > 0.1 && L.isClimbable(100, 615));
+  check('the flats around the key are deep enough to swim, not wade', [[150, 590], [100, 730], [350, 650]].every(([x, z]) => L.isWater(x, z) && L.WATER_Y - L.terrainHeight(x, z) > 1.25));
+  const kn = L.ROAD_GRAPH.nodes.find((n) => n.x === L.KEYS.marinaX && n.z === L.KEYS.z1 - 14);
+  const route = L.findRoute(L.nearestNode(PLACES.safehouse.x, PLACES.safehouse.z).id, kn.id);
+  check('the marina is reachable by road from the motel (over the twin-span)', !!route && route.some((id) => L.ROAD_GRAPH.nodes[id].z === L.KEYS.hwyZ), route ? `${route.length} nodes` : 'no route');
+  const twinEdge = L.ROAD_GRAPH.edges.find((e) => e.road === 'twinspan');
+  const ll = laneLine(twinEdge, twinEdge.a, 0), lr = laneLine(twinEdge, twinEdge.b, 0);
+  check('twin-span lanes run on the decks, one direction per deck', Math.abs(Math.abs(ll.x0 - T.x) - (T.median / 2 + L.LANE_W / 2)) < 0.01 && Math.sign(ll.x0 - T.x) === -Math.sign(lr.x0 - T.x));
 }
 
 // ---- collision maths -----------------------------------------------------------
@@ -216,7 +230,12 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
 {
   check('corrupt save data falls back to defaults', JSON.stringify(sanitizeSave('garbage')) === JSON.stringify(defaultSave()));
   const s = sanitizeSave({ version: 1, savedAt: 'x', money: -50, hour: 99, player: { weapons: ['pistol', 'rocket', 'pistol'], current: 'rocket', ammo: { pistol: { mag: 99, reserve: -3 } } }, missions: { completed: ['small_change', 'nope', 'small_change'] }, vehicles: [{ id: 'a', model: 'kestrel', x: 1, z: 2 }, { id: 'a', model: 'kestrel' }, { id: 'b', model: 'tank' }] });
-  check('save validation clamps and filters', s.money === 0 && s.hour === 23.99 && s.player.weapons.join() === 'fists,pistol' && s.player.current === 'fists' && s.player.ammo.pistol.mag === 12 && s.player.ammo.pistol.reserve === 0);
+  const cal = s.crew.cal;
+  check('save validation clamps and filters', s.money === 0 && s.hour === 23.99 && cal.weapons.join() === 'fists,pistol' && cal.current === 'fists' && cal.ammo.pistol.mag === 12 && cal.ammo.pistol.reserve === 0);
+  check('a v1 save migrates: its player becomes Cal, Sol starts fresh', s.active === 'cal' && JSON.stringify(s.crew.sol) === JSON.stringify(defaultSave().crew.sol) && !('player' in s));
+  const s2 = sanitizeSave({ version: 2, savedAt: 'x', active: 'sol', crew: { cal: { health: 40, x: 12, z: 'no', mode: 'dance' }, sol: { health: 500, weapons: ['pistol'], current: 'pistol', ammo: { pistol: { mag: 3, reserve: 10 } }, x: 5, z: 6, yaw: 1, mode: 'follow' } } });
+  check('v2 keeps each protagonist separately and validates them', s2.active === 'sol' && s2.crew.cal.health === 40 && s2.crew.cal.x === null && s2.crew.cal.mode === 'wait' && s2.crew.sol.health === 100 && s2.crew.sol.current === 'pistol' && s2.crew.sol.ammo.pistol.mag === 3 && s2.crew.sol.x === 5 && s2.crew.sol.mode === 'follow');
+  check('an unknown active protagonist falls back to Cal', sanitizeSave({ version: 2, active: 'teo' }).active === 'cal');
   check('save validation dedupes missions and vehicles', s.missions.completed.length === 1 && s.vehicles.length === 1);
   check('saves from a newer version are ignored safely', sanitizeSave({ version: 99, money: 5 }).money === defaultSave().money);
   writeSave({ ...defaultSave(), money: 1234 });

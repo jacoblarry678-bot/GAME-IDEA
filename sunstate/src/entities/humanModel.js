@@ -317,7 +317,7 @@ export class HumanAnimator {
       B.foreArmL.rotation.x = lerp(B.foreArmL.rotation.x, -1.8, c); B.foreArmR.rotation.x = lerp(B.foreArmR.rotation.x, -1.8, c);
     }
     // aiming the pistol: right arm extended, left hand supporting, chest pitched with aim
-    this.m.gun.visible = !!s.armed && !s.sitting && !s.swim && !(s.dead > 0.05) && !s.surrender;
+    this.m.gun.visible = !!s.armed && (!s.sitting || !!s.aim) && !s.swim && !(s.dead > 0.05) && !s.surrender;
     if (w.aim > 0.01) {
       const a = w.aim, pitch = s.aimPitch || 0;
       B.chest.rotation.x = lerp(B.chest.rotation.x, -pitch * 0.5, a);
@@ -349,6 +349,14 @@ export class HumanAnimator {
       B.foreArmL.rotation.set(lerp(B.foreArmL.rotation.x, -0.45, k), 0, 0);
       B.foreArmR.rotation.set(lerp(B.foreArmR.rotation.x, -0.45, k), 0, 0);
       if (s.passenger) { B.upperArmL.rotation.set(-0.5, 0, 0.1); B.upperArmR.rotation.set(-0.5, 0, -0.1); B.foreArmL.rotation.x = -1; B.foreArmR.rotation.x = -1; }
+      // shooting from the seat: twist toward the target and extend the gun arm out of the window
+      if (s.aim) {
+        const rel = Math.max(-1.7, Math.min(1.7, s.carAimYaw || 0)), pitch = s.aimPitch || 0;
+        B.chest.rotation.y = rel * 0.55;
+        B.head.rotation.y = rel * 0.35;
+        B.upperArmR.rotation.set(-Math.PI / 2 - pitch * 0.5, rel * 0.5, -0.1);
+        B.foreArmR.rotation.set(0, 0, 0);
+      }
     }
     // sitting on the sand: legs out in front, leaning back on the hands
     if (s.sitGround) {

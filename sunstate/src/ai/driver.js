@@ -7,7 +7,7 @@
  * Right-hand traffic. Lane offset is measured to the right of the travel
  * direction; lane 0 is next to the centre line.
  */
-import { ROAD_GRAPH, LANE_W, signalState } from '../world/layout.js';
+import { ROAD_GRAPH, LANE_W, signalState, nearestRoadPoint, findRoute, roadAt } from '../world/layout.js';
 
 const { nodes, edges } = ROAD_GRAPH;
 
@@ -21,7 +21,7 @@ export function edgeDir(e, fromId) {
 export function laneLine(e, fromId, lane) {
   const { a, b, dx, dz } = edgeDir(e, fromId);
   const rx = -dz, rz = dx; // right of travel
-  const off = (lane + 0.5) * LANE_W;
+  const off = (e.median || 0) / 2 + (lane + 0.5) * LANE_W; // twin spans keep a gap between directions
   const ha = dx ? a.hx : a.hz, hb = dx ? b.hx : b.hz;
   return {
     x0: a.x + dx * (ha + 1) + rx * off, z0: a.z + dz * (ha + 1) + rz * off,
@@ -30,7 +30,7 @@ export function laneLine(e, fromId, lane) {
   };
 }
 
-export function speedLimit(e) { return e.road === 'causeway' ? 19 : e.lanes === 2 ? 15 : 11.5; }
+export function speedLimit(e) { return e.limit || (e.road === 'causeway' ? 19 : e.lanes === 2 ? 15 : 11.5); }
 
 export class DriverAI {
   constructor(vehicle, game, { edge, from, lane = 0, t = 0.3, mode = 'cruise' } = {}) {
@@ -138,6 +138,7 @@ export class DriverAI {
       const t = ((v.pos.x - a.x) * dx + (v.pos.z - a.z) * dz) / (dx * dx + dz * dz || 1);
       if (Math.hypot(v.pos.x - a.x, v.pos.z - a.z) < 3.5 || t > 0.02) this.wp.shift(); else break;
     }
+    if (this.offroad && this.stepOffroad(dt)) return;
     let total = 0;
     for (let i = 1; i < this.wp.length; i++) total += Math.hypot(this.wp[i].x - this.wp[i - 1].x, this.wp[i].z - this.wp[i - 1].z);
     if (total < 60 || this.wp.length < 4) this.extend();
@@ -232,6 +233,71 @@ export class DriverAI {
     else { v.input.throttle = 0; v.input.brake = 0; }
   }
 
+  /**
+   * Off the road (pulling out of a parking lot): steer toward the road with
+   * feelers that look for a heading clear of walls and parked cars, at walking
+   * pace, backing up when boxed in. Returns false once the car reaches the road.
+   */
+  stepOffroad(dt) {
+    const v = this.v, g = this.game, w = this.wp[0];
+    const onRoad = roadAt(v.pos.x, v.pos.z) && Math.hypot(w.x - v.pos.x, w.z - v.pos.z) < 9;
+    this.offT = (this.offT || 0) + dt;
+    if (onRoad || this.offT > 25) { this.offroad = false; return false; }
+    if (this.reverseT > 0) {
+      this.reverseT -= dt;
+      v.input.throttle = 0; v.input.brake = 0.6; v.input.handbrake = false; v.input.steer = this.backSteer || 0;
+      return true;
+    }
+    const desired = Math.atan2(w.x - v.pos.x, w.z - v.pos.z);
+    const range = 9;
+    const [fx, fz] = v.localToWorld(0, v.hz);
+    const freeAlong = (h) => {
+      const dx = Math.sin(h), dz = Math.cos(h);
+      // side rays from both front corners too, so the car's width fits through
+      let free = range;
+      for (const side of [-1, 0, 1]) {
+        const [sx, sz] = v.localToWorld(side * (v.hx + 0.3), v.hz - 0.3);
+        const hit = g.world.collision.raycast(sx, v.pos.y + 0.5, sz, dx, 0, dz, range, (c) => c.tag !== 'glass');
+        if (hit) free = Math.min(free, hit.t);
+      }
+      for (const o of g.vehicles) {
+        if (o === v || Math.abs(o.pos.x - v.pos.x) > range + 8 || Math.abs(o.pos.z - v.pos.z) > range + 8) continue;
+        for (let s = 0.5; s < free; s += 0.75) {
+          const [lx, lz] = o.worldToLocal(fx + dx * s, fz + dz * s);
+          if (Math.abs(lx) < o.hx + v.hx * 0.9 && Math.abs(lz) < o.hz + 0.4) { free = s; break; }
+        }
+      }
+      return free;
+    };
+    let best = desired, bestScore = -Infinity, bestFree = 0;
+    for (const off of [0, 0.35, -0.35, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6]) {
+      const h = desired + off;
+      // only headings the car can reach from where it points
+      let rel = h - v.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+      if (Math.abs(rel) > 2.2) continue;
+      const free = freeAlong(h);
+      let score = Math.min(free, 7) / 7 * 2 - Math.abs(off) * 0.5 - Math.abs(rel) * 0.15;
+      // a line that just got us boxed in is avoided for a while
+      for (const f of this.failed || []) { const df = Math.atan2(Math.sin(h - f.h), Math.cos(h - f.h)); if (Math.abs(df) < 0.4) score -= 1.2; }
+      if (score > bestScore) { bestScore = score; best = h; bestFree = free; }
+    }
+    let dy = best - v.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    const steer = Math.max(-1, Math.min(1, -dy * 2));
+    // boxed in, or pushing against something the feelers missed: back up and try another line
+    if ((bestFree < 2.2 && v.speed < 1.5) || (v.speed < 0.25 && v.input.throttle > 0)) this.boxedT = (this.boxedT || 0) + dt; else this.boxedT = 0;
+    if (this.failed) this.failed = this.failed.filter((f) => this.offT - f.t < 6);
+    if (bestScore === -Infinity || this.boxedT > 0.6) {
+      (this.failed || (this.failed = [])).push({ h: best, t: this.offT });
+      this.reverseT = 1.3; this.backSteer = -steer || 1; this.boxedT = 0;
+      return true;
+    }
+    const target = Math.min(5, 1 + bestFree * 0.5);
+    v.input.steer = steer;
+    v.input.handbrake = false;
+    if (v.vLong < target) { v.input.throttle = 0.45; v.input.brake = 0; } else { v.input.throttle = 0; v.input.brake = 0.3; }
+    return true;
+  }
+
   /** Closest vehicle or person in the lane band ahead. */
   obstacleAhead(speed) {
     const v = this.v, g = this.game;
@@ -258,4 +324,42 @@ export class DriverAI {
     }
     return best;
   }
+}
+
+/**
+ * Hand a vehicle to a DriverAI starting from wherever it is: join the nearest
+ * road point the car can actually see, heading the way the car faces, and
+ * (with a destination) route along the road segment nearest that point so the
+ * car drives past it. Used by the partner when they drive, and by test tools.
+ */
+export function attachDriver(v, game, dest = null) {
+  let rp = null;
+  for (const e of edges) {
+    const A = nodes[e.a], B = nodes[e.b];
+    const dx = B.x - A.x, dz = B.z - A.z;
+    const t = Math.max(0.05, Math.min(0.95, ((v.pos.x - A.x) * dx + (v.pos.z - A.z) * dz) / (dx * dx + dz * dz)));
+    const px = A.x + dx * t, pz = A.z + dz * t;
+    const dist = Math.hypot(px - v.pos.x, pz - v.pos.z);
+    if (rp && dist >= rp.dist) continue;
+    const hit = game.world.collision.raycast(v.pos.x, v.pos.y + 0.8, v.pos.z, px - v.pos.x, 0, pz - v.pos.z, 1, (c) => c.tag !== 'prop');
+    if (hit && hit.t < 0.98) continue;
+    rp = { edge: e, t, x: px, z: pz, dist };
+  }
+  if (!rp) rp = nearestRoadPoint(v.pos.x, v.pos.z);
+  const e = rp.edge, a = nodes[e.a], b = nodes[e.b];
+  const [fx, fz] = v.forward;
+  const from = ((b.x - a.x) * fx + (b.z - a.z) * fz) >= 0 ? e.a : e.b;
+  const to = from === e.a ? e.b : e.a;
+  const t = Math.max(0.05, Math.min(0.95, from === e.a ? rp.t : 1 - rp.t));
+  const ai = new DriverAI(v, game, { edge: e.id, from, lane: 0, t: Math.min(0.95, t + 0.15) });
+  ai.mode = dest ? 'route' : 'cruise';
+  ai.offroad = !roadAt(v.pos.x, v.pos.z) || rp.dist > 6; // in a lot: feel the way out first
+  if (dest) {
+    const tp = nearestRoadPoint(dest.x, dest.z);
+    const [A, B] = [tp.edge.a, tp.edge.b];
+    const viaA = findRoute(to, A), viaB = findRoute(to, B);
+    const len = (r) => (r ? r.length : 1e9);
+    ai.route = len(viaA) <= len(viaB) ? [...(viaA || [to]), B] : [...(viaB || [to]), A];
+  }
+  return ai;
 }

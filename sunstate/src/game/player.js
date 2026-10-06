@@ -13,6 +13,21 @@ import { obbCircle } from '../world/collision.js';
 
 const SPEED = { walk: 1.7, run: 4.1, sprint: 6.6, crouch: 1.7, aim: 2.3 };
 
+/** Where to walk to reach a door: the door itself, or a corner first if it's on the far side of the car. */
+export function doorApproachPoint(v, seat, ch) {
+  let [dx, dz] = v.doorPoint(seat);
+  const [plx, plz] = v.worldToLocal(ch.pos.x, ch.pos.z);
+  const [dlx] = v.worldToLocal(dx, dz);
+  if (Math.sign(plx) !== Math.sign(dlx) && Math.abs(plx) > 0.2) {
+    const end = Math.abs(plz) > 0.3 ? Math.sign(plz) : 1;
+    const ez = end * (v.hz + 0.75);
+    const sideX = (Math.abs(plz) < v.hz + 0.4) ? Math.sign(plx) * (v.hx + 0.7) : Math.sign(dlx) * (v.hx + 0.7);
+    [dx, dz] = v.localToWorld(sideX, ez);
+    if (Math.abs(plz) >= v.hz + 0.4) [dx, dz] = v.localToWorld(Math.sign(dlx) * (v.hx + 0.7), ez);
+  }
+  return [dx, dz];
+}
+
 export class PlayerController {
   constructor(game, character) {
     this.game = game;
@@ -148,7 +163,13 @@ export class PlayerController {
     const target = aimHit ? new THREE.Vector3(aimHit.x, aimHit.y, aimHit.z) : origin.clone().addScaledVector(dir, w.range);
     const muzzle = new THREE.Vector3();
     ch.model.gun.userData.muzzle.getWorldPosition(muzzle);
-    if (!this.aiming || muzzle.distanceTo(ch.pos) > 2) muzzle.set(ch.pos.x + Math.sin(ch.yaw) * 0.5, ch.pos.y + 1.35, ch.pos.z + Math.cos(ch.yaw) * 0.5);
+    if (ch.vehicle) {
+      // out of the side window, toward the aim point
+      const v = ch.vehicle, [sx, sy, sz] = v.def.seats[ch.seat];
+      const [wx, wz] = v.localToWorld(sx, sz);
+      const hd = Math.hypot(target.x - wx, target.z - wz) || 1;
+      muzzle.set(wx + (target.x - wx) / hd * 0.9, v.pos.y + sy + 0.75, wz + (target.z - wz) / hd * 0.9);
+    } else if (!this.aiming || muzzle.distanceTo(ch.pos) > 2) muzzle.set(ch.pos.x + Math.sin(ch.yaw) * 0.5, ch.pos.y + 1.35, ch.pos.z + Math.cos(ch.yaw) * 0.5);
     const d = target.clone().sub(muzzle).normalize();
     const moving = Math.min(1, Math.hypot(ch.vel.x, ch.vel.z) / 4);
     const spread = (this.aiming ? w.spread : w.hipSpread) + w.moveSpread * moving;
@@ -183,7 +204,7 @@ export class PlayerController {
     }
     if (best) { this.interactTarget = best.it; this.prompt = { key: 'interact', text: best.label }; }
     const v = this.findVehicle();
-    if (v && !best) this.prompt = { key: 'enterVehicle', text: v.vehicle.seats[0] && !v.vehicle.seats[0].dead && v.seat === 0 ? `Take the ${v.vehicle.def.name}` : `Enter the ${v.vehicle.def.name}` };
+    if (v && !best) this.prompt = { key: 'enterVehicle', text: v.ride ? `Ride with ${g.partner.protagonistName}` : v.vehicle.seats[0] && !v.vehicle.seats[0].dead && v.seat === 0 ? `Take the ${v.vehicle.def.name}` : `Enter the ${v.vehicle.def.name}` };
   }
 
   lineClear(x, z) {
@@ -202,26 +223,27 @@ export class PlayerController {
     return { x: dx, z: dz, y };
   }
 
-  /** Pick a vehicle within reach and the seat/door to use. */
+  /** Pick a vehicle within reach and the seat/door to use. Your partner is never carjacked: you ride with them. */
   findVehicle() {
-    const ch = this.ch;
+    const ch = this.ch, partner = this.game.partner;
     let best = null, bd = 6.5;
     for (const v of this.game.vehicles) {
       if (v.sunk || v.speed > 5) continue;
       const d = Math.hypot(v.pos.x - ch.pos.x, v.pos.z - ch.pos.z) - v.hz * 0.6;
       if (d > bd || Math.abs(v.pos.y - ch.pos.y) > 1.6) continue;
       // driver door if it is clear; else passenger door (then slide across)
+      const ride = !!partner && v.seats[0] === partner && !partner.dead;
       let seat = -1, door = null;
-      for (const s of [0, 1]) {
+      for (const s of ride ? [1, 2, 3] : [0, 1]) {
         if (s >= v.seats.length) continue;
         const occ = v.seats[s];
-        if (occ && (occ === ch || (s === 1 && !occ.dead))) continue;
+        if (occ && (occ === ch || occ === partner || (s >= 1 && !occ.dead))) continue;
         const dp = this.doorClear(v, s);
         if (dp && this.lineClear(dp.x, dp.z)) { seat = s; door = dp; break; }
       }
       if (seat < 0) continue;
-      if (seat === 1 && v.seats[0] && !v.seats[0].dead) continue;
-      best = { vehicle: v, seat, door }; bd = d;
+      if (!ride && seat === 1 && v.seats[0] && !v.seats[0].dead) continue;
+      best = { vehicle: v, seat, door, ride }; bd = d;
     }
     return best;
   }
@@ -237,17 +259,7 @@ export class PlayerController {
     const g = this.game, ch = this.ch, e = this.enter, v = e.vehicle;
     e.t += dt;
     if (e.phase === 'approach') {
-      let [dx, dz] = v.doorPoint(e.seat);
-      // walk around the front or back of the car if the door is on the far side
-      const [plx, plz] = v.worldToLocal(ch.pos.x, ch.pos.z);
-      const [dlx] = v.worldToLocal(dx, dz);
-      if (Math.sign(plx) !== Math.sign(dlx) && Math.abs(plx) > 0.2) {
-        const end = Math.abs(plz) > 0.3 ? Math.sign(plz) : 1;
-        const ez = end * (v.hz + 0.75);
-        const sideX = (Math.abs(plz) < v.hz + 0.4) ? Math.sign(plx) * (v.hx + 0.7) : Math.sign(dlx) * (v.hx + 0.7);
-        [dx, dz] = v.localToWorld(sideX, ez);
-        if (Math.abs(plz) >= v.hz + 0.4) [dx, dz] = v.localToWorld(Math.sign(dlx) * (v.hx + 0.7), ez);
-      }
+      const [dx, dz] = doorApproachPoint(v, e.seat, ch);
       const ddx = dx - ch.pos.x, ddz = dz - ch.pos.z;
       const dist = Math.hypot(ddx, ddz);
       const mv = g.input.move();
@@ -294,6 +306,7 @@ export class PlayerController {
     const g = this.game, ch = this.ch, v = ch.vehicle, input = g.input;
     ch.anim_.aim = false;
     if (ch.seat === 0) {
+      this.aiming = false;
       const d = input.drive();
       v.input.throttle = d.throttle; v.input.brake = d.brake; v.input.steer = d.steer;
       v.input.handbrake = input.down('handbrake');
@@ -301,10 +314,28 @@ export class PlayerController {
       if (input.pressed('headlights')) v.lightsOn = !v.lightsOn;
       this.stats.distanceDriven += v.speed * dt;
     }
+    else this.stepPassenger(dt);
     if (input.pressed('radio')) g.audio?.nextStation();
-    g.cameraRig.lookBehind = input.down('lookBehind');
+    g.cameraRig.lookBehind = input.down('lookBehind') && !this.aiming;
     this.prompt = { key: 'enterVehicle', text: v.speed > 3 ? 'Bail out' : 'Exit vehicle' };
+    if (ch.seat > 0 && v.driver === g.partner && !this.aiming) this.prompt = { key: 'partner', text: g.partner.partnerAI.hold ? `Tell ${g.partner.protagonistName} to drive` : `Tell ${g.partner.protagonistName} to pull over` };
     if (input.pressed('enterVehicle')) this.tryExit();
+  }
+
+  /** Riding as a passenger: aim out of the window and shoot (drive-by). */
+  stepPassenger(dt) {
+    const g = this.game, ch = this.ch, v = ch.vehicle, input = g.input, cam = g.cameraRig;
+    if (input.pressed('nextWeapon') || input.takeWheel() !== 0) this.cycleWeapon();
+    if (this.reloadT > 0) {
+      this.reloadT -= dt;
+      if (this.reloadT <= 0) this.reloadInstant(this.inventory.current);
+    } else if (input.pressed('reload')) this.startReload();
+    this.aiming = input.down('aim') && !this.weapon.melee && !v.sunk;
+    const a = ch.anim_;
+    a.aim = this.aiming; a.armed = this.aiming; a.aimPitch = cam.pitch;
+    a.carAimYaw = Math.atan2(Math.sin(cam.yaw - v.yaw), Math.cos(cam.yaw - v.yaw));
+    if (this.aiming && input.down('fire') && this.cooldown <= 0) this.attack();
+    this.updateAimTarget();
   }
 
   tryExit() {
@@ -342,6 +373,7 @@ export class PlayerController {
     if (!ex.bail && v.speed > 0.8 && ex.t < 1.5) return; // wait for the car to stop
     const spot = ex.bail ? this.findExitSpot(v, ch.seat) : ex.spot.roof ? this.findExitSpot(v, ch.seat) : ex.spot;
     this.game.unseatCharacter(v, ch, spot);
+    this.aiming = false; ch.anim_.aim = false;
     if (ex.bail) {
       const side = Math.sign(v.def.seats[0][0]) || -1;
       const [lx, lz] = [side * 3, 0];

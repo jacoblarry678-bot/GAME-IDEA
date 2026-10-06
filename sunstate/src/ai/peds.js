@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { Character } from '../entities/character.js';
 import { randomLook } from '../entities/humanModel.js';
-import { SIDEWALKS, BEACH_ZONE, PROMENADE_ZONE } from '../world/district.js';
+import { SIDEWALKS, BEACH_ZONE, PROMENADE_ZONE, KEYS_ZONES } from '../world/district.js';
 import { CRIMES } from '../game/wanted.js';
 
 const SW = SIDEWALKS.nodes;
@@ -165,6 +165,12 @@ export class PedController {
 
   pickActivity() {
     const r = Math.random();
+    if (this.kind === 'keys') {
+      // out on the key there are no sidewalks: amble about, chat on the phone, stand around
+      if (r < 0.6) { this.target = randomIn(this.zone); this.setState('wander', 30); }
+      else { this.phoneIdle = Math.random() < 0.5; this.setState('idle', rand(5, 14)); }
+      return;
+    }
     if (this.kind === 'beach') {
       if (r < 0.35) this.setState('sit', rand(15, 40));
       else if (r < 0.75) { this.target = randomIn(BEACH_ZONE); this.setState('wander', 30); }
@@ -177,7 +183,7 @@ export class PedController {
 
   wander() {
     const ch = this.ch;
-    if (!this.target) this.target = randomIn(this.kind === 'beach' ? BEACH_ZONE : PROMENADE_ZONE);
+    if (!this.target) this.target = randomIn(this.zone || (this.kind === 'beach' ? BEACH_ZONE : PROMENADE_ZONE));
     const dx = this.target.x - ch.pos.x, dz = this.target.z - ch.pos.z;
     const d = Math.hypot(dx, dz);
     if (d < 1 || this.stateT <= 0 || ch.blockedT > 1.5) { this.target = null; this.pickActivity(); return; }
@@ -187,6 +193,7 @@ export class PedController {
 
   walk(dt) {
     const ch = this.ch, g = this.game;
+    if (this.kind === 'keys') { this.setState('wander', 30); this.wander(); return; } // no sidewalk graph out on the key
     if (this.node === null) {
       // join the sidewalk graph at the nearest node
       let best = 0, bd = Infinity;
@@ -304,9 +311,10 @@ export class PedManager {
     const tr = this.game.traffic;
     for (let k = 0; k < n; k++) {
       for (let attempt = 0; attempt < 10; attempt++) {
-        let x, z, kind;
+        let x, z, kind, zone = null;
         const r = Math.random();
-        if (r < 0.3) { const q = randomIn(BEACH_ZONE); x = q.x; z = q.z; kind = 'beach'; }
+        if (p.z > KEYS_ZONES[0].z0 - 160) { zone = KEYS_ZONES[Math.random() < 0.75 ? 0 : 1]; const q = randomIn(zone); x = q.x; z = q.z; kind = 'keys'; }
+        else if (r < 0.3) { const q = randomIn(BEACH_ZONE); x = q.x; z = q.z; kind = 'beach'; }
         else if (r < 0.45) { const q = randomIn(PROMENADE_ZONE); x = q.x; z = q.z; kind = 'walker'; }
         else { const node = SW[Math.floor(Math.random() * SW.length)]; x = node.x + rand(-1, 1); z = node.z + rand(-1, 1); kind = 'walker'; }
         const d = Math.hypot(x - p.x, z - p.z);
@@ -321,6 +329,7 @@ export class PedManager {
           const look = randomLook(Math.random, kind === 'beach' ? { shorts: Math.random() < 0.85, sleeveless: Math.random() < 0.6 } : {});
           const ch = new Character(this.game, look, { role: 'ped', x: x + i * 1.1, z, yaw: Math.random() * 6.28 });
           ch.controller = new PedController(this.game, ch, kind);
+          ch.controller.zone = zone;
           this.game.peds.push(ch);
           if (group > 1) {
             if (!first) first = ch;

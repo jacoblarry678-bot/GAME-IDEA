@@ -7,6 +7,7 @@
  */
 import * as THREE from 'three';
 import { PLACES } from '../world/district.js';
+import { Input } from '../core/input.js';
 
 export const CAST = {
   cal: { name: 'Cal', full: 'Cal Reyes' },
@@ -21,6 +22,8 @@ export const MISSIONS = {
     id: 'small_change',
     title: 'Small Change',
     giver: 'sol',
+    cast: ['cal'], // who you play; Sol stays at the motel
+    partner: 'stay',
     start: { x: S.x + 3.5, z: S.z + 2.5 },
     summary: 'Sol has a way to cover the debt to Teo by Friday: the week\'s takings at the Sunny Stop.',
     intro: [
@@ -96,18 +99,47 @@ export class MissionManager {
     game.events.on('cashTaken', (amt) => { if (this.active) this.active.data.taken += amt; });
     game.events.on('playerDied', () => this.fail('You were killed.'));
     game.events.on('busted', () => this.fail('You were arrested.'));
+    game.events.on('killed', ({ victim }) => {
+      const a = this.active;
+      if (a && victim === game.partner && (a.def.cast || []).includes(victim.protagonist)) this.fail(`${victim.protagonistName} is down.`);
+    });
     this.markerMat = new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
     this.startMat = new THREE.MeshBasicMaterial({ color: 0x29e6ff, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide });
     for (const def of Object.values(MISSIONS)) {
       game.interactables.push({
         id: 'mission:' + def.id, x: def.start.x, z: def.start.z, radius: 2.2,
-        label: () => (this.canStart(def.id) ? `Start mission: ${def.title}` : null),
-        onInteract: () => this.start(def.id),
+        label: () => {
+          if (this.canStart(def.id)) return `Start mission: ${def.title}`;
+          if (this.active || this.completed.has(def.id) || !this.unlocked(def)) return null;
+          const why = this.castProblem(def);
+          return why ? `${def.title}: ${why}` : null;
+        },
+        onInteract: () => { if (this.canStart(def.id)) this.start(def.id); },
       });
     }
   }
 
-  canStart(id) { return !this.active && !this.completed.has(id) && !this.cutscene && this.game.wanted.level === 0; }
+  canStart(id) {
+    const def = MISSIONS[id];
+    return !this.active && !this.completed.has(id) && !this.cutscene && this.game.wanted.level === 0 && this.unlocked(def) && !this.castProblem(def);
+  }
+
+  unlocked(def) { return (def.requires || []).every((r) => this.completed.has(r)); }
+
+  /** Who has to be here: a one-person mission needs that protagonist; a two-person one needs both together. */
+  castProblem(def) {
+    const g = this.game, cast = def.cast || ['cal'];
+    const name = (id) => CAST[id].name;
+    if (!cast.includes(g.player.protagonist)) return `switch to ${name(cast[0])} to start`;
+    if (cast.length > 1 && !g.crew.partnerWithPlayer()) return `bring ${g.partner.protagonistName} (${Input.label(g.settings.c.bindings.partner)}: follow)`;
+    return null;
+  }
+
+  /** Where the partner should drive when they're at the wheel with you aboard. */
+  partnerDriveTarget() {
+    const st = this.stage;
+    return st?.partnerDrive ? st.partnerDrive(this.game) : null;
+  }
 
   get available() { return Object.values(MISSIONS).filter((m) => !this.completed.has(m.id)); }
 
@@ -117,12 +149,18 @@ export class MissionManager {
     this.cleanup();
     this.failed = null;
     this.active = { def, stageIndex: 0, t: 0, stageT: 0, data: { taken: 0 }, actors: [], checkpoint: null };
+    if (!def.allowSwitch) g.crew.lockReason = 'You can\'t switch during this mission';
+    if (def.partner === 'stay' && !g.partner.dead) {
+      // they head home and wait there
+      if (g.partner.vehicle && g.partner.vehicle === g.player.vehicle) g.partner.partnerAI.getOut(g.partner.vehicle);
+      g.partner.partnerAI.setMode('wait', g.crew.constructor.home(g.partner.protagonist));
+    }
     if (fromCheckpoint) {
       this.restoreCheckpoint(fromCheckpoint);
     } else {
       g.store.reset();
       this.saveCheckpoint(0);
-      if (def.intro) this.playDialogue(def.intro, 'Phone call — Sol');
+      if (def.intro) this.playDialogue(def.intro, def.introTitle || 'Bayside Motel');
     }
     g.events.emit('missionStarted', def);
     this.enterStage();
@@ -231,6 +269,7 @@ export class MissionManager {
     this.completed.add(def.id);
     g.stats.robberies++;
     this.active = null;
+    g.crew.lockReason = null;
     g.events.emit('missionPassed', { def, earned: a.data.taken + (def.reward.bonus || 0) });
     g.audio?.jingle('pass');
     if (def.outro) this.playDialogue(def.outro, null);
@@ -250,6 +289,7 @@ export class MissionManager {
   cleanup() {
     if (this.active) this.cleanupActors(this.active);
     this.active = null;
+    this.game.crew.lockReason = null;
   }
 
   /** Dialogue lines as subtitles; skippable with Enter/Space. */

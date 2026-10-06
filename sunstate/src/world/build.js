@@ -8,7 +8,7 @@ import { Batcher } from './geo.js';
 import * as T from './textures.js';
 import {
   AVENUES, STREETS, ROADS, ROAD_GRAPH, BLOCKS, ISLAND, CAUSEWAY, MAINLAND, BACKDROP, CURB, WATER_Y, LANE_W,
-  roadHalfWidth, terrainHeight, causewayDeck,
+  roadHalfWidth, segHalfWidth, terrainHeight, causewayDeck, KEYS, TWIN, FLATS, twinDeck,
 } from './layout.js';
 import { DISTRICT, mulberry32 } from './district.js';
 
@@ -27,6 +27,9 @@ export function makeMaterials(engine) {
     grass: std({ map: T.grass(), roughness: 1 }),
     sand: std({ map: T.sand(), roughness: 1 }),
     seabed: std({ color: 0x6f6a55, roughness: 1 }),
+    flats: std({ map: T.sand(), color: 0xc9bd96, roughness: 1 }),
+    keyrock: std({ color: 0xb9ad94, roughness: 1, flatShading: true }),
+    mangrove: std({ color: 0x3f6b3a, roughness: 1, flatShading: true }),
     deepbed: std({ color: 0x2b4a52, roughness: 1 }),
     seawall: std({ map: T.concrete(), color: 0x9b968a }),
     wood: std({ map: T.wood(), roughness: 0.9 }),
@@ -70,6 +73,8 @@ export function buildWorld(engine, collision, mats) {
   buildRoads(B);
   buildBeach(group, mats);
   buildCauseway(B, collision);
+  buildKeys(B, group, mats, collision);
+  buildTwinSpan(B, collision);
   for (const b of DISTRICT.buildings) buildBuilding(B, b, collision, signs, group, rnd);
   buildBackdrop(B, collision, rnd);
 
@@ -93,7 +98,11 @@ function buildGround(B, cw) {
   slabs.push([ISLAND.west, gx0, ISLAND.north, CAUSEWAY.z - cwH]);
   slabs.push([ISLAND.west, gx0, CAUSEWAY.z + cwH, ISLAND.south]);
   slabs.push([gx0, gx1, ISLAND.north, gz0]);
-  slabs.push([gx0, gx1, gz1, ISLAND.south]);
+  // south strip, cut for the twin-span approach (two carriageways at road level, raised median between)
+  const tw = TWIN.median / 2 + TWIN.deckW;
+  slabs.push([gx0, TWIN.x - tw, gz1, ISLAND.south]);
+  slabs.push([TWIN.x - TWIN.median / 2, TWIN.x + TWIN.median / 2, gz1, ISLAND.south]);
+  slabs.push([TWIN.x + tw, gx1, gz1, ISLAND.south]);
   slabs.push([gx1, ISLAND.sandStart, ISLAND.north, ISLAND.south]);
 
   for (const [x0, x1, z0, z1] of slabs) {
@@ -120,7 +129,8 @@ function buildGround(B, cw) {
   // seawalls around the island (down to the bay floor)
   B.box('seawall', ISLAND.west - 0.6, ISLAND.west, -4.3, top, ISLAND.north, ISLAND.south, { sides: { top: true, e: false }, tile: [4, 4] });
   B.box('seawall', ISLAND.west, ISLAND.sandStart, -4.3, top, ISLAND.north - 0.6, ISLAND.north, { sides: { top: true, s: false }, tile: [4, 4] });
-  B.box('seawall', ISLAND.west, ISLAND.sandStart, -4.3, top, ISLAND.south, ISLAND.south + 0.6, { sides: { top: true, n: false }, tile: [4, 4] });
+  for (const [x0, x1] of [[ISLAND.west, TWIN.x - tw], [TWIN.x - TWIN.median / 2, TWIN.x + TWIN.median / 2], [TWIN.x + tw, ISLAND.sandStart]]) B.box('seawall', x0, x1, -4.3, top, ISLAND.south, ISLAND.south + 0.6, { sides: { top: true, n: false }, tile: [4, 4] });
+  for (const sx of [-1, 1]) B.box('seawall', TWIN.x + sx * TWIN.median / 2 - 0.3, TWIN.x + sx * TWIN.median / 2 + 0.3, -4.3, 0, ISLAND.south, ISLAND.south + 0.6, { tile: [4, 4] });
   // jetty rocks where the beach meets the canals
   for (const z of [ISLAND.north - 2, ISLAND.south + 2]) {
     for (let x = ISLAND.sandStart; x < ISLAND.shore + 40; x += 2.2) {
@@ -155,7 +165,16 @@ function stripe(B, key, cx, cz, dx, dz, len, w, y = 0.014) {
 
 function buildRoads(B) {
   for (const s of ROADS) {
-    const hw = roadHalfWidth(s.lanes);
+    const hw = segHalfWidth(s);
+    if (s.twin) {
+      // the two carriageways on land at each end (the decks themselves are built with the bridge)
+      for (const sx of [-1, 1]) {
+        const xa = s.c + sx * TWIN.median / 2, xb = s.c + sx * hw;
+        B.flat('asphalt', Math.min(xa, xb), Math.max(xa, xb), s.from, TWIN.zStart, 0, 8);
+        B.flat('asphalt', Math.min(xa, xb), Math.max(xa, xb), TWIN.zEnd, s.to + roadHalfWidth(1), 0, 8);
+      }
+      continue;
+    }
     if (s.dir === 'ns') B.flat('asphalt', s.c - hw, s.c + hw, s.from - hw, s.to + hw, 0, 8);
     else if (s.bridge) B.flat('asphalt', ISLAND.west, s.to + hw, s.c - hw, s.c + hw, 0, 8);
     else B.flat('asphalt', s.from - hw, s.to + hw, s.c - hw, s.c + hw, 0, 8);
@@ -163,7 +182,7 @@ function buildRoads(B) {
   const { nodes, edges } = ROAD_GRAPH;
   for (const e of edges) {
     const a = nodes[e.a], b = nodes[e.b];
-    if (e.road === 'causeway') continue; // markings drawn on the deck
+    if (e.road === 'causeway' || e.road === 'twinspan') continue; // markings drawn on the deck
     const dx = Math.sign(b.x - a.x), dz = Math.sign(b.z - a.z);
     const along = dx ? 'x' : 'z';
     const ha = along === 'x' ? a.hx : a.hz, hb = along === 'x' ? b.hx : b.hz;
@@ -274,6 +293,126 @@ function buildCauseway(B, cw) {
   }
 }
 
+/**
+ * Cayo Lento: low limestone-edged land with grass, a sandy south shore, the
+ * shallow flats around it, and the further keys of the chain (backdrop).
+ */
+function buildKeys(B, group, mats, cw) {
+  const K = KEYS, top = CURB, rw = roadHalfWidth(1), tw = TWIN.median / 2 + TWIN.deckW;
+  const hz = K.hwyZ, hwyX0 = K.x0 + 20 - rw, hwyX1 = K.x1 - 10 + rw, mx = K.marinaX, mEnd = K.z1 - 14 + rw;
+  const slabs = [
+    // north strip (between the shore and the highway), cut for the bridge approach
+    [K.x0, TWIN.x - tw, K.z0, hz - rw], [TWIN.x - TWIN.median / 2, TWIN.x + TWIN.median / 2, K.z0, hz - rw], [TWIN.x + tw, K.x1, K.z0, hz - rw],
+    // highway row ends
+    [K.x0, hwyX0, hz - rw, hz + rw], [hwyX1, K.x1, hz - rw, hz + rw],
+    // south strip, cut for Marina Rd
+    [K.x0, mx - rw, hz + rw, K.z1], [mx + rw, K.x1, hz + rw, K.z1], [mx - rw, mx + rw, mEnd, K.z1],
+  ];
+  for (const [x0, x1, z0, z1] of slabs) {
+    B.box('curb', x0, x1, 0, top, z0, z1, { sides: { top: false }, tile: [2, 2] });
+    B.flat('grass', x0, x1, z0, z1, top, 6);
+  }
+  // sandy south shore and a coral-rock edge all round, down to the flats
+  B.flat('sand', K.x0 + 1, K.x1 - 1, K.z1 - 9, K.z1, top + 0.01, 5);
+  const fy = FLATS.y;
+  B.box('keyrock', K.x0 - 0.8, K.x0, fy, top, K.z0, K.z1, { tile: [3, 3] });
+  B.box('keyrock', K.x1, K.x1 + 0.8, fy, top, K.z0, K.z1, { tile: [3, 3] });
+  for (const [x0, x1] of [[K.x0 - 0.8, TWIN.x - tw], [TWIN.x - TWIN.median / 2, TWIN.x + TWIN.median / 2], [TWIN.x + tw, K.x1 + 0.8]]) B.box('keyrock', x0, x1, fy, top, K.z0 - 0.8, K.z0, { tile: [3, 3] });
+  for (const sx of [-1, 1]) B.box('keyrock', TWIN.x + sx * TWIN.median / 2 - 0.3, TWIN.x + sx * TWIN.median / 2 + 0.3, fy, 0, K.z0 - 0.8, K.z0, { tile: [3, 3] });
+  B.box('keyrock', K.x0 - 0.8, K.x1 + 0.8, fy, top, K.z1, K.z1 + 0.8, { tile: [3, 3] });
+  // the flats: a shallow sandy bottom (heightfield) that makes the water turquoise
+  const nx = 98, nz = 56;
+  const geo = new THREE.PlaneGeometry(FLATS.x1 - FLATS.x0, FLATS.z1 - FLATS.z0, nx, nz);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position, uv = geo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i) + (FLATS.x0 + FLATS.x1) / 2, z = pos.getZ(i) + (FLATS.z0 + FLATS.z1) / 2;
+    const h = terrainHeight(x, z);
+    pos.setXYZ(i, x, Math.min(h, FLATS.y + 0.4), z);
+    uv.setXY(i, x / 9, -z / 9);
+  }
+  geo.computeVertexNormals();
+  const flats = new THREE.Mesh(geo, mats.flats);
+  flats.receiveShadow = true;
+  flats.name = 'flats';
+  group.add(flats);
+  // further keys of the chain (visible, not reachable)
+  for (const k of BACKDROP.keys) {
+    B.box('keyrock', k.x0, k.x1, fy, top, k.z0, k.z1, { sides: { top: false }, tile: [3, 3] });
+    B.flat('grass', k.x0, k.x1, k.z0, k.z1, top, 6);
+    cw.add({ type: 'box', cx: (k.x0 + k.x1) / 2, cz: (k.z0 + k.z1) / 2, hx: (k.x1 - k.x0) / 2, hz: (k.z1 - k.z0) / 2, y0: -10, y1: 40, material: 'concrete' });
+  }
+}
+
+/**
+ * The twin-span: two parallel decks (southbound on the west deck, northbound
+ * on the east) with an open gap between them, parapets on both edges of each
+ * deck, lane markings, and paired piers with hammerhead caps.
+ */
+function buildTwinSpan(B, cw) {
+  const T0 = TWIN, step = 6;
+  for (let z = T0.zStart; z < T0.zEnd; z += step) {
+    const za = z, zb = Math.min(T0.zEnd, z + step);
+    const ya = twinDeck(za), yb = twinDeck(zb);
+    for (const sx of [-1, 1]) {
+      const xi = T0.x + sx * T0.median / 2, xo = T0.x + sx * (T0.median / 2 + T0.deckW);
+      const xl = Math.min(xi, xo), xr = Math.max(xi, xo);
+      B.quad('asphalt', [[xl, ya, za], [xl, yb, zb], [xr, yb, zb], [xr, ya, za]], [[xl / 8, -za / 8], [xl / 8, -zb / 8], [xr / 8, -zb / 8], [xr / 8, -za / 8]]);
+      B.quad('seawall', [[xl - 0.5, ya - 1.1, za], [xr + 0.5, ya - 1.1, za], [xr + 0.5, yb - 1.1, zb], [xl - 0.5, yb - 1.1, zb]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+      for (const [px, out] of [[xl, -1], [xr, 1]]) {
+        // parapet: outer face, inner face, cap
+        const xo2 = px + out * 0.35, xi2 = px;
+        const pa = ya + 1.0, pb = yb + 1.0;
+        B.quad('seawall', out > 0 ? [[xo2, ya - 1.1, za], [xo2, yb - 1.1, zb], [xo2, pb, zb], [xo2, pa, za]] : [[xo2, yb - 1.1, zb], [xo2, ya - 1.1, za], [xo2, pa, za], [xo2, pb, zb]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        B.quad('curb', out > 0 ? [[xi2, yb, zb], [xi2, ya, za], [xi2, pa, za], [xi2, pb, zb]] : [[xi2, ya, za], [xi2, yb, zb], [xi2, pb, zb], [xi2, pa, za]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        B.quad('curb', [[Math.min(xi2, xo2), pa, za], [Math.min(xi2, xo2), pb, zb], [Math.max(xi2, xo2), pb, zb], [Math.max(xi2, xo2), pa, za]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+        cw.add({ type: 'box', cx: px + out * 0.17, cz: (za + zb) / 2, hx: 0.22, hz: step / 2 + 0.2, y0: Math.min(ya, yb) - 1.5, y1: Math.max(ya, yb) + 1.0, tag: 'railing', material: 'concrete' });
+      }
+      // edge lines and the centre dashes of the lane
+      const lane = T0.x + sx * (T0.median / 2 + 0.35);
+      const edge = T0.x + sx * (T0.median / 2 + LANE_W + 0.05);
+      for (const [lx, key] of [[lane, 'marking_y'], [edge, 'marking_w']]) B.quad(key, [[lx - 0.06, ya + 0.02, za], [lx - 0.06, yb + 0.02, zb], [lx + 0.06, yb + 0.02, zb], [lx + 0.06, ya + 0.02, za]], [[0, 0], [1, 0], [1, 1], [0, 1]]);
+    }
+  }
+  // piers
+  for (let z = T0.zStart + 22; z < T0.zEnd - 8; z += 22) {
+    const y = twinDeck(z);
+    if (y < 1.2) continue;
+    for (const sx of [-1, 1]) {
+      const cx = T0.x + sx * (T0.median / 2 + T0.deckW / 2);
+      for (const o of [-1.6, 1.6]) {
+        B.box('seawall', cx + o - 0.55, cx + o + 0.55, -4.3, y - 1.1, z - 0.55, z + 0.55, { tile: [3, 3] });
+        cw.add({ type: 'box', cx: cx + o, cz: z, hx: 0.55, hz: 0.55, y0: -6, y1: y - 1.1, material: 'concrete' });
+      }
+      B.box('seawall', cx - T0.deckW / 2 - 0.4, cx + T0.deckW / 2 + 0.4, y - 1.9, y - 1.1, z - 0.9, z + 0.9, { tile: [3, 3] });
+    }
+  }
+}
+
+/** A raised wooden stilt house with a pitched tin roof, stairs and a porch. */
+function buildStilt(B, b, cw) {
+  const y0 = CURB, lift = 2.6, wallTop = y0 + lift + 3.2, ridge = wallTop + 1.7;
+  const color = col(b.color), white = col(0xf6f4ee), post = col(0x8a7458), tin = col(0xb9c1c6);
+  for (const [x, z] of [[b.x0 + 0.4, b.z0 + 0.4], [b.x1 - 0.4, b.z0 + 0.4], [b.x1 - 0.4, b.z1 - 0.4], [b.x0 + 0.4, b.z1 - 0.4], [(b.x0 + b.x1) / 2, b.z0 + 0.4], [(b.x0 + b.x1) / 2, b.z1 - 0.4]]) {
+    B.box('trim', x - 0.18, x + 0.18, y0, y0 + lift, z - 0.18, z + 0.18, { color: post });
+    cw.add({ type: 'circle', cx: x, cz: z, r: 0.2, y0: -1, y1: y0 + lift, material: 'wood', cameraBlock: false });
+  }
+  B.box('wood', b.x0, b.x1, y0 + lift - 0.25, y0 + lift, b.z0, b.z1, { tile: [3, 3] });
+  B.box('fac:residential', b.x0 + 0.6, b.x1 - 0.6, y0 + lift, wallTop, b.z0 + 0.6, b.z1 - 0.6, { tile: T.FACADE_TILE, vBase: y0 + lift, color });
+  cw.add({ type: 'box', cx: (b.x0 + b.x1) / 2, cz: (b.z0 + b.z1) / 2, hx: (b.x1 - b.x0) / 2 - 0.6, hz: (b.z1 - b.z0) / 2 - 0.6, y0: y0 + lift - 0.3, y1: ridge, material: 'wood', data: { building: b } });
+  // pitched roof along x (gable ends east and west)
+  const zc = (b.z0 + b.z1) / 2, x0 = b.x0 - 0.3, x1 = b.x1 + 0.3, za = b.z0 - 0.3, zb = b.z1 + 0.3;
+  B.quad('trim', [[x0, wallTop, za], [x1, wallTop, za], [x1, ridge, zc], [x0, ridge, zc]].reverse(), [[0, 0], [1, 0], [1, 1], [0, 1]], tin);
+  B.quad('trim', [[x0, wallTop, zb], [x0, ridge, zc], [x1, ridge, zc], [x1, wallTop, zb]].reverse(), [[0, 0], [1, 0], [1, 1], [0, 1]], tin);
+  for (const gx of [b.x0 + 0.6, b.x1 - 0.6]) B.quad('trim', gx < zc ? [[gx, wallTop, b.z0 + 0.6], [gx, wallTop, b.z1 - 0.6], [gx, ridge, zc], [gx, ridge, zc]] : [[gx, wallTop, b.z1 - 0.6], [gx, wallTop, b.z0 + 0.6], [gx, ridge, zc], [gx, ridge, zc]], [[0, 0], [1, 0], [0.5, 1], [0.5, 1]], color);
+  // porch rail and stairs on the frontage side
+  const F = frontage(b);
+  const pz = F.nz ? (F.nz > 0 ? b.z1 : b.z0) : zc;
+  B.box('trim', b.x0, b.x1, y0 + lift, y0 + lift + 1.0, pz - 0.05, pz + 0.05, { color: white });
+  const sx = b.x1 - 2.2, dir = F.nz || 1;
+  for (let k = 0; k < 8; k++) { const y = y0 + lift - (k + 1) * (lift / 8); const z = pz + dir * (0.4 + k * 0.32); B.box('wood', sx - 0.6, sx + 0.6, y - 0.08, y, Math.min(z, z + dir * 0.32), Math.max(z, z + dir * 0.32), { tile: [1, 1] }); }
+}
+
 /** Neon tube along a line (box with small cross-section). */
 function neonLine(B, x0, y0, z0, x1, y1, z1, color, t = 0.12) {
   B.box('neon', Math.min(x0, x1) - t / 2, Math.max(x0, x1) + t / 2, Math.min(y0, y1) - t / 2, Math.max(y0, y1) + t / 2, Math.min(z0, z1) - t / 2, Math.max(z0, z1) + t / 2, { color: col(color), sides: { bottom: true } });
@@ -315,6 +454,7 @@ function buildBuilding(B, b, cw, signs, group, rnd) {
   const hasShopfront = ['shop', 'deco', 'civic'].includes(b.style);
 
   if (b.style === 'store') return buildStore(B, b, cw, signs, group);
+  if (b.style === 'stilt') return buildStilt(B, b, cw);
 
   if (hasShopfront) {
     const keys = { [fk]: b.style === 'deco' ? 'front:deco' : 'front:shop' };
@@ -542,8 +682,9 @@ function buildBackdrop(B, cw, rnd) {
     const near = R.z0 > 0 ? R.z0 : R.z1;
     const dir = R.z0 > 0 ? 1 : -1;
     for (let k = 0; k < 26; k++) {
-      const z = near + dir * (20 + rnd() * 380), x = 160 - rnd() * 40 - (k % 3) * 60;
-      tower(x, z, 16 + rnd() * 14, 16 + rnd() * 14, 25 + rnd() * 60 * (x > 100 ? 1 : 0.5));
+      const z = near + dir * (20 + rnd() * 380);
+      const x = R.x1 > 100 ? 160 - rnd() * 40 - (k % 3) * 60 : R.x1 - 16 - rnd() * 40 - (k % 3) * 55;
+      tower(x, z, 16 + rnd() * 14, 16 + rnd() * 14, 25 + rnd() * 60 * (R.x1 > 100 && x > 100 ? 1 : 0.45));
     }
     cw.add({ type: 'box', cx: (R.x0 + R.x1) / 2, cz: (R.z0 + R.z1) / 2, hx: (R.x1 - R.x0) / 2 + 1, hz: (R.z1 - R.z0) / 2 + 1, y0: -10, y1: 60, material: 'concrete' });
   }
