@@ -25,7 +25,7 @@ await p.goto(url, { waitUntil: 'load', timeout: 120000 });
 await p.waitForFunction(() => window.__ashline?.state === 'menu', null, { timeout: 120000 });
 
 for (const map of ['cinder_yard', 'old_quarter', 'signal_station']) {
-  await ev(async (map) => { const a = window.__ashline; Object.assign(a.profile.data.matchSetup, { map, mode: 'tdm', botsAllies: 0, botsEnemies: 1 }); await a.startMatch(); }, map);
+  await ev(async (map) => { const a = window.__ashline; Object.assign(a.profile.data.matchSetup, { map, mode: 'tdm', botsAllies: 0, botsEnemies: 1, weather: 'clear' }); await a.startMatch(); }, map);
   await p.waitForFunction(() => window.__ashline.state === 'match-live', null, { timeout: 120000 });
   // find an open spot that sees the sun and one where a building hides it
   const spots = await ev(() => {
@@ -72,7 +72,7 @@ for (const map of ['cinder_yard', 'old_quarter', 'signal_station']) {
 }
 
 // scope glint: an enemy sniper aiming at the player
-await ev(async () => { const a = window.__ashline; Object.assign(a.profile.data.matchSetup, { map: 'cinder_yard', mode: 'tdm', botsAllies: 0, botsEnemies: 1 }); await a.startMatch(); });
+await ev(async () => { const a = window.__ashline; Object.assign(a.profile.data.matchSetup, { map: 'cinder_yard', mode: 'tdm', botsAllies: 0, botsEnemies: 1, weather: 'clear' }); await a.startMatch(); });
 await p.waitForFunction(() => window.__ashline.state === 'match-live', null, { timeout: 120000 });
 const glint = await ev(() => {
   const a = window.__ashline, g = a.game, pl = g.player, m = g.match;
@@ -115,7 +115,7 @@ await p.waitForTimeout(1200);
 await p.screenshot({ path: `${out}/collab-store.png` });
 await ev(() => window.__ashline.toMenu());
 // keychain on the first-person weapon
-await ev(async () => { const a = window.__ashline; Object.assign(a.profile.data.matchSetup, { map: 'cinder_yard', mode: 'tdm', botsAllies: 0, botsEnemies: 1 }); await a.startMatch(); });
+await ev(async () => { const a = window.__ashline; Object.assign(a.profile.data.matchSetup, { map: 'cinder_yard', mode: 'tdm', botsAllies: 0, botsEnemies: 1, weather: 'clear' }); await a.startMatch(); });
 await p.waitForFunction(() => window.__ashline.state === 'match-live', null, { timeout: 120000 });
 const vm = await ev(() => { const g = window.__ashline.game; g.debugAdvance(3.4); g.hud.root.style.display = 'none'; g.look.yaw = -Math.PI / 2; g.look.pitch = -0.1; for (let i = 0; i < 20; i++) g.update(1 / 60); return window.__ashline.viewmodel.curCharm; });
 check('keychain hangs on the first-person weapon', vm === 'ch_waspinator', vm);
