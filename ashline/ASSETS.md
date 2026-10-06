@@ -19,6 +19,9 @@
 | Cosmetics: weapon finishes, outfits, charms, calling cards, emblems, banners | Generated in code: `src/world/finishes.js`, `src/fx/weaponModels.js`, `src/entities/soldierModel.js`, `src/ui/art.js` | Original |
 | **Waspinator collab** (Waspinator Keychain charm, Waspinator banner) | Character name used for a collaboration the project owner states is licensed (Oct 2026). The 3D keychain (`buildCharm` 'waspinator' in `src/fx/weaponModels.js`) and banner art (`waspBanner` in `src/ui/art.js`) are original procedural work in the character's colour scheme; no third-party artwork is included. | **Licensed collab — keep the license agreement on file and confirm its scope (name, likeness, platforms, territories, dates) before any public release.** |
 | Sealed drop `drop_001` (Waspinator collab operator skin) | Original procedural model data (generic armour kit in `src/entities/soldierModel.js`); encrypted in `src/data/vault.js` until released | Covered by the Waspinator collab license note above — confirm scope before release |
+| Weather (0.6.0): rain streaks, overcast sky, lightning, wet ground | Generated in code: `src/fx/weather.js`, `src/world/sky.js` (shader) | Original |
+| Rain bed and thunder sounds | Synthesized at load time: `src/audio/audio.js` | Original |
+| Battle Royale (0.6.0): zone wall shader, next-circle ring, loot models (ammo box, medkit, grenade pack; weapons reuse the game's own models) | Built in code: `src/fx/battleRoyaleView.js` | Original |
 | UI fonts | Rajdhani, Inter via Google Fonts (falls back to system fonts offline) | SIL Open Font License 1.1 |
 
 No images, models or audio files are downloaded or bundled. The browser client uses the built-in WebSocket API; `ws` runs only in the Node server. There are no names,

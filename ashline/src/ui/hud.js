@@ -15,6 +15,7 @@ export class Hud {
       <div class="vignette"></div>
       <div class="flash-white"></div>
       <div class="blind"></div>
+      <div class="zonetint"></div>
       <div class="scope"><div class="mask"></div><div class="line h"></div><div class="line v"></div><div class="line h thick-l"></div><div class="line h thick-r"></div><div class="line v thick-b"></div><div class="dot"></div></div>
       <div class="xh"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="d"></i><i class="c"></i></div>
       <div class="hitm"><i style="transform:rotate(45deg) translateY(-9px)"></i><i style="transform:rotate(135deg) translateY(-9px)"></i><i style="transform:rotate(225deg) translateY(-9px)"></i><i style="transform:rotate(315deg) translateY(-9px)"></i></div>
@@ -24,7 +25,7 @@ export class Hud {
         <div class="tm t0"><span class="n"></span><span class="s">0</span></div>
         <div class="clock"><span class="time">10:00</span><small class="lim"></small></div>
         <div class="tm t1"><span class="s">0</span><span class="n"></span></div>
-      </div></div></div>
+      </div><div class="hud-chips"><span class="wxchip"></span><span class="xpchip"></span></div></div></div>
       <div class="hud-tr"><div class="hs"><div class="killfeed"></div><div class="fps"></div></div></div>
       <div class="hud-bl"><div class="hs"><div class="hp"><div class="lab"><span>HEALTH</span><span class="hpv">100</span></div><div class="barbg"><div class="fill"></div></div></div></div></div>
       <div class="hud-br"><div class="hs">
@@ -51,7 +52,7 @@ export class Hud {
       hp: q('.hp'), hpv: q('.hpv'), hpfill: q('.hp .fill'), wname: q('.wname'), mag: q('.mag'), res: q('.res'),
       lethal: q('.lethal'), tactical: q('.tactical'), lk: q('.lk'), lc: q('.lc'), tk: q('.tk'), tc: q('.tc'),
       popups: q('.popups'), prompt: q('.prompt'), protect: q('.protect'), center: q('.center-msg'), death: q('.death'),
-      blind: q('.blind'), support: q('.support'),
+      blind: q('.blind'), zt: q('.zonetint'), support: q('.support'), wx: q('.wxchip'), xp: q('.xpchip'),
       captions: q('.captions'), sb: q('.scoreboard'), np: q('.nameplates'), rp: q('.range-panel'), topc: q('.hud-tc'), om: q('.obj-markers'), os: q('.obj-strip'),
     };
     this.miniCtx = this.$.mini.getContext('2d');
@@ -177,6 +178,7 @@ export class Hud {
       else if (s.reloading) prompt = 'RELOADING';
       else if (s.mag <= s.magSize * 0.25 && s.reserve > 0) { prompt = `<span class="key">${esc(s.keys.reload)}</span> RELOAD`; warn = s.mag === 0; }
     }
+    if (s.interact) { prompt = s.interact; warn = false; } // standing on a weapon: the swap prompt wins
     this.set('prompt', prompt + warn, () => { $.prompt.innerHTML = prompt; $.prompt.classList.toggle('warn', warn); });
     this.set('protect', s.alive && s.protect > 0, (v) => { $.protect.textContent = v ? 'SPAWN PROTECTION' : ''; });
     // center message timer
@@ -229,7 +231,7 @@ export class Hud {
       setTimeout(() => row.remove(), 5000);
       return;
     }
-    const w = k.weapon === 'frag' ? 'FRAG' : k.weapon === 'strike' ? 'AREA STRIKE' : k.weapon === 'melee' ? 'MELEE' : k.weapon === 'fall' ? 'FELL' : (k.weaponName || '');
+    const w = k.weapon === 'frag' ? 'FRAG' : k.weapon === 'strike' ? 'AREA STRIKE' : k.weapon === 'melee' ? 'MELEE' : k.weapon === 'fall' ? 'FELL' : k.weapon === 'zone' ? 'THE ZONE' : (k.weaponName || '');
     if (k.killer && k.killer !== k.victim) {
       row.innerHTML = `<span style="color:${col(k.killer)}">${nm(k.killer)}</span><span class="w">${esc(w)}</span>${k.headshot ? '<span class="hs">HEADSHOT</span>' : ''}<span style="color:${col(k.victim)}">${nm(k.victim)}</span>`;
     } else {
@@ -322,8 +324,17 @@ export class Hud {
     }
   }
 
+  /** Battle Royale: blue tint while outside the safe zone. */
+  zoneTint(on) { this.set('zt', !!on, (v) => { this.$.zt.classList.toggle('on', v); }); }
+
+  /** Weather readout under the clock. */
+  weather(text) { this.set('wx', text, (v) => { this.$.wx.textContent = v; this.$.wx.style.display = v ? '' : 'none'; }); }
+
+  /** Supercharged XP badge (text or '' to hide). */
+  xpBoost(text) { this.set('xpb', text, (v) => { this.$.xp.textContent = v; this.$.xp.style.display = v ? '' : 'none'; }); }
+
   /** Draw minimap. m: {img, scale (px per m), minX, minZ, pad}, s: player snapshot, dots: [{x,z,color,kind}] */
-  minimap(m, s, dots) {
+  minimap(m, s, dots, circles = []) {
     const mode = this.app.settings.data.interface.minimap;
     if (mode === 'off' || !m) return;
     const ctx = this.miniCtx, W = 190, H = 190;
@@ -339,6 +350,18 @@ export class Hud {
     ctx.globalAlpha = 0.95;
     ctx.drawImage(m.img, m.minX - m.pad, m.minZ - m.pad, m.img.width / m.scale, m.img.height / m.scale);
     ctx.globalAlpha = 1;
+    // Battle Royale: safe zone (solid) and next circle (dashed); outside is tinted
+    for (const c of circles) {
+      ctx.lineWidth = (c.width || 2) / k;
+      ctx.strokeStyle = c.color;
+      ctx.setLineDash(c.dash ? [4 / k, 3 / k] : []);
+      ctx.beginPath(); ctx.arc(c.x, c.z, Math.max(0.1, c.r), 0, Math.PI * 2); ctx.stroke();
+      if (c.shade) {
+        ctx.fillStyle = 'rgba(70,110,255,0.22)';
+        ctx.beginPath(); ctx.rect(c.x - 1000, c.z - 1000, 2000, 2000); ctx.arc(c.x, c.z, Math.max(0.1, c.r), 0, Math.PI * 2, true); ctx.fill();
+      }
+    }
+    ctx.setLineDash([]);
     for (const d of dots) {
       ctx.fillStyle = d.color;
       ctx.beginPath();

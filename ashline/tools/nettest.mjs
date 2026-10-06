@@ -165,7 +165,54 @@ t('leaving returns the slot to a bot', A.roster.list.filter((r) => r.human).leng
 const st = await (await fetch(`http://localhost:${srv.port}/status`)).json();
 t('/status reports room, mode and players', st.mode === 'tdm' && st.players.length === 1, JSON.stringify(st));
 
+t('snapshots carry the weather state', Array.isArray(A.snap?.m.wx) && A.snap.m.wx.length === 6, JSON.stringify(A.snap?.m.wx));
 A.ws.close();
 srv.close();
+
+// ---- 0.6.0: Battle Royale on the server
+{
+  const srv2 = await startServer({ port: 0, dev: true, quiet: true, rotation: [{ map: 'old_quarter', mode: 'br' }], time: 8 });
+  const url2 = `ws://localhost:${srv2.port}/ws`;
+  class C2 extends Client { constructor(n) { super(n); } }
+  // point a client at the BR server
+  const mk = (n) => { const c = Object.create(Client.prototype); Object.assign(c, { name: n, msgs: [], snap: null, roster: null, events: [], seq: 0, los: 0, lastLo: null }); c.ws = new WebSocket(url2); c.open = new Promise((r) => c.ws.addEventListener('open', r)); c.ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); if (m.t === 'snap') { c.snap = m; c.events.push(...m.ev); if (m.lo) { c.los++; c.lastLo = m.lo; } } if (m.t === 'roster') c.roster = m; if (m.t === 'welcome') c.welcome = m; if (m.t === 'reject') c.rejected = m.reason; }); return c; };
+  const P = mk('Pilot'), Q = mk('Quill');
+  t('BR server: two players join', (await P.join()) && (await Q.join()));
+  await until(() => P.snap?.m.state === 'live', 9000);
+  const br = P.snap.m.br;
+  t('BR server: snapshot carries zone, next circle, phase and the cold-phase timer', Array.isArray(br) && br.length === 12 && br[3] > 20 && br[11] > 20, JSON.stringify(br));
+  t('BR server: humans take bot slots, everyone on their own team, bots flagged', P.roster.list.length === 8 && new Set(P.roster.list.map((r) => r.team)).size === 8 && P.roster.list.filter((r) => r.isBot).length === 6);
+  t('BR server: loot list arrives once and only again when it changes', P.los >= 1 && P.lastLo.length >= 30 && P.los < 10, `${P.los} loot updates, ${P.lastLo.length} items`);
+  const me = P.me;
+  t('BR server: players start with pistol + axe', me && P.snap.you.mag.length === 2, JSON.stringify(P.snap.you.mag));
+  // stand on a weapon and send one interact press
+  P.send({ t: 'dbg', op: 'freezeBots' });
+  const wpn = P.lastLo.find((l) => l[1] === 0);
+  P.send({ t: 'dbg', op: 'place', x: wpn[3], y: wpn[4], z: wpn[5] });
+  await sleep(150);
+  const losBefore = P.los;
+  P.input(1, 1 / 60, { interact: true }); P.input(3, 1 / 60, {});
+  await until(() => P.los > losBefore, 3000);
+  await sleep(200);
+  const meNow = P.me;
+  const prim = P.roster && P.snap.e.find((e) => e[0] === P.roster.you);
+  const { unpackEntity } = await import('../src/net/protocol.js');
+  const u = unpackEntity(prim);
+  t('BR server: interact over a weapon swaps it in (server-authoritative) and the loot list updates', u.primary === wpn[2] && P.los > losBefore && !P.lastLo.some((l) => l[0] === wpn[0]), `${u.primary} vs ${wpn[2]}`);
+  // zone damage reaches a client: move far outside a tiny forced zone
+  srv2.room.match.ceasefireT = 0;
+  const z = srv2.room.match.br.zone; z.state = 'final'; z.t = Infinity; z.x0 = z.x1 = 0; z.z0 = z.z1 = 0; z.r0 = z.r1 = 3;
+  Q.send({ t: 'dbg', op: 'place', x: 40, z: 0 });
+  const hp0 = 100; await sleep(2300);
+  t('BR server: outside the zone the server drains your health', Q.snap.you.hp < hp0, String(Q.snap.you.hp));
+  // a kill on the server shows up as a placement for everyone
+  Q.send({ t: 'dbg', op: 'health', v: 1 });
+  await until(() => (P.snap?.m.br?.[10] || []).length >= 1, 4000);
+  const places = new Map(P.snap.m.br[10]);
+  const qTeam = Q.roster.list.find((r) => r.id === Q.roster.you)?.team;
+  t('BR server: the eliminated player gets a placement everyone can see', places.get(qTeam) === 8, JSON.stringify([...places]));
+  P.ws.close(); Q.ws.close();
+  srv2.close();
+}
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

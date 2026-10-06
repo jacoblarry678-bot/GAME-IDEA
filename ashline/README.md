@@ -1,7 +1,8 @@
 # OPERATION ASHLINE
 
 An original 3D military first-person shooter that runs in the browser. Fast
-movement and gunplay against bots across three maps and six modes. Everything in
+movement and gunplay against bots across three maps and seven modes, including a
+mini Battle Royale, with dynamic weather. Everything in
 it is made for this project: the maps, weapons, characters, sounds and music are
 generated in code when the game loads.
 
@@ -44,7 +45,7 @@ Everyone opens the printed address, chooses **Online**, and presses **Connect** 
 pre-filled). Players on other networks need the port forwarded (TCP 4190 by default) or a VPN.
 
 Server options: `--port 4190`, `--map old_quarter --mode dom` (a fixed map and mode instead of the
-rotation), `--bots 1-5` (per team; bots fill every slot nobody occupies), `--difficulty
+rotation; `--mode br` runs Battle Royale, which is also the last stop of the default rotation), `--bots 1-5` (per team; bots fill every slot nobody occupies), `--difficulty
 recruit|regular|hardened|veteran`, `--time <minutes>`, `--score <limit>`, `--name "My Server"`.
 `GET /status` returns the room state as JSON.
 
@@ -81,10 +82,11 @@ as a claude.ai artifact can't reach a server on your machine; open the server's 
 | Melee | V or E | R3 |
 | Lethal (frag) / Tactical (smoke, flash or Bulwark) | G / Q | RB / LB |
 | Support: Recon Scan / Supply Drop / Area Strike | 3 / 4 / 5 | D-pad ← / ↑ / → |
+| Pick up weapon (Battle Royale) | F | D-pad ↓ |
 | Scoreboard | Tab | View |
 | Pause | Esc | Menu |
 
-## What you can play now (Milestones 1–5)
+## What you can play now (Milestones 1–5, update 0.6.0)
 
 - **Cinder Yard**: an industrial rail depot with a close-quarters warehouse, a rail yard with boxcars and a control booth, a container maze, a maintenance building, a long south road and two staging areas.
 - **Team Deathmatch** against up to 9 bots (5v5 with you), at four difficulty levels. You can set score and time limits and turn friendly fire on or off.
@@ -104,6 +106,10 @@ as a claude.ai artifact can't reach a server on your machine; open the server's 
   - **Support abilities**: earned through consecutive eliminations: Recon Scan (4), Supply Drop (6) and Area Strike (8). Hardline lowers each by one. Bots use them too.
 - **Milestone 5**: online play on a self-hosted, server-authoritative server (see above).
 - **Update 0.5.1**: sun glare and lens flare that buildings, roofs, trees and smoke can block; windows and polished metal reflect each map's own buildings through a per-map reflection probe; scope glint on enemy snipers and 3x optics aimed at you; HX-9 Warden buff; **Waspinator collab** (keychain charm + banner) in the Store's Collab section (test credits).
+- **Update 0.6.0**:
+  - **Battle Royale (mini)**: up to 10 players on any map, no respawns. Everyone drops in spread out with a pistol and an axe. A 30-second weapons-cold phase is for looting weapons (F to swap), ammo, medkits and grenade packs. Then a five-phase shrinking zone drifts toward a final circle and hurts you outside it. Natural regen stops at 60 health; medkits heal to full. Eliminated players drop their gun. Last one standing wins; if time runs out, the survivor with the most eliminations wins. After you're out you spectate, and offline you can press Space to simulate the rest of the match to a real winner. Online, the server runs the zone and loot.
+  - **Dynamic weather**: clear → overcast → rain → thunderstorm, or fog, changing every 1–2 minutes (or fixed, chosen in Play setup). It brings an overcast sky, rain that roofs stop, lightning with delayed thunder, a rain audio bed, wet ground that soaks in and dries, and dimmer sun and flare under cloud. Fog and rain also shorten how far bots can see. Online, the server decides the weather. Settings → Graphics → Weather Effects turns off the rain, lightning flashes and wet sheen; fog and light still change because they affect visibility for everyone.
+  - **Supercharged XP**: a free event gift on the main menu, claimed once per profile. It gives one hour of 2× player, weapon and battle-pass XP, which counts down only while you are in a match (so it doesn't depend on your device clock). The HUD shows a 2× XP timer, and results list the bonus. It never affects gameplay.
 - **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
@@ -118,8 +124,10 @@ src/
              procedural textures/materials, map builder, sky, maps/ (kit + Cinder Yard, Old Quarter, Signal Station)
   entities/  combatant (shared player/bot simulation), bot AI, soldier model (rigid-skinned)
   combat/    weapon state machine, grenades/smoke/flash, deployables (shields, supply drops, strikes, recon)
-  game/      match (rules, damage, scoring, spawning), modes, spawns, game (presentation + player control)
-  fx/        viewmodel (procedural animation), weapon models, effects (instanced particles, tracers, decals)
+  game/      match (rules, damage, scoring, spawning), modes, battleRoyale (zone, loot, placements), weather,
+             spawns, game (presentation + player control)
+  fx/        viewmodel (procedural animation), weapon models, effects (instanced particles, tracers, decals),
+             weather (rain, lightning, wet ground), battleRoyaleView (zone wall, loot models)
   audio/     synthesized SFX + music, spatial playback, announcer
   net/       online protocol, browser connection (clock sync, ping), NetMatch (prediction/interpolation)
   ui/        menus/screens, HUD, controller menu navigation, styles
@@ -139,7 +147,7 @@ The match simulation does not depend on rendering. `tools/sim.mjs` and
 ## Testing
 
 ```bash
-npm test                         # 172 headless tests (movement, weapons, damage, equipment, modes, economy, attachments, maps)
+npm test                         # 218 headless tests (movement, weapons, damage, equipment, modes, economy, attachments, maps, weather, BR, XP boost)
 npm run sim -- 3 regular 5 dom old_quarter   # bots-only match: minutes, difficulty, bots per team, mode, map
 npm run maps                     # validates spawns, nav connectivity and objectives on every map
 npm run nettest                  # dedicated server with real WebSocket clients
@@ -151,6 +159,9 @@ node tools/m3.mjs                # progression/cosmetics/store/pass browser flow
 node tools/m4.mjs                # unlocks, gunsmith, perks, support abilities, shield, flash
 node tools/maps.mjs              # map picker + screenshots of the new maps
 node tools/sun.mjs               # sun flare/occlusion, reflections, scope glint, Waspinator collab
+node tools/weather.mjs           # storm/fog/rain visuals, roofs stop rain, lightning, cleanup, dynamic changes
+node tools/br.mjs                # Battle Royale end to end + Supercharged XP claim → badge → ×2 results
+npm run build && node tools/onlinebr.mjs   # Battle Royale on the dedicated server in a browser
 node tools/range.mjs             # firing range check
 node tools/beauty.mjs high       # review screenshots from fixed viewpoints
 ```
@@ -170,7 +181,7 @@ Resolution, Shadows or the quality preset.
 
 Unreleased cosmetics can ship inside a build as AES-256-GCM ciphertext (`src/data/vault.js`).
 Nothing about them — ids, names, colours — is readable until a release code is supplied. Hotfix
-0.5.2 ships one sealed drop.
+0.5.2 shipped one sealed drop (still sealed in 0.6.0).
 
 Release it any of these ways (each one is instant, no rebuild needed for the first two):
 - **Code**: players type it into **Store → Redeem code**. It unlocks for that device and is remembered.

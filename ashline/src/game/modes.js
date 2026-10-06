@@ -7,10 +7,14 @@
  *   canRespawn(match, c)       false = wait for the next round
  *   spawnScore(match, c, sp)   extra spawn preference
  *   botGoal(match, bot)        objective destination for bots ({ x, z, name, hold })
- *   loadoutFor(match, c)       forced loadout (Gun Game)
+ *   loadoutFor(match, c)       forced loadout (Gun Game, Battle Royale)
+ *   spawnAt(match, c, initial) custom spawn point (Battle Royale drop-in)
+ *   botUrgent(match, bot)      goal that overrides roaming (BR: run for the zone)
+ *   goalStale(match, bot, name) true when a bot's objective goal is gone
  * Only modes whose rules are implemented here are offered as playable.
  */
 import { WEAPONS, GUN_LADDER } from '../data/weapons.js';
+import { BATTLE_ROYALE } from './battleRoyale.js';
 
 export const TEAMS = [
   { id: 0, name: 'WARDEN', full: 'Warden Security Directorate' },
@@ -287,6 +291,8 @@ export const MODES = {
     onTimeUp: timeUpFfa,
     spawnScore() { return 0; },
   },
+
+  br: BATTLE_ROYALE,
 
   range: {
     id: 'range', name: 'Firing Range', short: 'RANGE', teams: true, range: true, playable: false,

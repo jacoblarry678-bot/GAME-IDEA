@@ -13,7 +13,7 @@ import { WEAPONS, EQUIPMENT } from '../data/weapons.js';
 import { sanitizeBuild } from '../data/attachments.js';
 import { PERKS, DEFAULT_PERKS } from '../data/perks.js';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2; // 2: Battle Royale state, loot, interact bit, weather
 export const DEFAULT_PORT = 4190;
 export const TICK_HZ = 60;
 export const SNAP_HZ = 20;
@@ -29,7 +29,7 @@ export function packCmd(seq, dt, cmd, vt) {
   return [seq, r3(dt), r3(cmd.moveX), r3(cmd.moveZ), bits(cmd), cmd.swapTo, cmd.support || 0, r4(cmd.yaw), r4(cmd.pitch), r3(vt)];
 }
 function bits(c) {
-  return (c.sprint ? 1 : 0) | (c.crouch ? 2 : 0) | (c.jump ? 4 : 0) | (c.fire ? 8 : 0) | (c.ads ? 16 : 0) | (c.reload ? 32 : 0) | (c.swap ? 64 : 0) | (c.melee ? 128 : 0) | (c.lethal ? 256 : 0) | (c.tactical ? 512 : 0);
+  return (c.sprint ? 1 : 0) | (c.crouch ? 2 : 0) | (c.jump ? 4 : 0) | (c.fire ? 8 : 0) | (c.ads ? 16 : 0) | (c.reload ? 32 : 0) | (c.swap ? 64 : 0) | (c.melee ? 128 : 0) | (c.lethal ? 256 : 0) | (c.tactical ? 512 : 0) | (c.interact ? 1024 : 0);
 }
 
 /** Validate and decode one packed command (server side). Returns null when malformed. */
@@ -43,7 +43,7 @@ export function unpackCmd(a) {
     vt,
     cmd: {
       moveX: clamp(mx, -1, 1), moveZ: clamp(mz, -1, 1),
-      sprint: !!(b & 1), crouch: !!(b & 2), jump: !!(b & 4), fire: !!(b & 8), ads: !!(b & 16), reload: !!(b & 32), swap: !!(b & 64), melee: !!(b & 128), lethal: !!(b & 256), tactical: !!(b & 512),
+      sprint: !!(b & 1), crouch: !!(b & 2), jump: !!(b & 4), fire: !!(b & 8), ads: !!(b & 16), reload: !!(b & 32), swap: !!(b & 64), melee: !!(b & 128), lethal: !!(b & 256), tactical: !!(b & 512), interact: !!(b & 1024),
       swapTo: swapTo === 0 || swapTo === 1 ? swapTo : -1,
       support: SUPPORT_IDS.has(support) ? support : null,
       yaw: wrapAngle(yaw), pitch: clamp(pitch, -1.5, 1.5),

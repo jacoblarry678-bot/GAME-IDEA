@@ -33,7 +33,7 @@ export function newCommand() {
   return {
     moveX: 0, moveZ: 0, sprint: false, crouch: false, jump: false,
     fire: false, firePressed: false, ads: false, reload: false, swap: false,
-    swapTo: -1, melee: false, lethal: false, tactical: false, support: null,
+    swapTo: -1, melee: false, lethal: false, tactical: false, support: null, interact: false,
     yaw: 0, pitch: 0,
   };
 }
@@ -98,6 +98,12 @@ export class Combatant {
     this.cur = 0;
     this.lethal = { id: lo.lethal, count: EQUIPMENT[lo.lethal].count };
     this.tactical = { id: lo.tactical, count: EQUIPMENT[lo.tactical].count };
+  }
+
+  /** Replace one weapon slot (Battle Royale pickups). */
+  applyLoadoutWeapon(slot, wid) {
+    const b = this.loadout.builds || {};
+    this.weapons[slot] = new WeaponState(applyAttachments(WEAPONS[wid], b[wid]));
   }
 
   get weapon() { return this.weapons[this.cur]; }
@@ -191,9 +197,13 @@ export class Combatant {
     this.pitch = Math.max(-1.5, Math.min(1.5, cmd.pitch));
 
     // ---- health regen ----
-    if (this.health < HEALTH.max && ctx.time - this.lastDamageT > (perks.has('pk_resolve') ? 2.5 : HEALTH.regenDelay)) {
-      this.health = Math.min(HEALTH.max, this.health + HEALTH.regenRate * dt);
+    const regenCap = ctx.regenCap ?? HEALTH.max; // Battle Royale: regen stops partway, medkits heal fully
+    if (this.health < regenCap && ctx.time - this.lastDamageT > (perks.has('pk_resolve') ? 2.5 : HEALTH.regenDelay)) {
+      this.health = Math.min(regenCap, this.health + HEALTH.regenRate * dt);
     }
+    // interact is edge-triggered: one press, one request (substeps repeat the same command)
+    if (cmd.interact && !this._interactHeld) this.interactReq = ctx.time;
+    this._interactHeld = !!cmd.interact;
 
     const w = this.weapon;
     const def = w.def;

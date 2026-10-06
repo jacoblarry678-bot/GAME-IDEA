@@ -1,5 +1,7 @@
 /**
  * Procedural sky dome: gradient, sun disc + glow and soft drifting clouds.
+ * `overcast` (0..1) greys the sky, thickens clouds and hides the sun;
+ * `flash` (0..1) lights the clouds for lightning.
  */
 import * as THREE from 'three';
 
@@ -16,6 +18,8 @@ export function createSky(def) {
       sunDir: { value: sunDir },
       sunColor: { value: new THREE.Color(def.sun.color) },
       time: { value: 0 },
+      overcast: { value: 0 },
+      flash: { value: 0 },
     },
     vertexShader: /* glsl */`
       varying vec3 vDir;
@@ -25,7 +29,7 @@ export function createSky(def) {
         gl_Position = p.xyww;
       }`,
     fragmentShader: /* glsl */`
-      uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; uniform vec3 sunDir; uniform vec3 sunColor; uniform float time;
+      uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; uniform vec3 sunDir; uniform vec3 sunColor; uniform float time; uniform float overcast; uniform float flash;
       varying vec3 vDir;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float noise(vec2 p) {
@@ -39,13 +43,19 @@ export function createSky(def) {
         float h = d.y;
         vec3 col = h > 0.0 ? mix(horizon, top, pow(clamp(h, 0.0, 1.0), 0.55)) : mix(horizon, ground, clamp(-h * 4.0, 0.0, 1.0));
         float sd = max(dot(d, normalize(sunDir)), 0.0);
-        col += sunColor * (pow(sd, 900.0) * 6.0 + pow(sd, 18.0) * 0.35 + pow(sd, 3.0) * 0.12);
+        float lum = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(col, vec3(lum) * vec3(0.78, 0.8, 0.84), overcast * 0.8);
+        float sunVis = 1.0 - overcast * 0.92;
+        col += sunColor * (pow(sd, 900.0) * 6.0 * sunVis * sunVis + pow(sd, 18.0) * 0.35 * sunVis + pow(sd, 3.0) * 0.12 * sunVis);
         if (h > 0.0) {
-          vec2 uv = d.xz / (h + 0.18) * 1.4 + vec2(time * 0.004, time * 0.002);
-          float c = smoothstep(0.52, 0.85, fbm(uv));
-          vec3 cloud = mix(vec3(0.92, 0.9, 0.86), sunColor, 0.25) * (0.85 + pow(sd, 6.0) * 0.4);
-          col = mix(col, cloud, c * smoothstep(0.0, 0.25, h) * 0.75);
+          vec2 uv = d.xz / (h + 0.18) * 1.4 + vec2(time * 0.004, time * 0.002) * (1.0 + overcast * 2.5);
+          float c = smoothstep(0.52 - overcast * 0.5, 0.85 - overcast * 0.3, fbm(uv));
+          vec3 cloud = mix(vec3(0.92, 0.9, 0.86), sunColor, 0.25 * sunVis) * (0.85 + pow(sd, 6.0) * 0.4 * sunVis);
+          cloud = mix(cloud, vec3(0.42, 0.44, 0.48) * (0.8 + 0.4 * fbm(uv * 1.7)), overcast * 0.85);
+          cloud += vec3(0.75, 0.8, 1.0) * flash * (0.6 + fbm(uv * 0.6 + 3.0));
+          col = mix(col, cloud, c * smoothstep(0.0, 0.25, h) * (0.75 + overcast * 0.25));
         }
+        col += vec3(0.5, 0.55, 0.7) * flash * 0.35;
         gl_FragColor = vec4(col, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>

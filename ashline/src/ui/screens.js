@@ -2,6 +2,8 @@
  * Menu screens: main, play setup, loadouts, settings, career, about,
  * pause and results. Screens are DOM pages over the live 3D background.
  */
+import { XP_EVENT } from '../data/events.js';
+import { WEATHER_OPTIONS, WEATHER_NAMES } from '../game/weather.js';
 import { el, esc } from './dom.js';
 import { SETTINGS_SCHEMA, ACTION_LABELS, DEFAULT_BINDINGS } from '../core/settings.js';
 import { codeLabel } from '../core/input.js';
@@ -18,7 +20,7 @@ import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
 import { NetClient } from '../net/netClient.js';
 
-export const VERSION = 'M5 · build 0.5.2';
+export const VERSION = 'Update 0.6.0';
 
 export class Screens {
   constructor(app) {
@@ -195,7 +197,7 @@ const SCREENS = {
           </nav>
         </div>
         <div class="status-line">
-          <div><span class="pill on">Offline</span> <span class="pill">Solo vs bots</span> <span class="pill off">Online play: not available in this build</span></div>
+          <div><span class="pill on">Offline vs bots</span> <span class="pill">Online: self-hosted server (npm run server)</span></div>
           <div style="margin-top:8px">Operator <b style="color:var(--text)">${esc(prof.name)}</b> · progress is saved in this browser only.</div>
           <div class="dim" id="device-hint" style="margin-top:4px"></div>
           ${matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches ? '<div style="margin-top:8px;color:var(--accent-2)">This game needs a keyboard and mouse or a game controller. Touch controls are not supported.</div>' : ''}
@@ -205,7 +207,12 @@ const SCREENS = {
     node.querySelector('[data-act=range]').onclick = () => app.startRange();
     const side = document.createElement('div');
     side.className = 'menu-side';
-    side.innerHTML = `${profileCard(app)}<div class="row" style="justify-content:flex-end;margin-top:8px">${creditsChip(app)}</div>`;
+    const renderSide = () => {
+      side.innerHTML = `${profileCard(app)}<div class="row" style="justify-content:flex-end;margin-top:8px">${creditsChip(app)}</div>${xpEventCard(app)}`;
+      const claim = side.querySelector('[data-a=claim-xp]');
+      if (claim) claim.onclick = () => { const r = app.profile.claimXpGift(); app.audio.ui('click'); if (r.ok) app.screens.toast('Supercharged XP claimed: 1 hour of 2× XP, counting down only in matches.', 5000); renderSide(); };
+    };
+    renderSide();
     node.appendChild(side);
     for (const n of app.profile.data.notices.splice(0)) app.screens.toast(n, 5000);
     const hint = node.querySelector('#device-hint');
@@ -248,6 +255,9 @@ const SCREENS = {
             ${MODES[setup.mode].teams ? `<div class="field"><label>Friendly fire</label><div class="choice" data-k="friendlyFire">
               <button data-v="false" class="${!setup.friendlyFire ? 'sel' : ''}">Off</button><button data-v="true" class="${setup.friendlyFire ? 'sel' : ''}">On</button>
             </div></div>` : ''}
+            <div class="field" style="grid-column: span 2"><label>Weather</label><div class="choice" data-k="weather">
+              ${WEATHER_OPTIONS.map((w) => `<button data-v="${w}" class="${(setup.weather || 'dynamic') === w ? 'sel' : ''}">${esc(WEATHER_NAMES[w])}</button>`).join('')}
+            </div><div class="muted small">${setup.weather === 'dynamic' || !setup.weather ? 'Changes during the match: clear → clouds → rain → thunderstorm, or fog. Fog and rain shorten how far bots can see.' : 'Fixed for the whole match.'}</div></div>
             <div class="field" style="grid-column: span 2"><label>Loadout</label><div class="choice" data-k="loadout">
               ${app.profile.data.loadouts.map((l, i) => `<button data-v="${i}" class="${app.profile.data.activeLoadout === i ? 'sel' : ''}">${esc(l.name)} · ${esc(WEAPONS[l.primary].name)}</button>`).join('')}
             </div><div class="muted small">${esc(WEAPONS[lo.primary].name)} + ${esc(WEAPONS[lo.secondary].name)} · ${esc(EQUIPMENT[lo.lethal].name)} · ${esc(EQUIPMENT[lo.tactical].name)}</div></div>
@@ -581,10 +591,12 @@ const SCREENS = {
           <p class="muted small">Sprint + Crouch while moving to slide. Jump into a ledge or low wall to mantle/vault. Controller: standard layout (RT fire, LT aim, A jump, B crouch, X reload, Y swap, RB lethal, LB tactical, L3 sprint, R3 melee, D-pad ←/↑/→ support abilities).</p>
         </div>
         <div class="panel" style="flex:1;min-width:300px">
-          <h3 class="title">In this build (Milestone 5)</h3>
+          <h3 class="title">In this build (update 0.6.0)</h3>
           <ul class="small" style="line-height:1.7;margin:0;padding-left:18px">
             <li>3 maps: Cinder Yard, Old Quarter, Signal Station · plus a Firing Range</li>
-            <li>6 modes vs bots: Team Deathmatch, Free-for-All, Domination, Hardpoint, Elimination, Gun Game · private match settings</li>
+            <li>7 modes vs bots: Team Deathmatch, Free-for-All, Domination, Hardpoint, Elimination, Gun Game, Battle Royale (mini, up to 10 players) · private match settings</li>
+            <li>Dynamic weather: clouds, rain, thunderstorms and fog that change during a match (or pick fixed weather)</li>
+            <li>Supercharged XP event: a free one-hour 2× XP gift, counted only while you play</li>
             <li>16 weapons (4 AR, 3 SMG, 2 shotguns, sniper + DMR, 2 LMGs, 2 pistols, breaching axe)</li>
             <li>Gunsmith: 16 attachments in 6 slots, each with a drawback, unlocked by weapon level</li>
             <li>9 perks · frag, smoke, flash, Bulwark deployable cover</li>
@@ -641,9 +653,9 @@ const SCREENS = {
   results(app, node, p) {
     node.classList.add('shade-full');
     const r = p.result;
-    const banner = r.outcome === 'win' ? 'VICTORY' : r.outcome === 'loss' ? (r.ffa ? `#${r.placing} PLACE` : 'DEFEAT') : 'DRAW';
+    const banner = r.outcome === 'win' ? (r.br ? 'LAST ONE STANDING' : 'VICTORY') : r.outcome === 'loss' ? (r.ffa ? `#${r.placing} PLACE` : 'DEFEAT') : 'DRAW';
     const cls = r.outcome;
-    const reason = r.reason === 'score' ? (r.mode === 'gun' ? 'Ladder completed' : r.mode === 'elim' ? 'Round limit reached' : 'Score limit reached') : 'Time limit reached';
+    const reason = r.br ? (r.reason === 'last' ? 'Decided by elimination' : 'Time ran out · most eliminations among the survivors wins') : r.reason === 'score' ? (r.mode === 'gun' ? 'Ladder completed' : r.mode === 'elim' ? 'Round limit reached' : 'Score limit reached') : 'Time limit reached';
     const ffaTable = (rr) => `<div class="team-head"><span>STANDINGS</span><span class="small muted" style="font-family:var(--font-body);font-weight:400">You placed #${rr.placing} of ${rr.rows[0].length}</span></div>
       <table class="sb"><thead><tr><th>#</th><th>Player</th>${rr.mode === 'gun' ? '<th class="num">Level</th>' : ''}<th class="num">Score</th><th class="num">K</th><th class="num">D</th><th class="num">Acc</th></tr></thead><tbody>
       ${rr.rows[0].map((x, i) => `<tr class="${x.me ? 'me' : ''}"><td>${i + 1}</td><td>${x.bot ? '<span class="bot-tag">BOT</span>' : ''}${esc(x.name)}</td>${rr.mode === 'gun' ? `<td class="num">${Math.min(x.level + 1, rr.ladder)}/${rr.ladder}</td>` : ''}<td class="num">${x.score}</td><td class="num">${x.kills}</td><td class="num">${x.deaths}</td><td class="num">${x.acc}</td></tr>`).join('')}
@@ -698,11 +710,22 @@ function rewardsHtml(app, rw, recorded) {
     <div class="row small" style="margin-top:8px"><b>LEVEL ${d.level}</b>${lvUp ? `<span class="pill on">Level up! ${rw.levelBefore} → ${rw.levelAfter}</span>` : ''}<div class="spacer"></div><span class="muted">${d.level >= MAX_LEVEL ? 'Max' : `${d.xp.toLocaleString('en-US')} / ${need.toLocaleString('en-US')}`}</span></div>
     <div class="xpbar"><i style="width:${pct}%"></i></div>
     <div class="row small" style="margin-top:8px"><span>Battle pass tier ${rw.pass.from} → <b>${rw.pass.to}</b></span>${rw.pass.to > rw.pass.from ? '<span class="pill on">Rewards ready to claim</span>' : ''}</div>
+    ${rw.boost ? `<div class="row small xp-boost-line" style="margin-top:8px"><span class="pill xpb">SUPERCHARGED XP ×${rw.boost.mult}</span><span class="muted">${rw.boost.left > 0 ? `${fmtBoost(rw.boost.left)} of boost left` : 'Boost used up'}</span></div>` : ''}
     ${rw.weapons.length ? `<div class="small" style="margin-top:8px">${rw.weapons.map((w) => `<div class="row"><span class="muted">${esc(WEAPONS[w.id].name)}</span><div class="spacer"></div>+${w.xp} XP · LV ${w.to}${w.to > w.from ? ' <span class="pill on">Level up</span>' : ''}</div>${w.atts?.length ? `<div class="muted" style="margin:-2px 0 4px 10px">New attachments: ${w.atts.map((id) => esc(ATTACHMENTS[id].name)).join(', ')}</div>` : ''}`).join('')}</div>` : ''}
     ${rw.challenges.length ? `<div class="small" style="margin-top:8px">${rw.challenges.map((c) => `<div class="row"><span class="pill on">Challenge complete</span><span>${esc(c.text)}</span></div>`).join('')}</div>` : ''}
     ${rw.newWeapons?.length ? `<h3 class="title" style="margin-top:12px">New weapons</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.newWeapons.map((id) => `<div class="pill on">${esc(WEAPONS[id].name)} · ${esc(WEAPONS[id].classLabel)}</div>`).join('')}</div>` : ''}
     ${rw.unlocks.length ? `<h3 class="title" style="margin-top:12px">Unlocked</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.unlocks.map((i) => `<div class="row small" style="gap:6px;border:1px solid ${RARITY[i.rarity].color};padding:4px 8px">${itemThumb(i)}<span>${esc(i.name)}</span></div>`).join('')}</div>` : ''}
     <div class="muted small" style="margin-top:10px">Saved to your local profile.</div>`;
+}
+
+function fmtBoost(sec) { sec = Math.max(0, Math.floor(sec)); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; }
+
+/** Main-menu card for the free Supercharged XP event gift. */
+function xpEventCard(app) {
+  const pr = app.profile, left = pr.xpBoostLeft;
+  if (!pr.giftClaimed(XP_EVENT.id)) return `<div class="xp-event"><div class="xe-k">LIMITED EVENT · FREE GIFT</div><div class="xe-t">${esc(XP_EVENT.name)}</div><div class="xe-b">${esc(XP_EVENT.blurb)}</div><button class="btn primary" data-a="claim-xp">Claim 1 hour of 2× XP</button></div>`;
+  if (left > 0) return `<div class="xp-event on"><div class="xe-k">ACTIVE</div><div class="xe-t">${esc(XP_EVENT.name)} ×${XP_EVENT.mult}</div><div class="xe-b"><b>${fmtBoost(left)}</b> left · counts down only in matches</div></div>`;
+  return `<div class="xp-event done"><div class="xe-k">EVENT</div><div class="xe-t">${esc(XP_EVENT.name)}</div><div class="xe-b">Your hour has been used. Thanks for playing!</div></div>`;
 }
 
 // ---------------------------------------------------------------- settings rows

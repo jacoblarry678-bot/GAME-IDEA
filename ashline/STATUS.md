@@ -169,6 +169,37 @@ someone runs the server, and others connect to it.
 
 **Limits**: this hides content until release; it is not DRM. After a code is published, the drop can be read by anyone with the build. Unlocks and purchases are local like all progression.
 
+## Update 0.6.0: Battle Royale, dynamic weather, Supercharged XP
+
+**Added**
+- **Battle Royale (mini)** (`br`): up to 10 players (you + 9 bots offline; 8 slots online), everyone for themselves, no respawns.
+  - **Start**: dispersed drop-in spawns, a pistol + axe start, and a 30-second *weapons-cold* phase (no player damage, bots loot instead of fighting).
+  - **Loot**: about 38 items at match start (weapons with their own ammo, ammo boxes, medkits, grenade packs). Weapons swap with **F / D-pad ↓**, edge-triggered with a short cooldown; ammo, medkits and gear are picked up automatically when useful. Eliminated players drop their gun.
+  - **Zone**: five phases, each a wait and then a shrink toward a new circle inside the old one, centred on walkable ground. Damage outside rises from 2 to 15 HP/s and ignores spawn protection. Natural regen stops at 60; medkits heal to 100.
+  - **Winning**: unique placements; last one standing wins, and on time-up the survivor with the most eliminations wins.
+  - **Bots** loot what improves them, hold spread-out spots inside the next circle, and run for the zone when outside or about to be.
+  - **HUD**: players alive, zone clock, weapons-cold timer, an outside-zone warning with a blue screen tint, minimap circles (current + next) and a pick-up prompt.
+  - **World**: an animated zone wall, a next-circle ring and loot shown with the game's own weapon models plus ammo/medkit/grenade-pack models and tier-coloured beams.
+  - **After elimination**: you spectate your killer (or a survivor). Offline, Space simulates the rest of the match to a real winner; results show your placement, or *LAST ONE STANDING* for a win.
+  - **Online**: the server runs zone, loot and placements. Snapshots carry the zone (`m.br`); the loot list is sent only when it changes; the protocol is now **v2** with an interact input bit. BR is the last stop of the default server rotation, or use `--mode br`.
+- **Dynamic weather**: clear, overcast, rain, thunderstorm and fog, changing every 1–2 minutes along a transition table, or fixed per match (Play setup → Weather).
+  - **Visuals**: the sky shader greys out and hides the sun; sun light dims and fog tints and thickens. Rain streaks stop at roofs (a per-map height grid built from the collision world). Lightning flashes the sky and lights, with thunder delayed by distance.
+  - **Ground and audio**: wet ground darkens and gets glossier over ~25 s and dries over ~60 s. A rain audio bed is muffled indoors. Sun glare fades under cloud.
+  - **Gameplay**: fog and rain cut bot sight range (95 m → about 43 m in fog).
+  - **Online and settings**: online, the server owns the weather. *Settings → Graphics → Weather Effects* turns off rain, flashes and wet sheen; fog and light always follow, for fairness.
+- **Supercharged XP** (event `supercharged_060`): a free main-menu gift, claimable once per profile, worth one hour of 2× player, weapon and battle-pass XP. It counts down only during matches (played seconds), so it doesn't rely on the device clock and isn't wasted while you're away. A match started with boost time left is doubled; results show the bonus line and the time left. There's a HUD badge with a countdown; saves are clamped to at most one hour. It never touches gameplay and is never sold.
+- Also: the main-menu status line no longer says online play is unavailable (stale since M5); the version label reads *Update 0.6.0*; kill feed and death screen name **the zone** as the killer when it is.
+
+**Verification run**
+- RESULTS_PLACEHOLDER
+
+**Known issues / limits**
+- Battle Royale uses the existing three maps, which are compact for 10 players: bot-only matches run about 2–4 minutes. A purpose-built large map is a natural follow-up.
+- Rain streaks are 1-pixel lines and there are no puddle reflections or splashes. The wet look is a material change, not screen-space reflections. Rain isn't drawn on the first-person weapon.
+- Bots don't use cover from the zone wall or plan rotations around other players' positions; they head for a spread-out spot in the next circle.
+- Supercharged XP and all progression are stored locally and remain editable by the user (as before).
+- Weather and BR performance are still unmeasured on a real GPU; the container renders with SwiftShader.
+
 ## Possible next steps
 - Co-op survival, multiple rooms per server or a simple server list, an axe swing animation, a laser beam visual, and GPU profiling on real hardware.
 - A production online service would need hosted servers, accounts, server-side progression and entitlements, and anti-cheat. That isn't in scope without real infrastructure.

@@ -19,6 +19,10 @@ import { DeployablesView } from '../fx/deployablesView.js';
 import { SUPPORT, SUPPORT_IDS, supportThreshold } from '../data/support.js';
 import { COSMETICS } from '../data/cosmetics.js';
 import { SunFlare, glintTexture } from '../fx/sunflare.js';
+import { WeatherView } from '../fx/weather.js';
+import { BattleRoyaleView } from '../fx/battleRoyaleView.js';
+import { brZone, nearbyWeapon, LOOT_NAMES } from './battleRoyale.js';
+import { WEATHER_NAMES } from './weather.js';
 
 const v3 = new THREE.Vector3(), v3b = new THREE.Vector3();
 
@@ -42,7 +46,7 @@ export class Game {
     m.presenter = true; // combatant events are consumed (and cleared) by this Game
     this.player = m.player;
     this.cosm = app.profile.look; // equipped cosmetics (visual only — never affects gameplay)
-    this.summary = { classKills: {}, weaponKills: {}, weaponHeadshots: {}, weaponsUsed: new Set(), grenadeKills: 0, meleeKills: 0, longshots: 0, multikills: 0, difficulty: setup.difficulty };
+    this.summary = { xpBoost: app.profile.xpBoostLeft > 0, classKills: {}, weaponKills: {}, weaponHeadshots: {}, weaponsUsed: new Set(), grenadeKills: 0, meleeKills: 0, longshots: 0, multikills: 0, difficulty: setup.difficulty };
     // third-person views
     this.views = new Map();
     this.viewSeed = 1;
@@ -60,6 +64,7 @@ export class Game {
     this.hud = new Hud(document.getElementById('ui'), app);
     this.sunflare = new SunFlare(this.hud.root);
     this.glints = new Map();
+    this.wxView = this.isRange ? null : new WeatherView(app, m);
     this.hud.setTeams(0);
     this.hud.setFfa(this.ffa && !this.isRange);
     this.vm = app.viewmodel;
@@ -139,9 +144,10 @@ export class Game {
     }
     this.objView = new ObjectiveView(this.app.engine.scene, this.match, 0, this.app.settings.teamColors());
     this.depView = new DeployablesView(this.app.engine.scene, this.match, 0, this.app.settings.teamColors());
-    const goal = { tdm: `first to ${this.setup.scoreLimit}`, ffa: `first to ${this.setup.scoreLimit} eliminations`, dom: `capture flags A · B · C — ${this.setup.scoreLimit} points`, hp: `hold the zone — ${this.setup.scoreLimit} points`, elim: `no respawns — first to ${this.setup.scoreLimit} rounds`, gun: `${this.match.ladder?.length || 0} weapons to win` }[mode.id];
+    if (this.match.mode.br) this.brView = new BattleRoyaleView(this.app.engine.scene, this.match, this.app.wmats);
+    const goal = { br: `${this.match.combatants.length} players · last one standing`, tdm: `first to ${this.setup.scoreLimit}`, ffa: `first to ${this.setup.scoreLimit} eliminations`, dom: `capture flags A · B · C — ${this.setup.scoreLimit} points`, hp: `hold the zone — ${this.setup.scoreLimit} points`, elim: `no respawns — first to ${this.setup.scoreLimit} rounds`, gun: `${this.match.ladder?.length || 0} weapons to win` }[mode.id];
     this.hud.center(mode.name.toUpperCase(), `${this.map.def.name} · ${goal}`, 3.4);
-    this.app.audio.announce({ tdm: 'Team deathmatch. Eliminate the enemy team.', ffa: 'Free for all. Trust no one.', dom: 'Domination. Capture the flags.', hp: 'Hardpoint. Secure the zone.', elim: 'Elimination. Round one. No respawns.', gun: 'Gun game. Every kill upgrades your weapon.' }[mode.id]);
+    this.app.audio.announce({ br: 'Battle royale. Weapons are cold for thirty seconds. Grab what you can.', tdm: 'Team deathmatch. Eliminate the enemy team.', ffa: 'Free for all. Trust no one.', dom: 'Domination. Capture the flags.', hp: 'Hardpoint. Secure the zone.', elim: 'Elimination. Round one. No respawns.', gun: 'Gun game. Every kill upgrades your weapon.' }[mode.id]);
   }
 
   // ------------------------------------------------------------------ input
@@ -202,6 +208,7 @@ export class Game {
     cmd.melee = inp.isDown('melee');
     cmd.lethal = inp.isDown('lethal');
     cmd.tactical = inp.isDown('tactical');
+    cmd.interact = inp.pressed('interact');
     if (!this.isRange) SUPPORT_IDS.forEach((id, i) => { if (inp.pressed('support' + (i + 1))) { if (p.abilities[id] > 0) cmd.support = id; else this.hud.popup(`${SUPPORT[id].name.toUpperCase()} NOT READY`, 0, 'medal'); } });
     cmd.yaw = this.look.yaw;
     cmd.pitch = this.look.pitch;
@@ -232,7 +239,7 @@ export class Game {
   clearInput() {
     const cmd = this.player.cmd;
     cmd.moveX = cmd.moveZ = 0;
-    cmd.fire = cmd.ads = cmd.jump = cmd.sprint = cmd.reload = cmd.swap = cmd.melee = cmd.lethal = cmd.tactical = false;
+    cmd.fire = cmd.ads = cmd.jump = cmd.sprint = cmd.reload = cmd.swap = cmd.melee = cmd.lethal = cmd.tactical = cmd.interact = false;
     cmd.yaw = this.look.yaw; cmd.pitch = this.look.pitch;
   }
 
@@ -249,7 +256,9 @@ export class Game {
       if (!p.alive && m.state === 'live' && m.canRespawn(p)) {
         if (p.respawnT <= 0 && (inp.pressed('jump') || inp.pressed('fire') || p.respawnT < -2.5 || (this.online && p.respawnT <= 0 && this.paused))) m.respawn(p);
       }
+      if (m.mode.br && !p.alive && m.state === 'live' && !this.online && this.deathCam?.t > 1.5 && (inp.pressed('jump') || (inp.pad && inp.padPressed(PAD.A)))) this.finishWithoutPlayer();
       const wasAlive = p.alive;
+      if (m.state === 'live') this.summary.playSeconds = (this.summary.playSeconds || 0) + dt;
       m.tick(dt);
       if (wasAlive && !p.alive) this.onPlayerDeath();
       this.afterTick(dt);
@@ -268,9 +277,16 @@ export class Game {
     this.updateGlints();
     this.updateViewmodel(dt);
     this.updateSun(dt);
+    this.wxView?.update(this.paused && !this.online ? 0 : dt, this.indoor || 0);
+    if (this.wxView) this.hud.weather(WEATHER_NAMES[m.weather.kind] || '');
+    if (this.summary.xpBoost && !this.isRange) {
+      const left = Math.max(0, Math.floor(this.app.profile.xpBoostLeft - (this.summary.playSeconds || 0)));
+      this.hud.xpBoost(`2× XP · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
+    }
     app.effects.update(this.paused ? 0 : dt, m.projectiles);
     this.objView?.update(this.paused ? 0 : dt);
     this.depView?.update(this.paused ? 0 : dt);
+    this.brView?.update(this.paused && !this.online ? 0 : dt);
     this.updateHud(dt);
     // audio listener
     const cam = app.engine.camera;
@@ -364,6 +380,7 @@ export class Game {
 
   onEvent(e) {
     const app = this.app, a = app.audio, hud = this.hud, p = this.player, fx = app.effects;
+    if (this.ffwd && e.type !== 'matchEnd') return; // fast-forwarding the rest of a BR match
     switch (e.type) {
       case 'shot': {
         const c = e.c, def = WEAPONS[e.weapon];
@@ -476,7 +493,7 @@ export class Game {
           const k = e.killer;
           this.deathInfo = {
             by: k && k !== p ? 'ELIMINATED BY' : 'YOU DIED',
-            who: k && k !== p ? k.displayName : (e.weapon === 'frag' ? 'Your own grenade' : 'Environment'),
+            who: k && k !== p ? k.displayName : (e.weapon === 'frag' ? 'Your own grenade' : e.weapon === 'zone' ? 'The zone' : 'Environment'),
             how: k && k !== p ? `${e.weapon === 'frag' ? 'M-7 FRAG' : e.weapon === 'strike' ? 'AREA STRIKE' : e.weapon === 'melee' ? 'MELEE' : (kname || '')}${e.headshot ? ' · HEADSHOT' : ''}${e.dist ? ` · ${Math.round(e.dist)} m` : ''}` : '',
             color: k && k.team !== p.team ? 'var(--enemy)' : 'var(--friendly)',
             killer: k,
@@ -537,6 +554,20 @@ export class Game {
         a.play('horn', { bus: 'sfx', vol: 0.5 });
         break;
       case 'objective': this.onObjective(e); break;
+      case 'loot': {
+        if (e.c !== p) break;
+        const what = e.kind === 'weapon' ? (WEAPONS[e.wid]?.name || 'WEAPON').toUpperCase() : (LOOT_NAMES[e.kind] || e.kind).toUpperCase();
+        hud.popup(e.kind === 'weapon' ? `PICKED UP ${what}` : `+ ${what}`, 0, 'medal');
+        a.play(e.kind === 'weapon' ? 'swap' : 'magIn', { vol: 0.8 });
+        if (e.kind === 'weapon') this.vm.setWeapon(p.weapon.def.id, this.cosm.weapons[p.weapon.def.id], p.weapon.def.attachments);
+        break;
+      }
+      case 'weather': {
+        const msg = { clear: 'SKIES CLEARING', overcast: 'CLOUDS ROLLING IN', rain: 'RAIN MOVING IN', storm: 'THUNDERSTORM INBOUND', fog: 'FOG ROLLING IN' }[e.kind];
+        if (msg) hud.popup(`WEATHER · ${msg}`, 0, 'medal');
+        if (e.kind === 'storm' || e.kind === 'fog') app.audio.announce(e.kind === 'storm' ? 'Storm inbound.' : 'Fog rolling in. Visibility dropping.');
+        break;
+      }
       case 'roundEnd': {
         const me = e.winner === p.team;
         hud.center(e.winner < 0 ? 'ROUND DRAW' : me ? 'ROUND WON' : 'ROUND LOST', `${TEAMS[0].name} ${e.scores[0]} — ${e.scores[1]} ${TEAMS[1].name}${e.reason === 'time' ? ' · time' : ''}`, 4, e.winner < 0 ? 'var(--accent-2)' : me ? 'var(--good)' : 'var(--bad)');
@@ -597,6 +628,14 @@ export class Game {
     const hud = this.hud, a = this.app.audio, p = this.player;
     const ours = (t) => t === p.team;
     switch (e.kind) {
+      case 'weaponsHot': hud.center('WEAPONS HOT', 'Damage is live — good luck', 2.2, 'var(--accent)'); a.announce('Weapons hot.'); a.play('horn', { bus: 'ui', vol: 0.5 }); break;
+      case 'zoneShrink': hud.center('THE ZONE IS CLOSING', 'Get inside the white circle', 2.4, '#8fb2ff'); a.announce('The zone is closing.'); break;
+      case 'zoneNext': hud.popup('NEXT ZONE MARKED', 0, 'medal'); break;
+      case 'eliminated': {
+        if (e.c === p) break;
+        if (e.alive > 1 && e.alive <= 3) a.announce(`${e.alive} players left.`);
+        break;
+      }
       case 'capture': if (e.c === p) hud.popup(`FLAG ${e.flag} CAPTURED`, 150); break;
       case 'defend': if (e.c === p) hud.popup('FLAG DEFENDED', 50); break;
       case 'flagCaptured': a.announce(ours(e.team) ? `We have captured ${e.flag}.` : `The enemy has captured ${e.flag}.`); break;
@@ -654,8 +693,12 @@ export class Game {
       const dc = this.deathCam;
       dc.t += dt;
       this.spectating = null;
-      if (this.match.mode.rounds && dc.t > 3) {
-        const mate = this.match.combatants.find((c) => c.alive && c.team === p.team && c !== p);
+      if ((this.match.mode.rounds || this.match.mode.br) && dc.t > 3) {
+        const k = this.deathInfo?.killer;
+        const mate = this.match.mode.br
+          ? (k && k.alive && k !== p ? k : (this.spectateLast?.alive ? this.spectateLast : this.match.combatants.find((c) => c.alive && c !== p)))
+          : this.match.combatants.find((c) => c.alive && c.team === p.team && c !== p);
+        this.spectateLast = mate;
         if (mate) {
           this.spectating = mate;
           // over-the-shoulder, pulled in if a wall is behind them
@@ -743,7 +786,8 @@ export class Game {
   /** Sun glare / lens flare, hidden by geometry and smoke. */
   updateSun(dt) {
     const g = this.app.settings.data.graphics, acc = this.app.settings.data.accessibility;
-    const strength = g.sunFlare ? (acc.reducedFlash ? 0.4 : 1) * (this.scoped ? 0.7 : 1) : 0;
+    const cloud = this.match.weather?.cur.cloud || 0;
+    const strength = g.sunFlare ? (acc.reducedFlash ? 0.4 : 1) * (this.scoped ? 0.7 : 1) * Math.max(0, 1 - cloud * 1.1) : 0;
     const w = this.match.world, pj = this.match.projectiles;
     this.sunflare.update(this.paused && !this.online ? 0 : dt, this.app.engine.camera, this.app.engine.sunDir, (ox, oy, oz, dx, dy, dz) => !!w.raycast(ox, oy, oz, dx, dy, dz, 300, 'sight') || pj.smokeBlocks(ox, oy, oz, ox + dx * 60, oy + dy * 60, oz + dz * 60), strength);
   }
@@ -801,7 +845,9 @@ export class Game {
       spreadDeg: p.spreadDeg(), vfov: app.engine.camera.fov * Math.PI / 180, reloading: w.reloading, protect: p.spawnProtectT,
       x: p.x, z: p.z, yaw: this.look.yaw, nades,
       keys: { lethal: inp.label('lethal'), tactical: inp.label('tactical'), reload: inp.label('reload') },
+      interact: this.interactPrompt(),
     });
+    if (m.br) hud.zoneTint(p.alive && m.state === 'live' && (() => { const z = brZone(m); return Math.hypot(p.x - z.x, p.z - z.z) > z.r; })());
     hud.blind(p.alive && p.blindT > 0 ? Math.min(1, p.blindT / Math.min(1.6, p.blindMax || 1)) : 0);
     hud.support(SUPPORT_IDS.map((id, i) => ({ id, name: SUPPORT[id].name, key: inp.label('support' + (i + 1)), have: Math.min(p.supportKills, supportThreshold(id, p.perks)), need: supportThreshold(id, p.perks), ready: p.abilities[id] })), this.isRange || !p.alive);
     if (!this.isRange) for (const c of m.combatants) if (m.deployables.revealed(c, p.team)) this.radar.set(c.id, m.time);
@@ -810,7 +856,11 @@ export class Game {
     // death overlay
     if (!p.alive && this.deathInfo && m.state === 'live') {
       const rt = Math.max(0, p.respawnT);
-      if (!m.canRespawn(p)) this.deathInfo.respawn = this.spectating ? `Spectating ${esc(this.spectating.displayName)} · respawn next round` : 'Eliminated · respawn next round';
+      if (m.mode.br) {
+        const place = m.br.place.get(p.team);
+        const left = m.combatants.filter((c) => c.alive).length;
+        this.deathInfo.respawn = `Eliminated${place ? ` · #${place} of ${m.br.total || m.combatants.length}` : ''} · ${left} left${this.spectating ? ` · spectating ${esc(this.spectating.displayName)}` : ''}${this.online ? ' · results when the match ends' : ` · press <span class="key">${esc(inp.label('jump'))}</span> for results`}`;
+      } else if (!m.canRespawn(p)) this.deathInfo.respawn = this.spectating ? `Spectating ${esc(this.spectating.displayName)} · respawn next round` : 'Eliminated · respawn next round';
       else this.deathInfo.respawn = rt > 0 ? `Respawning in ${rt.toFixed(1)}` : `Press <span class="key">${esc(inp.label('jump'))}</span> to respawn`;
       hud.death(this.deathInfo);
     } else if (p.alive || m.state !== 'live') hud.death(null);
@@ -835,7 +885,13 @@ export class Game {
         if (t !== undefined && m.time - t < 2) dots.push({ x: c.x, z: c.z, color: '#ff3b30', kind: 'enemy' });
       }
     }
-    hud.minimap(this.map.minimap, { x: p.alive ? p.x : p.x, z: p.z, yaw: this.look.yaw }, dots);
+    const circles = [];
+    if (m.br) {
+      const z = brZone(m), n = m.br.next;
+      circles.push({ x: z.x, z: z.z, r: z.r, color: '#6f9bff', width: 2.5, shade: true });
+      if (n && n.r > 0.5 && m.br.zone.state === 'wait') circles.push({ x: n.x, z: n.z, r: n.r, color: '#ffffff', dash: true, width: 1.5 });
+    }
+    hud.minimap(this.map.minimap, { x: p.alive ? p.x : p.x, z: p.z, yaw: this.look.yaw }, dots, circles);
   }
 
   hudScores() {
@@ -844,8 +900,31 @@ export class Game {
     return [m.teamScores[0], Math.max(0, ...m.teamScores.slice(1))];
   }
 
+  /** Battle Royale: weapon on the ground under you → swap prompt. */
+  interactPrompt() {
+    const m = this.match, p = this.player;
+    if (!m.br || !p.alive) return '';
+    const it = nearbyWeapon(m, p);
+    if (!it || !WEAPONS[it.wid]) return '';
+    const key = this.app.input.device === 'pad' ? 'D↓' : this.app.input.label('interact');
+    return `<span class="key">${esc(key)}</span> PICK UP ${esc(WEAPONS[it.wid].name.toUpperCase())}<span class="dim"> · drops ${esc(p.weapons[0].def.name)}</span>`;
+  }
+
+  /** Simulate the rest of an offline Battle Royale after you are out, then show results. */
+  finishWithoutPlayer() {
+    const m = this.match;
+    this.hud.center('SIMULATING THE REST OF THE MATCH', '', 1);
+    const presenter = m.presenter;
+    m.presenter = false; this.ffwd = true;
+    for (let i = 0; i < 60 * 60 * 15 && m.state === 'live'; i++) m.tick(1 / 60);
+    m.presenter = presenter; this.ffwd = false;
+    for (const c of m.combatants) c.events.length = 0;
+    this.endTimer = 3.5;
+  }
+
   limitText() {
     const m = this.match, id = m.mode.id, lim = m.settings.scoreLimit;
+    if (id === 'br') return `${m.combatants.filter((c) => c.alive).length} ALIVE`;
     if (id === 'gun') return `LEVEL ${Math.min((this.player.gunLevel || 0) + 1, m.ladder.length)} / ${m.ladder.length}`;
     if (id === 'elim') return `ROUND ${m.round?.n || 1} · FIRST TO ${lim}`;
     return `FIRST TO ${lim}`;
@@ -853,6 +932,17 @@ export class Game {
 
   objStripHtml() {
     const m = this.match, p = this.player;
+    if (m.br) {
+      const z = m.br.zone, t = Number.isFinite(z.t) ? Math.max(0, Math.ceil(z.t)) : 0;
+      const clock = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+      const zone = brZone(m);
+      const out = p.alive && Math.hypot(p.x - zone.x, p.z - zone.z) > zone.r;
+      const parts = [];
+      if (m.ceasefireT > 0) parts.push(`<div class="tag br-cold">WEAPONS COLD · ${Math.ceil(m.ceasefireT)}s</div>`);
+      parts.push(`<div class="tag">${z.state === 'final' ? 'FINAL ZONE' : z.state === 'shrink' ? `ZONE CLOSING · ${clock}` : `ZONE CLOSES IN ${clock}`}</div>`);
+      if (out) parts.push('<div class="tag br-out">OUTSIDE THE ZONE · TAKING DAMAGE</div>');
+      return parts.join('');
+    }
     const [fc, ec] = this.app.settings.teamColors();
     const col = (t) => (t < 0 ? '#d8d8d0' : t === p.team ? fc : ec);
     if (m.flags) {
@@ -976,7 +1066,8 @@ export class Game {
 
   buildResult() {
     const m = this.match, p = this.player;
-    const outcome = m.winner === -1 ? 'draw' : m.winner === p.team ? 'win' : 'loss';
+    const brPlace = m.br ? m.br.place.get(p.team) || 0 : 0;
+    const outcome = m.br ? (brPlace === 1 ? 'win' : 'loss') : m.winner === -1 ? 'draw' : m.winner === p.team ? 'win' : 'loss';
     const groups = m.scoreboard();
     const row = (r) => ({ name: r.c.name, bot: r.c.isBot, me: r.c === p, score: r.score, kills: r.kills, deaths: r.deaths, assists: r.assists, level: r.level, acc: r.shots ? Math.round(r.hits / r.shots * 100) + '%' : '—' });
     const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed] };
@@ -984,7 +1075,7 @@ export class Game {
     return {
       online: this.online,
       outcome, reason: m.endReason, scores: this.hudScores(), mode: m.settings.mode,
-      rows: groups.map((g) => g.map(row)), ffa: this.ffa, placing: this.ffa ? groups[0].findIndex((r) => r.c === p) + 1 : 0, ladder: m.ladder?.length || 0, me: { ...p.stats }, medals: [...this.medals.values()], recorded: !!rewards, rewards,
+      rows: groups.map((g) => g.map(row)), ffa: this.ffa, placing: m.br ? brPlace || groups[0].findIndex((r) => r.c === p) + 1 : this.ffa ? groups[0].findIndex((r) => r.c === p) + 1 : 0, br: !!m.br, ladder: m.ladder?.length || 0, me: { ...p.stats }, medals: [...this.medals.values()], recorded: !!rewards, rewards,
     };
   }
 
@@ -1011,6 +1102,7 @@ export class Game {
   setPaused(on) {
     this.paused = on;
     this.app.audio.ambience(!on);
+    this.wxView?.setPaused(on && !this.online);
   }
 
   dispose() {
@@ -1021,6 +1113,8 @@ export class Game {
     this.hud.destroy();
     this.objView?.dispose();
     this.depView?.dispose();
+    this.brView?.dispose();
+    this.wxView?.dispose();
     this.unsubSettings();
     this.app.audio.ambience(false);
     this.vm.visible = false;

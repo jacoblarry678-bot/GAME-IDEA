@@ -8,7 +8,7 @@ const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START
 export const PAD_ACTIONS = {
   jump: PAD.A, crouch: PAD.B, reload: PAD.X, swap: PAD.Y, tactical: PAD.LB, lethal: PAD.RB,
   ads: PAD.LT, fire: PAD.RT, sprint: PAD.L3, melee: PAD.R3, scoreboard: PAD.BACK, pause: PAD.START,
-  support1: PAD.LEFT, support2: PAD.UP, support3: PAD.RIGHT,
+  support1: PAD.LEFT, support2: PAD.UP, support3: PAD.RIGHT, interact: PAD.DOWN,
 };
 const PAD_LABELS = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'LS', 'RS', 'D↑', 'D↓', 'D←', 'D→'];
 

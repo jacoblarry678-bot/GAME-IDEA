@@ -16,7 +16,10 @@
     "server": "node server/server.mjs",
     "nettest": "node tools/nettest.mjs",
     "online": "node tools/online.mjs",
-    "sun": "node tools/sun.mjs"
+    "sun": "node tools/sun.mjs",
+    "weather": "node tools/weather.mjs",
+    "br": "node tools/br.mjs",
+    "onlinebr": "node tools/onlinebr.mjs"
   },
   "dependencies": {
     "three": "0.169.0",

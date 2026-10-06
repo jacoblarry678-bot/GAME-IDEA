@@ -225,6 +225,35 @@ function ambience(ctx) {
   }, 2);
 }
 
+/** Rain bed: dense filtered noise with random droplet ticks (seamless loop). */
+function rain(ctx) {
+  return buf(ctx, 8, (d, n, ch) => {
+    const r = rng(131 + ch * 7);
+    for (let i = 0; i < n; i++) d[i] = r() * 0.35;
+    highpass(d, 400); lowpass(d, 5200);
+    for (let k = 0; k < 900; k++) {
+      const at = Math.floor(Math.abs(r()) * (n - 600)), amp = 0.15 + Math.abs(r()) * 0.35;
+      for (let j = 0; j < 400; j++) d[at + j] += r() * amp * Math.exp(-j / 60);
+    }
+    const f = Math.floor(SR * 0.5);
+    for (let i = 0; i < f; i++) { const q = i / f; d[i] = d[i] * q + d[n - f + i] * (1 - q); }
+  }, 2);
+}
+
+/** Rolling thunder: low rumble with a sharp crack at the start. */
+function thunder(ctx, seed) {
+  return buf(ctx, 5, (d, n, ch) => {
+    const r = rng(seed + ch);
+    for (let i = 0; i < n; i++) {
+      const t = i / SR;
+      const roll = 0.6 + 0.4 * Math.sin(t * 5.3 + seed) * Math.sin(t * 2.1);
+      d[i] = r() * Math.exp(-t * 0.9) * Math.min(1, t * 6) * roll;
+    }
+    lowpass(d, 260); lowpass(d, 320);
+    for (let i = 0; i < SR * 0.25; i++) d[i] += r() * Math.exp(-i / SR * 14) * 0.5;
+  }, 2);
+}
+
 /** Stereo impulse response: early reflections + exponentially decaying diffuse tail. */
 function impulse(ctx, seconds, decay, early, seed) {
   return buf(ctx, seconds, (d, n, ch) => {
@@ -317,6 +346,8 @@ export class AudioEngine {
     b.sting = buf(c, 2.5, (d, n) => { for (let i = 0; i < n; i++) { const t = i / SR; d[i] = (Math.sin(2 * Math.PI * 110 * t) + Math.sin(2 * Math.PI * 164.8 * t) * 0.7 + Math.sin(2 * Math.PI * 220 * t) * 0.5) * Math.exp(-t * 1.2) * Math.min(1, t * 20) * 0.4; } });
     b.music = menuMusic(c);
     b.ambience = ambience(c);
+    b.rain = rain(c);
+    b.thunder = [thunder(c, 201), thunder(c, 307)];
   }
 
   applyVolumes() {

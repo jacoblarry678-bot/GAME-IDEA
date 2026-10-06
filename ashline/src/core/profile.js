@@ -7,6 +7,8 @@
  * and validated on load, but it is NOT a secure economy: anyone can edit
  * local storage. A real release would validate all of this on a server.
  */
+import { WEATHER_OPTIONS } from '../game/weather.js';
+import { XP_EVENT } from '../data/events.js';
 import { load, save, mergeDefaults } from './storage.js';
 import { WEAPONS, EQUIPMENT, PRIMARY_IDS } from '../data/weapons.js';
 import { sanitizeBuild, attachmentsFor, ATTACHMENTS, ATTACH_SLOTS, MAX_ATTACHMENTS } from '../data/attachments.js';
@@ -39,7 +41,7 @@ const DEFAULT_PROFILE = {
     { name: 'OVERWATCH', primary: 'sr_longreach', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
     { name: 'CUSTOM 5', primary: 'ar_kv7', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
   ],
-  matchSetup: { mode: 'tdm', map: 'cinder_yard', botsAllies: 4, botsEnemies: 5, difficulty: 'regular', scoreLimit: 75, timeLimit: 10, friendlyFire: false },
+  matchSetup: { mode: 'tdm', map: 'cinder_yard', botsAllies: 4, botsEnemies: 5, difficulty: 'regular', scoreLimit: 75, timeLimit: 10, friendlyFire: false, weather: 'dynamic' },
   career: { matches: 0, wins: 0, losses: 0, draws: 0, kills: 0, deaths: 0, assists: 0, headshots: 0, shots: 0, hits: 0, score: 0, bestStreak: 0, timePlayed: 0 },
   lastMatchId: null,
   level: 1,
@@ -54,6 +56,7 @@ const DEFAULT_PROFILE = {
   challenges: { day: -1, week: -1, daily: [], weekly: [] },
   purchases: [],
   notices: [],
+  boosts: { xpSeconds: 0, gifts: {} }, // Supercharged XP: seconds of match time left; claimed event gifts
 };
 
 export class Profile {
@@ -65,6 +68,7 @@ export class Profile {
     this.data.equipped.outfits = isObj(saved?.equipped?.outfits) ? { ...saved.equipped.outfits } : {};
     this.data.equipped.weapons = isObj(saved?.equipped?.weapons) ? { ...saved.equipped.weapons } : {};
     this.data.pass.claimed = { free: { ...(saved?.pass?.claimed?.free || {}) }, premium: { ...(saved?.pass?.claimed?.premium || {}) } };
+    this.data.boosts.gifts = isObj(saved?.boosts?.gifts) ? { ...saved.boosts.gifts } : {};
     this.data.purchases = Array.isArray(saved?.purchases) ? saved.purchases.slice(-200) : [];
     this.data.challenges = isObj(saved?.challenges) ? saved.challenges : DEFAULT_PROFILE.challenges;
     this.data.notices = [];
@@ -78,6 +82,9 @@ export class Profile {
   validate() {
     const d = this.data;
     d.version = PROFILE_VERSION; // v1 saves (M1/M2) migrate by filling the new fields with defaults
+    if (!isObj(d.boosts)) d.boosts = { xpSeconds: 0, gifts: {} };
+    if (!isObj(d.boosts.gifts)) d.boosts.gifts = {};
+    d.boosts.xpSeconds = Math.max(0, Math.min(XP_EVENT.seconds, Number(d.boosts.xpSeconds) || 0));
     d.level = clampInt(d.level, 1, MAX_LEVEL);
     const ok = (id, slot) => WEAPONS[id]?.slot === slot && this.weaponUnlocked(id);
     const eqOk = (id, slot) => EQUIPMENT[id]?.slot === slot && d.level >= (EQUIPMENT[id].unlockLevel || 1);
@@ -97,6 +104,7 @@ export class Profile {
     const ms = d.matchSetup;
     if (!MODES[ms.mode]?.playable) { ms.mode = 'tdm'; ms.scoreLimit = 75; ms.timeLimit = 10; }
     if (!MAP_IDS.includes(ms.map)) ms.map = 'cinder_yard';
+    if (!WEATHER_OPTIONS.includes(ms.weather)) ms.weather = 'dynamic';
     ms.botsEnemies = Math.max(1, Math.min(MODES[ms.mode].teams ? 5 : 9, ms.botsEnemies | 0));
     ms.botsAllies = Math.max(0, Math.min(4, ms.botsAllies | 0));
     d.level = clampInt(d.level, 1, MAX_LEVEL);
@@ -444,6 +452,20 @@ export class Profile {
     return report || { xp: [] };
   }
 
+  /** Seconds of Supercharged XP left (counts down only in matches). */
+  get xpBoostLeft() { return this.data.boosts.xpSeconds; }
+  giftClaimed(id) { return !!this.data.boosts.gifts[id]; }
+
+  /** Claim the free event gift once: one hour of Supercharged XP. */
+  claimXpGift() {
+    const b = this.data.boosts;
+    if (b.gifts[XP_EVENT.id]) return { ok: false, reason: 'Already claimed' };
+    b.gifts[XP_EVENT.id] = Date.now();
+    b.xpSeconds = XP_EVENT.seconds;
+    this.save();
+    return { ok: true };
+  }
+
   applyRewards(result, stats, seconds, s) {
     const diffMul = { recruit: 0.8, regular: 1, hardened: 1.2, veteran: 1.4 }[s.difficulty] || 1;
     const lines = [];
@@ -459,7 +481,15 @@ export class Profile {
     const completed = this.applyChallenges({ ...s, score: stats.score, kills: stats.kills, headshots: stats.headshots, assists: stats.assists, bestStreak: stats.bestStreak, matches: 1, wins: result === 'win' ? 1 : 0 });
     const challengeXp = completed.reduce((a, t) => a + t.xp, 0);
     for (const t of completed) lines.push([`Challenge: ${t.text}`, t.xp]);
-    const total = base + challengeXp;
+    let total = base + challengeXp;
+    // Supercharged XP: a match started with boost time left earns double; it uses up the time played
+    const boosted = !!s.xpBoost;
+    const mult = boosted ? XP_EVENT.mult : 1;
+    if (boosted) {
+      lines.push([`${XP_EVENT.name} ×${mult}`, total * (mult - 1)]);
+      total *= mult;
+      this.data.boosts.xpSeconds = Math.max(0, this.data.boosts.xpSeconds - Math.round(s.playSeconds ?? seconds));
+    }
     const lv = this.addXp(total);
     const passBefore = this.passTier;
     const pass = this.addPassXp(total);
@@ -468,7 +498,7 @@ export class Profile {
     for (const wid of new Set([...Object.keys(s.weaponKills || {}), ...(s.weaponsUsed || [])])) {
       if (!WEAPONS[wid]) continue;
       const k = s.weaponKills?.[wid] || 0, h = s.weaponHeadshots?.[wid] || 0;
-      const wxp = k * 150 + h * 50 + 150;
+      const wxp = (k * 150 + h * 50 + 150) * mult;
       const before = this.data.weaponProgress[wid].level;
       const r = this.addWeaponXp(wid, Math.round(wxp * diffMul), k);
       const to = this.data.weaponProgress[wid].level;
@@ -480,6 +510,7 @@ export class Profile {
       xp: lines, total, levelBefore, xpBefore, levelAfter: this.data.level, xpAfter: this.data.xp,
       unlocks: [...lv.unlocks, ...weaponUnlocks], weapons, challenges: completed, newWeapons: this.weaponsUnlockedBetween(levelBefore, this.data.level),
       pass: { from: passBefore, to: pass.to, xp: this.data.pass.xp },
+      boost: boosted ? { mult, left: this.data.boosts.xpSeconds } : null,
     };
   }
 }

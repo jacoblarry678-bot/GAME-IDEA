@@ -17,6 +17,7 @@ import { NavGrid } from '../src/world/navgrid.js';
 import { MAPS } from '../src/world/maps/index.js';
 import { Match } from '../src/game/match.js';
 import { MODES } from '../src/game/modes.js';
+import { packBR, packLoot } from '../src/game/battleRoyale.js';
 import { Combatant } from '../src/entities/combatant.js';
 import { BotBrain } from '../src/entities/bot.js';
 import { BOT_NAMES } from '../src/data/names.js';
@@ -36,6 +37,7 @@ export const DEFAULT_ROTATION = [
   { map: 'old_quarter', mode: 'tdm' },
   { map: 'signal_station', mode: 'dom' },
   { map: 'cinder_yard', mode: 'hp' },
+  { map: 'old_quarter', mode: 'br' },
 ];
 
 export class Room {
@@ -93,7 +95,7 @@ export class Room {
     this.history = [];
     this.endedFor = 0;
     // existing players take over bot slots in the new match
-    for (const cl of this.clients) { cl.c = null; cl.lastSeq = cl.lastSeq || 0; cl.queue = []; }
+    for (const cl of this.clients) { cl.c = null; cl.lastSeq = cl.lastSeq || 0; cl.queue = []; cl.lootVer = -1; }
     m.start();
     for (const cl of this.clients) if (cl.joined) this.assignSlot(cl);
     this.broadcast({ t: 'newMatch', match: this.matchInfo() });
@@ -335,6 +337,8 @@ export class Room {
         fl: m.flags ? m.flags.map((f) => [f.owner, r3(f.progress), f.contested ? 1 : 0, f.capturing]) : undefined,
         hp: m.hp ? [m.hp.idx, m.hp.owner, m.hp.contested ? 1 : 0, r2(m.hp.t)] : undefined,
         rd: m.round ? [m.round.n, m.round.phase] : undefined,
+        wx: m.weather.pack(),
+        br: m.br ? packBR(m) : undefined,
       },
       e: m.combatants.map(packEntity),
       sb: m.combatants.map((c) => [c.id, c.stats.kills, c.stats.deaths, c.stats.assists, c.stats.score, c.stats.streak, c.stats.captures || 0, c.net?.ping ?? -1]),
@@ -357,7 +361,10 @@ export class Room {
         id: c.id, mag: c.weapons.map((w) => w.mag), res: c.weapons.map((w) => w.reserve), le: c.lethal.count, ta: c.tactical.count,
         ab: c.abilities, sk: c.supportKills, bl: r2(c.blindT), bm: r2(c.blindMax), rt: r2(c.respawnT), sp: r2(c.spawnProtectT), hp: Math.ceil(c.health),
       } : null;
-      this.send(cl, { ...common, ack: cl.lastSeq, you });
+      // loot list only when it changed since this client last got it
+      const lo = m.loot && cl.lootVer !== m.br.lootVer ? packLoot(m) : undefined;
+      if (lo) cl.lootVer = m.br.lootVer;
+      this.send(cl, { ...common, ack: cl.lastSeq, you, lo });
     }
   }
 

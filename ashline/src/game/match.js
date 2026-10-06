@@ -7,6 +7,7 @@ import { Combatant } from '../entities/combatant.js';
 import { BotBrain } from '../entities/bot.js';
 import { Projectiles } from '../combat/projectiles.js';
 import { Deployables } from '../combat/deployables.js';
+import { Weather } from './weather.js';
 import { attachmentsFor, ATTACH_SLOTS, MAX_ATTACHMENTS } from '../data/attachments.js';
 import { PERK_SLOTS, perksForSlot } from '../data/perks.js';
 import { WEAPONS, MELEE, damageAt, PRIMARY_IDS } from '../data/weapons.js';
@@ -44,6 +45,7 @@ export class Match {
     this.firstBlood = false;
     this.projectiles = new Projectiles(this);
     this.deployables = new Deployables(this);
+    this.weather = new Weather(this.mode.range ? 'clear' : settings.weather || 'dynamic', rng);
     this.player = null;
     this._populate();
   }
@@ -106,8 +108,8 @@ export class Match {
   }
 
   respawn(c, initial = false) {
-    const sp = c.dummy ? { x: c.dummy.baseX, y: 0, z: c.dummy.z, yaw: Math.PI } : chooseSpawn(this, c, initial);
     if (this.mode.loadoutFor) c.applyLoadout(this.mode.loadoutFor(this, c));
+    const sp = c.dummy ? { x: c.dummy.baseX, y: 0, z: c.dummy.z, yaw: Math.PI } : this.mode.spawnAt ? this.mode.spawnAt(this, c, initial) : chooseSpawn(this, c, initial);
     c.spawnAt(sp);
     c.spawnProtectT = initial ? 0 : 2.0;
     if (c.brain) c.brain.onSpawn();
@@ -126,6 +128,10 @@ export class Match {
   }
 
   _step(dt) {
+    if (this.state !== 'ended') {
+      const w = this.weather.update(dt);
+      if (w) this.emit({ type: 'weather', kind: w });
+    }
     if (this.state === 'countdown') {
       this.countdown -= dt;
       // allow looking but not moving
@@ -329,7 +335,8 @@ export class Match {
 
   applyDamage(victim, attacker, amount, info) {
     if (!victim.alive || this.state !== 'live') return;
-    if (victim.spawnProtectT > 0 && info.kind !== 'fall') return;
+    if (victim.spawnProtectT > 0 && info.kind !== 'fall' && info.kind !== 'zone') return;
+    if (this.ceasefireT > 0 && info.kind !== 'fall' && info.kind !== 'zone') return; // Battle Royale drop-in phase
     if (attacker && attacker !== victim && attacker.team === victim.team && !this.settings.friendlyFire) return;
     if ((info.kind === 'explosive' || info.kind === 'strike') && victim.perks?.has('pk_flak')) amount *= 0.55;
     amount = Math.max(1, Math.round(amount));
@@ -406,7 +413,12 @@ export class Match {
   /** Sorted scoreboard rows per team. */
   /** Sorted rows: [team0, team1] for team modes, [everyone] for free-for-all modes. */
   scoreboard() {
-    const rows = this.combatants.map((c) => ({ c, ...c.stats, level: c.gunLevel || 0 }));
+    const rows = this.combatants.map((c) => ({ c, ...c.stats, level: c.gunLevel || 0, place: this.br?.place.get(c.team) || 0 }));
+    if (this.mode.br) {
+      // survivors first (by kills), then the eliminated by placement
+      rows.sort((a, b) => (!a.place && !b.place ? b.kills - a.kills : !a.place ? -1 : !b.place ? 1 : a.place - b.place));
+      return [rows];
+    }
     if (!this.mode.teams) {
       rows.sort((a, b) => (b.level - a.level) || b.kills - a.kills || b.score - a.score);
       return [rows];

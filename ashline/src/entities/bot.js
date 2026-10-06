@@ -134,12 +134,13 @@ export class BotBrain {
     const eyeY = c.eyeY;
     const fx = -Math.sin(c.yaw), fz = -Math.cos(c.yaw);
     const cosFov = Math.cos(this.d.fovDeg * 0.5 * DEG);
+    const sightMax = m.weather ? m.weather.sightRange() : 95; // fog and rain shorten sight
     let best = null, bestScore = Infinity;
     for (const e of m.combatants) {
       if (e.team === c.team || !e.alive) { if (!e.alive) this.known.delete(e.id); continue; }
       const dx = e.x - c.x, dz = e.z - c.z;
       const d = Math.hypot(dx, dz);
-      if (d > 95) continue;
+      if (d > sightMax) continue;
       const inFov = d < 4 || (dx * fx + dz * fz) / (d || 1) > cosFov;
       let vis = false;
       if (inFov && c.blindT < 0.6) {
@@ -187,6 +188,7 @@ export class BotBrain {
         if (!mem || (!mem.visible && now - mem.t > 1)) o.brain.known.set(best.id, { c: best, x: best.x, y: best.y, z: best.z, t: now, visible: false, seenSince: null, heard: true });
       }
     }
+    if (m.ceasefireT > 0) best = null; // weapons cold: loot, don't fight
     if (best !== this.target) {
       this.target = best;
       this.trackT = 0;
@@ -252,11 +254,21 @@ export class BotBrain {
         const g = this.goalName || '';
         if ((g.startsWith('hp ') && m.hp && g !== 'hp ' + m.hp.idx) || (g.startsWith('flag ') && !holding && m.flags?.find((f) => 'flag ' + f.id === g)?.owner === c.team && this.waitT <= 0)) this.pickRoamGoal();
       }
-      if (recent && holding && now - recent.t > 1 && !(zone && inZone(recent.c, zone))) recent = null; // stay on the objective unless the threat is fresh or on it
+      // mode emergencies (Battle Royale: outside the zone) beat roaming and hunting
+      const urgent = m.mode.botUrgent?.(m, this);
+      if (urgent) {
+        if (this.goalName !== urgent.name || !this.goal || Math.hypot(this.goal.x - urgent.x, this.goal.z - urgent.z) > 6) {
+          this.setGoal(urgent.x, 0, urgent.z, urgent.name);
+        }
+        this.state = 'roam'; this.urgent = true; this.objGoal = false; this.waitT = 0.5;
+        recent = null;
+      } else if (this.urgent) { this.urgent = false; this.goal = null; }
+      if (this.state === 'roam' && this.objGoal && this.goalName && m.mode.goalStale?.(m, this, this.goalName)) this.pickRoamGoal();
+      if (urgent) { /* keep running */ } else if (recent && holding && now - recent.t > 1 && !(zone && inZone(recent.c, zone))) recent = null; // stay on the objective unless the threat is fresh or on it
       // objective players only chase unseen threats that are close; slayers hunt everything
       if (this.role === undefined) this.role = m.mode.botGoal ? (Math.random() < 0.72 ? 'objective' : 'slayer') : 'slayer';
       if (recent && this.role === 'objective' && Math.hypot(recent.x - c.x, recent.z - c.z) > 16 && !(zone && inZone(recent.c, zone))) recent = null;
-      if (recent) {
+      if (urgent) { /* running for the zone */ } else if (recent) {
         if (this.state !== 'hunt' || !this.goal || Math.hypot(this.goal.x - recent.x, this.goal.z - recent.z) > 4) {
           this.state = 'hunt';
           this.setGoal(recent.x, recent.y, recent.z, 'hunt');
@@ -460,7 +472,7 @@ export class BotBrain {
     // sprint through our own half; walk (alert) in contested space
     const enemySide = c.team === 0 ? c.x > -12 : c.x < 12;
     cmd.sprint = (this.state === 'roam' && (!enemySide || remaining > 22)) && remaining > 6 && c.health > 50 && cmd.moveZ > 0.7;
-    if (this.state === 'flee') cmd.sprint = cmd.moveZ > 0.5;
+    if (this.state === 'flee' || this.urgent) cmd.sprint = cmd.moveZ > 0.5;
     this.separate();
   }
 

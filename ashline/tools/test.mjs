@@ -560,5 +560,123 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   } else console.log('SKIP  release-code tests (set VAULT_TEST_CODE to run them)');
 }
 
+// ---------------- 0.6.0 supercharged XP ----------------
+{
+  const { Profile } = await import('../src/core/profile.js');
+  const { XP_EVENT } = await import('../src/data/events.js');
+  globalThis.window.localStorage.removeItem('ashline.profile');
+  const stats = { kills: 5, deaths: 3, assists: 1, headshots: 1, shots: 50, hits: 20, score: 800, bestStreak: 3 };
+  const sum = (extra) => ({ classKills: { assault: 5 }, weaponKills: { ar_kv7: 5 }, weaponHeadshots: { ar_kv7: 1 }, weaponsUsed: ['ar_kv7'], difficulty: 'regular', ...extra });
+  const a = new Profile();
+  t('boost starts empty and unclaimed', a.xpBoostLeft === 0 && !a.giftClaimed(XP_EVENT.id));
+  const plain = a.recordMatch('x-1', 'win', stats, 600, sum({ xpBoost: a.xpBoostLeft > 0, playSeconds: 600 }));
+  const r1 = a.claimXpGift();
+  t('claiming the gift grants exactly one hour', r1.ok && a.xpBoostLeft === 3600);
+  t('the gift can only be claimed once', !a.claimXpGift().ok && a.xpBoostLeft === 3600);
+  const wBefore = a.data.weaponProgress.ar_kv7.xp + 0;
+  const boosted = a.recordMatch('x-2', 'win', stats, 600, sum({ xpBoost: a.xpBoostLeft > 0, playSeconds: 600 }));
+  t('a boosted match earns double player XP', boosted.total === plain.total * 2 && boosted.boost?.mult === 2, `${plain.total} → ${boosted.total}`);
+  t('boost doubles weapon XP too', boosted.weapons[0].xp === plain.weapons[0].xp * 2, `${plain.weapons[0].xp} → ${boosted.weapons[0].xp}`);
+  t('boost time is used up by time played in matches only', a.xpBoostLeft === 3000 && boosted.boost.left === 3000);
+  const b = new Profile();
+  t('boost time survives a reload', b.xpBoostLeft === 3000 && b.giftClaimed(XP_EVENT.id));
+  b.data.boosts.xpSeconds = 999999; b.save();
+  t('a tampered save cannot exceed one hour', new Profile().xpBoostLeft === 3600);
+  const c = new Profile();
+  c.data.boosts.xpSeconds = 100;
+  const last = c.recordMatch('x-3', 'loss', stats, 400, sum({ xpBoost: true, playSeconds: 400 }));
+  t('the last minutes still boost the match, then the boost ends', last.boost.mult === 2 && c.xpBoostLeft === 0);
+  const after = c.recordMatch('x-4', 'loss', stats, 400, sum({ xpBoost: c.xpBoostLeft > 0, playSeconds: 400 }));
+  t('no boost once the hour is used', !after.boost && !after.xp.some(([k]) => /Supercharged/.test(k)));
+}
+
+// ---------------- 0.6.0 battle royale ----------------
+{
+  const { brZone, nearbyWeapon } = await import('../src/game/battleRoyale.js');
+  const { MAPS: ALL } = await import('../src/world/maps/index.js');
+  const mkBR = (mp = map, extra = {}) => { const m = new Match(mp, { mode: 'br', timeLimit: 8, botsEnemies: 9, botsAllies: 0, difficulty: 'regular', includePlayer: true, playerLoadout: LO, countdown: 0, ...extra }); m.start(); m.state = 'live'; return m; };
+  const m = mkBR();
+  const p = m.player;
+  t('BR: 10 players, each on their own team', m.combatants.length === 10 && new Set(m.combatants.map((c) => c.team)).size === 10);
+  t('BR: start loadout is pistol + axe, no equipment', m.combatants.every((c) => c.weapons[0].def.id === 'pistol_warden' && c.weapons[1].def.id === 'melee_axe' && c.lethal.count === 0 && c.tactical.count === 0));
+  t('BR: loot scattered (weapons, ammo, medkits, gear)', m.loot.length >= 36 && ['weapon', 'ammo', 'medkit', 'gear'].every((k) => m.loot.some((l) => l.kind === k)), `${m.loot.length} items`);
+  t('BR: no respawns', !m.canRespawn(p));
+  const z0 = brZone(m).r;
+  for (const c of m.combatants) c.brain = null;
+  m.ceasefireT = 0;
+  run(m, 100);
+  const z1 = brZone(m).r;
+  t('BR: zone shrinks after the first wait', z1 < z0 - 5, `${z0.toFixed(1)} → ${z1.toFixed(1)}`);
+  // outside the zone takes damage, even with spawn protection
+  const zz = brZone(m);
+  place(p, zz.x + zz.r + 15, 0, zz.z); p.spawnProtectT = 5; p.health = 100;
+  m.br.dmgT = 0.99; m.tick(1 / 60);
+  t('BR: outside the zone hurts (spawn protection does not block it)', p.health < 100, String(p.health));
+  // pickups: weapon via interact edge, ammo automatic
+  const m2 = mkBR(); const p2 = m2.player; for (const c of m2.combatants) if (c !== p2) { c.brain = null; c.x += 300; }
+  const wl = m2.loot.find((l) => l.kind === 'weapon');
+  place(p2, wl.x, wl.y, wl.z);
+  t('BR: nearbyWeapon finds the item under you', nearbyWeapon(m2, p2) === wl);
+  p2.cmd.interact = true; m2.tick(1 / 60); m2.tick(1 / 60); m2.tick(1 / 60); p2.cmd.interact = false; m2.tick(1 / 60);
+  t('BR: interact swaps once and drops the old weapon', p2.weapons[0].def.id === wl.wid && m2.loot.filter((l) => l.kind === 'weapon' && l.wid === 'pistol_warden').length >= 1, p2.weapons[0].def.id);
+  const am = m2.loot.find((l) => l.kind === 'ammo'); p2.weapons[0].reserve = 0; place(p2, am.x, am.y, am.z); m2.tick(1 / 60);
+  t('BR: ammo picked up automatically', p2.weapons[0].reserve > 0 && !m2.loot.includes(am));
+  const mk = m2.loot.find((l) => l.kind === 'medkit'); p2.health = 40; p2.lastDamageT = m2.time; place(p2, mk.x, mk.y, mk.z); p2.health = 40; m2.tick(1 / 60);
+  t('BR: medkit heals to full', p2.health === 100);
+  { const zc = brZone(m2); const ci = m2.nav.center(m2.nav.nearest(zc.x, zc.z)); place(p2, ci.x, ci.y, ci.z); } p2.health = 30; p2.lastDamageT = -99; run(m2, 6);
+  t('BR: natural regen stops at 60', Math.round(p2.health) === 60, String(p2.health));
+  // eliminations: placements and dropped weapon
+  const m3 = mkBR(); for (const c of m3.combatants) c.brain = null; m3.ceasefireT = 0;
+  const others = m3.combatants.filter((c) => c !== m3.player);
+  const before = m3.loot.length;
+  m3.applyDamage(others[0], m3.player, 500, { kind: 'bullet', weapon: 'pistol_warden', zone: 'torso' });
+  t('BR: first out places #10 and drops their gun', m3.br.place.get(others[0].team) === 10 && m3.loot.length > before);
+  for (const c of others.slice(1)) m3.applyDamage(c, m3.player, 500, { kind: 'bullet', weapon: 'pistol_warden', zone: 'torso' });
+  t('BR: last one standing wins with place #1', m3.state === 'ended' && m3.winner === m3.player.team && m3.br.place.get(m3.player.team) === 1 && m3.endReason === 'last');
+  t('BR: every player gets a unique placement', [...m3.br.place.values()].sort((a, b) => a - b).join() === '1,2,3,4,5,6,7,8,9,10');
+  // time up: most kills among survivors wins
+  const m4 = mkBR(); for (const c of m4.combatants) c.brain = null; m4.ceasefireT = 0;
+  const o4 = m4.combatants.filter((c) => c !== m4.player);
+  o4[3].stats.kills = 4; m4.timeLeft = 0.01; m4.tick(1 / 60);
+  t('BR: time up → survivor with most eliminations wins', m4.state === 'ended' && m4.winner === o4[3].team && m4.br.place.get(o4[3].team) === 1);
+  // weapons-cold drop-in
+  const m5 = mkBR(); const h = m5.player.health; m5.applyDamage(m5.player, m5.combatants[1], 60, { kind: 'bullet', weapon: 'ar_kv7', zone: 'torso' });
+  t('BR: weapons cold for the first 30 s', m5.ceasefireT > 29 && m5.player.health === h);
+  // full bot-only matches finish on every map with a real winner
+  for (const id of ['cinder_yard', 'old_quarter', 'signal_station']) {
+    const def = ALL[id]; const bb = new MapBuilder({ headless: true }); def.build(bb);
+    const mp = { world: bb.world, nav: new NavGrid(bb.world, def.bounds, 1), spawns: bb.spawns, hotspots: bb.hotspots, def };
+    const mm = new Match(mp, { mode: 'br', timeLimit: 8, botsEnemies: 9, botsAllies: 0, difficulty: 'regular', includePlayer: false, countdown: 0 });
+    mm.start(); mm.state = 'live';
+    let n = 0; while (mm.state !== 'ended' && n++ < 60 * 60 * 9) mm.tick(1 / 60);
+    const places = [...mm.br.place.values()].sort((a, b) => a - b).join();
+    t(`BR: bots play a full match on ${id} to a winner`, mm.state === 'ended' && places === '1,2,3,4,5,6,7,8,9' && mm.time > 45, `${mm.endReason} in ${mm.time.toFixed(0)} s`);
+  }
+}
+
+// ---------------- 0.6.0 weather ----------------
+{
+  const { Weather, WEATHER_KINDS } = await import('../src/game/weather.js');
+  let seed = 3; const rng = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const w = new Weather('dynamic', rng);
+  const seen = new Set([w.kind]); let changes = 0;
+  for (let i = 0; i < 60 * 1800; i++) if (w.update(1 / 60)) { changes++; seen.add(w.kind); }
+  t('dynamic weather cycles through several kinds in 30 min', seen.size >= 4 && changes >= 10, `${[...seen].join(',')} · ${changes} changes`);
+  const fixed = new Weather('storm', rng);
+  let fc = 0; for (let i = 0; i < 60 * 600; i++) if (fixed.update(1 / 60)) fc++;
+  t('fixed weather never changes', fc === 0 && fixed.kind === 'storm');
+  const clear = new Weather('clear', rng); clear.update(1);
+  const fog = new Weather('fog', rng); for (let i = 0; i < 600; i++) fog.update(1 / 60);
+  t('fog shortens sight range; clear keeps it', clear.sightRange() > 90 && fog.sightRange() < 50, `${clear.sightRange().toFixed(0)} / ${fog.sightRange().toFixed(0)}`);
+  const copy = new Weather('clear', rng); copy.unpack(fog.pack());
+  t('weather pack/unpack round-trips for the network', copy.kind === 'fog' && Math.abs(copy.cur.fog - fog.cur.fog) < 0.01);
+  t('unknown weather setting falls back to dynamic', new Weather('blizzard', rng).mode === 'dynamic' && WEATHER_KINDS.length === 5);
+  const m = mkMatch({ weather: 'fog' });
+  for (let i = 0; i < 600; i++) m.tick(1 / 60);
+  t('match carries its weather setting', m.weather.kind === 'fog' && m.weather.mode === 'fog');
+  const range = mkMatch({ mode: 'range', weather: 'storm' });
+  t('firing range is always clear', range.weather.kind === 'clear' && range.weather.mode === 'clear');
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

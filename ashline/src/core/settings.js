@@ -26,6 +26,7 @@ export const DEFAULT_BINDINGS = {
   support1: ['Digit3', ''],
   support2: ['Digit4', ''],
   support3: ['Digit5', ''],
+  interact: ['KeyF', ''],
 };
 
 export const ACTION_LABELS = {
@@ -33,7 +34,7 @@ export const ACTION_LABELS = {
   jump: 'Jump / Mantle', crouch: 'Crouch / Slide', sprint: 'Sprint', fire: 'Fire', ads: 'Aim Down Sights',
   reload: 'Reload', swap: 'Switch Weapon', primary: 'Primary Weapon', secondary: 'Secondary Weapon',
   melee: 'Melee', lethal: 'Lethal Equipment', tactical: 'Tactical Equipment', scoreboard: 'Scoreboard',
-  support1: 'Recon Scan', support2: 'Supply Drop', support3: 'Area Strike',
+  support1: 'Recon Scan', support2: 'Supply Drop', support3: 'Area Strike', interact: 'Interact / Pick Up',
 };
 
 export const DEFAULT_SETTINGS = {
@@ -48,6 +49,7 @@ export const DEFAULT_SETTINGS = {
     bloom: true,
     ao: false,
     sunFlare: true,
+    weatherFx: true,
     fov: 90,
     frameCap: 0,
     showFps: false,
@@ -112,6 +114,7 @@ export const SETTINGS_SCHEMA = [
     { key: 'graphics.ao', label: 'Ambient Occlusion (GTAO)', type: 'toggle', note: 'Contact shadows in corners and under cover. Costly on integrated GPUs.' },
     { key: 'graphics.bloom', label: 'Bloom', type: 'toggle', note: 'Soft glow on lights, muzzle flashes and explosions.' },
     { key: 'graphics.sunFlare', label: 'Sun Glare & Lens Flare', type: 'toggle', note: 'Glare and lens flare when you look toward the sun; hidden when buildings or smoke block it. Reduce Flashing dims it.' },
+    { key: 'graphics.weatherFx', label: 'Weather Effects', type: 'toggle', note: 'Rain streaks, lightning flashes and wet-ground sheen. Fog and cloud light always change with the weather, because they affect how far everyone (bots included) can see.' },
     { key: 'graphics.fov', label: 'Field of View (horizontal)', type: 'slider', min: 70, max: 115, step: 1, fmt: (v) => `${v}°` },
     { key: 'graphics.frameCap', label: 'Frame Rate Limit', type: 'select', options: [[0, 'Display refresh'], [30, '30'], [60, '60'], [120, '120'], [144, '144']] },
     { key: 'graphics.brightness', label: 'Brightness', type: 'slider', min: 0.6, max: 1.6, step: 0.05, fmt: (v) => v.toFixed(2) },

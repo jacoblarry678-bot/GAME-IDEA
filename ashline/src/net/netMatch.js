@@ -13,6 +13,7 @@ import { Match } from '../game/match.js';
 import { Combatant } from '../entities/combatant.js';
 import { EQUIPMENT } from '../data/weapons.js';
 import { packCmd, unpackEntity, deserEvent, INTERP_DELAY } from './protocol.js';
+import { unpackBR } from '../game/battleRoyale.js';
 
 const SNAP_DIST = 2.5; // larger prediction errors snap instead of blending
 
@@ -78,6 +79,7 @@ export class NetMatch extends Match {
   // ---------------------------------------------------------------- lifecycle
   start() {
     this.mode.setup?.(this);
+    if (this.mode.br) this.loot = []; // the server's loot arrives with the first snapshot
     if (this.mode.id === 'gun') for (const c of this.combatants) c.gunLevel = c.gunLevel || 0;
     this.emit({ type: 'matchStart' });
   }
@@ -171,6 +173,12 @@ export class NetMatch extends Match {
     if (m.fl && this.flags) m.fl.forEach((f, i) => { const F = this.flags[i]; if (F) { F.owner = f[0]; F.progress = f[1]; F.contested = !!f[2]; F.capturing = f[3]; } });
     if (m.hp && this.hp) { this.hp.idx = m.hp[0]; this.hp.owner = m.hp[1]; this.hp.contested = !!m.hp[2]; this.hp.t = m.hp[3]; }
     if (m.rd && this.round) { this.round.n = m.rd[0]; this.round.phase = m.rd[1]; }
+    if (m.br || s.lo) unpackBR(this, m.br, s.lo);
+    if (m.wx) {
+      const was = this.weather.kind;
+      this.weather.unpack(m.wx);
+      if (this.weather.kind !== was) this.emit({ type: 'weather', kind: this.weather.kind });
+    }
 
     // combatants
     const p = this.player;
