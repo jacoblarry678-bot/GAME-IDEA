@@ -103,8 +103,11 @@ const wanted = await T(() => {
   const before = { ...g.wanted.lastKnown };
   t.press('loop1');
   const p = g.social.posts.find((x) => x.mine);
+  const after = { ...g.wanted.lastKnown }, level = g.wanted.level;
+  // (clear the police before waiting for the replies: at 1 star they'd come and arrest Cal)
+  g.wanted.clear(true); g.police.clearAll();
   S.advance(40);
-  return { before, after: g.wanted.lastKnown, level: g.wanted.level, risky: p.replies.some((r) => /chase|police|delete|evidence|undefeated/i.test(r.text)), caption: p.text };
+  return { before, after, level, risky: p.replies.some((r) => /chase|police|delete|evidence|undefeated/i.test(r.text)), caption: p.text };
 });
 check('posting while wanted tells the police where you are (and the replies roast you)', Math.abs(wanted.after.x - 60) < 2 && Math.abs(wanted.after.z + 100) < 2 && wanted.before.z === -20 && wanted.risky, JSON.stringify(wanted));
 await T(() => { const g = window.__sun.game; g.wanted.clear(true); g.police.clearAll(); });

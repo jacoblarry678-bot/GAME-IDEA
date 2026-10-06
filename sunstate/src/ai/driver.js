@@ -135,6 +135,25 @@ export class DriverAI {
   }
 
   step(dt) {
+    this.drive(dt);
+    this.waterGuard();
+  }
+
+  /**
+   * Whatever the manoeuvre (a three-point turn, backing out, feeling a way off a lot), a car
+   * at ground level never drives or backs into open water that isn't a road (bridges are).
+   * Lane-following at speed is left alone: its path is the road.
+   */
+  waterGuard() {
+    const v = this.v, w = this.game.world;
+    if (v.sunk || v.pos.y > 2 || !(this.offroad || this.turning || this.reverseT > 0 || v.speed < 5)) return;
+    const wet = (lz) => { const [x, z] = v.localToWorld(0, lz); return w.isWater(x, z) && !roadAt(x, z); };
+    const forward = v.input.throttle > 0 && v.vLong > -0.5;
+    const backward = v.input.throttle === 0 && v.input.brake > 0 && v.vLong < 0.5; // brake at rest = reverse
+    if ((forward && wet(v.hz + 2.5)) || (backward && wet(-v.hz - 2.5))) { v.holdStill(); this.reverseT = 0; this.wetT = (this.wetT || 0) + 1; }
+  }
+
+  drive(dt) {
     const v = this.v;
     this.stepAt = this.game.time;
     if (!v.driver || v.driver.dead) { v.holdStill(); return; }
