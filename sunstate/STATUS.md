@@ -90,6 +90,25 @@ Asked for: "add where we can post and get likes and follows".
 
 ## Verification
 
+### Latest full run (final build after M3: memory, places, Velvet Palms inside, LOOP accounts)
+
+| Suite | Result | Notes |
+|---|---|---|
+| `npm test` (Node) | **93/93** | |
+| `tools/e2e.mjs` (M1/M2 playthrough) | **49/49** | It failed once earlier today at the walk to the motel door, cause not captured. The check now prints the failure reason. A rerun passed. |
+| `tools/e2e-crew.mjs` | **16/17** | "The partner drives you to your waypoint" timed out at 97 m. The cause wasn't captured. Three reproductions arrived in 24–36 s, and the suite passed 17/17 twice earlier today. |
+| `tools/e2e-lowtide.mjs` | **16/18** | Everything up to and including the chase passed; Sol's drive home didn't finish in 4 minutes (see below). |
+| `tools/e2e-weather.mjs` | **10/10** | |
+| `tools/e2e-city.mjs` | **20/20** | Includes the Velvet Palms interior: the door, the bar, the stage, the DJ, the VIP booth, and getting thrown out. |
+| `tools/e2e-loop.mjs` | **13/13** | Your LOOP accounts. |
+
+**"Low Tide" is still the flakiest suite.** It's long, and the chase plays out differently every time. Across six full runs today:
+- **Passes:** one run passed 18/18, and every run passed up to and including the chase.
+- **Failures:**
+  - Sol's drive home after the chase got stuck. In one run it ended on dry land off the road on the key's south edge, with the car badly damaged. That cause isn't known.
+  - In earlier runs the car was shoved into the sea by a Caldera car. That's now fixed: rivals brake in time.
+  - Once, the police arrived during the ambush and the crew didn't get back into the car together.
+
 Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU, so **frame rates measured here say nothing about real hardware**. The tests advance the simulation directly (`window.__sun.advance`) and render occasionally.
 
 - `npm test`: **93/93** Node checks. They cover:
@@ -188,6 +207,7 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
   - The partner's drive home in "Low Tide" stalled on the bridge. The driver AI treated the bridge railing as hiding the road.
   - Destinations off the road (a lot, a door) now count as reached from the nearest road point.
   - Caldera hunters no longer vanish while on screen when a hunt times out.
+- `npm run shots`: now also covers Bayshore Park, Sunshine Gas, Coral Auto Body, and Velvet Palms outside at night and inside. The garage reads more like an office block from the street (it uses the shop-window facade); that's a known cosmetic limit.
 - `npm run shots`: screenshots of the title, the spawn, Ocean Blvd driving, the store interior, a sunset and night neon. They were reviewed by eye, which is how the stretched-suspension bug, the opaque shop windows and the dull sand were caught.
 
 ### Implemented but not verified on real hardware
