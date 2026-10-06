@@ -177,7 +177,7 @@ await T(() => { window.__sun.debug.stop(); const vi = window.__sun.input.virtual
 await T(([d]) => { window.__t.walkTo(d.x + 1.5, d.z, { within: 1.2, maxSec: 40 }); window.__t.tick(1); }, [sh.door]);
 st = await state();
 const passed = await T(() => window.__sun.game.missions.completed.has('small_change'));
-check('MISSION PASSED at the safehouse', passed && !st.mission, JSON.stringify({ stage: st.stage, pos: st.pos }));
+check('MISSION PASSED at the safehouse', passed && !st.mission, JSON.stringify({ stage: st.stage, pos: st.pos, failed: st.failed, dead: st.dead, health: st.health, wanted: st.wanted, overlay: st.overlay }));
 const saved = await T(() => JSON.parse(localStorage.getItem('sunstate.save') || 'null'));
 check('progress is saved automatically', saved && saved.money === st.money && saved.missions.completed.includes('small_change'), saved ? `$${saved.money}` : 'no save');
 
