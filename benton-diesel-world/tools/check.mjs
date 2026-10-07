@@ -74,6 +74,7 @@ function typedSource(src) {
   return src
     .replace(/Instance\.new\("(\w+)"\)/g, '(Instance.new("$1") :: $1)')
     .replace(/(game|[\w.]+):GetService\("(\w+)"\)/g, '($1:GetService("$2") :: $2)')
+    .replace(/:(FindFirstChildOfClass|FindFirstChildWhichIsA|FindFirstAncestorOfClass|FindFirstAncestorWhichIsA)\("(\w+)"\)(?![:.\w])/g, ':$1("$2") :: $2?')
     // type annotations: Enum.Material -> EnumMaterial (luau-lsp's naming)
     .replace(/(?<=(?::|->|\||<)\s*)Enum\.(\w+)(?![.\w])/g, 'Enum$1');
 }

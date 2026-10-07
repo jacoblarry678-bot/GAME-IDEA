@@ -57,6 +57,7 @@ scs.Parent = starterPlayer
 local terrain = newInstance("Terrain", true)
 S[terrain].props.Name = "Terrain"
 terrain.Parent = ws
+S[ws].props.Terrain = terrain
 local camera = newInstance("Camera")
 camera.Name = "Camera"
 camera.Parent = ws

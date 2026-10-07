@@ -285,60 +285,36 @@ local function encodeRiders(riders: { Rider }): string
 end
 
 local function runCycle(s: RideState)
-	local seats = RideMotion.seatList(s.motion)
-	-- shuffle seats so guests are spread through the train
-	local shuffled = table.clone(seats)
-	s.rng:Shuffle(shuffled)
-	-- players prefer the front of the train
-	table.sort(shuffled, function(a, b)
-		if a[1] ~= b[1] then
-			return a[1] < b[1]
-		end
-		return a[2] < b[2]
-	end)
+	local seats: { { number } } = RideMotion.seatList(s.motion) -- front car first
+	local capacity = #seats
 	local riders: { Rider } = {}
-	local taken = 0
-	local playerSeats = {}
-	local npcSeats = {}
-	for i, seat in shuffled do
-		if i % 2 == 1 then
-			table.insert(playerSeats, seat)
-		else
-			table.insert(npcSeats, seat)
-		end
-	end
-	for _, seat in npcSeats do
-		table.insert(playerSeats, seat)
-	end
-	while taken < #playerSeats and #s.queue > 0 do
+	while #riders < capacity and #s.queue > 0 do
 		local entry = table.remove(s.queue, 1) :: Entry
 		local player = entry.player
 		if player then
 			if player.Parent and rootOf(player.Character) and not riding[player] then
-				taken += 1
-				local seat = playerSeats[taken]
-				table.insert(riders, { player = player, character = player.Character, car = seat[1], seat = seat[2], seed = entry.seed })
+				table.insert(riders, { player = player, character = player.Character, car = 0, seat = 0, seed = entry.seed })
 				player:SetAttribute("QueueRide", "")
 				player:SetAttribute("QueuePos", 0)
 				player:SetAttribute("QueueEta", 0)
 			end
 		else
-			taken += 1
-			-- simulated guests sit in the remaining seats, back to front
-			local seat = playerSeats[#playerSeats - (taken - 1) + #riders - (taken - 1)] or playerSeats[taken]
-			local _ = seat
 			table.insert(riders, { player = nil, character = nil, car = 0, seat = 0, seed = entry.seed })
 		end
 	end
-	-- give simulated guests the seats players did not take
-	local used = {}
+	-- players get the front seats; simulated guests fill the rest at random
+	local used: { [string]: boolean } = {}
+	local nextSeat = 1
 	for _, r in riders do
 		if r.player then
-			used[r.car .. ":" .. r.seat] = true
+			local seat = seats[nextSeat]
+			nextSeat += 1
+			r.car, r.seat = seat[1], seat[2]
+			used[seat[1] .. ":" .. seat[2]] = true
 		end
 	end
-	local free = {}
-	for _, seat in shuffled do
+	local free: { { number } } = {}
+	for _, seat in seats do
 		if not used[seat[1] .. ":" .. seat[2]] then
 			table.insert(free, seat)
 		end
@@ -611,11 +587,12 @@ function RideService.start(infos: { [string]: RideInfo }, boards: { Part })
 			f.Parent = stateFolder
 			folder = f
 		end
+		local rideFolder = folder :: Folder
 		local s: RideState = {
 			info = info,
 			ride = ride,
 			motion = info.motion,
-			folder = folder :: Folder,
+			folder = rideFolder,
 			queue = {},
 			status = "Open",
 			cycleId = 0,

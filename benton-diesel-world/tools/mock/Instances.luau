@@ -1158,6 +1158,16 @@ function Methods.TakeDamage(inst, amount)
 	local s = checkSelf(inst, "TakeDamage")
 	s.props.Health = math.max(0, (s.props.Health or 100) - amount)
 end
+function Methods.AddAccessory(inst, acc)
+	checkSelf(inst, "AddAccessory")
+	assert(M.isInstance(acc) and Methods.IsA(acc, "Accoutrement"), "AddAccessory expects an Accessory")
+	local handle = Methods.FindFirstChild(acc, "Handle")
+	assert(handle and Methods.FindFirstChildWhichIsA(handle, "Attachment"), "Accessory needs a Handle with an Attachment")
+	local char = S[inst].parent
+	if char then
+		acc.Parent = char
+	end
+end
 function Methods.UnequipTools() end
 function Methods.EquipTool(inst, tool)
 	checkSelf(inst, "EquipTool")
