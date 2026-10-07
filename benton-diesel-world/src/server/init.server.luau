@@ -70,6 +70,9 @@ local function startClock(state: Folder)
 	end)
 end
 
+-- guests spawn once the park exists (see spawnGuests below)
+Players.CharacterAutoLoads = false
+
 local state = Net.setup()
 setupLighting()
 startClock(state)
@@ -97,16 +100,45 @@ script:GetAttributeChangedSignal("StartShow"):Connect(function()
 	end
 end)
 
--- Make sure riders who reset don't stay anchored on a ride.
-Players.PlayerAdded:Connect(function(player)
+-- Spawn guests at the front gate now that the park is built, and respawn
+-- them after a fall. Riders who reset never stay anchored on a ride.
+local function spawnCharacter(player: Player)
+	local ok = pcall(function()
+		(player :: any):LoadCharacterAsync()
+	end)
+	if not ok and player.Parent then
+		-- older engines: fall back to the classic call
+		pcall(function()
+			(player :: any).LoadCharacter(player)
+		end)
+	end
+end
+
+local function spawnGuests(player: Player)
 	player.CharacterAdded:Connect(function(character)
 		player:SetAttribute("Riding", "")
 		local root = character:WaitForChild("HumanoidRootPart", 10) :: BasePart?
 		if root then
 			root.Anchored = false
 		end
+		local hum = character:WaitForChild("Humanoid", 10) :: Humanoid?
+		if hum then
+			hum.Died:Connect(function()
+				task.wait(math.max(Players.RespawnTime, 2))
+				if player.Parent and player.Character == character then
+					spawnCharacter(player)
+				end
+			end)
+		end
 	end)
-end)
+	if not player.Character then
+		spawnCharacter(player)
+	end
+end
+Players.PlayerAdded:Connect(spawnGuests)
+for _, player in Players:GetPlayers() do
+	task.spawn(spawnGuests, player)
+end
 
 state:SetAttribute("ParkReady", true)
 if RunService:IsStudio() then

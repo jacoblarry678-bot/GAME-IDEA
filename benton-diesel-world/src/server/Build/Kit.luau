@@ -148,10 +148,12 @@ function Kit.label(part: BasePart, face: Enum.NormalId, text: string, opts: Sign
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = face
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = 40
+	-- keep sign textures small: big signs get fewer pixels per stud
+	local area = part.Size.X * part.Size.Y
+	gui.PixelsPerStud = if area > 200 then 14 elseif area > 60 then 22 else 32
 	gui.LightInfluence = if o.glow then 0 else 0.4
 	gui.Brightness = if o.glow then 1.4 else 1
-	gui.MaxDistance = 600
+	gui.MaxDistance = 450
 	gui.Parent = part
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)

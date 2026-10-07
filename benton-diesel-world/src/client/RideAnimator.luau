@@ -230,6 +230,7 @@ end
 
 -- Keep the local player from jumping out of a moving ride.
 local function watchRiding()
+	local wasRiding = false
 	local function apply()
 		local character = localPlayer.Character
 		local hum = character and character:FindFirstChildOfClass("Humanoid")
@@ -241,7 +242,11 @@ local function watchRiding()
 		hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, not onRide)
 		if onRide then
 			hum.Sit = true
+		elseif wasRiding then
+			-- stand up when the ride lets us off (benches are unaffected)
+			hum.Sit = false
 		end
+		wasRiding = onRide
 	end
 	localPlayer:GetAttributeChangedSignal("Riding"):Connect(apply)
 	localPlayer.CharacterAdded:Connect(function()

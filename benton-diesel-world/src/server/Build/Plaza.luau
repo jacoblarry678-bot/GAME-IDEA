@@ -134,6 +134,7 @@ local function waitBoard(parent: Instance, cf: CFrame, name: string): Part
 		glow = true,
 	})
 	title.Name = "Title"
+	Kit.label(board, Enum.NormalId.Back, "BENTON DIESEL WORLD\nRide wait times on the other side", { fg = C.Cream, font = Enum.Font.GothamBlack })
 	return board
 end
 

@@ -21,9 +21,11 @@ function ParkBuilder.build(): Built
 	if old then
 		old:Destroy()
 	end
-	local baseplate = workspace:FindFirstChild("Baseplate")
-	if baseplate then
-		baseplate:Destroy()
+	for _, name in { "Baseplate", "PressPlay" } do
+		local leftover = workspace:FindFirstChild(name)
+		if leftover then
+			leftover:Destroy()
+		end
 	end
 	local root = Instance.new("Model")
 	root.Name = "BentonDieselWorld"

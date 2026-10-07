@@ -637,6 +637,13 @@ function Methods.LoadCharacter(player)
 	return char
 end
 
+Methods.LoadCharacterAsync = function(player)
+	return Methods.LoadCharacter(player)
+end
+function Methods.BindToClose(_, fn)
+	assert(type(fn) == "function", "BindToClose expects a function")
+end
+
 function M.addPlayer(name: string, userId: number)
 	local players = getService("Players")
 	local p = newInstance("Player", true)

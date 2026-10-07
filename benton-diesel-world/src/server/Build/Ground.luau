@@ -11,8 +11,13 @@ local Ground = {}
 
 local function terrain()
 	local t = workspace.Terrain
-	-- grass everywhere, surface at y = 0
-	t:FillBlock(CFrame.new(0, -6, 10), Vector3.new(1100, 12, 1200), M.Grass)
+	-- grass everywhere, surface at y = 0 (filled in tiles to keep each
+	-- terrain write small)
+	for x = -550, 450, 200 do
+		for z = -590, 410, 200 do
+			t:FillBlock(CFrame.new(x + 100, -6, z + 100), Vector3.new(200, 12, 200), M.Grass)
+		end
+	end
 	-- rolling hills outside the walls
 	local rng = Random.new(7)
 	for _ = 1, 26 do

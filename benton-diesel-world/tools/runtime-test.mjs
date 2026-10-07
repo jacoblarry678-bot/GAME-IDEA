@@ -74,7 +74,6 @@ console.log('== player joins');
 lua(`
   local M = _G.__mock
   local p = M.addPlayer("TestGuest", 1234)
-  p:LoadCharacter()
 `);
 if (hasClient) {
   lua(`

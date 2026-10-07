@@ -1,6 +1,8 @@
 # HELLRAISER: THE GAME
 
 > **Also in this repo:** [`ashline/`](ashline/) — **Operation Ashline**, an original browser 3D military FPS (six modes across three maps, offline vs bots or online on a self-hosted server). See [ashline/README.md](ashline/README.md).
+>
+> **Also in this repo:** [`benton-diesel-world/`](benton-diesel-world/) — **Benton Diesel World**, a Roblox theme park game (7 lands, 13 rides with live wait times, shows, shops and restaurants). Open [`BentonDieselWorld.rbxlx`](benton-diesel-world/BentonDieselWorld.rbxlx) in Roblox Studio and press Play. See [benton-diesel-world/README.md](benton-diesel-world/README.md).
 
 A browser-based, asymmetrical multiplayer horror prototype. Four survivors are
 trapped in **The Labyrinth** performing a rite that will open the Gate. One
