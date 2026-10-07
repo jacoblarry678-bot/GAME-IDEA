@@ -210,8 +210,8 @@ local Defaults = {
 	GuiBase2d = {},
 	LayerCollector = { Enabled = true, ResetOnSpawn = true },
 	SurfaceGuiBase = { Face = "Front" },
-	TextLabel = { TextSize = 14, Text = "Label", TextColor3 = Color3.new(0, 0, 0), TextTransparency = 0 },
-	TextButton = { TextSize = 14, Text = "Button", TextColor3 = Color3.new(0, 0, 0), TextTransparency = 0, AutoButtonColor = true },
+	TextLabel = { TextSize = 14, Text = "Label", TextColor3 = Color3.new(0, 0, 0), TextTransparency = 0, TextXAlignment = "Center", TextYAlignment = "Center" },
+	TextButton = { TextSize = 14, Text = "Button", TextColor3 = Color3.new(0, 0, 0), TextTransparency = 0, AutoButtonColor = true, TextXAlignment = "Center", TextYAlignment = "Center" },
 	TextBox = { TextSize = 14, Text = "", TextColor3 = Color3.new(0, 0, 0) },
 	ImageLabel = { ImageTransparency = 0 },
 	Humanoid = {

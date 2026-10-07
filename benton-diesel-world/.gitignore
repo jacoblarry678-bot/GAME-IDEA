@@ -3,3 +3,4 @@ tools/.cache/
 tools/out/
 *.rbxl.lock
 *.rbxlx.lock
+web/dist/

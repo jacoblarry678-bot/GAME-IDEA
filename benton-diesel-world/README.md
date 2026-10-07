@@ -10,7 +10,25 @@ build code. Terrain, sky, lighting and sign text look much better in Roblox.*
 
 ---
 
-## Play it in Roblox Studio (easiest)
+## Play it in your browser (no Roblox needed)
+
+The `web/` folder is a browser edition of the same park, built with three.js
+from the Roblox game's own build code: same lands, rides, wait times, shows,
+shops, restaurants, Benton Bucks and passport. Progress is saved in your
+browser.
+
+```bash
+npm install
+npm run export-web   # export the park from the Roblox build to web/public/park.json
+npm run build-web    # bundle web/dist (index.html, game.js, park.json)
+npm run serve-web    # open http://localhost:8080
+```
+
+Controls: WASD or arrows to walk, drag to look, wheel to zoom, Space to jump,
+E to join a line or open a shop, F for an Express Pass, 1–3 to eat. On a phone,
+use your left thumb to walk and drag anywhere else to look.
+
+## Play it in Roblox Studio
 
 1. Download **[`BentonDieselWorld.rbxlx`](BentonDieselWorld.rbxlx)** from this
    folder.
@@ -120,6 +138,7 @@ npm install
 npm run check       # Luau type-check of every script against the Roblox API
 npm test            # runs the real game scripts in a simulated Roblox and plays a guest's day
 npm run build       # rebuilds BentonDieselWorld.rbxlx (needs rojo)
+npm run build-web   # bundles the browser edition into web/dist
 ```
 
 `npm test` boots the server, builds the park, and walks a guest through
