@@ -1,0 +1,49 @@
+{
+  "name": "BentonDieselWorld",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "BentonShared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "BentonServer": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "CharacterWalkSpeed": 18,
+        "CameraMaxZoomDistance": 160
+      },
+      "StarterPlayerScripts": {
+        "BentonClient": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false,
+        "Gravity": 196.2
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "Brightness": 2.5,
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 1,
+        "GlobalShadows": true,
+        "ClockTime": 10
+      }
+    },
+    "SoundService": {},
+    "Players": {
+      "$properties": {
+        "CharacterAutoLoads": true
+      }
+    }
+  }
+}

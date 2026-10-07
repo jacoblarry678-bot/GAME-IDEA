@@ -1,0 +1,15 @@
+{
+  "name": "benton-diesel-world",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Benton Diesel World - a Roblox theme park game (Rojo project + dev tooling).",
+  "scripts": {
+    "check": "node tools/check.mjs",
+    "test": "node tools/runtime-test.mjs",
+    "build": "rojo build default.project.json -o BentonDieselWorld.rbxlx"
+  },
+  "devDependencies": {
+    "@luau-rs/luau": "0.739.0"
+  }
+}
