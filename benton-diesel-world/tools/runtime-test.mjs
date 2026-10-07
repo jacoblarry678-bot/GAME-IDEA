@@ -91,6 +91,55 @@ check('profile loaded', `
   return p:GetAttribute("DataReady") == true and p:GetAttribute("Bucks") ~= nil, "bucks " .. tostring(p:GetAttribute("Bucks"))
 `);
 
+if (hasClient) {
+  console.log('== client UI');
+  check('app UI created', `
+    local gui = game.Players.TestGuest.PlayerGui:FindFirstChild("BentonApp")
+    return gui ~= nil and gui:FindFirstChild("Dock") ~= nil, nil
+  `);
+  for (const tab of ['Waits', 'Map', 'Shows', 'Dining', 'Shops', 'Passport', 'Bag']) {
+    lua(`
+      local b = game.Players.TestGuest.PlayerGui.BentonApp.Dock:FindFirstChild("${tab}")
+      _G.__mock.getSignal(b, "Activated"):Fire()
+    `);
+    step(1);
+    check(`tab ${tab} renders`, `
+      local panel = game.Players.TestGuest.PlayerGui.BentonApp.Panel
+      local n = 0
+      for _, d in panel:GetDescendants() do n += 1 end
+      return panel.Visible and n > 10, n .. " ui objects"
+    `);
+  }
+  lua(`
+    -- press the first "Guide me" button on the Bag/Shops tab
+    local b = game.Players.TestGuest.PlayerGui.BentonApp.Dock:FindFirstChild("Waits")
+    _G.__mock.getSignal(b, "Activated"):Fire()
+  `);
+  step(1);
+  lua(`
+    for _, d in game.Players.TestGuest.PlayerGui.BentonApp.Panel:GetDescendants() do
+      if d:IsA("TextButton") and d.Text == "Guide me" then
+        _G.__mock.getSignal(d, "Activated"):Fire()
+        break
+      end
+    end
+  `);
+  step(1);
+  check('guide marker placed', `return workspace:FindFirstChild("BentonGuideMarker") ~= nil, nil`);
+  lua(`
+    local p = game.Players.TestGuest
+    local prompt = workspace.BentonDieselWorld.Venues.Emporium:FindFirstChild("VenuePrompt", true)
+    _G.__mock.getSignal(prompt, "Triggered"):Fire(p)
+  `);
+  step(1);
+  check('shop counter opens', `
+    local modal = game.Players.TestGuest.PlayerGui.BentonApp:FindFirstChild("VenueModal")
+    local vps = 0
+    if modal then for _, d in modal:GetDescendants() do if d:IsA("ViewportFrame") then vps += 1 end end end
+    return modal ~= nil and vps > 0, vps .. " item previews"
+  `);
+}
+
 console.log('== queue for Little Haulers Truck Trek');
 lua(`
   local p = game.Players.TestGuest
@@ -109,6 +158,15 @@ for (let i = 0; i < 200 && !boarded; i++) {
   boarded = lua('return game.Players.TestGuest:GetAttribute("Riding") == "TruckTrek"')[0];
 }
 check('player boarded', `return ${boarded}, nil`);
+if (hasClient) {
+  step(6);
+  check('ride animates on the client', `
+    local car = workspace.BentonDieselWorld.Rides.TruckTrek.Cars.Car1
+    local rest = require(game.ReplicatedStorage.BentonShared.RideMotion).get("TruckTrek").pose(0)[1]
+    local d = (car:GetPivot().Position - rest.Position).Magnitude
+    return d > 1, string.format("moved %.1f studs", d)
+  `);
+}
 check('rider anchored in seat', `
   local root = game.Players.TestGuest.Character.HumanoidRootPart
   return root.Anchored == true, tostring(root.Position)

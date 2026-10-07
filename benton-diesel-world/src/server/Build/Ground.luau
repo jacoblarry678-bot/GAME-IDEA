@@ -122,11 +122,16 @@ local function parking(parent: Instance)
 	end
 	-- coach buses along the east side
 	for i = 0, 2 do
-		local base = Vector3.new(250, 0.3, 360 + i * 30)
+		local base = Vector3.new(250, 0.3, 365 + i * 22)
 		local bus = Kit.model("Bus", parent)
-		Kit.box(bus, Vector3.new(36, 11, 9), base + Vector3.new(0, 1.5, 0), Color3.fromRGB(240, 240, 236), M.SmoothPlastic, 90)
-		Kit.box(bus, Vector3.new(34, 3, 9.2), base + Vector3.new(0, 7, 0), Color3.fromRGB(30, 60, 120), M.Glass, 90)
-		Kit.box(bus, Vector3.new(36.2, 1.5, 9.2), base + Vector3.new(0, 3, 0), C.Orange, M.SmoothPlastic, 90)
+		Kit.box(bus, Vector3.new(36, 11, 9), base + Vector3.new(0, 1.5, 0), Color3.fromRGB(240, 240, 236), M.SmoothPlastic)
+		Kit.box(bus, Vector3.new(34, 3, 9.2), base + Vector3.new(0, 7, 0), Color3.fromRGB(30, 60, 120), M.Glass)
+		Kit.box(bus, Vector3.new(36.2, 1.5, 9.2), base + Vector3.new(0, 3, 0), C.Orange, M.SmoothPlastic)
+		for _, wx in { -12, 12 } do
+			for _, wz in { -4.6, 4.6 } do
+				Kit.cyl(bus, 1, 3.4, CFrame.new(base + Vector3.new(wx, 1.7, wz)) * CFrame.Angles(0, math.pi / 2, 0), Color3.fromRGB(25, 25, 25), M.SmoothPlastic)
+			end
+		end
 	end
 	for _, x in { -200, -120, 120, 200 } do
 		for _, z in { 340, 420 } do

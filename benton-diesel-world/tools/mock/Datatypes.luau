@@ -483,7 +483,16 @@ function CF.ToAxisAngle(cf)
 	return newV3(qx / s, qy / s, qz / s), angle
 end
 function CF.Orthonormalize(cf)
-	return cf
+	local r = cf.r
+	local x = newV3(r[1], r[4], r[7])
+	local y = newV3(r[2], r[5], r[8])
+	if x.Magnitude < 1e-9 or y.Magnitude < 1e-9 then
+		return newCF(cf.x, cf.y, cf.z, IDR)
+	end
+	x = x.Unit
+	y = (y - x * V3.Dot(x, y)).Unit
+	local z = V3.Cross(x, y)
+	return newCF(cf.x, cf.y, cf.z, { x.X, y.X, z.X, x.Y, y.Y, z.Y, x.Z, y.Z, z.Z })
 end
 function CF.FuzzyEq(a, b, eps)
 	eps = eps or 1e-5

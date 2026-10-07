@@ -204,6 +204,7 @@ local Defaults = {
 		Reflectance = 0,
 		Material = "Plastic",
 	},
+	Part = { Shape = "Block" },
 	Instance = { Archivable = true },
 	GuiObject = { Visible = true, BackgroundTransparency = 0, Size = UDim2.new(), Position = UDim2.new(), ZIndex = 1, BackgroundColor3 = Color3.new(1, 1, 1), Active = false },
 	GuiBase2d = {},
@@ -565,7 +566,8 @@ local function pivotTo(inst, cf)
 	for _, d in descendants(inst, {}) do
 		local ds = S[d]
 		if classIsA(ds.class, "BasePart") then
-			ds.props.CFrame = delta * (ds.props.CFrame or CFrame.new())
+			-- Roblox keeps part rotations orthonormal; so do we
+			ds.props.CFrame = (delta * (ds.props.CFrame or CFrame.new())):Orthonormalize()
 		end
 	end
 	if s.props.WorldPivot and s.pivotSet then
@@ -695,6 +697,9 @@ InstanceMT.__newindex = function(inst, key, value)
 		if value.X > 2048 or value.Y > 2048 or value.Z > 2048 then
 			report("warn", "part larger than 2048 studs gets clamped: " .. fullName(inst))
 		end
+	end
+	if key == "CFrame" and classIsA(s.class, "BasePart") then
+		value = value:Orthonormalize()
 	end
 	s.props[key] = value
 	fireChanged(inst, key)

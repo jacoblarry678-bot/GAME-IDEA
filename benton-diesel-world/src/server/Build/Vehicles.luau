@@ -264,10 +264,8 @@ function Vehicles.build(ride: Ride, motion: RideMotion.Motion, index: number, cf
 	base.Name = "Base"
 	base.Transparency = 1
 	model.PrimaryPart = base
-	local seats = {}
-	for _, s in motion.seats[index] do
-		table.insert(seats, cf * s)
-	end
+	-- seat CFrames in car space (the builders below apply `cf`)
+	local seats = motion.seats[index]
 	local style = ride.carStyle
 	if ride.kind == "coaster" then
 		coasterCar(model, ride, cf, index, seats)
