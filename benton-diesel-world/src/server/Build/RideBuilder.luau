@@ -5,6 +5,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local RideMotion = require(Shared.RideMotion)
 local Track = require(Shared.Track)
+local QueueLine = require(Shared.QueueLine)
 local Kit = require(script.Parent.Kit)
 local Vehicles = require(script.Parent.Vehicles)
 
@@ -266,6 +267,92 @@ local function stars(n: number): string
 	return string.rep("*", n) .. string.rep("-", 5 - n)
 end
 
+---------------------------------------------------------------------------
+-- Queue line: a railed switchback maze with room for well over an hour of
+-- guests, a railed walkway to the entrance sign and a boarding gate
+---------------------------------------------------------------------------
+local QUEUE_FLOOR = Color3.fromRGB(196, 186, 170)
+local QUEUE_TOP = 0.55
+
+-- Posts every few studs and two rails between them, from a to b.
+local function railRun(parent: Instance, a: Vector3, b: Vector3, railColor: Color3)
+	local len = (b - a).Magnitude
+	if len < 0.5 then
+		return
+	end
+	local posts = math.max(1, math.ceil(len / 5))
+	local postColor = Color3.fromRGB(70, 74, 84)
+	for i = 0, posts do
+		local p = a:Lerp(b, i / posts)
+		Kit.post(parent, 3.2, 0.4, Vector3.new(p.X, QUEUE_TOP, p.Z), postColor, M.Metal)
+	end
+	local lift = Vector3.new(0, QUEUE_TOP, 0)
+	Kit.beam(parent, a + lift + Vector3.new(0, 3, 0), b + lift + Vector3.new(0, 3, 0), 0.3, railColor, M.Metal, true)
+	Kit.beam(parent, a + lift + Vector3.new(0, 1.6, 0), b + lift + Vector3.new(0, 1.6, 0), 0.2, postColor, M.Metal, true)
+end
+
+-- Polyline offset sideways by `d` (positive = right of travel), mitred.
+local function offsetLine(points: { Vector3 }, d: number): { Vector3 }
+	local out = {}
+	for i, p in points do
+		local prev = points[math.max(1, i - 1)]
+		local nxt = points[math.min(#points, i + 1)]
+		local dirIn = flat(p - prev)
+		local dirOut = flat(nxt - p)
+		if i == 1 then
+			dirIn = dirOut
+		elseif i == #points then
+			dirOut = dirIn
+		end
+		local nIn = Vector3.new(-dirIn.Z, 0, dirIn.X)
+		local nOut = Vector3.new(-dirOut.Z, 0, dirOut.X)
+		local n = nIn + nOut
+		n = if n.Magnitude > 1e-3 then n.Unit else nIn
+		local scale = 1 / math.max(0.35, n:Dot(nIn))
+		table.insert(out, p + n * d * scale)
+	end
+	return out
+end
+
+local function queueLine(parent: Instance, ride: Ride, land: Config.Land)
+	local line = QueueLine.get(ride.id)
+	if not line then
+		return
+	end
+	local f = Kit.folder("Line", parent)
+	-- floor under the maze
+	local floor = Kit.block(f, Vector3.new(line.mazeSize.X + 1.5, 1, line.mazeSize.Z + 1.5), line.mazeCFrame * CFrame.new(0, QUEUE_TOP - 0.5, 0), QUEUE_FLOOR, M.Concrete)
+	floor.Name = "QueueFloor"
+	floor.CastShadow = false
+	-- walkway from the maze to the sign, and out the front of the sign
+	local walk = line.walkway
+	for i = 2, #walk do
+		Kit.path(f, walk[i - 1], walk[i], QueueLine.LANE + 0.5, QUEUE_FLOOR, M.Concrete, QUEUE_TOP)
+	end
+	Kit.path(f, walk[#walk], line.entrance + line.outward * 3, QueueLine.LANE + 0.5, QUEUE_FLOOR, M.Concrete, QUEUE_TOP)
+	-- rails
+	for _, w in line.walls do
+		railRun(f, w[1], w[2], land.color)
+	end
+	local half = QueueLine.LANE / 2
+	for _, side in { -half, half } do
+		local rail = offsetLine(walk, side)
+		for i = 2, #rail do
+			railRun(f, rail[i - 1], rail[i], land.color)
+		end
+	end
+	-- boarding gate at the front of the line
+	local g = line.gate
+	local gcf = CFrame.lookAt(Vector3.new(g.X, QUEUE_TOP, g.Z), Vector3.new(g.X, QUEUE_TOP, g.Z) + line.gateDir)
+	for _, sx in { -1, 1 } do
+		Kit.block(f, Vector3.new(0.8, 8, 0.8), gcf * CFrame.new(sx * (half + 0.4), 4, 0), land.color, M.Metal)
+	end
+	Kit.block(f, Vector3.new(QueueLine.LANE + 2.4, 1, 1), gcf * CFrame.new(0, 8.4, 0), land.color, M.Metal)
+	Kit.sign(f, "BOARDING", Vector3.new(QueueLine.LANE + 1.6, 1.4, 0.3), gcf * CFrame.new(0, 7, 0.1) * CFrame.Angles(0, math.pi, 0), { bg = C.Navy, fg = C.Cream, font = Enum.Font.GothamBlack, both = true })
+	-- turnstile arm
+	Kit.block(f, Vector3.new(QueueLine.LANE - 0.6, 0.25, 0.25), gcf * CFrame.new(0, 3, -0.6), Color3.fromRGB(220, 220, 225), M.Metal).CanCollide = false
+end
+
 local function queueEntrance(parent: Instance, ride: Ride): (TextLabel, TextLabel, TextLabel, ProximityPrompt, ProximityPrompt)
 	local f = Kit.folder("Queue", parent)
 	local land = Config.landById(ride.land) :: Config.Land
@@ -307,18 +394,8 @@ local function queueEntrance(parent: Instance, ride: Ride): (TextLabel, TextLabe
 	local statusLabel = text("Status", 0.84, 0.12, "NOW BOARDING", C.Green, Enum.Font.GothamBold)
 	-- back of the sign
 	Kit.label(board, Enum.NormalId.Back, ride.name, { fg = C.Cream, font = Enum.Font.GothamBlack, glow = true })
-	-- stanchions
-	for i = 0, 3 do
-		for _, sx in { -1, 1 } do
-			local p = cf * Vector3.new(sx * 3, 0, -2 - i * 3)
-			Kit.post(f, 3, 0.4, Vector3.new(p.X, 0.4, p.Z), Color3.fromRGB(200, 200, 205), M.Metal)
-		end
-	end
-	for _, sx in { -1, 1 } do
-		local a = cf * Vector3.new(sx * 3, 3.0, -2)
-		local b = cf * Vector3.new(sx * 3, 3.0, -11)
-		Kit.beam(f, a, b, 0.25, C.Red, M.Fabric, true)
-	end
+	-- the queue maze, walkway and boarding gate
+	queueLine(f, ride, land)
 	-- prompt anchor
 	local point = Kit.block(f, Vector3.new(2, 2, 2), cf * CFrame.new(0, 3, -1), Color3.new(1, 1, 1), M.SmoothPlastic)
 	point.Name = "QueuePoint"

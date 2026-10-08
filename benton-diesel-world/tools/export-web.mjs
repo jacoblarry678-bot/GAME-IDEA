@@ -20,6 +20,7 @@ local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Props = require(Shared.Props)
 local RideMotion = require(Shared.RideMotion)
+local QueueLine = require(Shared.QueueLine)
 local Clock = require(Shared.Clock)
 local root = workspace.BentonDieselWorld
 
@@ -195,6 +196,14 @@ for _, ride in Config.Rides do
     end
     r.track = { length = s.length, cum = s.cum, pos = pos, tan = tan, up = up, times = m.timing.times }
   end
+  local line = QueueLine.get(ride.id)
+  if line then
+    local pts = {}
+    for _, p in line.points do table.insert(pts, p.X) table.insert(pts, p.Z) end
+    r.queue = { points = pts, cum = line.cum, length = line.length, signAt = line.signAt,
+      gate = { line.gate.X, line.gate.Z }, gateDir = { line.gateDir.X, line.gateDir.Z }, outward = { line.outward.X, line.outward.Z },
+      maze = comps(line.mazeCFrame), mazeSize = { line.mazeSize.X, line.mazeSize.Z } }
+  end
   table.insert(rides, r)
 end
 
@@ -272,7 +281,7 @@ local config = {
 
 return HttpService:JSONEncode({
   materials = materials, static = static, signs = signs, dynamicSigns = dynamicSigns, terrain = terrain,
-  rides = rides, globe = globeRec, guests = guests, items = items, tags = tags, config = config,
+  rides = rides, queue = { spacing = QueueLine.SPACING, lane = QueueLine.LANE }, globe = globeRec, guests = guests, items = items, tags = tags, config = config,
 })
 `);
 

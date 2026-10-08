@@ -2,6 +2,7 @@
 // simulated guests, posted waits, dispatching, shows, shops, food, hunger
 // and the saved profile. Mirrors the Roblox server's rules.
 import * as Clock from './clock.js';
+import { QueuePath, slotAt } from './queue.js';
 
 const SAVE_KEY = 'bentonDieselWorld.v1';
 
@@ -41,7 +42,11 @@ export class Sim {
     this.food = []; // { id, bites }
     this.rides = new Map();
     this.order = [];
+    this.paths = new Map(); // ride id -> QueuePath through its queue maze
+    this.spacing = data.queue?.spacing ?? 2.5;
+    this.entryId = 0;
     for (const r of data.rides) {
+      if (r.queue) this.paths.set(r.id, new QueuePath(r.queue));
       const cfg = this.cfg.Rides.find((c) => c.id === r.id);
       const capacity = r.seats.reduce((n, list) => n + list.length, 0);
       const seatList = [];
@@ -61,7 +66,7 @@ export class Sim {
     this.nextCrowd = 0;
     this.nextHunger = Clock.now() + this.cfg.Hunger.DrainInterval;
     this.nextPlaytime = Clock.now() + this.cfg.Economy.PlaytimeInterval;
-    for (let i = 0; i < 6; i++) this.simulateCrowd(true);
+    for (let i = 0; i < 20; i++) this.simulateCrowd(true);
   }
 
   // ---------------------------------------------------------------- save
@@ -143,15 +148,49 @@ export class Sim {
       this.save();
       let at = 0;
       st.queue.forEach((e, i) => { if (e.express) at = i + 1; });
-      st.queue.splice(at, 0, { player: true, express: true });
-      this.hooks.toast(`Express Pass used! You're near the front for ${st.cfg.name}.`, 'reward');
+      st.queue.splice(at, 0, { id: 'player', player: true, express: true });
+      this.hooks.toast(`Express Pass used! Head past the line to the front for ${st.cfg.name}.`, 'reward');
     } else {
-      st.queue.push({ player: true });
+      st.queue.push({ id: 'player', player: true });
       const wait = Math.max(1, Math.ceil(this.eta(st, st.queue.length)));
-      this.hooks.toast(`You joined the line for ${st.cfg.name}. Estimated wait: ${wait} min.`, 'info');
+      this.hooks.toast(`You joined the line for ${st.cfg.name} - about ${wait} min. Stand still and you'll move up with the line.`, 'info');
     }
     this.queueRide = id;
+    this.joinedAt = Clock.now();
     if (st.status === 'Closed') this.hooks.toast(`${st.cfg.name} is temporarily closed. Hang tight - you'll keep your place!`, 'warn');
+  }
+
+  // Where the player should be standing in line (distance from the gate).
+  playerSlot() {
+    if (!this.queueRide || this.ridingRide) return null;
+    const st = this.rides.get(this.queueRide);
+    const index = st.queue.findIndex((e) => e.player);
+    const path = this.paths.get(this.queueRide);
+    if (index < 0 || !path) return null;
+    return { path, s: slotAt(index, this.spacing) };
+  }
+
+  // Point the player should walk to next to keep their place in line, or
+  // null when they're already standing in their spot.
+  lineTarget(pos) {
+    const slot = this.playerSlot();
+    if (!slot) return null;
+    const { s, d } = slot.path.project(pos.x, pos.z);
+    if (d > 1.5) return { ...slot.path.pointAt(s), final: false }; // step back onto the path first
+    if (Math.abs(s - slot.s) < 0.6) return null;
+    return slot.path.nextWaypoint(s, slot.s);
+  }
+
+  // Walking out of the queue maze (or back out past the sign) leaves the line.
+  checkLine(pos) {
+    const slot = this.playerSlot();
+    if (!slot || Clock.now() - (this.joinedAt ?? 0) < 5) return;
+    const { s, d } = slot.path.project(pos.x, pos.z);
+    if (d > 5 || s > Math.max(slot.path.signAt, slot.s) + 10) {
+      const name = this.rides.get(this.queueRide).cfg.name;
+      this.leave(true);
+      this.hooks.toast(`You stepped out of the line for ${name}.`, 'warn');
+    }
   }
 
   leave(quiet) {
@@ -236,7 +275,7 @@ export class Sim {
       const npcs = st.queue.filter((e) => !e.player).length;
       if (npcs < desired) {
         const add = Math.min(desired - npcs, Math.max(1, Math.ceil(st.capacity / 4)));
-        for (let k = 0; k < add; k++) st.queue.push({ seed: 1 + Math.floor(Math.random() * 1e6) });
+        for (let k = 0; k < add; k++) st.queue.push({ id: ++this.entryId, seed: 1 + Math.floor(Math.random() * 1e6) });
       } else if (npcs > desired + st.capacity) {
         for (let k = st.queue.length - 1; k >= 0; k--) {
           if (!st.queue[k].player) { st.queue.splice(k, 1); break; }
@@ -404,6 +443,7 @@ export class Sim {
   // ---------------------------------------------------------------- tick
   update(playerPos) {
     const now = Clock.now();
+    this.checkLine(playerPos);
     if (now >= this.nextCrowd) {
       this.nextCrowd = now + 2;
       this.simulateCrowd(false);

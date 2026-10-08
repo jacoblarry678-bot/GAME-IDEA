@@ -150,6 +150,23 @@ check('player is in line', `
   local p = game.Players.TestGuest
   return p:GetAttribute("QueueRide") == "TruckTrek", "pos " .. tostring(p:GetAttribute("QueuePos")) .. " eta " .. tostring(p:GetAttribute("QueueEta"))
 `);
+check('queue line published', `
+  local line = game.ReplicatedStorage.BentonState.Rides.TruckTrek:GetAttribute("Line")
+  return type(line) == "string" and string.find(line, "p1234", 1, true) ~= nil, tostring(line)
+`);
+// walk into the queue maze (the mock humanoid doesn't walk by itself)
+lua(`
+  local QueueLine = require(game.ReplicatedStorage.BentonShared.QueueLine)
+  local gate = QueueLine.get("TruckTrek").gate
+  game.Players.TestGuest.Character:PivotTo(CFrame.new(gate + Vector3.new(0, 3.5, 0)))
+`);
+if (hasClient) {
+  step(1);
+  check('guests standing in the queue mazes', `
+    local f = workspace:FindFirstChild("BentonQueueGuests")
+    return f ~= nil and #f:GetChildren() > 0, (f and #f:GetChildren() or 0) .. " guests in line nearby"
+  `);
+}
 const before = lua('return game.Players.TestGuest:GetAttribute("Bucks")')[0];
 let boarded = false;
 for (let i = 0; i < 200 && !boarded; i++) {
@@ -180,6 +197,33 @@ check('rider released and rewarded', `
   local p = game.Players.TestGuest
   local root = p.Character.HumanoidRootPart
   return root.Anchored == false and p:GetAttribute("Bucks") > ${before}, "bucks ${before} -> " .. p:GetAttribute("Bucks")
+`);
+
+console.log('== stepping out of a queue line');
+lua(`game.ServerScriptService.BentonServer:SetAttribute("CloseRide", "DieselThunder")`);
+let closed = false;
+for (let i = 0; i < 60 && !closed; i++) {
+  step(1);
+  closed = lua('return game.ReplicatedStorage.BentonState.Rides.DieselThunder:GetAttribute("Status") == "Closed"')[0];
+}
+check('ride can be closed for testing', `return ${closed}, nil`);
+lua(`
+  local p = game.Players.TestGuest
+  local QueueLine = require(game.ReplicatedStorage.BentonShared.QueueLine)
+  p.Character:PivotTo(CFrame.new(QueueLine.get("DieselThunder").entrance + Vector3.new(0, 3.5, 0)))
+  _G.__mock.getSignal(workspace.BentonDieselWorld.Rides.DieselThunder.Queue.QueuePoint.JoinPrompt, "Triggered"):Fire(p)
+`);
+step(7);
+check('still in line while standing in the maze', `
+  local p = game.Players.TestGuest
+  return p:GetAttribute("QueueRide") == "DieselThunder", "pos " .. tostring(p:GetAttribute("QueuePos"))
+`);
+lua(`game.Players.TestGuest.Character:PivotTo(CFrame.new(0, 4, 300))`);
+step(2);
+check('walking out of the maze leaves the line', `
+  local p = game.Players.TestGuest
+  local line = game.ReplicatedStorage.BentonState.Rides.DieselThunder:GetAttribute("Line")
+  return p:GetAttribute("QueueRide") == "" and not string.find(line, "p1234", 1, true), "queue " .. tostring(p:GetAttribute("QueueRide"))
 `);
 
 console.log('== shopping and dining');
@@ -229,11 +273,14 @@ lua(`
 `);
 step(2);
 check('show running', `return game.ReplicatedStorage.BentonState.Shows.BigDreams:GetAttribute("Running") == true, nil`);
+const bucksBeforeShow = lua('return game.Players.TestGuest:GetAttribute("Bucks")')[0];
 step(75);
+// a scheduled performance may follow straight on; wait for the stage to clear
+for (let i = 0; i < 90 && lua('return game.ReplicatedStorage.BentonState.Shows.BigDreams:GetAttribute("Running")')[0]; i++) step(1);
 check('show finished and rewarded', `
   local p = game.Players.TestGuest
   local f = game.ReplicatedStorage.BentonState.Shows.BigDreams
-  return f:GetAttribute("Running") == false, "bucks " .. p:GetAttribute("Bucks")
+  return f:GetAttribute("Running") == false and p:GetAttribute("Bucks") > ${bucksBeforeShow}, "bucks ${bucksBeforeShow} -> " .. p:GetAttribute("Bucks")
 `);
 for (const id of ['StuntSpectacular', 'BigRigParade', 'BentonNights']) {
   lua(`game.ServerScriptService.BentonServer:SetAttribute("StartShow", "${id}")`);

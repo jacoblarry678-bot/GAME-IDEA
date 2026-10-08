@@ -326,7 +326,7 @@ Config.Rides = {
 		yaw = 0,
 		entrance = Vector3.new(-302, 0, -40),
 		exit = Vector3.new(-280, 0, -40),
-		baseWait = 40,
+		baseWait = 50,
 		colors = { C.Red, Color3.fromRGB(60, 60, 66), C.Gold },
 		layout = "DieselThunder",
 		cars = 3,
@@ -345,7 +345,7 @@ Config.Rides = {
 		yaw = 90,
 		entrance = Vector3.new(-148, 0, 48),
 		exit = Vector3.new(-92, 0, 48),
-		baseWait = 25,
+		baseWait = 30,
 		colors = { C.Orange, Color3.fromRGB(70, 70, 76), C.Gold },
 		duration = 46,
 	},
@@ -382,7 +382,7 @@ Config.Rides = {
 		yaw = 0,
 		entrance = Vector3.new(-278, 0, -220),
 		exit = Vector3.new(-256, 0, -220),
-		baseWait = 35,
+		baseWait = 45,
 		colors = { Color3.fromRGB(122, 84, 52), Color3.fromRGB(90, 62, 40), Color3.fromRGB(70, 140, 200) },
 		layout = "BackwoodsRapids",
 		cars = 2,
@@ -401,7 +401,7 @@ Config.Rides = {
 		yaw = 0,
 		entrance = Vector3.new(-160, 0, -232),
 		exit = Vector3.new(-134, 0, -232),
-		baseWait = 25,
+		baseWait = 30,
 		colors = { Color3.fromRGB(200, 120, 40), Color3.fromRGB(96, 70, 50), Color3.fromRGB(230, 200, 80) },
 		layout = "RunawayTowTruck",
 		cars = 3,
@@ -447,7 +447,7 @@ Config.Rides = {
 		yaw = 0,
 		entrance = Vector3.new(232, 0, -222),
 		exit = Vector3.new(272, 0, -222),
-		baseWait = 55,
+		baseWait = 65,
 		colors = { C.Blue, Color3.fromRGB(230, 236, 246), Color3.fromRGB(20, 30, 50) },
 		layout = "VelocityViper",
 		cars = 4,
@@ -466,7 +466,7 @@ Config.Rides = {
 		yaw = 0,
 		entrance = Vector3.new(232, 0, -112),
 		exit = Vector3.new(232, 0, -84),
-		baseWait = 50,
+		baseWait = 60,
 		colors = { C.Orange, Color3.fromRGB(40, 40, 46), Color3.fromRGB(255, 220, 120) },
 		layout = "NitroLoop",
 		cars = 3,
@@ -485,7 +485,7 @@ Config.Rides = {
 		yaw = 0,
 		entrance = Vector3.new(150, 0, -222),
 		exit = Vector3.new(124, 0, -222),
-		baseWait = 35,
+		baseWait = 45,
 		colors = { C.Blue, Color3.fromRGB(28, 32, 44), C.Orange },
 		duration = 46,
 	},
@@ -2294,6 +2294,279 @@ return Props
       </Item>
       <Item class="ModuleScript" referent="10">
         <Properties>
+          <string name="Name">QueueLine</string>
+          <string name="Source"><![CDATA[--!strict
+-- Physical queue lines. Every ride has a switchback queue maze near its
+-- entrance sign. Guests stand along one path in queue order: the front of
+-- the line is the boarding gate (distance 0) and the path runs back through
+-- the switchbacks, out under the entrance sign and, if the line ever gets
+-- that long, out onto the walkway.
+--
+-- Shared by the park builder (rails and floors), the server (who is in
+-- line, stepping out of line) and the client (guests standing in line).
+
+local Config = require(script.Parent.Config)
+
+local QueueLine = {}
+
+QueueLine.LANE = 4 -- lane width between rails (studs)
+QueueLine.SPACING = 2.5 -- distance between guests standing in line
+QueueLine.OVERFLOW = 60 -- extra path past the sign for very long lines
+
+-- Maze placement for each ride, found by searching the park for clear
+-- ground near each entrance (rows run along the maze's local X axis).
+export type Layout = {
+	center: Vector3,
+	yaw: number, -- degrees
+	width: number, -- length of each row, rail to rail
+	lanes: number, -- number of rows
+	mirror: boolean,
+	entry: string, -- "side" or "back": where the path leaves the maze
+	corner: Vector3?, -- bend in the walkway between the maze and the sign
+}
+
+local V = Vector3.new
+
+QueueLine.LAYOUTS = {
+	DieselThunder = { center = V(-258, 0, -42), yaw = 180, width = 28, lanes = 4, mirror = false, entry = "side" },
+	PistonPounder = { center = V(-172, 0, 62), yaw = 180, width = 20, lanes = 4, mirror = true, entry = "side", corner = V(-145.27, 0, 56) },
+	TruckTrek = { center = V(-207, 0, 250), yaw = 180, width = 36, lanes = 2, mirror = false, entry = "back" },
+	BackwoodsRapids = { center = V(-294, 0, -214), yaw = 90, width = 20, lanes = 2, mirror = false, entry = "back" },
+	RunawayTowTruck = { center = V(-114, 0, -236), yaw = 180, width = 24, lanes = 4, mirror = false, entry = "side" },
+	BacklotTram = { center = V(36, 0, -298), yaw = 270, width = 24, lanes = 4, mirror = true, entry = "back" },
+	VelocityViper = { center = V(252, 0, -216), yaw = 270, width = 24, lanes = 4, mirror = true, entry = "back" },
+	NitroLoop = { center = V(228, 0, -140), yaw = 90, width = 32, lanes = 4, mirror = true, entry = "side", corner = V(234, 0, -113.62) },
+	TowerDrop = { center = V(178, 0, -228), yaw = 180, width = 36, lanes = 2, mirror = false, entry = "side" },
+	VelocitySpeedway = { center = V(232, 0, -68), yaw = 0, width = 20, lanes = 3, mirror = false, entry = "side" },
+	LakesideExpress = { center = V(268, 0, 224), yaw = 270, width = 36, lanes = 2, mirror = false, entry = "side" },
+	GearwheelCarousel = { center = V(122, 0, 206), yaw = 270, width = 36, lanes = 2, mirror = false, entry = "side" },
+	SpinningPistons = { center = V(168, 0, 164), yaw = 270, width = 20, lanes = 6, mirror = true, entry = "back", corner = V(154.5, 0, 148.01) },
+} :: { [string]: Layout }
+
+export type Line = {
+	ride: string,
+	points: { Vector3 }, -- gate -> back of the line (y = 0)
+	cum: { number }, -- distance along the path at each point
+	length: number, -- total path length (including overflow)
+	signAt: number, -- distance from the gate to the entrance sign
+	mazeCFrame: CFrame,
+	mazeSize: Vector3, -- width x 0 x depth
+	walls: { { Vector3 } }, -- rail runs {a, b}
+	walkway: { Vector3 }, -- maze entry -> just inside the sign (railed both sides)
+	gate: Vector3, -- front of the line
+	gateDir: Vector3, -- direction the front guest faces (toward the station)
+	entrance: Vector3,
+	outward: Vector3, -- direction from the ride out through the sign
+}
+
+local function flat(v: Vector3): Vector3
+	local f = Vector3.new(v.X, 0, v.Z)
+	return if f.Magnitude > 1e-6 then f.Unit else Vector3.new(0, 0, 1)
+end
+
+-- Path and rails in maze-local coordinates (x along the rows).
+local function localPath(width: number, lanes: number, entry: string): { Vector2 }
+	local lane = QueueLine.LANE
+	local depth = lanes * lane
+	local xa, xb = -width / 2 + lane / 2, width / 2 - lane / 2
+	local pts = { Vector2.new(width / 2 + 1, -depth / 2 + lane / 2) }
+	for i = 0, lanes - 1 do
+		local z = -depth / 2 + lane / 2 + i * lane
+		local a, b = xb, xa
+		if i % 2 == 1 then
+			a, b = xa, xb
+		end
+		table.insert(pts, Vector2.new(a, z))
+		table.insert(pts, Vector2.new(b, z))
+	end
+	local last = pts[#pts]
+	if entry == "side" then
+		table.insert(pts, Vector2.new(if last.X < 0 then -width / 2 - 1.5 else width / 2 + 1.5, last.Y))
+	else
+		table.insert(pts, Vector2.new(last.X, depth / 2 + 1.5))
+	end
+	local out = { pts[1] }
+	for i = 2, #pts do
+		if (pts[i] - out[#out]).Magnitude > 1e-6 then
+			table.insert(out, pts[i])
+		end
+	end
+	return out
+end
+
+local function localWalls(width: number, lanes: number, entry: string): { { Vector2 } }
+	local lane = QueueLine.LANE
+	local hw, hd = width / 2, lanes * lane / 2
+	local walls: { { Vector2 } } = {}
+	local function add(ax: number, az: number, bx: number, bz: number)
+		table.insert(walls, { Vector2.new(ax, az), Vector2.new(bx, bz) })
+	end
+	-- separators between rows, open at the end where the path turns
+	for i = 0, lanes - 2 do
+		local z = -hd + lane * (i + 1)
+		if i % 2 == 0 then
+			add(-hw + lane, z, hw, z)
+		else
+			add(-hw, z, hw - lane, z)
+		end
+	end
+	add(-hw, -hd, hw, -hd) -- front
+	local endsLeft = (lanes - 1) % 2 == 0
+	if entry == "back" then
+		if endsLeft then
+			add(-hw + lane, hd, hw, hd)
+		else
+			add(-hw, hd, hw - lane, hd)
+		end
+	else
+		add(-hw, hd, hw, hd)
+	end
+	if entry == "side" and endsLeft then
+		add(-hw, -hd, -hw, hd - lane)
+	else
+		add(-hw, -hd, -hw, hd)
+	end
+	-- right side: the boarding gate opens from the first row
+	if entry == "side" and not endsLeft then
+		add(hw, -hd + lane, hw, hd - lane)
+	else
+		add(hw, -hd + lane, hw, hd)
+	end
+	local out = {}
+	for _, w in walls do
+		if (w[2] - w[1]).Magnitude > 0.01 then
+			table.insert(out, w)
+		end
+	end
+	return out
+end
+
+local cache: { [string]: Line } = {}
+
+function QueueLine.get(rideId: string): Line?
+	local hit = cache[rideId]
+	if hit then
+		return hit
+	end
+	local layout = QueueLine.LAYOUTS[rideId]
+	local found: Config.Ride? = nil
+	for _, r in Config.Rides do
+		if r.id == rideId then
+			found = r
+		end
+	end
+	if not layout or not found then
+		return nil
+	end
+	local ride = found :: Config.Ride
+	local mazeCF = CFrame.new(layout.center.X, 0, layout.center.Z) * CFrame.Angles(0, math.rad(layout.yaw), 0)
+	local sx = if layout.mirror then -1 else 1
+	local function toWorld(p: Vector2): Vector3
+		local w = mazeCF * Vector3.new(p.X * sx, 0, p.Y)
+		return Vector3.new(w.X, 0, w.Z)
+	end
+	local points: { Vector3 } = {}
+	for _, p in localPath(layout.width, layout.lanes, layout.entry) do
+		table.insert(points, toWorld(p))
+	end
+	local outward = flat(ride.entrance - ride.origin)
+	local sign = Vector3.new(ride.entrance.X, 0, ride.entrance.Z)
+	local inside = sign - outward * 4
+	-- the walkway starts at the gap in the maze rail, 1.5 studs back
+	local entryPt = points[#points]
+	local walkway = { entryPt + flat(points[#points - 1] - entryPt) * 1.5, entryPt }
+	local corner = layout.corner
+	if corner then
+		local c = Vector3.new(corner.X, 0, corner.Z)
+		table.insert(points, c)
+		table.insert(walkway, c)
+	end
+	table.insert(points, inside)
+	table.insert(walkway, inside)
+	local signIndex = #points + 1
+	table.insert(points, sign)
+	table.insert(points, sign + outward * QueueLine.OVERFLOW)
+	local cum = { 0 }
+	for i = 2, #points do
+		cum[i] = cum[i - 1] + (points[i] - points[i - 1]).Magnitude
+	end
+	local walls = {}
+	for _, w in localWalls(layout.width, layout.lanes, layout.entry) do
+		table.insert(walls, { toWorld(w[1]), toWorld(w[2]) })
+	end
+	local line: Line = {
+		ride = rideId,
+		points = points,
+		cum = cum,
+		length = cum[#cum],
+		signAt = cum[signIndex],
+		mazeCFrame = mazeCF,
+		mazeSize = Vector3.new(layout.width, 0, layout.lanes * QueueLine.LANE),
+		walls = walls,
+		walkway = walkway,
+		gate = points[1],
+		gateDir = flat(points[1] - points[2]),
+		entrance = sign,
+		outward = outward,
+	}
+	cache[rideId] = line
+	return line
+end
+
+-- Position on the path `s` studs back from the gate, and the direction a
+-- guest standing there faces (toward the front of the line).
+function QueueLine.pointAt(line: Line, s: number): (Vector3, Vector3)
+	local pts, cum = line.points, line.cum
+	s = math.clamp(s, 0, line.length)
+	for i = 2, #pts do
+		if s <= cum[i] or i == #pts then
+			local seg = cum[i] - cum[i - 1]
+			local u = if seg > 0 then (s - cum[i - 1]) / seg else 0
+			local a, b = pts[i - 1], pts[i]
+			return a:Lerp(b, math.clamp(u, 0, 1)), flat(a - b)
+		end
+	end
+	return pts[1], line.gateDir
+end
+
+-- Closest point on the path to `pos`: distance along the path and how far
+-- away (flat) the position is.
+function QueueLine.project(line: Line, pos: Vector3): (number, number)
+	local p = Vector3.new(pos.X, 0, pos.Z)
+	local bestS, bestD = 0, math.huge
+	local pts, cum = line.points, line.cum
+	for i = 2, #pts do
+		local a, b = pts[i - 1], pts[i]
+		local ab = b - a
+		local len2 = ab:Dot(ab)
+		local u = if len2 > 0 then math.clamp((p - a):Dot(ab) / len2, 0, 1) else 0
+		local q = a + ab * u
+		local d = (p - q).Magnitude
+		if d < bestD then
+			bestD = d
+			bestS = cum[i - 1] + (cum[i] - cum[i - 1]) * u
+		end
+	end
+	return bestS, bestD
+end
+
+-- Distance along the path where the guest at queue index `index`
+-- (1 = next to board) stands.
+function QueueLine.slot(index: number): number
+	return (index - 1) * QueueLine.SPACING
+end
+
+-- How many guests fit between the gate and the entrance sign.
+function QueueLine.capacity(line: Line): number
+	return math.floor(line.signAt / QueueLine.SPACING) + 1
+end
+
+return QueueLine
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="11">
+        <Properties>
           <string name="Name">RideMotion</string>
           <string name="Source"><![CDATA[-- Deterministic ride motion. Given a ride and the seconds since dispatch,
 -- returns the world CFrame of every car (and of moving scenery such as a
@@ -2672,7 +2945,7 @@ return RideMotion
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="11">
+      <Item class="ModuleScript" referent="12">
         <Properties>
           <string name="Name">Track</string>
           <string name="Source"><![CDATA[-- Track geometry and timing shared by the server (which builds rails and
@@ -3118,11 +3391,11 @@ return Track
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="12">
+  <Item class="ServerScriptService" referent="13">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="13">
+    <Item class="Script" referent="14">
       <Properties>
         <string name="Name">BentonServer</string>
         <token name="RunContext">0</token>
@@ -3228,6 +3501,15 @@ script:GetAttributeChangedSignal("StartShow"):Connect(function()
 	end
 end)
 
+-- Studio helper: set the attribute "CloseRide" on this script to a ride id
+-- to take that ride out of service for 90 seconds.
+script:GetAttributeChangedSignal("CloseRide"):Connect(function()
+	local id = script:GetAttribute("CloseRide")
+	if type(id) == "string" then
+		RideService.closeFor(id, 90)
+	end
+end)
+
 -- Spawn guests at the front gate now that the park is built, and respawn
 -- them after a fall. Riders who reset never stay anchored on a ride.
 local function spawnCharacter(player: Player)
@@ -3274,11 +3556,11 @@ if RunService:IsStudio() then
 end
 ]]></string>
       </Properties>
-      <Item class="Folder" referent="14">
+      <Item class="Folder" referent="15">
         <Properties>
           <string name="Name">Build</string>
         </Properties>
-        <Item class="ModuleScript" referent="15">
+        <Item class="ModuleScript" referent="16">
           <Properties>
             <string name="Name">Ground</string>
             <string name="Source"><![CDATA[-- Terrain, perimeter wall, parking lot, front gate and the spawn.
@@ -3518,7 +3800,7 @@ return Ground
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="16">
+        <Item class="ModuleScript" referent="17">
           <Properties>
             <string name="Name">Kit</string>
             <string name="Source"><![CDATA[-- Building kit: small helpers the land builders use to put the park
@@ -4028,7 +4310,7 @@ return Kit
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="17">
+        <Item class="ModuleScript" referent="18">
           <Properties>
             <string name="Name">Lands</string>
             <string name="Source"><![CDATA[-- Themed scenery for each land, the two show venues (Lakeside Stage and
@@ -4036,6 +4318,7 @@ return Kit
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
+local QueueLine = require(Shared.QueueLine)
 local Kit = require(script.Parent.Kit)
 
 local M = Enum.Material
@@ -4515,7 +4798,7 @@ local function family(parent: Instance)
 		end
 	end
 	Kit.postSign(f, "LAKESIDE DEPOT", Vector3.new(252, 0.4, 276), Vector3.new(0, 0, -1), 22, 4, { bg = Color3.fromRGB(30, 90, 60), fg = C.Gold, font = Enum.Font.GothamBlack, both = true })
-	for _, p in { Vector3.new(120, 0.4, 100), Vector3.new(120, 0.4, 170), Vector3.new(300, 0.4, 90), Vector3.new(300, 0.4, 200), Vector3.new(180, 0.4, 246), Vector3.new(270, 0.4, 246) } do
+	for _, p in { Vector3.new(120, 0.4, 100), Vector3.new(120, 0.4, 170), Vector3.new(300, 0.4, 90), Vector3.new(300, 0.4, 200), Vector3.new(180, 0.4, 246), Vector3.new(284, 0.4, 248) } do
 		Kit.lamp(f, p)
 	end
 	for _, p in { Vector3.new(175, 0.4, 180), Vector3.new(290, 0.4, 175) } do
@@ -4612,6 +4895,18 @@ function Lands.build(root: Instance)
 	for _, ride in Config.Rides do
 		blockCircle(ride.entrance.X, ride.entrance.Z, 12)
 		blockCircle(ride.exit.X, ride.exit.Z, 8)
+		-- queue maze and its walkway
+		local line = QueueLine.get(ride.id)
+		if line then
+			local cf, size = line.mazeCFrame, line.mazeSize
+			local a = cf * Vector3.new(-size.X / 2 - 2, 0, -size.Z / 2 - 2)
+			local b = cf * Vector3.new(size.X / 2 + 2, 0, size.Z / 2 + 2)
+			block(a.X, a.Z, b.X, b.Z)
+			for i = 2, #line.walkway do
+				local p, q = line.walkway[i - 1], line.walkway[i]
+				block(math.min(p.X, q.X) - 3, math.min(p.Z, q.Z) - 3, math.max(p.X, q.X) + 3, math.max(p.Z, q.Z) + 3)
+			end
+		end
 	end
 	trees(f)
 	local _ = HALF_PI
@@ -4621,7 +4916,7 @@ return Lands
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="18">
+        <Item class="ModuleScript" referent="19">
           <Properties>
             <string name="Name">ParkBuilder</string>
             <string name="Source"><![CDATA[-- Builds the whole park into Workspace.BentonDieselWorld.
@@ -4670,7 +4965,7 @@ return ParkBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="19">
+        <Item class="ModuleScript" referent="20">
           <Properties>
             <string name="Name">Plaza</string>
             <string name="Source"><![CDATA[-- Benton Plaza: entry plaza, Main Street, the Hub with the Benton Globe,
@@ -4927,7 +5222,7 @@ return Plaza
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="20">
+        <Item class="ModuleScript" referent="21">
           <Properties>
             <string name="Name">RideBuilder</string>
             <string name="Source"><![CDATA[-- Builds every ride: track or structure, vehicles, station, and the queue
@@ -4937,6 +5232,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local RideMotion = require(Shared.RideMotion)
 local Track = require(Shared.Track)
+local QueueLine = require(Shared.QueueLine)
 local Kit = require(script.Parent.Kit)
 local Vehicles = require(script.Parent.Vehicles)
 
@@ -5198,6 +5494,92 @@ local function stars(n: number): string
 	return string.rep("*", n) .. string.rep("-", 5 - n)
 end
 
+---------------------------------------------------------------------------
+-- Queue line: a railed switchback maze with room for well over an hour of
+-- guests, a railed walkway to the entrance sign and a boarding gate
+---------------------------------------------------------------------------
+local QUEUE_FLOOR = Color3.fromRGB(196, 186, 170)
+local QUEUE_TOP = 0.55
+
+-- Posts every few studs and two rails between them, from a to b.
+local function railRun(parent: Instance, a: Vector3, b: Vector3, railColor: Color3)
+	local len = (b - a).Magnitude
+	if len < 0.5 then
+		return
+	end
+	local posts = math.max(1, math.ceil(len / 5))
+	local postColor = Color3.fromRGB(70, 74, 84)
+	for i = 0, posts do
+		local p = a:Lerp(b, i / posts)
+		Kit.post(parent, 3.2, 0.4, Vector3.new(p.X, QUEUE_TOP, p.Z), postColor, M.Metal)
+	end
+	local lift = Vector3.new(0, QUEUE_TOP, 0)
+	Kit.beam(parent, a + lift + Vector3.new(0, 3, 0), b + lift + Vector3.new(0, 3, 0), 0.3, railColor, M.Metal, true)
+	Kit.beam(parent, a + lift + Vector3.new(0, 1.6, 0), b + lift + Vector3.new(0, 1.6, 0), 0.2, postColor, M.Metal, true)
+end
+
+-- Polyline offset sideways by `d` (positive = right of travel), mitred.
+local function offsetLine(points: { Vector3 }, d: number): { Vector3 }
+	local out = {}
+	for i, p in points do
+		local prev = points[math.max(1, i - 1)]
+		local nxt = points[math.min(#points, i + 1)]
+		local dirIn = flat(p - prev)
+		local dirOut = flat(nxt - p)
+		if i == 1 then
+			dirIn = dirOut
+		elseif i == #points then
+			dirOut = dirIn
+		end
+		local nIn = Vector3.new(-dirIn.Z, 0, dirIn.X)
+		local nOut = Vector3.new(-dirOut.Z, 0, dirOut.X)
+		local n = nIn + nOut
+		n = if n.Magnitude > 1e-3 then n.Unit else nIn
+		local scale = 1 / math.max(0.35, n:Dot(nIn))
+		table.insert(out, p + n * d * scale)
+	end
+	return out
+end
+
+local function queueLine(parent: Instance, ride: Ride, land: Config.Land)
+	local line = QueueLine.get(ride.id)
+	if not line then
+		return
+	end
+	local f = Kit.folder("Line", parent)
+	-- floor under the maze
+	local floor = Kit.block(f, Vector3.new(line.mazeSize.X + 1.5, 1, line.mazeSize.Z + 1.5), line.mazeCFrame * CFrame.new(0, QUEUE_TOP - 0.5, 0), QUEUE_FLOOR, M.Concrete)
+	floor.Name = "QueueFloor"
+	floor.CastShadow = false
+	-- walkway from the maze to the sign, and out the front of the sign
+	local walk = line.walkway
+	for i = 2, #walk do
+		Kit.path(f, walk[i - 1], walk[i], QueueLine.LANE + 0.5, QUEUE_FLOOR, M.Concrete, QUEUE_TOP)
+	end
+	Kit.path(f, walk[#walk], line.entrance + line.outward * 3, QueueLine.LANE + 0.5, QUEUE_FLOOR, M.Concrete, QUEUE_TOP)
+	-- rails
+	for _, w in line.walls do
+		railRun(f, w[1], w[2], land.color)
+	end
+	local half = QueueLine.LANE / 2
+	for _, side in { -half, half } do
+		local rail = offsetLine(walk, side)
+		for i = 2, #rail do
+			railRun(f, rail[i - 1], rail[i], land.color)
+		end
+	end
+	-- boarding gate at the front of the line
+	local g = line.gate
+	local gcf = CFrame.lookAt(Vector3.new(g.X, QUEUE_TOP, g.Z), Vector3.new(g.X, QUEUE_TOP, g.Z) + line.gateDir)
+	for _, sx in { -1, 1 } do
+		Kit.block(f, Vector3.new(0.8, 8, 0.8), gcf * CFrame.new(sx * (half + 0.4), 4, 0), land.color, M.Metal)
+	end
+	Kit.block(f, Vector3.new(QueueLine.LANE + 2.4, 1, 1), gcf * CFrame.new(0, 8.4, 0), land.color, M.Metal)
+	Kit.sign(f, "BOARDING", Vector3.new(QueueLine.LANE + 1.6, 1.4, 0.3), gcf * CFrame.new(0, 7, 0.1) * CFrame.Angles(0, math.pi, 0), { bg = C.Navy, fg = C.Cream, font = Enum.Font.GothamBlack, both = true })
+	-- turnstile arm
+	Kit.block(f, Vector3.new(QueueLine.LANE - 0.6, 0.25, 0.25), gcf * CFrame.new(0, 3, -0.6), Color3.fromRGB(220, 220, 225), M.Metal).CanCollide = false
+end
+
 local function queueEntrance(parent: Instance, ride: Ride): (TextLabel, TextLabel, TextLabel, ProximityPrompt, ProximityPrompt)
 	local f = Kit.folder("Queue", parent)
 	local land = Config.landById(ride.land) :: Config.Land
@@ -5239,18 +5621,8 @@ local function queueEntrance(parent: Instance, ride: Ride): (TextLabel, TextLabe
 	local statusLabel = text("Status", 0.84, 0.12, "NOW BOARDING", C.Green, Enum.Font.GothamBold)
 	-- back of the sign
 	Kit.label(board, Enum.NormalId.Back, ride.name, { fg = C.Cream, font = Enum.Font.GothamBlack, glow = true })
-	-- stanchions
-	for i = 0, 3 do
-		for _, sx in { -1, 1 } do
-			local p = cf * Vector3.new(sx * 3, 0, -2 - i * 3)
-			Kit.post(f, 3, 0.4, Vector3.new(p.X, 0.4, p.Z), Color3.fromRGB(200, 200, 205), M.Metal)
-		end
-	end
-	for _, sx in { -1, 1 } do
-		local a = cf * Vector3.new(sx * 3, 3.0, -2)
-		local b = cf * Vector3.new(sx * 3, 3.0, -11)
-		Kit.beam(f, a, b, 0.25, C.Red, M.Fabric, true)
-	end
+	-- the queue maze, walkway and boarding gate
+	queueLine(f, ride, land)
 	-- prompt anchor
 	local point = Kit.block(f, Vector3.new(2, 2, 2), cf * CFrame.new(0, 3, -1), Color3.new(1, 1, 1), M.SmoothPlastic)
 	point.Name = "QueuePoint"
@@ -5480,7 +5852,7 @@ return RideBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="21">
+        <Item class="ModuleScript" referent="22">
           <Properties>
             <string name="Name">Vehicles</string>
             <string name="Source"><![CDATA[-- Ride vehicles. Each car is a Model whose PrimaryPart ("Base") sits
@@ -5794,7 +6166,7 @@ return Vehicles
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="22">
+        <Item class="ModuleScript" referent="23">
           <Properties>
             <string name="Name">Venues</string>
             <string name="Source"><![CDATA[-- Shops and restaurants: open-front buildings with a counter, a prompt,
@@ -5945,7 +6317,7 @@ return Venues
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="23">
+      <Item class="ModuleScript" referent="24">
         <Properties>
           <string name="Name">PlayerData</string>
           <string name="Source"><![CDATA[-- Player profiles: Benton Bucks, souvenirs, Express Passes, passport
@@ -6278,12 +6650,17 @@ return PlayerData
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="24">
+      <Item class="ModuleScript" referent="25">
         <Properties>
           <string name="Name">RideService</string>
-          <string name="Source"><![CDATA[-- Ride operations: virtual queues shared by real players and simulated
--- guests, posted wait times, dispatch cycles, seating riders, rewards, and
--- the occasional "temporarily closed" breakdown.
+          <string name="Source"><![CDATA[-- Ride operations: queue lines shared by real players and simulated guests,
+-- posted wait times, dispatch cycles, seating riders, rewards, and the
+-- occasional "temporarily closed" breakdown.
+--
+-- Every ride has a physical queue maze (see QueueLine). The order of the
+-- line is published as ReplicatedStorage.BentonState.Rides.<RideId>.Line so
+-- each client can draw the guests standing in it; players walk the line
+-- themselves and leave it if they walk out of the maze.
 --
 -- Vehicles are animated on each client from the dispatch time published in
 -- ReplicatedStorage.BentonState.Rides.<RideId> (see RideAnimator). The
@@ -6297,6 +6674,7 @@ local Config = require(Shared.Config)
 local Clock = require(Shared.Clock)
 local Net = require(Shared.Net)
 local RideMotion = require(Shared.RideMotion)
+local QueueLine = require(Shared.QueueLine)
 
 local PlayerData = require(script.Parent.PlayerData)
 local Wearables = require(script.Parent.Wearables)
@@ -6313,9 +6691,11 @@ type RideInfo = {
 }
 
 type Entry = {
+	id: number,
 	player: Player?,
 	express: boolean,
 	seed: number,
+	joined: number, -- Clock.now() when a player joined
 }
 
 type Rider = {
@@ -6346,6 +6726,30 @@ local states: { [string]: RideState } = {}
 local order: { RideState } = {}
 local boardRows: { { [string]: TextLabel } } = {}
 local riding: { [Player]: string } = {}
+local nextEntryId = 0
+
+local function newEntry(player: Player?, express: boolean, seed: number): Entry
+	nextEntryId += 1
+	return { id = nextEntryId, player = player, express = express, seed = seed, joined = Clock.now() }
+end
+
+-- Line order for the clients: "id:seed" per simulated guest, "p<UserId>"
+-- for a player, front of the line first.
+local function publishLine(s: RideState)
+	local tokens = table.create(#s.queue)
+	for i, e in s.queue do
+		local p = e.player
+		tokens[i] = if p then "p" .. p.UserId else e.id .. ":" .. e.seed
+	end
+	s.folder:SetAttribute("Line", table.concat(tokens, ","))
+end
+
+local function rootOf(character: Model?): BasePart?
+	if not character then
+		return nil
+	end
+	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
 
 local function cycleTotal(s: RideState): number
 	return Config.BoardingTime + s.motion.duration + Config.UnloadTime
@@ -6406,6 +6810,7 @@ function RideService.leave(player: Player, quiet: boolean?)
 	if s and pos then
 		table.remove(s.queue, pos)
 		refreshQueueAttributes(s)
+		publishLine(s)
 		if not quiet then
 			PlayerData.notify(player, "You left the line for " .. s.ride.name .. ".", "info")
 		end
@@ -6432,7 +6837,7 @@ function RideService.join(player: Player, rideId: string, express: boolean)
 	if current then
 		RideService.leave(player, true)
 	end
-	local entry: Entry = { player = player, express = express, seed = player.UserId % 100000 }
+	local entry = newEntry(player, express, player.UserId % 100000)
 	if express then
 		local profile = PlayerData.get(player)
 		if not profile or profile.Passes <= 0 then
@@ -6449,27 +6854,49 @@ function RideService.join(player: Player, rideId: string, express: boolean)
 			end
 		end
 		table.insert(s.queue, at, entry)
-		PlayerData.notify(player, "Express Pass used! You're near the front for " .. s.ride.name .. ".", "reward")
+		PlayerData.notify(player, "Express Pass used! Head past the line to the front for " .. s.ride.name .. ".", "reward")
 	else
 		table.insert(s.queue, entry)
 		local wait = math.ceil(etaFor(s, #s.queue))
-		PlayerData.notify(player, string.format("You joined the line for %s. Estimated wait: %d min.", s.ride.name, math.max(1, wait)), "info")
+		PlayerData.notify(player, string.format("You joined the line for %s - about %d min. Stand still and you'll move up with the line.", s.ride.name, math.max(1, wait)), "info")
 	end
 	if s.status == "Closed" then
 		PlayerData.notify(player, s.ride.name .. " is temporarily closed. Hang tight - you'll keep your place!", "warn")
 	end
 	refreshQueueAttributes(s)
+	publishLine(s)
+end
+
+-- Players walk the queue maze themselves; walking out of it (or back out
+-- past the entrance sign) gives up their place.
+local function checkLines()
+	for _, s in order do
+		local line = QueueLine.get(s.ride.id)
+		if not line then
+			continue
+		end
+		for i = #s.queue, 1, -1 do
+			local e = s.queue[i]
+			local p = e.player
+			if p and Clock.now() - e.joined > 5 then
+				local root = rootOf(p.Character)
+				local away = true
+				if root then
+					local along, off = QueueLine.project(line, root.Position)
+					away = off > 5 or along > math.max(line.signAt, QueueLine.slot(i)) + 10
+				end
+				if away then
+					RideService.leave(p, true)
+					PlayerData.notify(p, "You stepped out of the line for " .. s.ride.name .. ".", "warn")
+				end
+			end
+		end
+	end
 end
 
 ---------------------------------------------------------------------------
 -- Seating and unloading
 ---------------------------------------------------------------------------
-local function rootOf(character: Model?): BasePart?
-	if not character then
-		return nil
-	end
-	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
-end
 
 local function humanoidOf(character: Model?): Humanoid?
 	if not character then
@@ -6614,6 +7041,7 @@ local function runCycle(s: RideState)
 		end
 	end
 	refreshQueueAttributes(s)
+	publishLine(s)
 	if #riders == 0 then
 		return
 	end
@@ -6662,6 +7090,11 @@ end
 local function rideLoop(s: RideState)
 	while true do
 		local now = Clock.now()
+		if s.status == "Open" and now < s.downUntil then
+			-- closed (see RideService.closeFor) while a cycle was running
+			s.status = "Closed"
+			publish(s)
+		end
 		if s.status == "Closed" then
 			if now >= s.downUntil then
 				s.status = "Open"
@@ -6716,8 +7149,9 @@ local function simulateCrowd()
 		if npcs < desired then
 			local add = math.min(desired - npcs, math.max(1, math.ceil(s.motion.capacity / 4)))
 			for _ = 1, add do
-				table.insert(s.queue, { player = nil, express = false, seed = s.rng:NextInteger(1, 1000000) })
+				table.insert(s.queue, newEntry(nil, false, s.rng:NextInteger(1, 1000000)))
 			end
+			publishLine(s)
 		elseif npcs > desired + s.motion.capacity then
 			-- a few guests give up and leave from the back of the line
 			for k = #s.queue, 1, -1 do
@@ -6726,6 +7160,7 @@ local function simulateCrowd()
 					break
 				end
 			end
+			publishLine(s)
 		end
 		-- rare breakdowns (only between cycles)
 		if s.status == "Open" and s.rng:NextNumber() < 0.004 then
@@ -6855,6 +7290,19 @@ end
 ---------------------------------------------------------------------------
 -- Start
 ---------------------------------------------------------------------------
+-- Take a ride out of service for a while, as soon as the current cycle
+-- ends (Studio helper and tests; guests in line keep their places).
+function RideService.closeFor(rideId: string, seconds: number)
+	local s = states[rideId]
+	if s then
+		s.downUntil = Clock.now() + seconds
+		if s.status == "Open" then
+			s.status = "Closed"
+			publish(s)
+		end
+	end
+end
+
 function RideService.isRiding(player: Player): boolean
 	return riding[player] ~= nil
 end
@@ -6902,7 +7350,7 @@ function RideService.start(infos: { [string]: RideInfo }, boards: { Part })
 		setupBoard(board)
 	end
 	-- warm up the queues so waits look realistic from the first second
-	for _ = 1, 6 do
+	for _ = 1, 20 do
 		simulateCrowd()
 	end
 	for _, s in order do
@@ -6920,6 +7368,12 @@ function RideService.start(infos: { [string]: RideInfo }, boards: { Part })
 			task.wait(1)
 		end
 	end)
+	task.spawn(function()
+		while true do
+			checkLines()
+			task.wait(0.5)
+		end
+	end)
 	Players.PlayerRemoving:Connect(function(player)
 		RideService.leave(player, true)
 		riding[player] = nil
@@ -6930,7 +7384,7 @@ return RideService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="25">
+      <Item class="ModuleScript" referent="26">
         <Properties>
           <string name="Name">ShopService</string>
           <string name="Source"><![CDATA[-- Shops, restaurants, eating, hunger and food boosts.
@@ -7189,7 +7643,7 @@ return ShopService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="26">
+      <Item class="ModuleScript" referent="27">
         <Properties>
           <string name="Name">ShowService</string>
           <string name="Source"><![CDATA[-- Runs the show schedule. When a show starts the server publishes its start
@@ -7297,7 +7751,7 @@ return ShowService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="27">
+      <Item class="ModuleScript" referent="28">
         <Properties>
           <string name="Name">Wearables</string>
           <string name="Source"><![CDATA[-- Puts purchased souvenirs on characters: hats and shades as Accessories,
@@ -7461,27 +7915,27 @@ return Wearables
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="28">
+  <Item class="SoundService" referent="29">
     <Properties>
       <string name="Name">SoundService</string>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="29">
+  <Item class="StarterPlayer" referent="30">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">160</float>
       <float name="CharacterWalkSpeed">18</float>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="30">
+    <Item class="StarterPlayerScripts" referent="31">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="31">
+      <Item class="LocalScript" referent="32">
         <Properties>
           <string name="Name">BentonClient</string>
           <string name="Source"><![CDATA[-- Benton Diesel World - client entry point.
--- Starts the Benton App UI, ride animation, shows, ambience and guidance
--- once the server has built the park.
+-- Starts the Benton App UI, ride animation, queue lines, shows, ambience
+-- and guidance once the server has built the park.
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Net = require(Shared.Net)
@@ -7492,6 +7946,7 @@ local Guide = require(script.Guide)
 local RideAnimator = require(script.RideAnimator)
 local ShowPlayer = require(script.ShowPlayer)
 local Ambience = require(script.Ambience)
+local QueueView = require(script.QueueView)
 
 local state = Net.state()
 while not state:GetAttribute("ParkReady") do
@@ -7518,13 +7973,16 @@ safe("Ambience", function()
 end)
 safe("Shows", ShowPlayer.start)
 task.spawn(function()
+	safe("Queues", QueueView.start)
+end)
+task.spawn(function()
 	safe("Rides", function()
 		RideAnimator.start(root)
 	end)
 end)
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="32">
+        <Item class="ModuleScript" referent="33">
           <Properties>
             <string name="Name">Ambience</string>
             <string name="Source"><![CDATA[-- Day/night from the park clock, lamps at dusk, the spinning Benton Globe,
@@ -7680,7 +8138,7 @@ return Ambience
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="33">
+        <Item class="ModuleScript" referent="34">
           <Properties>
             <string name="Name">App</string>
             <string name="Source"><![CDATA[-- The Benton App: the park's on-screen companion. Top bar (clock, Benton
@@ -8549,7 +9007,7 @@ function App.start()
 			local remaining = math.max(0, math.ceil(etaDeadline - os.clock()))
 			pill.Visible = true
 			leaveButton.Visible = true
-			pillLabel.Text = string.format("🎟  In line: %s  |  #%s  |  boarding in ~%ds", if ride then ride.name else queueRide, tostring(pos or "?"), remaining)
+			pillLabel.Text = string.format("🎟  In line for %s  |  #%s in line  |  about %d min", if ride then ride.name else queueRide, tostring(pos or "?"), math.max(1, remaining))
 		else
 			pill.Visible = false
 		end
@@ -8599,7 +9057,7 @@ return App
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="34">
+        <Item class="ModuleScript" referent="35">
           <Properties>
             <string name="Name">Guide</string>
             <string name="Source"><![CDATA[-- "Guide me" navigation: a glowing beam from the player to a destination
@@ -8753,7 +9211,234 @@ return Guide
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="36">
+          <Properties>
+            <string name="Name">QueueView</string>
+            <string name="Source"><![CDATA[-- Queue lines on the client: draws the simulated guests standing in each
+-- ride's queue maze from the line order the server publishes, and walks the
+-- local player forward with the line while they aren't steering.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
+local Config = require(Shared.Config)
+local Net = require(Shared.Net)
+local Props = require(Shared.Props)
+local QueueLine = require(Shared.QueueLine)
+
+local QueueView = {}
+
+local FLOOR = 0.55 -- top of the queue floor
+local WALK = 7 -- how fast guests shuffle forward (studs/s)
+local SHOW_WITHIN = 360 -- draw lines this close to the camera
+local HIDE_BEYOND = 420
+
+type Token = { key: string, seed: number, player: boolean }
+type Visual = { model: Model, s: number, lift: number, moving: boolean }
+type LineState = {
+	id: string,
+	line: QueueLine.Line,
+	folder: Instance,
+	tokens: { Token },
+	visuals: { [string]: Visual },
+	shown: boolean,
+	snap: boolean,
+}
+
+local lines: { LineState } = {}
+local localPlayer = Players.LocalPlayer
+local container: Folder
+
+local function parse(value: any): { Token }
+	local out: { Token } = {}
+	if type(value) ~= "string" or value == "" then
+		return out
+	end
+	for tok in string.gmatch(value, "[^,]+") do
+		if string.sub(tok, 1, 1) == "p" then
+			table.insert(out, { key = tok, seed = 0, player = true })
+		else
+			local seed = tonumber(string.match(tok, ":(%d+)$")) or 1
+			table.insert(out, { key = tok, seed = seed, player = false })
+		end
+	end
+	return out
+end
+
+local function place(v: Visual, line: QueueLine.Line, bob: number)
+	local pos, facing = QueueLine.pointAt(line, v.s)
+	local at = pos + Vector3.new(0, FLOOR + v.lift + bob, 0)
+	v.model:PivotTo(CFrame.lookAt(at, at + facing))
+end
+
+local function makeGuest(seed: number): (Model, number)
+	local model = Props.guest(seed, "stand")
+	model.Name = "QueueGuest"
+	model.Parent = container
+	-- how far the pivot sits above the guest's feet
+	local cf, size = model:GetBoundingBox()
+	local lift = model:GetPivot().Position.Y - (cf.Position.Y - size.Y / 2)
+	return model, lift
+end
+
+local function clear(ls: LineState)
+	for key, v in ls.visuals do
+		v.model:Destroy()
+		ls.visuals[key] = nil
+	end
+end
+
+local function updateLine(ls: LineState, dt: number, now: number)
+	local seen: { [string]: boolean } = {}
+	for index, tok in ls.tokens do
+		if tok.player then
+			continue
+		end
+		seen[tok.key] = true
+		local target = QueueLine.slot(index)
+		local v = ls.visuals[tok.key]
+		if not v then
+			local model, lift = makeGuest(tok.seed)
+			-- newcomers walk in from outside the entrance sign
+			local start = if ls.snap then target else math.max(target, math.min(ls.line.length, ls.line.signAt + 4))
+			v = { model = model, s = start, lift = lift, moving = true }
+			ls.visuals[tok.key] = v
+		end
+		local visual = v :: Visual
+		local gap = target - visual.s
+		if math.abs(gap) > 0.05 then
+			visual.s += math.clamp(gap, -WALK * dt, WALK * dt)
+			visual.moving = true
+			place(visual, ls.line, math.abs(math.sin(now * 9 + tok.seed)) * 0.35)
+		elseif visual.moving then
+			visual.moving = false
+			place(visual, ls.line, 0)
+		end
+	end
+	for key, v in ls.visuals do
+		if not seen[key] then
+			v.model:Destroy()
+			ls.visuals[key] = nil
+		end
+	end
+	ls.snap = false
+end
+
+-- Next point for the local player to walk to, or nil when in their spot.
+local function lineTarget(root: BasePart): Vector3?
+	local rideId = localPlayer:GetAttribute("QueueRide")
+	local pos = localPlayer:GetAttribute("QueuePos")
+	if type(rideId) ~= "string" or rideId == "" or type(pos) ~= "number" or pos < 1 then
+		return nil
+	end
+	local riding = localPlayer:GetAttribute("Riding")
+	if type(riding) == "string" and riding ~= "" then
+		return nil
+	end
+	local line = QueueLine.get(rideId)
+	if not line then
+		return nil
+	end
+	local slot = QueueLine.slot(pos)
+	local along, off = QueueLine.project(line, root.Position)
+	if off > 1.5 then
+		return (QueueLine.pointAt(line, along))
+	end
+	if math.abs(along - slot) < 0.6 then
+		return nil
+	end
+	-- walk to the next bend between here and our spot
+	local cum = line.cum
+	if slot < along then
+		for i = #cum, 1, -1 do
+			if cum[i] < along - 0.05 and cum[i] > slot then
+				return line.points[i]
+			end
+		end
+	else
+		for i = 1, #cum do
+			if cum[i] > along + 0.05 and cum[i] < slot then
+				return line.points[i]
+			end
+		end
+	end
+	return (QueueLine.pointAt(line, slot))
+end
+
+local shuffleTimer = 0
+local function shuffle(dt: number)
+	shuffleTimer += dt
+	if shuffleTimer < 0.2 then
+		return
+	end
+	shuffleTimer = 0
+	local character = localPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local hum = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not hum then
+		return
+	end
+	-- the player is steering themselves
+	if hum.MoveDirection.Magnitude > 0.1 then
+		return
+	end
+	local target = lineTarget(root)
+	if target then
+		hum:MoveTo(Vector3.new(target.X, root.Position.Y, target.Z))
+	end
+end
+
+function QueueView.start()
+	container = Instance.new("Folder")
+	container.Name = "BentonQueueGuests"
+	container.Parent = workspace
+	local rideState = Net.state():WaitForChild("Rides")
+	for _, ride in Config.Rides do
+		local line = QueueLine.get(ride.id)
+		local folder = rideState:WaitForChild(ride.id, 10)
+		if line and folder then
+			local ls: LineState = {
+				id = ride.id,
+				line = line,
+				folder = folder,
+				tokens = parse(folder:GetAttribute("Line")),
+				visuals = {},
+				shown = false,
+				snap = true,
+			}
+			folder:GetAttributeChangedSignal("Line"):Connect(function()
+				ls.tokens = parse(folder:GetAttribute("Line"))
+			end)
+			table.insert(lines, ls)
+		end
+	end
+	RunService.RenderStepped:Connect(function(dt)
+		local camera = workspace.CurrentCamera
+		local camPos = if camera then camera.CFrame.Position else Vector3.zero
+		local now = os.clock()
+		for _, ls in lines do
+			local d = (Vector3.new(camPos.X, 0, camPos.Z) - ls.line.gate).Magnitude
+			if ls.shown and d > HIDE_BEYOND then
+				ls.shown = false
+				clear(ls)
+			elseif not ls.shown and d < SHOW_WITHIN then
+				ls.shown = true
+				ls.snap = true
+			end
+			if ls.shown then
+				updateLine(ls, dt, now)
+			end
+		end
+		shuffle(dt)
+	end)
+end
+
+return QueueView
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">RideAnimator</string>
             <string name="Source"><![CDATA[-- Animates every ride locally, in sync with server time, and keeps riders
@@ -9081,7 +9766,7 @@ return RideAnimator
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="36">
+        <Item class="ModuleScript" referent="38">
           <Properties>
             <string name="Name">ShowPlayer</string>
             <string name="Source"><![CDATA[-- Plays the park's shows locally, in sync with the start time the server
@@ -9729,7 +10414,7 @@ return ShowPlayer
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="37">
+        <Item class="ModuleScript" referent="39">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[-- Tiny UI toolkit + the Benton App look (navy panels, orange accents).
@@ -9902,14 +10587,14 @@ return UI
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="38">
+  <Item class="Workspace" referent="40">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>
       <bool name="NeedsPivotMigration">false</bool>
       <bool name="StreamingEnabled">false</bool>
     </Properties>
-    <Item class="Part" referent="39">
+    <Item class="Part" referent="41">
       <Properties>
         <string name="Name">PressPlay</string>
         <bool name="Anchored">true</bool>
@@ -9935,7 +10620,7 @@ return UI
           <Z>2</Z>
         </Vector3>
       </Properties>
-      <Item class="SurfaceGui" referent="40">
+      <Item class="SurfaceGui" referent="42">
         <Properties>
           <string name="Name">Sign</string>
           <token name="Face">2</token>
@@ -9943,7 +10628,7 @@ return UI
           <float name="PixelsPerStud">20</float>
           <token name="SizingMode">1</token>
         </Properties>
-        <Item class="TextLabel" referent="41">
+        <Item class="TextLabel" referent="43">
           <Properties>
             <string name="Name">Text</string>
             <float name="BackgroundTransparency">1</float>
@@ -9964,7 +10649,7 @@ Press PLAY to build the park!</string>
           </Properties>
         </Item>
       </Item>
-      <Item class="SurfaceGui" referent="42">
+      <Item class="SurfaceGui" referent="44">
         <Properties>
           <string name="Name">SignFront</string>
           <token name="Face">5</token>
@@ -9972,7 +10657,7 @@ Press PLAY to build the park!</string>
           <float name="PixelsPerStud">20</float>
           <token name="SizingMode">1</token>
         </Properties>
-        <Item class="TextLabel" referent="43">
+        <Item class="TextLabel" referent="45">
           <Properties>
             <string name="Name">Text</string>
             <float name="BackgroundTransparency">1</float>

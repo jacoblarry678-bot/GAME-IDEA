@@ -519,7 +519,7 @@ export class UI {
       const st = sim.rides.get(sim.queueRide);
       $('span', pill).textContent = st.status === 'Closed'
         ? `⏳ ${q.ride.name}: temporarily closed (#${q.pos} in line)`
-        : `⏳ In line for ${q.ride.name}  ·  #${q.pos}  ·  about ${Math.max(1, q.eta)} min`;
+        : `⏳ In line for ${q.ride.name}  ·  #${q.pos} in line  ·  about ${Math.max(1, q.eta)} min`;
     } else pill.hidden = true;
 
     // land banner

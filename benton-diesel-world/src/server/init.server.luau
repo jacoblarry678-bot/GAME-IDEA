@@ -100,6 +100,15 @@ script:GetAttributeChangedSignal("StartShow"):Connect(function()
 	end
 end)
 
+-- Studio helper: set the attribute "CloseRide" on this script to a ride id
+-- to take that ride out of service for 90 seconds.
+script:GetAttributeChangedSignal("CloseRide"):Connect(function()
+	local id = script:GetAttribute("CloseRide")
+	if type(id) == "string" then
+		RideService.closeFor(id, 90)
+	end
+end)
+
 -- Spawn guests at the front gate now that the park is built, and respawn
 -- them after a fall. Riders who reset never stay anchored on a ride.
 local function spawnCharacter(player: Player)

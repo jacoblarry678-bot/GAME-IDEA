@@ -225,6 +225,7 @@ local Defaults = {
 		UseJumpPower = false,
 		Sit = false,
 		DisplayDistanceType = "Viewer",
+		MoveDirection = Vector3.zero,
 	},
 	Light = { Enabled = true, Brightness = 1, Color = Color3.new(1, 1, 1) },
 	PointLight = { Range = 8 },

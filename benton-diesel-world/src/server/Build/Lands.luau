@@ -3,6 +3,7 @@
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
+local QueueLine = require(Shared.QueueLine)
 local Kit = require(script.Parent.Kit)
 
 local M = Enum.Material
@@ -482,7 +483,7 @@ local function family(parent: Instance)
 		end
 	end
 	Kit.postSign(f, "LAKESIDE DEPOT", Vector3.new(252, 0.4, 276), Vector3.new(0, 0, -1), 22, 4, { bg = Color3.fromRGB(30, 90, 60), fg = C.Gold, font = Enum.Font.GothamBlack, both = true })
-	for _, p in { Vector3.new(120, 0.4, 100), Vector3.new(120, 0.4, 170), Vector3.new(300, 0.4, 90), Vector3.new(300, 0.4, 200), Vector3.new(180, 0.4, 246), Vector3.new(270, 0.4, 246) } do
+	for _, p in { Vector3.new(120, 0.4, 100), Vector3.new(120, 0.4, 170), Vector3.new(300, 0.4, 90), Vector3.new(300, 0.4, 200), Vector3.new(180, 0.4, 246), Vector3.new(284, 0.4, 248) } do
 		Kit.lamp(f, p)
 	end
 	for _, p in { Vector3.new(175, 0.4, 180), Vector3.new(290, 0.4, 175) } do
@@ -579,6 +580,18 @@ function Lands.build(root: Instance)
 	for _, ride in Config.Rides do
 		blockCircle(ride.entrance.X, ride.entrance.Z, 12)
 		blockCircle(ride.exit.X, ride.exit.Z, 8)
+		-- queue maze and its walkway
+		local line = QueueLine.get(ride.id)
+		if line then
+			local cf, size = line.mazeCFrame, line.mazeSize
+			local a = cf * Vector3.new(-size.X / 2 - 2, 0, -size.Z / 2 - 2)
+			local b = cf * Vector3.new(size.X / 2 + 2, 0, size.Z / 2 + 2)
+			block(a.X, a.Z, b.X, b.Z)
+			for i = 2, #line.walkway do
+				local p, q = line.walkway[i - 1], line.walkway[i]
+				block(math.min(p.X, q.X) - 3, math.min(p.Z, q.Z) - 3, math.max(p.X, q.X) + 3, math.max(p.Z, q.Z) + 3)
+			end
+		end
 	end
 	trees(f)
 	local _ = HALF_PI

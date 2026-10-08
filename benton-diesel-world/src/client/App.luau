@@ -864,7 +864,7 @@ function App.start()
 			local remaining = math.max(0, math.ceil(etaDeadline - os.clock()))
 			pill.Visible = true
 			leaveButton.Visible = true
-			pillLabel.Text = string.format("🎟  In line: %s  |  #%s  |  boarding in ~%ds", if ride then ride.name else queueRide, tostring(pos or "?"), remaining)
+			pillLabel.Text = string.format("🎟  In line for %s  |  #%s in line  |  about %d min", if ride then ride.name else queueRide, tostring(pos or "?"), math.max(1, remaining))
 		else
 			pill.Visible = false
 		end

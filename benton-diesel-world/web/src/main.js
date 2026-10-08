@@ -10,6 +10,7 @@ import { RideVisuals } from './rides.js';
 import { Sim } from './sim.js';
 import { Effects } from './fx.js';
 import { GuestFactory, Crowd } from './guests.js';
+import { QueueCrowd } from './queue.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
 import { Thumbs } from './thumbs.js';
@@ -102,6 +103,8 @@ async function main() {
   game.sim = sim;
   const player = new Player(scene, data, collision, sim.profile.look);
   game.player = player;
+  const queueCrowd = new QueueCrowd(scene, data, sim.paths);
+  let queueSnap = true; // place guests already in line without walking them in
   let crowd = new Crowd(scene, guests, qualityName === 'high' ? 54 : 30);
 
   game.applyWear = () => {
@@ -224,7 +227,14 @@ async function main() {
       if (m) player.riding.matrix = m;
     }
 
+    queueCrowd.update(dt, time, sim.order, camera.position, queueSnap);
+    queueSnap = false;
+
     if (started) {
+      // in a queue line: shuffle forward with the line when not steering
+      const slot = player.riding ? null : sim.playerSlot();
+      player.autopilot = slot ? sim.lineTarget(player.pos) : null;
+      player.faceDir = slot ? slot.path.pointAt(slot.s) : null;
       player.update(dt, input, camera);
     } else {
       // attract mode: slow orbit over the park

@@ -1,6 +1,11 @@
--- Ride operations: virtual queues shared by real players and simulated
--- guests, posted wait times, dispatch cycles, seating riders, rewards, and
--- the occasional "temporarily closed" breakdown.
+-- Ride operations: queue lines shared by real players and simulated guests,
+-- posted wait times, dispatch cycles, seating riders, rewards, and the
+-- occasional "temporarily closed" breakdown.
+--
+-- Every ride has a physical queue maze (see QueueLine). The order of the
+-- line is published as ReplicatedStorage.BentonState.Rides.<RideId>.Line so
+-- each client can draw the guests standing in it; players walk the line
+-- themselves and leave it if they walk out of the maze.
 --
 -- Vehicles are animated on each client from the dispatch time published in
 -- ReplicatedStorage.BentonState.Rides.<RideId> (see RideAnimator). The
@@ -14,6 +19,7 @@ local Config = require(Shared.Config)
 local Clock = require(Shared.Clock)
 local Net = require(Shared.Net)
 local RideMotion = require(Shared.RideMotion)
+local QueueLine = require(Shared.QueueLine)
 
 local PlayerData = require(script.Parent.PlayerData)
 local Wearables = require(script.Parent.Wearables)
@@ -30,9 +36,11 @@ type RideInfo = {
 }
 
 type Entry = {
+	id: number,
 	player: Player?,
 	express: boolean,
 	seed: number,
+	joined: number, -- Clock.now() when a player joined
 }
 
 type Rider = {
@@ -63,6 +71,30 @@ local states: { [string]: RideState } = {}
 local order: { RideState } = {}
 local boardRows: { { [string]: TextLabel } } = {}
 local riding: { [Player]: string } = {}
+local nextEntryId = 0
+
+local function newEntry(player: Player?, express: boolean, seed: number): Entry
+	nextEntryId += 1
+	return { id = nextEntryId, player = player, express = express, seed = seed, joined = Clock.now() }
+end
+
+-- Line order for the clients: "id:seed" per simulated guest, "p<UserId>"
+-- for a player, front of the line first.
+local function publishLine(s: RideState)
+	local tokens = table.create(#s.queue)
+	for i, e in s.queue do
+		local p = e.player
+		tokens[i] = if p then "p" .. p.UserId else e.id .. ":" .. e.seed
+	end
+	s.folder:SetAttribute("Line", table.concat(tokens, ","))
+end
+
+local function rootOf(character: Model?): BasePart?
+	if not character then
+		return nil
+	end
+	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
 
 local function cycleTotal(s: RideState): number
 	return Config.BoardingTime + s.motion.duration + Config.UnloadTime
@@ -123,6 +155,7 @@ function RideService.leave(player: Player, quiet: boolean?)
 	if s and pos then
 		table.remove(s.queue, pos)
 		refreshQueueAttributes(s)
+		publishLine(s)
 		if not quiet then
 			PlayerData.notify(player, "You left the line for " .. s.ride.name .. ".", "info")
 		end
@@ -149,7 +182,7 @@ function RideService.join(player: Player, rideId: string, express: boolean)
 	if current then
 		RideService.leave(player, true)
 	end
-	local entry: Entry = { player = player, express = express, seed = player.UserId % 100000 }
+	local entry = newEntry(player, express, player.UserId % 100000)
 	if express then
 		local profile = PlayerData.get(player)
 		if not profile or profile.Passes <= 0 then
@@ -166,27 +199,49 @@ function RideService.join(player: Player, rideId: string, express: boolean)
 			end
 		end
 		table.insert(s.queue, at, entry)
-		PlayerData.notify(player, "Express Pass used! You're near the front for " .. s.ride.name .. ".", "reward")
+		PlayerData.notify(player, "Express Pass used! Head past the line to the front for " .. s.ride.name .. ".", "reward")
 	else
 		table.insert(s.queue, entry)
 		local wait = math.ceil(etaFor(s, #s.queue))
-		PlayerData.notify(player, string.format("You joined the line for %s. Estimated wait: %d min.", s.ride.name, math.max(1, wait)), "info")
+		PlayerData.notify(player, string.format("You joined the line for %s - about %d min. Stand still and you'll move up with the line.", s.ride.name, math.max(1, wait)), "info")
 	end
 	if s.status == "Closed" then
 		PlayerData.notify(player, s.ride.name .. " is temporarily closed. Hang tight - you'll keep your place!", "warn")
 	end
 	refreshQueueAttributes(s)
+	publishLine(s)
+end
+
+-- Players walk the queue maze themselves; walking out of it (or back out
+-- past the entrance sign) gives up their place.
+local function checkLines()
+	for _, s in order do
+		local line = QueueLine.get(s.ride.id)
+		if not line then
+			continue
+		end
+		for i = #s.queue, 1, -1 do
+			local e = s.queue[i]
+			local p = e.player
+			if p and Clock.now() - e.joined > 5 then
+				local root = rootOf(p.Character)
+				local away = true
+				if root then
+					local along, off = QueueLine.project(line, root.Position)
+					away = off > 5 or along > math.max(line.signAt, QueueLine.slot(i)) + 10
+				end
+				if away then
+					RideService.leave(p, true)
+					PlayerData.notify(p, "You stepped out of the line for " .. s.ride.name .. ".", "warn")
+				end
+			end
+		end
+	end
 end
 
 ---------------------------------------------------------------------------
 -- Seating and unloading
 ---------------------------------------------------------------------------
-local function rootOf(character: Model?): BasePart?
-	if not character then
-		return nil
-	end
-	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
-end
 
 local function humanoidOf(character: Model?): Humanoid?
 	if not character then
@@ -331,6 +386,7 @@ local function runCycle(s: RideState)
 		end
 	end
 	refreshQueueAttributes(s)
+	publishLine(s)
 	if #riders == 0 then
 		return
 	end
@@ -379,6 +435,11 @@ end
 local function rideLoop(s: RideState)
 	while true do
 		local now = Clock.now()
+		if s.status == "Open" and now < s.downUntil then
+			-- closed (see RideService.closeFor) while a cycle was running
+			s.status = "Closed"
+			publish(s)
+		end
 		if s.status == "Closed" then
 			if now >= s.downUntil then
 				s.status = "Open"
@@ -433,8 +494,9 @@ local function simulateCrowd()
 		if npcs < desired then
 			local add = math.min(desired - npcs, math.max(1, math.ceil(s.motion.capacity / 4)))
 			for _ = 1, add do
-				table.insert(s.queue, { player = nil, express = false, seed = s.rng:NextInteger(1, 1000000) })
+				table.insert(s.queue, newEntry(nil, false, s.rng:NextInteger(1, 1000000)))
 			end
+			publishLine(s)
 		elseif npcs > desired + s.motion.capacity then
 			-- a few guests give up and leave from the back of the line
 			for k = #s.queue, 1, -1 do
@@ -443,6 +505,7 @@ local function simulateCrowd()
 					break
 				end
 			end
+			publishLine(s)
 		end
 		-- rare breakdowns (only between cycles)
 		if s.status == "Open" and s.rng:NextNumber() < 0.004 then
@@ -572,6 +635,19 @@ end
 ---------------------------------------------------------------------------
 -- Start
 ---------------------------------------------------------------------------
+-- Take a ride out of service for a while, as soon as the current cycle
+-- ends (Studio helper and tests; guests in line keep their places).
+function RideService.closeFor(rideId: string, seconds: number)
+	local s = states[rideId]
+	if s then
+		s.downUntil = Clock.now() + seconds
+		if s.status == "Open" then
+			s.status = "Closed"
+			publish(s)
+		end
+	end
+end
+
 function RideService.isRiding(player: Player): boolean
 	return riding[player] ~= nil
 end
@@ -619,7 +695,7 @@ function RideService.start(infos: { [string]: RideInfo }, boards: { Part })
 		setupBoard(board)
 	end
 	-- warm up the queues so waits look realistic from the first second
-	for _ = 1, 6 do
+	for _ = 1, 20 do
 		simulateCrowd()
 	end
 	for _, s in order do
@@ -635,6 +711,12 @@ function RideService.start(infos: { [string]: RideInfo }, boards: { Part })
 		while true do
 			updateSigns()
 			task.wait(1)
+		end
+	end)
+	task.spawn(function()
+		while true do
+			checkLines()
+			task.wait(0.5)
 		end
 	end)
 	Players.PlayerRemoving:Connect(function(player)

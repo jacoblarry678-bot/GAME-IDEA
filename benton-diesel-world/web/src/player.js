@@ -206,6 +206,8 @@ export class Player {
     this.onGround = true;
     this.speed = 18;
     this.jumpBoost = 0;
+    this.autopilot = null; // { x, z, final } point to walk to while in a queue line
+    this.faceDir = null; // { fx, fz } direction to face when standing in line
     this.riding = null; // { cf: Matrix4 } while on a ride
     this.avatar = makeAvatar(look);
     this.holder = new THREE.Group();
@@ -282,16 +284,28 @@ export class Player {
       const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
       const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const wish = fwd.multiplyScalar(mv.y).add(right.multiplyScalar(mv.x));
+      let speed = this.speed;
+      // in a queue line: with no input, walk the switchbacks to our spot
+      const ap = this.autopilot;
+      if (wish.lengthSq() < 0.001 && ap) {
+        const dx = ap.x - this.pos.x, dz = ap.z - this.pos.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.2) {
+          wish.set(dx / dist, 0, dz / dist);
+          speed = Math.min(this.speed, 12) * (ap.final ? Math.min(1, 0.25 + dist / 1.5) : 1);
+        }
+      }
       const moving = wish.lengthSq() > 0.001;
-      const target = wish.multiplyScalar(this.speed);
+      const target = wish.multiplyScalar(speed);
       const accel = this.onGround ? 14 : 4;
       this.vel.x += (target.x - this.vel.x) * Math.min(1, accel * dt);
       this.vel.z += (target.z - this.vel.z) * Math.min(1, accel * dt);
-      if (moving) {
-        const desired = Math.atan2(-wish.x, -wish.z);
+      const face = moving ? wish : this.faceDir ? new THREE.Vector3(this.faceDir.fx, 0, this.faceDir.fz) : null;
+      if (face) {
+        const desired = Math.atan2(-face.x, -face.z);
         let d = desired - this.yaw;
         d = Math.atan2(Math.sin(d), Math.cos(d));
-        this.yaw += d * Math.min(1, 12 * dt);
+        this.yaw += d * Math.min(1, (moving ? 12 : 4) * dt);
       }
       if (this.onGround && input.wantsJump()) {
         this.vel.y = JUMP_SPEED + this.jumpBoost;

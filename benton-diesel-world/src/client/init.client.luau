@@ -1,6 +1,6 @@
 -- Benton Diesel World - client entry point.
--- Starts the Benton App UI, ride animation, shows, ambience and guidance
--- once the server has built the park.
+-- Starts the Benton App UI, ride animation, queue lines, shows, ambience
+-- and guidance once the server has built the park.
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Net = require(Shared.Net)
@@ -11,6 +11,7 @@ local Guide = require(script.Guide)
 local RideAnimator = require(script.RideAnimator)
 local ShowPlayer = require(script.ShowPlayer)
 local Ambience = require(script.Ambience)
+local QueueView = require(script.QueueView)
 
 local state = Net.state()
 while not state:GetAttribute("ParkReady") do
@@ -36,6 +37,9 @@ safe("Ambience", function()
 	Ambience.start(root)
 end)
 safe("Shows", ShowPlayer.start)
+task.spawn(function()
+	safe("Queues", QueueView.start)
+end)
 task.spawn(function()
 	safe("Rides", function()
 		RideAnimator.start(root)

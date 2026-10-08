@@ -49,8 +49,8 @@ saving in Studio.
 
 | Do this | How |
 |---|---|
-| Ride a ride | Walk up to the ride's entrance sign and press **E** (*Join Line*). You can explore while you wait; you're seated automatically when it's your turn. |
-| Skip the line | Press **F** at an entrance to use a **Diesel Express Pass**. You start with one; buy more in the shops. |
+| Ride a ride | Walk up to the ride's entrance sign and press **E** (*Join Line*). Your guest walks into the queue and moves up with the line; you can also steer yourself. Walking out of the queue leaves the line. When it's your turn you're seated at the boarding gate. |
+| Skip the line | Press **F** at an entrance to use a **Diesel Express Pass**. You walk past the line to the boarding gate. You start with one pass; buy more in the shops. |
 | Check wait times | Use the **Wait Times** tab in the app (left side of the screen), or the big boards at the front gate and the Hub. |
 | Get directions | Press **Guide me** on any ride, show or restaurant, or tap it on the **Map** tab. A glowing path leads you there. |
 | Shop or eat | Press **E** at a shop or restaurant counter. Food goes in your backpack; click to take a bite. |
@@ -68,10 +68,20 @@ a super jump.
 ### Park time and wait times
 
 The park has its own clock (top bar). During the day, **one real second is one
-park minute**, so a posted **25 min** wait really is about 25 seconds. Lines
-are shared with simulated guests, who show up in the ride vehicles. Lines get
-longest in the afternoon, rides sometimes go down for a minute ("Temporarily
-Closed"), and evenings are quieter. Night passes four times faster.
+park minute**, so a posted **25 min** wait really is about 25 seconds. Night
+passes four times faster.
+
+Every ride has a real queue line: a railed switchback maze by its entrance
+sign, ending at a boarding gate. You stand in it alongside simulated guests,
+and every guest in line is a real rider who boards the vehicles ahead of you,
+so the posted wait matches the line you see. Each maze holds at least an hour
+and a half of guests (up to about three hours), and longer lines spill out
+past the sign. Waits are longest in the afternoon, when the big coasters
+reach an hour or more. Rides sometimes go down for a minute
+("Temporarily Closed"), and evenings are quieter.
+
+Because a ride cycle takes 25–70 park minutes, an hour's wait is one or two
+trainloads of guests: about 8–28 people in line, depending on the ride.
 
 ## What's in the park
 
@@ -102,7 +112,8 @@ it.
 To start a show right away while testing in Studio: during Play, select
 **ServerScriptService → BentonServer** and add a string attribute
 **`StartShow`** set to `BigDreams`, `StuntSpectacular`, `BigRigParade` or
-`BentonNights`.
+`BentonNights`. A string attribute **`CloseRide`** set to a ride id (for
+example `DieselThunder`) closes that ride for 90 seconds.
 
 ## Changing the park
 
@@ -115,6 +126,7 @@ Everything is plain Luau in [`src/`](src):
 | `src/shared/Layouts.luau` | Coaster and track layouts (control points, lift hills, launches, brakes) |
 | `src/shared/Clock.luau` | Park hours and crowd curve |
 | `src/server/Build/*` | The park's buildings and scenery, one file per area |
+| `src/shared/QueueLine.luau` | Where each ride's queue maze sits, its size, and the path guests stand along |
 | `src/server/RideService.luau` | Queues, simulated guests, wait times, dispatching |
 | `src/client/App.luau` | The on-screen Benton App |
 
