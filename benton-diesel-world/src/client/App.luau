@@ -16,6 +16,7 @@ local Props = require(Shared.Props)
 
 local UI = require(script.Parent.UI)
 local Guide = require(script.Parent.Guide)
+local SoundPlayer = require(script.Parent.SoundPlayer)
 
 local App = {}
 
@@ -68,6 +69,7 @@ local KIND_COLORS = {
 }
 
 function App.toast(text: string, kind: string?, amount: number?)
+	SoundPlayer.cue(if kind == "reward" then "Reward" elseif kind == "warn" then "Warn" else "Info", 0.4)
 	local color = KIND_COLORS[kind or "info"] or C.Blue
 	local frame = UI.make("Frame", {
 		BackgroundColor3 = C.Panel,

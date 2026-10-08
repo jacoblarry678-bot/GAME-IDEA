@@ -146,12 +146,14 @@ export class Sim {
       }
       this.profile.passes -= 1;
       this.save();
+      this.hooks.sound?.('express');
       let at = 0;
       st.queue.forEach((e, i) => { if (e.express) at = i + 1; });
       st.queue.splice(at, 0, { id: 'player', player: true, express: true });
       this.hooks.toast(`Express Pass used! Head past the line to the front for ${st.cfg.name}.`, 'reward');
     } else {
       st.queue.push({ id: 'player', player: true });
+      this.hooks.sound?.('join');
       const wait = Math.max(1, Math.ceil(this.eta(st, st.queue.length)));
       this.hooks.toast(`You joined the line for ${st.cfg.name} - about ${wait} min. Stand still and you'll move up with the line.`, 'info');
     }
@@ -255,9 +257,11 @@ export class Sim {
     const E = this.cfg.Economy;
     if (first) {
       p.stamps.push(st.id);
+      this.hooks.sound?.('stamp');
       this.addBucks(E.RideReward + E.FirstRideBonus, `New passport stamp: ${st.cfg.name}!`);
       const land = this.cfg.Lands.find((l) => l.id === st.cfg.land);
       const all = this.cfg.Rides.filter((r) => r.land === st.cfg.land).every((r) => p.stamps.includes(r.id));
+      if (all) this.hooks.sound?.('fanfare');
       if (all) this.addBucks(E.LandCompleteBonus, `You rode everything in ${land ? land.name : 'this land'}!`);
     } else {
       this.addBucks(E.RideReward, `Thanks for riding ${st.cfg.name}!`);
@@ -387,6 +391,7 @@ export class Sim {
       return false;
     }
     this.profile.bucks -= item.price;
+    this.hooks.sound?.('buy');
     if (item.kind === 'pass') {
       this.profile.passes += 1;
       this.hooks.toast('Express Pass added! Press F (or tap Express) at any ride entrance.', 'reward');
@@ -418,6 +423,7 @@ export class Sim {
       this.hooks.toast(`${item.buff.kind === 'speed' ? 'Speed' : 'Jump'} boost for ${item.buff.duration} seconds!`, 'reward');
     }
     this.hunger = Math.min(this.cfg.Hunger.Max, this.hunger + Math.ceil((item.hunger ?? 20) / total));
+    this.hooks.sound?.(['cup', 'shake'].includes(item.shape) ? 'drink' : 'eat');
     f.bites -= 1;
     if (f.bites <= 0) {
       this.food.splice(index, 1);

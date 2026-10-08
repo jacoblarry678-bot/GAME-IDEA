@@ -62,6 +62,17 @@ export class UI {
     $('#pill button').addEventListener('click', () => this.g.sim.leave());
     $('#guide-chip button').addEventListener('click', () => this.g.guide.clear());
     $('#menu-btn').addEventListener('click', () => this.openSettings());
+    $('#sound-btn').addEventListener('click', () => {
+      const a = this.g.audio;
+      a.setPref('sound', !a.prefs.sound);
+      this.renderSoundButton();
+      if (a.prefs.sound) a.ui('open');
+    });
+    // a soft click for every button press
+    document.addEventListener('pointerdown', (e) => {
+      if (e.target instanceof Element && e.target.closest('button')) this.g.audio?.ui('click');
+    });
+    this.renderSoundButton();
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') this.closeModal(); });
     const jump = $('#jump-btn');
     jump.addEventListener('touchstart', (e) => { this.g.input.jumpPressed = true; e.preventDefault(); }, { passive: false });
@@ -76,7 +87,15 @@ export class UI {
   }
 
   // -------------------------------------------------------------- toasts
+  renderSoundButton() {
+    const on = this.g.audio?.prefs.sound;
+    const b = $('#sound-btn');
+    b.textContent = on ? '🔊' : '🔇';
+    b.setAttribute('aria-label', on ? 'Mute sound' : 'Turn sound on');
+  }
+
   toast(text, kind = 'info', amount) {
+    this.g.audio?.toastSound(kind);
     const box = $('#toasts');
     const el = h('div', { class: `toast ${kind}` },
       kind === 'reward' && amount ? h('b', {}, `+${this.cfg.CurrencyShort}${amount}`) : null,
@@ -107,6 +126,7 @@ export class UI {
   }
 
   open(tab) {
+    if (tab !== this.tab) this.g.audio?.ui(tab ? 'open' : 'close');
     this.tab = tab;
     this.live = [];
     for (const b of document.querySelectorAll('#dock .tab')) b.classList.toggle('on', b.dataset.tab === tab);
@@ -397,6 +417,14 @@ export class UI {
     box.append(h('header', {}, h('div', {}, h('h2', {}, 'Settings'), h('p', {}, 'Benton Diesel World - browser edition')),
       h('button', { class: 'close', 'aria-label': 'Close', onclick: () => this.closeModal() }, '✕')));
     const body = h('div', { class: 'settings' });
+    const a = g.audio;
+    body.append(h('h4', {}, 'Sound'));
+    body.append(h('div', { class: 'row' },
+      h('button', { class: `btn small ${a.prefs.sound ? '' : 'ghost'}`, onclick: () => { a.setPref('sound', !a.prefs.sound); this.renderSoundButton(); this.renderVenueModal(); } }, a.prefs.sound ? '🔊 Sound on' : '🔇 Sound off'),
+      h('button', { class: `btn small ${a.prefs.voice ? '' : 'ghost'}`, onclick: () => { a.setPref('voice', !a.prefs.voice); this.renderVenueModal(); } }, a.prefs.voice ? '🎙 Announcer on' : '🎙 Announcer off')));
+    const slider = (label, key) => h('label', { class: 'slider' }, h('span', {}, label),
+      h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(a.prefs[key]), id: `vol-${key}`, oninput: (e) => a.setPref(key, Number(e.target.value)) }));
+    body.append(slider('Music', 'music'), slider('Effects', 'effects'));
     body.append(h('h4', {}, 'Graphics'));
     body.append(h('div', { class: 'row' }, ...['low', 'high'].map((q) => h('button', { class: `btn small ${g.qualityName === q ? '' : 'ghost'}`, onclick: () => { g.setQuality(q); this.renderVenueModal(); } }, q === 'high' ? 'High (shadows)' : 'Fast'))));
     body.append(h('h4', {}, 'Getting around'));
@@ -604,4 +632,6 @@ const HELP = `
 <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> eat food · <kbd>M</kbd> park map · <kbd>Tab</kbd> wait times</span></div>
 <div class="keys"><b>Phone &amp; tablet</b>
 <span>Left thumb: walk · drag anywhere else: look</span>
-<span>Pinch: zoom · tap ⤒ to jump · tap the buttons that pop up at rides and shops</span></div>`;
+<span>Pinch: zoom · tap ⤒ to jump · tap the buttons that pop up at rides and shops</span></div>
+<div class="keys"><b>Sound</b>
+<span>Every land has its own music, plus ride, show and park sounds and an announcer. Tap 🔊 to mute, or set volumes in ⚙ Settings.</span></div>`;

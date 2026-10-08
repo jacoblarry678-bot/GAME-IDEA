@@ -11,6 +11,7 @@ local Config = require(Shared.Config)
 local Clock = require(Shared.Clock)
 local Net = require(Shared.Net)
 local Props = require(Shared.Props)
+local SoundPlayer = require(script.Parent.SoundPlayer)
 
 local ShowPlayer = {}
 
@@ -565,6 +566,7 @@ local function fireworks(stage: Model): (Updater, Cleanup)
 				trail.LightEmission = 1
 				trail.Parent = rocket
 				item.rocket = rocket
+				SoundPlayer.at(item.from, "Launch", 0.6)
 			end
 			local rocket = item.rocket
 			if rocket and not item.burst then

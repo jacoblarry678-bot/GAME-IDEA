@@ -5,6 +5,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local QueueLine = require(Shared.QueueLine)
 local Kit = require(script.Parent.Kit)
+local Theming = require(script.Parent.Theming)
 
 local M = Enum.Material
 local C = Config.Colors
@@ -592,6 +593,10 @@ function Lands.build(root: Instance)
 				block(math.min(p.X, q.X) - 3, math.min(p.Z, q.Z) - 3, math.max(p.X, q.X) + 3, math.max(p.Z, q.Z) + 3)
 			end
 		end
+	end
+	-- themed set dressing (keep trees off it)
+	for _, fp in Theming.build(f) do
+		blockCircle(fp[1], fp[2], fp[3])
 	end
 	trees(f)
 	local _ = HALF_PI

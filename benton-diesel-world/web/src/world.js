@@ -21,6 +21,7 @@ export class World {
     this.buildSigns();
     this.buildSky();
     this.globe = this.buildGlobe();
+    this.spinners = this.buildSpinners();
   }
 
   // ---------------------------------------------------------------- terrain
@@ -319,6 +320,31 @@ export class World {
     this.sky.position.copy(f);
     this.daylight = day;
     return day;
+  }
+
+  // windmill, gears, film reels, show cars and the lighthouse lamp
+  buildSpinners() {
+    const axes = { X: new THREE.Vector3(1, 0, 0), Y: new THREE.Vector3(0, 1, 0), Z: new THREE.Vector3(0, 0, 1) };
+    return (this.data.spinners || []).map((sp) => {
+      const holder = new THREE.Group();
+      holder.matrixAutoUpdate = false;
+      const base = cfMatrix(sp.pivot);
+      holder.matrix.copy(base);
+      holder.add(buildModel(sp.parts, this.materials, { detail: true }));
+      this.scene.add(holder);
+      return { name: sp.name, holder, base, axis: axes[sp.axis] || axes.Y, speed: sp.speed, pos: new THREE.Vector3().setFromMatrixPosition(base), angle: 0 };
+    });
+  }
+
+  spinSpinners(t, camPos) {
+    const rot = new THREE.Matrix4();
+    for (const s of this.spinners) {
+      s.angle = t * s.speed;
+      if (camPos && s.pos.distanceToSquared(camPos) > 600 * 600) continue;
+      rot.makeRotationAxis(s.axis, s.angle);
+      s.holder.matrix.copy(s.base).multiply(rot);
+      s.holder.matrixWorldNeedsUpdate = true;
+    }
   }
 
   spinGlobe(t) {

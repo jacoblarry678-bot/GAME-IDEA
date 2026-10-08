@@ -1,5 +1,7 @@
 -- Tiny UI toolkit + the Benton App look (navy panels, orange accents).
 
+local SoundPlayer = require(script.Parent.SoundPlayer)
+
 local UI = {}
 
 UI.Colors = {
@@ -120,6 +122,9 @@ function UI.button(text: string, color: Color3?, onClick: () -> (), props: { [st
 		AutoButtonColor = true,
 		Size = UDim2.new(0, 96, 0, 32),
 	}, { UI.corner(8) })
+	b.Activated:Connect(function()
+		SoundPlayer.cue("Click", 0.35)
+	end)
 	if props then
 		for k, v in props do
 			(b :: any)[k] = v

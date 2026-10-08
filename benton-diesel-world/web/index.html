@@ -72,7 +72,11 @@
   #hunger.low { animation: pulse 1.2s infinite; }
   @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(224,70,54,.35); } }
   #boost { color: var(--sky); }
-  #menu-btn { margin-left: auto; width: 34px; justify-content: center; padding: 0; font-size: 17px; }
+  #sound-btn { margin-left: auto; width: 34px; justify-content: center; padding: 0; font-size: 16px; }
+  #menu-btn { width: 34px; justify-content: center; padding: 0; font-size: 17px; }
+  .slider { display: flex; align-items: center; gap: 12px; margin: 8px 0; font-weight: 700; font-size: 14px; color: var(--muted); }
+  .slider span { width: 64px; }
+  .slider input { flex: 1; accent-color: var(--orange); }
 
   #toasts { position: absolute; top: calc(54px + var(--safe-t)); left: 50%; transform: translateX(-50%); width: min(460px, calc(100% - 20px)); display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
   .toast { display: flex; gap: 8px; align-items: center; padding: 9px 14px; border-radius: 12px; background: rgba(18, 28, 48, 0.92); border-left: 4px solid var(--sky); font-weight: 600; font-size: 14px; box-shadow: var(--shadow); animation: tin .25s ease-out; transition: opacity .45s, transform .45s; }
@@ -230,7 +234,7 @@
     #caption { bottom: calc(196px + var(--safe-b)); }
     .chip { height: 30px; font-size: 13px; padding: 0 9px; }
     #hunger .bar { width: 44px; }
-    #menu-btn { width: 30px; }
+    #menu-btn, #sound-btn { width: 30px; }
     #guide-chip { top: calc(50px + var(--safe-t)); font-size: 13px; height: 30px; }
     #toasts { top: calc(88px + var(--safe-t)); }
   }
@@ -245,6 +249,7 @@
     <div class="chip" id="passes">🎫 0</div>
     <div class="chip" id="hunger" title="Hunger">🍔<div class="bar"><i id="hunger-fill"></i></div></div>
     <div class="chip" id="boost" hidden></div>
+    <button class="chip" id="sound-btn" aria-label="Mute sound">🔊</button>
     <button class="chip" id="menu-btn" aria-label="Settings">⚙</button>
   </div>
   <div id="toasts"></div>
@@ -265,7 +270,7 @@
 <div id="start" hidden>
   <div class="box">
     <h1>Benton Diesel World<small>SPEED FUELS PEOPLE TOGETHER</small></h1>
-    <p class="lead">Seven lands, thirteen rides with live wait times, four shows, seven shops and six restaurants. Ride everything to fill your passport, earn Benton Bucks and spend them on souvenirs.</p>
+    <p class="lead">Seven lands, thirteen rides with live wait times, four shows, seven shops and six restaurants. Ride everything to fill your passport, earn Benton Bucks and spend them on souvenirs. Turn your sound on: every land has its own music.</p>
     <div class="outfit-slot"></div>
     <button class="enter">Enter the Park</button>
     <div class="help"></div>

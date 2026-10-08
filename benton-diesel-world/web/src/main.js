@@ -11,6 +11,7 @@ import { Sim } from './sim.js';
 import { Effects } from './fx.js';
 import { GuestFactory, Crowd } from './guests.js';
 import { QueueCrowd } from './queue.js';
+import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
 import { Thumbs } from './thumbs.js';
@@ -67,7 +68,13 @@ async function main() {
   const rideVis = new RideVisuals(scene, data, (seed, pose) => guests.make(seed, pose));
   rideVis.frame = 0;
   const fx = new Effects(scene, data);
-  const shows = new ShowRunner({ scene, materials: data.materials, guests, fx, tags: data.tags });
+  const audio = new GameAudio(data);
+  // explosions and fireworks are heard as well as seen
+  const explode = fx.explosion.bind(fx);
+  fx.explosion = (at, scale) => { explode(at, scale); audio.explosion(at, scale); };
+  const burst = fx.firework.bind(fx);
+  fx.firework = (at, color, size) => { burst(at, color, size); audio.firework(at, size); };
+  const shows = new ShowRunner({ scene, materials: data.materials, guests, fx, tags: data.tags, audio });
   const guide = new Guide(scene);
   const thumbs = new Thumbs(data);
   const input = new Input(canvas, document.getElementById('hud'));
@@ -79,11 +86,19 @@ async function main() {
     return { ...r, landInfo: { name: land.name, colorCss: `#${land.color.toString(16).padStart(6, '0')}` } };
   });
 
-  const game = { data, input, guide, thumbs, qualityName };
+  const game = { data, input, guide, thumbs, qualityName, audio };
   const sim = new Sim(data, {
     toast: (text, kind, amount) => game.ui?.toast(text, kind, amount),
+    sound: (kind) => audio.ui(kind),
     startRide: (id, car, seat) => {
       player.riding = { id, car, seat, matrix: rideVis.seatMatrix(id, car, seat) || new THREE.Matrix4() };
+      const name = rideCfg.get(id).name;
+      const lines = [
+        `Welcome aboard ${name}! Please keep your hands, arms, feet and legs inside the vehicle, and enjoy the ride!`,
+        `Please remain seated with your restraint secured. ${name} is ready to roll!`,
+        `Hold on tight! ${name} is now departing the station.`,
+      ];
+      audio.voice.say(lines[Math.floor(Math.random() * lines.length)], { interrupt: true });
     },
     endRide: (id) => {
       const r = rideCfg.get(id);
@@ -177,6 +192,8 @@ async function main() {
 
   // ---------------------------------------------------------------- loop
   let started = false;
+  let wasOnGround = true;
+  let fallSpeed = 0;
   let last = performance.now();
   let signTimer = 0;
   let time = 0;
@@ -245,6 +262,9 @@ async function main() {
     }
 
     world.spinGlobe(time);
+    world.spinSpinners(time, camera.position);
+    const lamp = world.spinners.find((sp) => sp.name === 'LighthouseLamp');
+    if (lamp) fx.lighthouseAngle = lamp.angle;
     const daylight = world.updateLighting(started ? player.pos : new THREE.Vector3(0, 0, -40));
     signTimer -= dt;
     if (signTimer <= 0) {
@@ -254,6 +274,25 @@ async function main() {
     crowd.update(dt, time);
     const caption = shows.update(sim.shows, now, player.pos);
     fx.update(dt, daylight);
+    if (started) {
+      camera.updateMatrixWorld();
+      const flat = Math.hypot(player.vel.x, player.vel.z);
+      if (!player.riding && player.onGround && !wasOnGround && fallSpeed < -40) audio.ui('land');
+      if (!player.riding && !player.onGround && wasOnGround && player.vel.y > 20) audio.ui('jump');
+      fallSpeed = player.vel.y;
+      wasOnGround = player.onGround;
+      const land = ui.landAt(player.pos);
+      audio.update({
+        dt, camera, now, daylight, caption, sim,
+        land: land ? land.id : (audio.land || 'Plaza'),
+        crowd: Clock.crowd(Clock.minutes()),
+        inPark: true,
+        riding: sim.ridingRide,
+        showPos: shows.audioPos,
+        walking: !player.riding && player.onGround && flat > 3,
+        stepRate: 2.9 * Math.min(1.2, flat / 15),
+      });
+    }
     const guideDist = guide.update(player.pos, time, (name) => ui.toast(`You've arrived at ${name}!`, 'info'));
 
     if (started) ui.update(dt, { pos: player.pos, caption, guideDist, movement: sim.movement() });
@@ -267,6 +306,9 @@ async function main() {
   ui.showStart(() => {
     started = true;
     input.enabled = true;
+    // sound has to start from this click
+    audio.start(rideVis);
+    setTimeout(() => audio.voice.say('Welcome to Benton Diesel World, where speed fuels people together!'), 900);
     player.snapCamera();
     document.getElementById('hud').hidden = false;
     document.body.classList.toggle('touch', touch);

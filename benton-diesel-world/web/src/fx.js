@@ -138,6 +138,48 @@ export class Effects {
     this.fountainsOn = false;
     this.fountainColors = [];
 
+    // steam vents in Diesel District and campfires in Backwoods Junction
+    for (const c of data.tags.SteamVent || []) this.emitters.add({ kind: 'steam', at: new THREE.Vector3(c[0], c[1] + 0.4, c[2]), acc: 0, until: Infinity });
+    for (const c of data.tags.Campfire || []) {
+      this.emitters.add({ kind: 'fire', at: new THREE.Vector3(c[0], c[1] - 0.4, c[2]), acc: 0, until: Infinity, size: 0.55 });
+      this.emitters.add({ kind: 'embers', at: new THREE.Vector3(c[0], c[1] + 0.5, c[2]), acc: 0, until: Infinity });
+    }
+    // searchlight beams (Movie Studios) and the lighthouse, at night
+    const beamMat = () => new THREE.MeshBasicMaterial({ color: 0xfff4d8, vertexColors: true, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    // a cone of light that fades out toward its far end
+    const beamGeo = (len, radius) => {
+      const g = new THREE.CylinderGeometry(radius, 0.6, len, 16, 6, true);
+      g.translate(0, len / 2, 0);
+      const pos = g.getAttribute('position');
+      const col = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) {
+        const k = Math.pow(1 - pos.getY(i) / len, 1.6);
+        col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = k;
+      }
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      return g;
+    };
+    this.searchBeams = (data.tags.Searchlight || []).map((c, i) => {
+      const m = new THREE.Mesh(beamGeo(240, 7), beamMat());
+      m.position.set(c[0], c[1], c[2]);
+      m.userData.phase = i * 1.3;
+      m.visible = false;
+      scene.add(m);
+      return m;
+    });
+    this.lighthouse = (data.tags.Lighthouse || []).map((c) => {
+      const g = new THREE.Group();
+      g.position.set(c[0], c[1], c[2]);
+      for (const dir of [1, -1]) {
+        const m = new THREE.Mesh(beamGeo(150, 14), beamMat());
+        m.rotation.z = (dir * Math.PI) / 2 - dir * 0.04;
+        g.add(m);
+      }
+      g.visible = false;
+      scene.add(g);
+      return g;
+    });
+
     // stage light beams (cones, hidden until a show)
     this.beams = (data.tags.StageLight || []).map((c) => {
       const len = 34;
@@ -244,7 +286,7 @@ export class Effects {
   }
 
   runEmitter(e, dt) {
-    const rates = { fire: 70, sparks: 160, mist: 30, spray: 60, rocket: 60 };
+    const rates = { fire: 70, sparks: 160, mist: 30, spray: 60, rocket: 60, steam: 7, embers: 4 };
     e.acc += dt * (rates[e.kind] ?? 40) * (e.kind === 'fire' ? e.size : 1);
     const v = new THREE.Vector3();
     while (e.acc >= 1) {
@@ -257,6 +299,12 @@ export class Effects {
           tmpColor.setRGB(0.3, 0.29, 0.28);
           this.smoke.spawn(e.at.x, e.at.y + 6 * s, e.at.z, rand(-1, 1), rand(5, 9), rand(-1, 1), tmpColor, 3 * s, rand(1.5, 2.5), -1, 0.3, 8 * s);
         }
+      } else if (e.kind === 'steam') {
+        tmpColor.setRGB(0.92, 0.92, 0.93);
+        this.smoke.spawn(e.at.x + rand(-0.3, 0.3), e.at.y, e.at.z + rand(-0.3, 0.3), rand(-0.6, 0.6), rand(5, 8), rand(-0.6, 0.6), tmpColor, rand(1.4, 2.2), rand(2.2, 3.2), -0.6, 0.35, rand(6, 9));
+      } else if (e.kind === 'embers') {
+        tmpColor.setHSL(rand(0.04, 0.1), 1, 0.6);
+        this.glow.spawn(e.at.x + rand(-0.8, 0.8), e.at.y, e.at.z + rand(-0.8, 0.8), rand(-0.6, 0.6), rand(4, 8), rand(-0.6, 0.6), tmpColor, 0.35, rand(1.2, 2), -1, 0.4, 0.1);
       } else if (e.kind === 'sparks') {
         randomDir(60, v);
         tmpColor.setRGB(1, 0.86, 0.47);
@@ -356,6 +404,22 @@ export class Effects {
       }
     }
     this.lamps.visible = daylight < 0.55;
+    // night beams: searchlights sweep the sky, the lighthouse turns
+    const night = Math.max(0, Math.min(1, (0.55 - daylight) / 0.35));
+    const t = now;
+    for (const b of this.searchBeams) {
+      b.visible = night > 0.01;
+      if (!b.visible) continue;
+      const p = b.userData.phase;
+      b.rotation.set(0.35 * Math.sin(t * 0.31 + p), 0, 0.42 * Math.sin(t * 0.23 + p * 1.7));
+      b.material.opacity = 0.16 * night;
+    }
+    for (const g of this.lighthouse) {
+      g.visible = night > 0.01;
+      if (!g.visible) continue;
+      g.rotation.y = this.lighthouseAngle ?? t * 0.9;
+      for (const m of g.children) m.material.opacity = 0.2 * night;
+    }
     this.lampMat.opacity = 1;
   }
 }

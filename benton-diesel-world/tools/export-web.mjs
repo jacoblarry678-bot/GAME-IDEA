@@ -90,6 +90,14 @@ for _, rm in root.Rides:GetChildren() do
 end
 local globe = root:FindFirstChild("BentonGlobe", true)
 markDynamic(globe)
+-- other models that turn (windmill, gears, film reels, show cars, lighthouse lamp)
+local spinnerModels = {}
+for _, m in game:GetService("CollectionService"):GetTagged("Spinner") do
+  if m ~= globe and m:IsDescendantOf(root) then
+    markDynamic(m)
+    table.insert(spinnerModels, m)
+  end
+end
 
 -- static parts
 local static, index = {}, {}
@@ -211,6 +219,14 @@ end
 local gpivot = globe:GetPivot()
 local globeRec = { pivot = comps(gpivot), parts = partsOf(globe, gpivot:Inverse()) }
 
+-- spinners
+local spinners = {}
+for _, m in spinnerModels do
+  local pivot = m:GetPivot()
+  table.insert(spinners, { name = m.Name, pivot = comps(pivot), parts = partsOf(m, pivot:Inverse()),
+    speed = m:GetAttribute("SpinSpeed") or 0.5, axis = m:GetAttribute("SpinAxis") or "Y" })
+end
+
 -- guest figures
 local guests = {}
 for seed = 1, 24 do
@@ -249,7 +265,7 @@ for _, item in Items.List do
 end
 
 -- tagged scenery used by shows and lighting
-local tags = { StageLight = {}, LakeFountain = {}, StuntFirePot = {}, ParkLamp = {} }
+local tags = { StageLight = {}, LakeFountain = {}, StuntFirePot = {}, ParkLamp = {}, SteamVent = {}, Campfire = {}, Searchlight = {}, Lighthouse = {} }
 for tag, list in tags do
   for _, inst in game:GetService("CollectionService"):GetTagged(tag) do
     if inst:IsDescendantOf(root) then table.insert(list, comps(inst.CFrame)) end
@@ -281,7 +297,7 @@ local config = {
 
 return HttpService:JSONEncode({
   materials = materials, static = static, signs = signs, dynamicSigns = dynamicSigns, terrain = terrain,
-  rides = rides, queue = { spacing = QueueLine.SPACING, lane = QueueLine.LANE }, globe = globeRec, guests = guests, items = items, tags = tags, config = config,
+  rides = rides, queue = { spacing = QueueLine.SPACING, lane = QueueLine.LANE }, globe = globeRec, spinners = spinners, guests = guests, items = items, tags = tags, config = config,
 })
 `);
 

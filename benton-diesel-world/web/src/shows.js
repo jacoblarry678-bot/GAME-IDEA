@@ -260,6 +260,7 @@ function float(ctx, theme) {
 }
 
 function parade(ctx) {
+  const api = { audioPos: null };
   const group = new THREE.Group();
   const floats = [1, 2, 3, 4].map((th) => {
     const f = float(ctx, th);
@@ -276,7 +277,7 @@ function parade(ctx) {
   }
   ctx.scene.add(group);
   const speed = 5, gap = 34;
-  return {
+  return Object.assign(api, {
     caption: captions([
       [0, 'The BIG RIG PARADE is rolling down Main Street!'],
       [25, 'Wave to the Benton Globe float!'],
@@ -292,6 +293,7 @@ function parade(ctx) {
         if (!visible) return;
         const cf = routeAt(s);
         place(f.model, cf);
+        if (idx === 0) api.audioPos = new THREE.Vector3().setFromMatrixPosition(cf);
         f.riders.forEach((g, ki) => {
           const k = ki + 1;
           const bounce = Math.abs(Math.sin(t * 3 + k + idx + 1)) * 0.8;
@@ -312,7 +314,7 @@ function parade(ctx) {
     cleanup() {
       ctx.scene.remove(group);
     },
-  };
+  });
 }
 
 // -------------------------------------------------------- Benton Nights
@@ -346,6 +348,10 @@ function fireworks(ctx) {
     update(time) {
       for (const item of schedule) {
         if (item.burst || time < item.at) continue;
+        if (!item.launched) {
+          item.launched = true;
+          ctx.audio?.launch(item.from);
+        }
         const u = (time - item.at) / 1.1;
         if (u >= 1) {
           item.burst = true;
@@ -366,6 +372,7 @@ export class ShowRunner {
   constructor(ctx) {
     this.ctx = ctx; // { scene, materials, guests, fx, tags }
     this.active = new Map();
+    this.audioPos = {}; // where moving shows (the parade) are, for sound
   }
 
   // shows: sim.shows; returns caption of the nearest running show (if near)
@@ -381,6 +388,7 @@ export class ShowRunner {
           this.active.set(show.id, a);
         }
         a.update(t);
+        if (a.audioPos) this.audioPos[show.id] = a.audioPos;
         const d = Math.hypot(playerPos.x - show.viewing[0], playerPos.z - show.viewing[2]);
         if (d < show.viewRadius * 1.6 && d < best) {
           const text = a.caption(t);

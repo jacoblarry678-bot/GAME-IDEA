@@ -116,17 +116,37 @@ function Ambience.start(root: Instance)
 	folder.Name = "BentonCrowd"
 	folder.Parent = workspace
 	makeWalkers(54)
-	local globe = root:FindFirstChild("BentonGlobe", true) :: Model?
-	local globeBase = if globe then globe:GetPivot() else nil
-	local angle = 0
+	-- everything tagged "Spinner" turns: the globe, windmill, gears, film
+	-- reels, show cars and the lighthouse lamp
+	type Spin = { model: Model, base: CFrame, speed: number, axis: Vector3 }
+	local spinners: { Spin } = {}
+	local axes: { [string]: Vector3 } = { X = Vector3.xAxis, Y = Vector3.yAxis, Z = Vector3.zAxis }
+	for _, inst in CollectionService:GetTagged("Spinner") do
+		if inst:IsA("Model") and inst:IsDescendantOf(root) then
+			local model = inst :: Model
+			local speed = model:GetAttribute("SpinSpeed")
+			local axis = model:GetAttribute("SpinAxis")
+			table.insert(spinners, {
+				model = model,
+				base = model:GetPivot(),
+				speed = if type(speed) == "number" then speed else 0.15,
+				axis = if type(axis) == "string" and axes[axis] then axes[axis] else Vector3.yAxis,
+			})
+		end
+	end
+	local spinTime = 0
 	local lampTimer = 0
 	local lampsOn: boolean? = nil
 	RunService.RenderStepped:Connect(function(dt)
 		local minute = Clock.minutes()
 		Lighting.ClockTime = Clock.clockTime(minute)
-		if globe and globeBase then
-			angle += dt * 0.15
-			globe:PivotTo(globeBase * CFrame.Angles(0, angle, 0))
+		spinTime += dt
+		local camera = workspace.CurrentCamera
+		local camPos = if camera then camera.CFrame.Position else Vector3.zero
+		for _, sp in spinners do
+			if (sp.base.Position - camPos).Magnitude < 600 then
+				sp.model:PivotTo(sp.base * CFrame.fromAxisAngle(sp.axis, spinTime * sp.speed))
+			end
 		end
 		updateWalkers(dt, Clock.crowd(minute))
 		lampTimer += dt
@@ -140,6 +160,14 @@ function Ambience.start(root: Instance)
 					local light = bulb:FindFirstChildOfClass("PointLight")
 					if light then
 						light.Enabled = night
+					end
+				end
+				-- searchlights and the lighthouse beam
+				for _, p in CollectionService:GetTagged("NightLight") do
+					for _, light in p:GetChildren() do
+						if light:IsA("Light") then
+							(light :: Light).Enabled = night
+						end
 					end
 				end
 			end

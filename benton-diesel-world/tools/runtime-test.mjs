@@ -64,6 +64,15 @@ check('all rides built with cars', `
   end
   return true, #Config.Rides .. " rides"
 `);
+check('themed props built in every land', `
+  local f = workspace.BentonDieselWorld:FindFirstChild("Theming", true)
+  local Theming = require(game.ServerScriptService.BentonServer.Build.Theming)
+  local lands = {}
+  for _, p in Theming.PROPS do lands[p[1]] = true end
+  local n = 0
+  for _ in lands do n += 1 end
+  return f ~= nil and #f:GetChildren() >= #Theming.PROPS and n == 7, #Theming.PROPS .. " props in " .. n .. " lands"
+`);
 check('ride state published', `
   local f = game.ReplicatedStorage.BentonState.Rides.DieselThunder
   return f:GetAttribute("Wait") ~= nil and f:GetAttribute("Duration") > 0, "wait " .. tostring(f:GetAttribute("Wait"))
@@ -92,6 +101,16 @@ check('profile loaded', `
 
 if (hasClient) {
   console.log('== client UI');
+  check('sound player started', `return workspace:FindFirstChild("BentonSounds") ~= nil, nil`);
+  const spinBefore = lua(`
+    local m = workspace.BentonDieselWorld:FindFirstChild("Windmill", true)
+    return m and tostring(m:GetPivot().RightVector) or "missing"
+  `)[0];
+  step(1);
+  check('windmill and other spinners turn', `
+    local m = workspace.BentonDieselWorld:FindFirstChild("Windmill", true)
+    return m ~= nil and tostring(m:GetPivot().RightVector) ~= "${spinBefore}", "${spinBefore}"
+  `);
   check('app UI created', `
     local gui = game.Players.TestGuest.PlayerGui:FindFirstChild("BentonApp")
     return gui ~= nil and gui:FindFirstChild("Dock") ~= nil, nil
