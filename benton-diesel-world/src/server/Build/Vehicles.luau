@@ -26,12 +26,19 @@ local function wheel(model: Model, cf: CFrame, offset: Vector3, diameter: number
 	return Kit.cyl(model, width, diameter, cf * CFrame.new(offset), color or DARK, M.SmoothPlastic)
 end
 
+-- Lap bars and harnesses are named so the clients can raise and lower them
+-- (they are built closed, over the rider).
+local function restraint(p: Part): Part
+	p.Name = "Restraint"
+	return p
+end
+
 local function seatPieces(model: Model, cf: CFrame, seat: CFrame, cushion: Color3, bar: Color3?)
 	-- seat CFrame is the rider's root; cushion sits under it
 	blk(model, cf, Vector3.new(1.9, 0.5, 1.7), seat * CFrame.new(0, -1.55, 0.1), cushion, M.Fabric)
 	blk(model, cf, Vector3.new(1.9, 2.1, 0.45), seat * CFrame.new(0, -0.55, 1.0), cushion, M.Fabric)
 	if bar then
-		blk(model, cf, Vector3.new(1.7, 0.3, 0.3), seat * CFrame.new(0, -0.6, -0.85), bar, M.Metal)
+		restraint(blk(model, cf, Vector3.new(1.7, 0.3, 0.3), seat * CFrame.new(0, -0.6, -0.85), bar, M.Metal))
 	end
 end
 
@@ -211,7 +218,7 @@ local function dropRing(model: Model, ride: Ride, cf: CFrame, seats: { CFrame })
 	for _, seat in seats do
 		blk(model, cf, Vector3.new(1.9, 0.5, 1.7), seat * CFrame.new(0, -1.55, 0.1), blue, M.SmoothPlastic)
 		blk(model, cf, Vector3.new(1.9, 3.2, 0.5), seat * CFrame.new(0, -0.1, 1.0), blue, M.SmoothPlastic)
-		blk(model, cf, Vector3.new(1.6, 1.6, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal)
+		restraint(blk(model, cf, Vector3.new(1.6, 1.6, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal))
 	end
 end
 
@@ -241,6 +248,7 @@ local function pistonCup(model: Model, ride: Ride, cf: CFrame, index: number, se
 	Kit.cyl(model, 0.5, 2.6, cf * CFrame.new(0, 4.6, 0) * CFrame.Angles(0, 0, HALF_PI), DARK, M.Metal)
 	for _, seat in seats do
 		blk(model, cf, Vector3.new(1.8, 1.8, 0.4), seat * CFrame.new(0, -0.7, 0.9), Color3.fromRGB(250, 243, 224), M.Fabric)
+		restraint(blk(model, cf, Vector3.new(1.7, 0.3, 0.3), seat * CFrame.new(0, -0.6, -0.85), Color3.fromRGB(220, 220, 225), M.Metal))
 	end
 end
 
@@ -252,7 +260,7 @@ local function gondola(model: Model, ride: Ride, cf: CFrame, seats: { CFrame })
 	for _, seat in seats do
 		blk(model, cf, Vector3.new(1.9, 0.5, 1.7), seat * CFrame.new(0, -1.55, 0.1), orange, M.SmoothPlastic)
 		blk(model, cf, Vector3.new(1.9, 3.0, 0.5), seat * CFrame.new(0, -0.2, 1.0), orange, M.SmoothPlastic)
-		blk(model, cf, Vector3.new(1.6, 1.4, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal)
+		restraint(blk(model, cf, Vector3.new(1.6, 1.4, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal))
 	end
 end
 

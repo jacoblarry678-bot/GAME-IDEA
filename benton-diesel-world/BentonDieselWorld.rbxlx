@@ -569,7 +569,7 @@ for _, ride in Config.Rides do
 	Config.RideById[ride.id] = ride
 end
 
-Config.BoardingTime = 5 -- seconds riders sit in the station before dispatch
+Config.BoardingTime = 12 -- seconds in the station: riders sit down, staff check every restraint, dispatch
 Config.UnloadTime = 3
 
 ---------------------------------------------------------------------------
@@ -2244,14 +2244,21 @@ local PANTS = {
 }
 local GUEST_HATS = { "GearEars", "TruckerCap", "CowboyHat", "HardHat", "CaptainHat", "RacingHelmet" }
 
+export type Uniform = { shirt: Color3, pants: Color3, cap: Color3? }
+
 -- Build a guest figure. The root sits where a player's HumanoidRootPart
--- would be. pose = "sit" | "stand" | "cheer".
-function Props.guest(seed: number, pose: string): Model
+-- would be. pose = "sit" | "stand" | "cheer", and for staff also "check"
+-- (reaching down to a lap bar), "operate" (hands on a console), "thumbs"
+-- (thumbs up) and "wave". A uniform dresses the figure as park staff.
+function Props.guest(seed: number, pose: string, uniform: Uniform?): Model
 	local rng = Random.new(seed)
 	local skin = SKIN[rng:NextInteger(1, #SKIN)]
 	local shirt = SHIRTS[rng:NextInteger(1, #SHIRTS)]
 	local pants = PANTS[rng:NextInteger(1, #PANTS)]
 	local scale = rng:NextNumber(0.75, 1.0)
+	if uniform then
+		shirt, pants, scale = uniform.shirt, uniform.pants, 1
+	end
 	local pieces: { Piece } = {
 		piece("block", Vector3.new(1.9, 1.9, 1) * scale, CFrame.new(0, 0, 0), shirt), -- torso / root
 		piece("round", Vector3.new(1.15, 1.15, 1.15) * scale, CFrame.new(0, 1.55 * scale, 0), skin),
@@ -2261,6 +2268,17 @@ function Props.guest(seed: number, pose: string): Model
 		local armCF = if armUp
 			then CFrame.new(side * 1.45 * scale, 1.2 * scale, 0) * CFrame.Angles(0, 0, side * math.rad(-20))
 			else CFrame.new(side * 1.45 * scale, -0.05 * scale, 0)
+		-- staff poses swing the arms about the shoulder
+		local swing = if pose == "check" then 65 elseif pose == "operate" then 45 else 0
+		if pose == "thumbs" and side == 1 then
+			swing = 150
+		elseif pose == "wave" and side == 1 then
+			swing = 0
+			armCF = CFrame.new(side * 1.45 * scale, 1.2 * scale, 0) * CFrame.Angles(0, 0, math.rad(25))
+		end
+		if swing ~= 0 then
+			armCF = CFrame.new(side * 1.45 * scale, 0.9 * scale, 0) * CFrame.Angles(math.rad(swing), 0, 0) * CFrame.new(0, -0.95 * scale, 0)
+		end
 		table.insert(pieces, piece("block", Vector3.new(0.9, 1.9, 0.9) * scale, armCF, shirt))
 		if pose == "sit" then
 			table.insert(pieces, piece("block", Vector3.new(0.9, 0.9, 1.9) * scale, CFrame.new(side * 0.48 * scale, -1.4 * scale, -0.5 * scale), pants))
@@ -2272,21 +2290,32 @@ function Props.guest(seed: number, pose: string): Model
 	-- eyes
 	table.insert(pieces, piece("block", Vector3.new(0.14, 0.2, 0.05) * scale, CFrame.new(-0.22 * scale, 1.62 * scale, -0.56 * scale), Color3.fromRGB(20, 20, 20)))
 	table.insert(pieces, piece("block", Vector3.new(0.14, 0.2, 0.05) * scale, CFrame.new(0.22 * scale, 1.62 * scale, -0.56 * scale), Color3.fromRGB(20, 20, 20)))
+	if uniform then
+		-- name badge and a cap
+		table.insert(pieces, piece("block", Vector3.new(0.45, 0.25, 0.06), CFrame.new(-0.45, 0.5, -0.52), Color3.fromRGB(245, 245, 240)))
+		if uniform.cap then
+			table.insert(pieces, piece("round", Vector3.new(1.25, 0.55, 1.25), CFrame.new(0, 2.0, 0), uniform.cap))
+			table.insert(pieces, piece("block", Vector3.new(1.0, 0.1, 0.6), CFrame.new(0, 1.9, -0.75), uniform.cap))
+		end
+	end
 	local model = Instance.new("Model")
-	model.Name = "Guest"
+	model.Name = if uniform then "Staff" else "Guest"
 	local root, parts = assemble(pieces, "Root", false)
 	root.Parent = model
 	model.PrimaryPart = root
 	for _, p in parts do
 		p.CastShadow = false
 	end
-	if rng:NextNumber() < 0.35 then
+	if not uniform and rng:NextNumber() < 0.35 then
 		local hat = Items.ById[GUEST_HATS[rng:NextInteger(1, #GUEST_HATS)]]
 		local hatModel = Props.hatModel(hat, CFrame.new(0, 2.1 * scale, 0))
 		hatModel.Parent = model
 	end
 	return model
 end
+
+-- Distance from a standing figure's root down to its feet.
+Props.STAND_HEIGHT = 2.85
 
 return Props
 ]]></string>
@@ -3014,6 +3043,299 @@ return Sounds
       </Item>
       <Item class="ModuleScript" referent="13">
         <Properties>
+          <string name="Name">Staff</string>
+          <string name="Source"><![CDATA[--!strict
+-- Park staff. Every ride has a crew: an operator at the control console
+-- and one or two attendants who walk the loading platform during boarding,
+-- checking every lap bar, harness or seatbelt before giving the operator a
+-- thumbs up to dispatch. This module works out where they stand (shared by
+-- the park builder, the Roblox client and the browser export), what kind of
+-- restraint each ride has, the staff uniform and what the staff say.
+
+local Config = require(script.Parent.Config)
+local RideMotion = require(script.Parent.RideMotion)
+local QueueLine = require(script.Parent.QueueLine)
+local Props = require(script.Parent.Props)
+
+local Staff = {}
+
+-- Boarding timeline (seconds after the riders sit down; Config.BoardingTime
+-- is the whole boarding window)
+Staff.PULL_BY = 3.5 -- riders pull their own restraints down by now
+Staff.CHECK_FROM = 2.5 -- attendants start walking the train
+Staff.ALL_CLEAR = 1.6 -- seconds before dispatch: thumbs up to the operator
+Staff.DISPATCH = 0.6 -- seconds before dispatch: the operator presses the button
+Staff.WALK = 7 -- attendant walking speed (studs/s)
+Staff.CHECK_TIME = 0.55 -- seconds spent at each car
+
+export type Crew = {
+	ride: string,
+	restraint: string, -- "lapbar" | "harness" | "belt" | "none"
+	console: CFrame, -- the control console (base center, facing the operator)
+	operator: CFrame, -- where the operator stands (feet), facing the console
+	stops: { CFrame }, -- where an attendant stands to check each car (feet, facing it)
+	stopCars: { number }, -- which car each stop checks
+	homes: { CFrame }, -- where attendants wait while the ride runs
+	exit: CFrame, -- an attendant at the exit side waving riders off
+	attendants: number,
+}
+
+local RESTRAINT = {
+	coaster = "lapbar",
+	spinner = "lapbar",
+	droptower = "harness",
+	pendulum = "harness",
+	trucks = "belt",
+	karts = "belt",
+}
+
+function Staff.restraint(ride: Config.Ride): string
+	return RESTRAINT[ride.kind] or "none"
+end
+
+-- floor height and rim radius of each flat ride's loading area
+type FlatSpec = { floor: number, rim: number }
+local FLAT: { [string]: FlatSpec } = {
+	carousel = { floor = 2.2, rim = 20 },
+	spinner = { floor = 2.0, rim = 24 },
+	pendulum = { floor = 4.6, rim = 10 },
+	droptower = { floor = 2.4, rim = 12 },
+}
+Staff.FLAT = FLAT
+
+local function flat(v: Vector3): Vector3
+	local f = Vector3.new(v.X, 0, v.Z)
+	return if f.Magnitude > 1e-6 then f.Unit else Vector3.new(0, 0, -1)
+end
+
+local function facing(p: Vector3, toward: Vector3): CFrame
+	local d = flat(toward - p)
+	return CFrame.lookAt(p, p + d)
+end
+
+-- Station platform frame shared with the ride builder's station().
+export type StationFrame = { frame: CFrame, length: number, platformTop: number, halfGap: number }
+
+function Staff.stationFrame(ride: Config.Ride, rest: { CFrame }): StationFrame
+	local first, last = rest[1], rest[#rest]
+	local trackY = first.Y
+	local dir = flat(first.Position - last.Position)
+	if #rest == 1 then
+		dir = flat(first.LookVector)
+	end
+	local center = (first.Position + last.Position) / 2
+	local length = (first.Position - last.Position).Magnitude + 12
+	local frame = CFrame.lookAt(Vector3.new(center.X, 0, center.Z), Vector3.new(center.X, 0, center.Z) + dir)
+	local platformTop = math.max(1.2, trackY + (if ride.kind == "train" then -0.4 elseif ride.kind == "tram" then 0.6 else 0.6))
+	local halfGap = if ride.kind == "train" or ride.kind == "tram" then 5.2 else 4.6
+	return { frame = frame, length = length, platformTop = platformTop, halfGap = halfGap }
+end
+
+local cache: { [string]: Crew } = {}
+
+function Staff.crew(rideId: string): Crew?
+	if cache[rideId] then
+		return cache[rideId]
+	end
+	local ride: Config.Ride? = nil
+	for _, r in Config.Rides do
+		if r.id == rideId then
+			ride = r
+		end
+	end
+	if not ride then
+		return nil
+	end
+	local found = ride :: Config.Ride
+	local motion = RideMotion.get(found.id)
+	local rest = motion.pose(0)
+	local line = QueueLine.get(found.id)
+	local gate = if line then line.gate else found.entrance
+	local crew: Crew
+	if motion.sampler then
+		-- track rides: along the loading platform beside the train
+		local sf = Staff.stationFrame(found, rest)
+		local frame, length = sf.frame, sf.length
+		local floor = sf.platformTop
+		local edge = sf.halfGap
+		if found.kind == "karts" or found.kind == "trucks" then
+			-- no station: the crew stands beside the cars on the road edge
+			local drop = if found.kind == "karts" then 0.5 else 1.35
+			local width = if found.kind == "karts" then 15 else 8
+			floor = math.max(0.05, rest[1].Y - drop + 0.5)
+			edge = width / 2 + 0.8
+		end
+		local localGate = frame:PointToObjectSpace(gate)
+		local side = if localGate.X < 0 then -1 else 1
+		local stops, stopCars = {}, {}
+		for i, cf in rest do
+			if #(motion.seats[i] or {}) > 0 then
+				local z = frame:PointToObjectSpace(cf.Position).Z
+				local p = (frame * CFrame.new(side * (edge + 1.0), 0, z)).Position
+				p = Vector3.new(p.X, floor, p.Z)
+				table.insert(stops, facing(p, p - frame.RightVector * side))
+				table.insert(stopCars, i)
+			end
+		end
+		local consoleP = (frame * CFrame.new(side * (edge + 1.5), 0, -length / 2 + 2.4)).Position
+		local operatorP = (frame * CFrame.new(side * (edge + 3.0), 0, -length / 2 + 2.4)).Position
+		consoleP = Vector3.new(consoleP.X, floor, consoleP.Z)
+		operatorP = Vector3.new(operatorP.X, floor, operatorP.Z)
+		local homes = {}
+		local attendants = if #stops > 3 then 2 else 1
+		for k = 1, attendants do
+			local z = if k == 1 then length / 2 - 4 else 0
+			local p = (frame * CFrame.new(side * (edge + 1.6), 0, z)).Position
+			p = Vector3.new(p.X, floor, p.Z)
+			table.insert(homes, facing(p, p - frame.RightVector * side))
+		end
+		local exitP = (frame * CFrame.new(-side * (edge + 1.6), 0, 0)).Position
+		exitP = Vector3.new(exitP.X, floor, exitP.Z)
+		crew = {
+			ride = found.id,
+			restraint = Staff.restraint(found),
+			console = facing(consoleP, operatorP),
+			operator = facing(operatorP, consoleP),
+			stops = stops,
+			stopCars = stopCars,
+			homes = homes,
+			exit = facing(exitP, exitP + frame.RightVector * side),
+			attendants = attendants,
+		}
+	else
+		-- flat rides: around the ring of cars on the loading floor
+		local o = found.origin
+		local spec: FlatSpec = FLAT[found.kind] or { floor = 0.4, rim = 14 }
+		local floor = o.Y + spec.floor
+		local stops, stopCars = {}, {}
+		for i, cf in rest do
+			local seats = motion.seats[i] or {}
+			if #rest == 1 and #seats > 4 then
+				-- one big car with seats all round: stop by every third seat
+				for s = 2, #seats, 3 do
+					local sp = (cf * seats[s]).Position
+					local u = flat(sp - o)
+					local r = (Vector3.new(sp.X, 0, sp.Z) - Vector3.new(o.X, 0, o.Z)).Magnitude
+					local p = Vector3.new(o.X, floor, o.Z) + u * (r + 2.4)
+					table.insert(stops, facing(p, Vector3.new(sp.X, floor, sp.Z)))
+					table.insert(stopCars, i)
+				end
+			elseif #seats > 0 then
+				local u = flat(cf.Position - o)
+				local r = (Vector3.new(cf.X, 0, cf.Z) - Vector3.new(o.X, 0, o.Z)).Magnitude
+				local p = Vector3.new(o.X, floor, o.Z) + u * (r + 3.2)
+				table.insert(stops, facing(p, Vector3.new(cf.X, floor, cf.Z)))
+				table.insert(stopCars, i)
+			end
+		end
+		local toGate = flat(gate - o)
+		local side = CFrame.Angles(0, math.rad(35), 0):VectorToWorldSpace(toGate)
+		local consoleP = Vector3.new(o.X, 0.4, o.Z) + side * (spec.rim + 1.6)
+		local operatorP = Vector3.new(o.X, 0.4, o.Z) + side * (spec.rim + 3.1)
+		local homes = {}
+		local attendants = if #stops > 3 then 2 else 1
+		for k = 1, attendants do
+			local a = CFrame.Angles(0, math.rad(if k == 1 then -12 else 12), 0):VectorToWorldSpace(toGate)
+			local p = Vector3.new(o.X, 0.4, o.Z) + a * (spec.rim + 1.8)
+			table.insert(homes, facing(p, o))
+		end
+		local exitP = Vector3.new(o.X, 0.4, o.Z) - toGate * (spec.rim + 1.8)
+		crew = {
+			ride = found.id,
+			restraint = Staff.restraint(found),
+			console = facing(consoleP, operatorP),
+			operator = facing(operatorP, consoleP),
+			stops = stops,
+			stopCars = stopCars,
+			homes = homes,
+			exit = facing(exitP, o),
+			attendants = attendants,
+		}
+	end
+	cache[rideId] = crew
+	return crew
+end
+
+-- Which stops each attendant covers (front half / back half).
+function Staff.route(crew: Crew, k: number): { number }
+	local n = #crew.stops
+	local out = {}
+	if crew.attendants == 1 then
+		for i = 1, n do
+			table.insert(out, i)
+		end
+	else
+		local half = math.ceil(n / 2)
+		if k == 1 then
+			for i = 1, half do
+				table.insert(out, i)
+			end
+		else
+			for i = n, half + 1, -1 do
+				table.insert(out, i)
+			end
+		end
+	end
+	return out
+end
+
+-- Uniform: a polo in the land's color, navy trousers, a name badge.
+Staff.PANTS = Color3.fromRGB(34, 44, 72)
+Staff.CAP = Color3.fromRGB(28, 34, 52)
+
+function Staff.shirt(landId: string): Color3
+	local land = Config.landById(landId)
+	return if land then land.color else Color3.fromRGB(196, 40, 40)
+end
+
+-- A staff member in uniform (a part-built figure; see Props.guest).
+function Staff.figure(seed: number, landId: string, pose: string): Model
+	local rng = Random.new(seed + 17)
+	local cap = if rng:NextNumber() < 0.45 then Staff.CAP else nil
+	return Props.guest(seed, pose, { shirt = Staff.shirt(landId), pants = Staff.PANTS, cap = cap })
+end
+
+-- Place a standing staff figure with its feet at `at` and tag it, so other
+-- renderers (the browser edition) can draw their own person there.
+function Staff.place(parent: Instance, role: string, landId: string, seed: number, at: CFrame, rideId: string?, pose: string?): Model
+	local m = Staff.figure(seed, landId, pose or "stand")
+	m:PivotTo(at * CFrame.new(0, Props.STAND_HEIGHT, 0))
+	m:SetAttribute("Role", role)
+	m:SetAttribute("Land", landId)
+	m:SetAttribute("Seed", seed)
+	if rideId then
+		m:SetAttribute("RideId", rideId)
+	end
+	m:AddTag("StaffSpot")
+	m.Parent = parent
+	return m
+end
+
+-- Things the staff say (speech bubbles).
+Staff.LINES = {
+	pull = { "Pull down on your lap bar, please!", "Lap bars down, folks!", "Push your restraint down until it clicks!" },
+	pullHarness = { "Pull your harness down over your shoulders!", "Harnesses down, please!" },
+	belt = { "Buckle up, please!", "Seatbelts on, everyone!" },
+	check = { "You're all set!", "Nice and snug!", "Good to go!", "Have a great ride!" },
+	checkNone = { "Keep your hands inside!", "Have fun out there!", "Enjoy the ride!" },
+	clear = { "All clear!", "Clear!", "Good to go!" },
+	dispatch = { "Clear to dispatch!", "Here we go!", "Enjoy your ride!" },
+	unload = { "Welcome back!", "Thanks for riding!", "Exit to your right, please!", "Watch your step!" },
+	wait = { "Step right up!", "Next train in just a moment!", "Line moves fast today!" },
+	shop = { "Welcome in!", "Hi there! Take a look around!", "Let me know if you need anything!" },
+	food = { "Hungry? We've got you covered!", "Welcome! What can I get you?", "Fresh and hot!" },
+	greeter = { "Welcome to Benton Diesel World!", "Have a great day at the park!", "Grab a map and have fun!" },
+	popcorn_cart = { "Popcorn! Fresh popcorn!", "Hot buttered popcorn here!", "Get it while it's warm!" },
+	balloon_cart = { "Balloons! Get your balloons!", "Pick a color, any color!", "Don't let it float away!" },
+	sweeper = { "Morning!", "Enjoy the park!", "Watch your step there!" },
+}
+
+return Staff
+]]></string>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="14">
+        <Properties>
           <string name="Name">Track</string>
           <string name="Source"><![CDATA[-- Track geometry and timing shared by the server (which builds rails and
 -- knows how long a ride cycle lasts) and the clients (which animate the
@@ -3458,11 +3780,11 @@ return Track
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="14">
+  <Item class="ServerScriptService" referent="15">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="15">
+    <Item class="Script" referent="16">
       <Properties>
         <string name="Name">BentonServer</string>
         <token name="RunContext">0</token>
@@ -3623,11 +3945,11 @@ if RunService:IsStudio() then
 end
 ]]></string>
       </Properties>
-      <Item class="Folder" referent="16">
+      <Item class="Folder" referent="17">
         <Properties>
           <string name="Name">Build</string>
         </Properties>
-        <Item class="ModuleScript" referent="17">
+        <Item class="ModuleScript" referent="18">
           <Properties>
             <string name="Name">Ground</string>
             <string name="Source"><![CDATA[-- Terrain, perimeter wall, parking lot, front gate and the spawn.
@@ -3635,6 +3957,7 @@ end
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local Kit = require(script.Parent.Kit)
+local Staff = require(Shared.Staff)
 
 local M = Enum.Material
 local C = Config.Colors
@@ -3819,6 +4142,10 @@ local function gate(parent: Instance)
 		local top = Kit.block(parent, Vector3.new(0.6, 0.6, 0.6), CFrame.new(x - 2.4, 4.3, z - 1), C.Green, M.Neon)
 		top.CanCollide = false
 	end
+	-- greeters just inside the gate, welcoming guests in
+	for i, x in { -24, 24 } do
+		Staff.place(parent, "greeter", "Plaza", 4100 + i * 13, CFrame.lookAt(Vector3.new(x, 0.4, z - 10), Vector3.new(x * 0.6, 0.4, z + 10)))
+	end
 	-- palms and planters on the forecourt
 	for _, x in { -60, -48, 48, 60 } do
 		Kit.tree(parent, Vector3.new(x, 0.4, 300), "palm", 1)
@@ -3867,7 +4194,7 @@ return Ground
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="18">
+        <Item class="ModuleScript" referent="19">
           <Properties>
             <string name="Name">Kit</string>
             <string name="Source"><![CDATA[-- Building kit: small helpers the land builders use to put the park
@@ -4087,11 +4414,18 @@ local LEAF = {
 	Color3.fromRGB(90, 150, 64),
 }
 
-function Kit.tree(parent: Instance, pos: Vector3, kind: string?, scale: number?)
+function Kit.tree(folder: Instance, pos: Vector3, kind: string?, scale: number?)
 	local rng = Kit.rng
 	local s = scale or rng:NextNumber(0.8, 1.25)
 	local k = kind or (if rng:NextNumber() < 0.5 then "round" else "pine")
 	local trunk = Color3.fromRGB(110, 78, 50)
+	-- each tree is its own tagged model so other renderers can swap in
+	-- their own trees (the browser edition does)
+	local parent = Kit.model("Tree", folder)
+	parent:SetAttribute("TreeKind", k)
+	parent:SetAttribute("TreeScale", s)
+	parent:SetAttribute("Base", pos)
+	parent:AddTag("Tree")
 	if k == "pine" then
 		Kit.post(parent, 6 * s, 1.4 * s, pos, trunk, M.Wood)
 		local leaf = Color3.fromRGB(40, 100, 56)
@@ -4121,6 +4455,7 @@ function Kit.bush(parent: Instance, pos: Vector3, size: number?)
 	local s = size or Kit.rng:NextNumber(2.5, 4)
 	local b = Kit.ball(parent, s, pos + Vector3.new(0, s * 0.35, 0), LEAF[Kit.rng:NextInteger(1, #LEAF)], M.Grass)
 	b.CastShadow = false
+	b:AddTag("Bush")
 end
 
 -- Flower bed: low box of soil with colorful blooms.
@@ -4377,7 +4712,7 @@ return Kit
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="19">
+        <Item class="ModuleScript" referent="20">
           <Properties>
             <string name="Name">Lands</string>
             <string name="Source"><![CDATA[-- Themed scenery for each land, the two show venues (Lakeside Stage and
@@ -4988,7 +5323,7 @@ return Lands
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="20">
+        <Item class="ModuleScript" referent="21">
           <Properties>
             <string name="Name">ParkBuilder</string>
             <string name="Source"><![CDATA[-- Builds the whole park into Workspace.BentonDieselWorld.
@@ -5037,7 +5372,7 @@ return ParkBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="21">
+        <Item class="ModuleScript" referent="22">
           <Properties>
             <string name="Name">Plaza</string>
             <string name="Source"><![CDATA[-- Benton Plaza: entry plaza, Main Street, the Hub with the Benton Globe,
@@ -5294,7 +5629,7 @@ return Plaza
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="22">
+        <Item class="ModuleScript" referent="23">
           <Properties>
             <string name="Name">RideBuilder</string>
             <string name="Source"><![CDATA[-- Builds every ride: track or structure, vehicles, station, and the queue
@@ -5304,6 +5639,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local RideMotion = require(Shared.RideMotion)
 local Track = require(Shared.Track)
+local Staff = require(Shared.Staff)
 local QueueLine = require(Shared.QueueLine)
 local Kit = require(script.Parent.Kit)
 local Vehicles = require(script.Parent.Vehicles)
@@ -5361,6 +5697,8 @@ local function steelTrack(parent: Instance, ride: Ride, sampler: Track.Sampler, 
 	local step = 3
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Track", parent)
+	f:SetAttribute("Style", if wooden then "wood" else "steel")
+	f:SetAttribute("Color", railColor)
 	local supports = Kit.folder("Supports", parent)
 	for i = 0, n - 1 do
 		local s0 = i * step
@@ -5420,6 +5758,8 @@ local function flumeTrack(parent: Instance, ride: Ride, sampler: Track.Sampler)
 	local step = 3
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Channel", parent)
+	f:SetAttribute("Style", "flume")
+	local supports = Kit.folder("Supports", parent)
 	local highest, highestS = -math.huge, 0
 	for i = 0, n - 1 do
 		local s0 = i * step
@@ -5440,7 +5780,7 @@ local function flumeTrack(parent: Instance, ride: Ride, sampler: Track.Sampler)
 		if i % 4 == 0 and cf0.Y > 5 then
 			for _, sx in { -3.6, 3.6 } do
 				local p = (cf0 * CFrame.new(sx, -1.6, 0)).Position
-				Kit.box(f, Vector3.new(1, p.Y, 1), Vector3.new(p.X, 0, p.Z), wood, M.Wood)
+				Kit.box(supports, Vector3.new(1, p.Y, 1), Vector3.new(p.X, 0, p.Z), wood, M.Wood)
 			end
 		end
 	end
@@ -5475,6 +5815,14 @@ local function groundStrip(parent: Instance, sampler: Track.Sampler, width: numb
 	local step = 4
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Road", parent)
+	f:SetAttribute("Style", "road")
+	f:SetAttribute("Width", width)
+	f:SetAttribute("Drop", drop)
+	f:SetAttribute("Color", color)
+	if dash then
+		f:SetAttribute("Dash", dash)
+	end
+	f:SetAttribute("Curbs", curbs == true)
 	for i = 0, n - 1 do
 		local s0 = i * step
 		local s1 = math.min((i + 1) * step, L)
@@ -5506,6 +5854,7 @@ local function railTrack(parent: Instance, sampler: Track.Sampler)
 	local step = 3
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Rails", parent)
+	f:SetAttribute("Style", "rails")
 	for i = 0, n - 1 do
 		local s0 = i * step
 		local s1 = math.min((i + 1) * step, L)
@@ -5529,17 +5878,8 @@ end
 local function station(parent: Instance, ride: Ride, motion: RideMotion.Motion, rest: { CFrame })
 	local f = Kit.folder("Station", parent)
 	local landColor = (Config.landById(ride.land) :: Config.Land).color
-	local first, last = rest[1], rest[#rest]
-	local trackY = first.Y
-	local dir = flat(first.Position - last.Position)
-	if #rest == 1 then
-		dir = flat(first.LookVector)
-	end
-	local center = (first.Position + last.Position) / 2
-	local length = (first.Position - last.Position).Magnitude + 12
-	local frame = CFrame.lookAt(Vector3.new(center.X, 0, center.Z), Vector3.new(center.X, 0, center.Z) + dir)
-	local platformTop = math.max(1.2, trackY + (if ride.kind == "train" then -0.4 elseif ride.kind == "tram" then 0.6 else 0.6))
-	local halfGap = if ride.kind == "train" or ride.kind == "tram" then 5.2 else 4.6
+	local sf = Staff.stationFrame(ride, rest)
+	local frame, length, platformTop, halfGap = sf.frame, sf.length, sf.platformTop, sf.halfGap
 	for _, sx in { -1, 1 } do
 		Kit.block(f, Vector3.new(4, platformTop, length), frame * CFrame.new(sx * (halfGap + 2), platformTop / 2, 0), C.Concrete, M.Concrete)
 		Kit.block(f, Vector3.new(0.5, 0.1, length), frame * CFrame.new(sx * (halfGap + 0.3), platformTop + 0.05, 0), Color3.fromRGB(250, 210, 40), M.SmoothPlastic)
@@ -5729,6 +6069,9 @@ local function dropTower(parent: Instance, ride: Ride, motion: RideMotion.Motion
 	local f = Kit.folder("Tower", parent)
 	local H = 172
 	Kit.block(f, Vector3.new(7, H, 7), o * CFrame.new(0, H / 2, 0), dark, M.Metal)
+	-- loading deck around the tower, where the crew checks the harnesses
+	Kit.disc(f, 24, 2.4, (o * CFrame.new(0, Staff.FLAT.droptower.floor, 0)).Position, C.Concrete, M.Concrete)
+	Kit.disc(f, 24.6, 0.2, (o * CFrame.new(0, Staff.FLAT.droptower.floor + 0.05, 0)).Position, Color3.fromRGB(250, 210, 40), M.SmoothPlastic).CastShadow = false
 	for _, sx in { -1, 1 } do
 		for _, sz in { -1, 1 } do
 			local strip_ = Kit.block(f, Vector3.new(0.5, H - 6, 0.5), o * CFrame.new(sx * 3.6, H / 2, sz * 3.6), blue, M.Neon)
@@ -5859,6 +6202,45 @@ local function pendulumStructure(parent: Instance, ride: Ride, motion: RideMotio
 end
 
 ---------------------------------------------------------------------------
+-- Ride crew: the control console and its operator (attendants are
+-- animated by the clients)
+---------------------------------------------------------------------------
+local function crewPost(parent: Instance, ride: Ride)
+	local crew = Staff.crew(ride.id)
+	if not crew then
+		return
+	end
+	local f = Kit.folder("Crew", parent)
+	local cf = crew.console
+	local cabinet = Color3.fromRGB(46, 52, 64)
+	Kit.block(f, Vector3.new(2.8, 3.1, 1.3), cf * CFrame.new(0, 1.55, 0), cabinet, M.Metal)
+	-- sloped control panel facing the operator, with its buttons
+	local panel = cf * CFrame.new(0, 3.2, -0.1) * CFrame.Angles(math.rad(-22), 0, 0)
+	Kit.block(f, Vector3.new(3.0, 0.3, 1.7), panel, Color3.fromRGB(30, 32, 38), M.Metal)
+	local buttons = {
+		{ -0.9, Color3.fromRGB(60, 220, 90) }, -- dispatch
+		{ -0.3, Color3.fromRGB(250, 200, 40) },
+		{ 0.3, Color3.fromRGB(60, 140, 240) },
+		{ 0.95, Color3.fromRGB(230, 40, 40) }, -- emergency stop
+	}
+	for _, b in buttons do
+		local p = (panel * CFrame.new(b[1] :: number, 0.2, 0.1)).Position
+		Kit.disc(f, if b[1] == 0.95 then 0.55 else 0.38, 0.14, p + Vector3.new(0, 0.07, 0), b[2] :: Color3, M.Neon).CastShadow = false
+	end
+	local screen = Kit.block(f, Vector3.new(1.4, 0.8, 0.12), cf * CFrame.new(0, 4.0, 0.45) * CFrame.Angles(math.rad(-10), 0, 0), Color3.fromRGB(40, 120, 170), M.Neon)
+	screen.CastShadow = false
+	-- stack light: green / amber / red
+	local pole = (cf * CFrame.new(1.25, 0, 0.45)).Position
+	Kit.post(f, 5.6, 0.18, Vector3.new(pole.X, cf.Y + 3.1, pole.Z), cabinet, M.Metal)
+	for i, c in { Color3.fromRGB(60, 220, 90), Color3.fromRGB(250, 190, 40), Color3.fromRGB(230, 50, 40) } do
+		local lamp = Kit.block(f, Vector3.new(0.42, 0.36, 0.42), CFrame.new(pole + Vector3.new(0, cf.Y + 3.1 + 2.3 + i * 0.38, 0)), c, if i == 1 then M.Neon else M.SmoothPlastic)
+		lamp.Name = "StackLight" .. i
+		lamp.CastShadow = false
+	end
+	Staff.place(f, "operator", ride.land, #ride.id * 97 + 5, crew.operator, ride.id, "operate")
+end
+
+---------------------------------------------------------------------------
 -- Entry point
 ---------------------------------------------------------------------------
 function RideBuilder.build(root: Instance): { [string]: RideInfo }
@@ -5905,6 +6287,7 @@ function RideBuilder.build(root: Instance): { [string]: RideInfo }
 		for _, m in (model:FindFirstChild("Moving") :: Folder):GetChildren() do
 			(m :: Model).ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 		end
+		crewPost(model, ride)
 		local nameLabel, waitLabel, statusLabel, join, express = queueEntrance(model, ride)
 		infos[ride.id] = {
 			ride = ride,
@@ -5924,7 +6307,7 @@ return RideBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="23">
+        <Item class="ModuleScript" referent="24">
           <Properties>
             <string name="Name">Theming</string>
             <string name="Source"><![CDATA[-- Themed set dressing for every land: carts, signs, props, overhead lights
@@ -5940,6 +6323,7 @@ return RideBuilder
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local Kit = require(script.Parent.Kit)
+local Staff = require(Shared.Staff)
 
 local M = Enum.Material
 local C = Config.Colors
@@ -7134,6 +7518,13 @@ function Theming.build(parent: Instance): { { number } }
 			local cf = CFrame.new(p[3] :: number, y, p[4] :: number) * CFrame.Angles(0, math.rad(p[5] :: number), 0)
 			local holder = Kit.folder(p[2] :: string, f)
 			builder(holder, cf, land.color, rng)
+			if p[2] == "popcorn_cart" or p[2] == "balloon_cart" then
+				-- a vendor minding the cart, by its push handle
+				local at = (cf * CFrame.new(4.4, 0.15, 1.0)).Position
+				local look = cf:VectorToWorldSpace(Vector3.new(-0.5, 0, -1))
+				local vendor = Staff.place(holder, "vendor", land.id, 5200 + #footprints * 11, CFrame.lookAt(at, at + look))
+				vendor:SetAttribute("Kind", p[2] :: string)
+			end
 			table.insert(footprints, { p[3] :: number, p[4] :: number, (Theming.RADIUS[p[2] :: string] or 2) + 1 })
 		end
 	end
@@ -7148,7 +7539,7 @@ return Theming
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="24">
+        <Item class="ModuleScript" referent="25">
           <Properties>
             <string name="Name">Vehicles</string>
             <string name="Source"><![CDATA[-- Ride vehicles. Each car is a Model whose PrimaryPart ("Base") sits
@@ -7179,12 +7570,19 @@ local function wheel(model: Model, cf: CFrame, offset: Vector3, diameter: number
 	return Kit.cyl(model, width, diameter, cf * CFrame.new(offset), color or DARK, M.SmoothPlastic)
 end
 
+-- Lap bars and harnesses are named so the clients can raise and lower them
+-- (they are built closed, over the rider).
+local function restraint(p: Part): Part
+	p.Name = "Restraint"
+	return p
+end
+
 local function seatPieces(model: Model, cf: CFrame, seat: CFrame, cushion: Color3, bar: Color3?)
 	-- seat CFrame is the rider's root; cushion sits under it
 	blk(model, cf, Vector3.new(1.9, 0.5, 1.7), seat * CFrame.new(0, -1.55, 0.1), cushion, M.Fabric)
 	blk(model, cf, Vector3.new(1.9, 2.1, 0.45), seat * CFrame.new(0, -0.55, 1.0), cushion, M.Fabric)
 	if bar then
-		blk(model, cf, Vector3.new(1.7, 0.3, 0.3), seat * CFrame.new(0, -0.6, -0.85), bar, M.Metal)
+		restraint(blk(model, cf, Vector3.new(1.7, 0.3, 0.3), seat * CFrame.new(0, -0.6, -0.85), bar, M.Metal))
 	end
 end
 
@@ -7364,7 +7762,7 @@ local function dropRing(model: Model, ride: Ride, cf: CFrame, seats: { CFrame })
 	for _, seat in seats do
 		blk(model, cf, Vector3.new(1.9, 0.5, 1.7), seat * CFrame.new(0, -1.55, 0.1), blue, M.SmoothPlastic)
 		blk(model, cf, Vector3.new(1.9, 3.2, 0.5), seat * CFrame.new(0, -0.1, 1.0), blue, M.SmoothPlastic)
-		blk(model, cf, Vector3.new(1.6, 1.6, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal)
+		restraint(blk(model, cf, Vector3.new(1.6, 1.6, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal))
 	end
 end
 
@@ -7394,6 +7792,7 @@ local function pistonCup(model: Model, ride: Ride, cf: CFrame, index: number, se
 	Kit.cyl(model, 0.5, 2.6, cf * CFrame.new(0, 4.6, 0) * CFrame.Angles(0, 0, HALF_PI), DARK, M.Metal)
 	for _, seat in seats do
 		blk(model, cf, Vector3.new(1.8, 1.8, 0.4), seat * CFrame.new(0, -0.7, 0.9), Color3.fromRGB(250, 243, 224), M.Fabric)
+		restraint(blk(model, cf, Vector3.new(1.7, 0.3, 0.3), seat * CFrame.new(0, -0.6, -0.85), Color3.fromRGB(220, 220, 225), M.Metal))
 	end
 end
 
@@ -7405,7 +7804,7 @@ local function gondola(model: Model, ride: Ride, cf: CFrame, seats: { CFrame })
 	for _, seat in seats do
 		blk(model, cf, Vector3.new(1.9, 0.5, 1.7), seat * CFrame.new(0, -1.55, 0.1), orange, M.SmoothPlastic)
 		blk(model, cf, Vector3.new(1.9, 3.0, 0.5), seat * CFrame.new(0, -0.2, 1.0), orange, M.SmoothPlastic)
-		blk(model, cf, Vector3.new(1.6, 1.4, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal)
+		restraint(blk(model, cf, Vector3.new(1.6, 1.4, 0.4), seat * CFrame.new(0, 0.2, -0.6), Color3.fromRGB(220, 220, 225), M.Metal))
 	end
 end
 
@@ -7462,7 +7861,7 @@ return Vehicles
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="25">
+        <Item class="ModuleScript" referent="26">
           <Properties>
             <string name="Name">Venues</string>
             <string name="Source"><![CDATA[-- Shops and restaurants: open-front buildings with a counter, a prompt,
@@ -7472,6 +7871,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Props = require(Shared.Props)
+local Staff = require(Shared.Staff)
 local Kit = require(script.Parent.Kit)
 
 local M = Enum.Material
@@ -7576,11 +7976,13 @@ local function build(parent: Instance, venue: Config.Venue): VenueInfo
 			preview.Parent = model
 		end
 	end
-	-- cashier figure behind the counter
-	local cashier = Props.guest(#venue.id * 31, "stand")
-	cashier:PivotTo(cf * CFrame.new(venue.size.X / 4, 3.4, -hz + 5.5) * CFrame.Angles(0, 0, 0))
-	cashier.Name = "Cashier"
-	cashier.Parent = model
+	-- cashiers behind the counter, facing out
+	for k, x in { venue.size.X / 4, -venue.size.X / 5 } do
+		local cashier = Staff.place(model, "cashier", venue.land, #venue.id * 31 + k * 7, cf * CFrame.new(x, 0.55, -hz + 5.5))
+		cashier.Name = "Cashier"
+		cashier:SetAttribute("VenueId", venue.id)
+		cashier:SetAttribute("Kind", venue.kind)
+	end
 	-- sidewalk menu board on legs
 	local boardCF = cf * CFrame.new(-venue.size.X / 2 + 4, 0, -hz - 5)
 	for _, sx in { -4, 4 } do
@@ -7613,7 +8015,7 @@ return Venues
           </Properties>
         </Item>
       </Item>
-      <Item class="ModuleScript" referent="26">
+      <Item class="ModuleScript" referent="27">
         <Properties>
           <string name="Name">PlayerData</string>
           <string name="Source"><![CDATA[-- Player profiles: Benton Bucks, souvenirs, Express Passes, passport
@@ -7946,7 +8348,7 @@ return PlayerData
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="27">
+      <Item class="ModuleScript" referent="28">
         <Properties>
           <string name="Name">RideService</string>
           <string name="Source"><![CDATA[-- Ride operations: queue lines shared by real players and simulated guests,
@@ -8680,7 +9082,7 @@ return RideService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="28">
+      <Item class="ModuleScript" referent="29">
         <Properties>
           <string name="Name">ShopService</string>
           <string name="Source"><![CDATA[-- Shops, restaurants, eating, hunger and food boosts.
@@ -8939,7 +9341,7 @@ return ShopService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="29">
+      <Item class="ModuleScript" referent="30">
         <Properties>
           <string name="Name">ShowService</string>
           <string name="Source"><![CDATA[-- Runs the show schedule. When a show starts the server publishes its start
@@ -9047,7 +9449,7 @@ return ShowService
 ]]></string>
         </Properties>
       </Item>
-      <Item class="ModuleScript" referent="30">
+      <Item class="ModuleScript" referent="31">
         <Properties>
           <string name="Name">Wearables</string>
           <string name="Source"><![CDATA[-- Puts purchased souvenirs on characters: hats and shades as Accessories,
@@ -9211,27 +9613,27 @@ return Wearables
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="31">
+  <Item class="SoundService" referent="32">
     <Properties>
       <string name="Name">SoundService</string>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="32">
+  <Item class="StarterPlayer" referent="33">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <float name="CameraMaxZoomDistance">160</float>
       <float name="CharacterWalkSpeed">18</float>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="33">
+    <Item class="StarterPlayerScripts" referent="34">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="34">
+      <Item class="LocalScript" referent="35">
         <Properties>
           <string name="Name">BentonClient</string>
           <string name="Source"><![CDATA[-- Benton Diesel World - client entry point.
--- Starts the Benton App UI, ride animation, queue lines, shows, ambience
--- and guidance once the server has built the park.
+-- Starts the Benton App UI, ride animation, ride crews, queue lines, shows,
+-- ambience and guidance once the server has built the park.
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Net = require(Shared.Net)
@@ -9244,6 +9646,7 @@ local ShowPlayer = require(script.ShowPlayer)
 local Ambience = require(script.Ambience)
 local QueueView = require(script.QueueView)
 local SoundPlayer = require(script.SoundPlayer)
+local RideStaff = require(script.RideStaff)
 
 local state = Net.state()
 while not state:GetAttribute("ParkReady") do
@@ -9282,9 +9685,14 @@ task.spawn(function()
 		RideAnimator.start(root)
 	end)
 end)
+task.spawn(function()
+	safe("Staff", function()
+		RideStaff.start(root)
+	end)
+end)
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="35">
+        <Item class="ModuleScript" referent="36">
           <Properties>
             <string name="Name">Ambience</string>
             <string name="Source"><![CDATA[-- Day/night from the park clock, lamps at dusk, the spinning Benton Globe,
@@ -9468,7 +9876,7 @@ return Ambience
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="36">
+        <Item class="ModuleScript" referent="37">
           <Properties>
             <string name="Name">App</string>
             <string name="Source"><![CDATA[-- The Benton App: the park's on-screen companion. Top bar (clock, Benton
@@ -10389,7 +10797,7 @@ return App
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="37">
+        <Item class="ModuleScript" referent="38">
           <Properties>
             <string name="Name">Guide</string>
             <string name="Source"><![CDATA[-- "Guide me" navigation: a glowing beam from the player to a destination
@@ -10543,7 +10951,7 @@ return Guide
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="38">
+        <Item class="ModuleScript" referent="39">
           <Properties>
             <string name="Name">QueueView</string>
             <string name="Source"><![CDATA[-- Queue lines on the client: draws the simulated guests standing in each
@@ -10770,7 +11178,7 @@ return QueueView
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="39">
+        <Item class="ModuleScript" referent="40">
           <Properties>
             <string name="Name">RideAnimator</string>
             <string name="Source"><![CDATA[-- Animates every ride locally, in sync with server time, and keeps riders
@@ -11098,7 +11506,652 @@ return RideAnimator
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="40">
+        <Item class="ModuleScript" referent="41">
+          <Properties>
+            <string name="Name">RideStaff</string>
+            <string name="Source"><![CDATA[-- Ride crews and park staff on the client. While a train boards, the
+-- attendants walk the loading platform car by car and push every lap bar
+-- or harness down (riders pull most of their own first), give the operator
+-- a thumbs up, and wave the train off; restraints lift again at unload.
+-- Staff at shops, carts and the gate say hello as you come by, and
+-- sweepers work the walkways. Speech shows as bubbles over their heads.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local CollectionService = game:GetService("CollectionService")
+local UserInputService = game:GetService("UserInputService")
+
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
+local Config = require(Shared.Config)
+local Clock = require(Shared.Clock)
+local Net = require(Shared.Net)
+local Props = require(Shared.Props)
+local RideMotion = require(Shared.RideMotion)
+local Staff = require(Shared.Staff)
+
+local RideStaff = {}
+
+local localPlayer = Players.LocalPlayer
+local HIDDEN = CFrame.new(0, -500, 0)
+local STAND = Props.STAND_HEIGHT
+
+-- hinge (seat space) and opening angle of each restraint type
+type Hinge = { at: CFrame, open: number }
+local HINGE: { [string]: Hinge } = {
+	lapbar = { at = CFrame.new(0, -1.9, -1.5), open = math.rad(-60) },
+	harness = { at = CFrame.new(0, 1.6, 0.5), open = math.rad(100) },
+}
+
+type Bar = { part: BasePart, car: number, seat: number, closedRel: CFrame, hinge: CFrame, open: number, angle: number, target: number }
+type Task = { kind: string, to: Vector3?, yaw: number?, stop: number?, dur: number?, time: number, done: boolean, speed: number? }
+type Person = { models: { [string]: Model }, shown: string, pos: Vector3, yaw: number, homePos: Vector3, homeYaw: number, route: { number }, tasks: { Task }, bob: number }
+type CrewState = {
+	ride: Config.Ride,
+	crew: Staff.Crew,
+	folder: Instance,
+	cars: { Model },
+	seats: { { CFrame } },
+	bars: { Bar },
+	attendants: { Person },
+	operator: Model?,
+	cycle: number,
+	status: string,
+	said: { [string]: boolean },
+	pulls: { { car: number, seat: number, at: number, done: boolean } },
+	runSince: number,
+	chatter: number,
+}
+
+local crews: { CrewState } = {}
+local holder: Folder
+
+local function pick(list: { string }?): string
+	if not list or #list == 0 then
+		return ""
+	end
+	return list[math.random(1, #list)]
+end
+
+local function yawCFrame(pos: Vector3, yaw: number): CFrame
+	return CFrame.new(pos) * CFrame.Angles(0, yaw, 0)
+end
+
+local function yawOf(cf: CFrame): number
+	local look = cf.LookVector
+	return math.atan2(-look.X, -look.Z)
+end
+
+---------------------------------------------------------------------------
+-- Speech bubbles
+---------------------------------------------------------------------------
+local function say(model: Model?, text: string)
+	if not model or text == "" then
+		return
+	end
+	local root = model.PrimaryPart
+	if not root then
+		return
+	end
+	local camera = workspace.CurrentCamera
+	if camera and (camera.CFrame.Position - root.Position).Magnitude > 80 then
+		return
+	end
+	local old = root:FindFirstChild("Speech")
+	if old then
+		old:Destroy()
+	end
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Speech"
+	gui.Size = UDim2.fromOffset(240, 44)
+	gui.StudsOffset = Vector3.new(0, 3.6, 0)
+	gui.MaxDistance = 80
+	gui.LightInfluence = 0
+	gui.Parent = root
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	label.BackgroundTransparency = 0.05
+	label.TextColor3 = Color3.fromRGB(27, 34, 51)
+	label.FontFace = Font.fromEnum(Enum.Font.GothamBold)
+	label.TextScaled = true
+	label.Text = text
+	label.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.4, 0)
+	corner.Parent = label
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.Parent = label
+	task.delay(2.8, function()
+		if gui.Parent then
+			gui:Destroy()
+		end
+	end)
+end
+
+---------------------------------------------------------------------------
+-- Attendants
+---------------------------------------------------------------------------
+local POSES = { "stand", "check", "thumbs", "wave" }
+
+local function newPerson(seed: number, land: string, at: CFrame): Person
+	local models = {}
+	for _, pose in POSES do
+		local m = Staff.figure(seed, land, pose)
+		m.Name = "Attendant"
+		m:PivotTo(HIDDEN)
+		m.Parent = holder
+		models[pose] = m
+	end
+	return {
+		models = models,
+		shown = "",
+		pos = at.Position,
+		yaw = yawOf(at),
+		homePos = at.Position,
+		homeYaw = yawOf(at),
+		route = {},
+		tasks = {},
+		bob = 0,
+	}
+end
+
+local function show(p: Person, pose: string)
+	if p.shown ~= pose then
+		local old = p.models[p.shown]
+		if old then
+			old:PivotTo(HIDDEN)
+		end
+		p.shown = pose
+	end
+	local lift = math.abs(math.sin(p.bob)) * 0.25
+	p.models[pose]:PivotTo(yawCFrame(p.pos + Vector3.new(0, STAND + lift, 0), p.yaw))
+end
+
+local function turn(from: number, to: number, k: number): number
+	local d = math.atan2(math.sin(to - from), math.cos(to - from))
+	return from + d * math.min(1, k)
+end
+
+---------------------------------------------------------------------------
+-- Restraints
+---------------------------------------------------------------------------
+local function collectBars(c: CrewState)
+	local hinge = HINGE[c.crew.restraint]
+	if not hinge then
+		return
+	end
+	for ci, car in c.cars do
+		local seats = c.seats[ci] or {}
+		local n = 0
+		for _, d in car:GetDescendants() do
+			if d.Name == "Restraint" and d:IsA("BasePart") then
+				local part = d :: BasePart
+				n += 1
+				local seat = seats[n]
+				if seat then
+					local pivot = car:GetPivot()
+					table.insert(c.bars, {
+						part = part,
+						car = ci,
+						seat = n,
+						closedRel = pivot:Inverse() * part.CFrame,
+						hinge = seat * hinge.at,
+						open = hinge.open,
+						angle = 0,
+						target = hinge.open,
+					})
+				end
+			end
+		end
+	end
+end
+
+local function poseBar(c: CrewState, b: Bar)
+	local car = c.cars[b.car]
+	-- rotate the closed position about the hinge (all in car space)
+	local rel = b.hinge * CFrame.Angles(b.angle, 0, 0) * b.hinge:Inverse() * b.closedRel
+	b.part.CFrame = car:GetPivot() * rel
+end
+
+local function setBar(c: CrewState, car: number, seat: number, closed: boolean): boolean
+	for _, b in c.bars do
+		if b.car == car and b.seat == seat then
+			local target = if closed then 0 else b.open
+			if b.target == target then
+				return false
+			end
+			b.target = target
+			return true
+		end
+	end
+	return false
+end
+
+local function setAll(c: CrewState, closed: boolean)
+	for _, b in c.bars do
+		b.target = if closed then 0 else b.open
+	end
+end
+
+---------------------------------------------------------------------------
+-- Boarding
+---------------------------------------------------------------------------
+type Rider = { c: number, s: number, u: number, n: number }
+
+local function riders(c: CrewState): { Rider }
+	local raw = c.folder:GetAttribute("Riders")
+	if type(raw) ~= "string" or raw == "" then
+		return {}
+	end
+	local ok, data = pcall(function()
+		return HttpService:JSONDecode(raw)
+	end)
+	return if ok and type(data) == "table" then data :: any else {}
+end
+
+local function plan(c: CrewState, p: Person, e: number)
+	local B = Config.BoardingTime
+	local start = math.max(e, Staff.CHECK_FROM)
+	local avail = math.max(1.2, B - Staff.ALL_CLEAR - start - 0.2)
+	local pts = { p.pos }
+	for _, i in p.route do
+		table.insert(pts, c.crew.stops[i].Position)
+	end
+	local flat = c.ride.kind == "carousel" or c.ride.kind == "spinner" or c.ride.kind == "pendulum" or c.ride.kind == "droptower"
+	if flat then
+		table.insert(pts, p.homePos)
+	end
+	local dist = 0
+	for i = 2, #pts do
+		dist += (pts[i] - pts[i - 1]).Magnitude
+	end
+	local n = #p.route
+	local dwell, speed = Staff.CHECK_TIME, Staff.WALK
+	if dist / speed + n * dwell > avail then
+		dwell = math.max(0.3, math.min(Staff.CHECK_TIME, avail * 0.3 / math.max(1, n)))
+		speed = math.min(18, dist / math.max(0.4, avail - n * dwell))
+	end
+	p.tasks = {}
+	if e < Staff.CHECK_FROM then
+		table.insert(p.tasks, { kind = "wait", dur = Staff.CHECK_FROM - e, time = 0, done = false })
+	end
+	for _, i in p.route do
+		local stop = c.crew.stops[i]
+		table.insert(p.tasks, { kind = "walk", to = stop.Position, time = 0, done = false, speed = speed })
+		table.insert(p.tasks, { kind = "check", stop = i, yaw = yawOf(stop), dur = dwell, time = 0, done = false })
+	end
+	if flat then
+		table.insert(p.tasks, { kind = "walk", to = p.homePos, yaw = p.homeYaw, time = 0, done = false, speed = speed })
+	end
+end
+
+-- an attendant reaches a car: push down every restraint there
+local function check(c: CrewState, p: Person, stop: number, list: { Rider })
+	local car = c.crew.stopCars[stop]
+	local seats = c.seats[car] or {}
+	-- one big car checked from several stops: split its seats between them
+	local same = {}
+	for i, cc in c.crew.stopCars do
+		if cc == car then
+			table.insert(same, i)
+		end
+	end
+	local first, last = 1, #seats
+	if #same > 1 then
+		local k = (table.find(same, stop) or 1) :: number
+		local per = math.ceil(#seats / #same)
+		first = (k - 1) * per + 1
+		last = math.min(#seats, k * per) :: number
+	end
+	local mine = false
+	for s = first, last :: number do
+		for _, r in list do
+			if r.c == car and r.s == s and r.u == localPlayer.UserId then
+				mine = true
+			end
+		end
+		setBar(c, car, s, true)
+	end
+	if mine then
+		say(p.models[p.shown], pick(Staff.LINES.check))
+	elseif math.random() < 0.3 then
+		say(p.models[p.shown], pick(if c.crew.restraint == "none" then Staff.LINES.checkNone else Staff.LINES.check))
+	end
+end
+
+local function step(c: CrewState, p: Person, dt: number, list: { Rider })
+	local t = p.tasks[1]
+	if not t then
+		return "stand"
+	end
+	if t.kind == "walk" then
+		local to = t.to :: Vector3
+		local d = Vector3.new(to.X - p.pos.X, 0, to.Z - p.pos.Z)
+		local move = (t.speed or Staff.WALK) * dt
+		if d.Magnitude <= move or d.Magnitude < 0.05 then
+			p.pos = to
+			table.remove(p.tasks, 1)
+			if t.yaw then
+				p.yaw = t.yaw
+			end
+		else
+			local u = d.Unit
+			p.pos = Vector3.new(p.pos.X + u.X * move, p.pos.Y + (to.Y - p.pos.Y) * math.min(1, dt * 6), p.pos.Z + u.Z * move)
+			p.yaw = turn(p.yaw, math.atan2(-u.X, -u.Z), dt * 10)
+			p.bob += dt * 9
+		end
+		return "stand"
+	elseif t.kind == "check" then
+		t.time += dt
+		p.yaw = turn(p.yaw, t.yaw or p.yaw, dt * 10)
+		if not t.done and t.time >= (t.dur or 0.5) * 0.55 then
+			t.done = true
+			check(c, p, t.stop or 1, list)
+		end
+		if t.time >= (t.dur or 0.5) then
+			table.remove(p.tasks, 1)
+		end
+		return "check"
+	else
+		t.time += dt
+		if t.time >= (t.dur or 0) then
+			table.remove(p.tasks, 1)
+		end
+		return if t.kind == "wave" then "wave" else "stand"
+	end
+end
+
+local function finish(c: CrewState, p: Person, list: { Rider })
+	for _, t in p.tasks do
+		if t.kind == "check" and not t.done then
+			t.done = true
+			check(c, p, t.stop or 1, list)
+		elseif t.kind == "walk" then
+			p.pos = t.to :: Vector3
+		end
+	end
+	p.tasks = {}
+end
+
+local function updateCrew(c: CrewState, dt: number)
+	local status = c.folder:GetAttribute("Status")
+	if type(status) ~= "string" then
+		return
+	end
+	local cycle = c.folder:GetAttribute("CycleId")
+	local start = c.folder:GetAttribute("CycleStart")
+	local now = Clock.now()
+	local B = Config.BoardingTime
+	local list = riders(c)
+	local opModel = c.operator
+	if status == "Boarding" and type(start) == "number" then
+		local e = math.clamp(now - (start - B), 0, B)
+		if cycle ~= c.cycle or c.status ~= "Boarding" then
+			c.cycle = if type(cycle) == "number" then cycle else c.cycle + 1
+			c.said = {}
+			setAll(c, false)
+			c.pulls = {}
+			for _, r in list do
+				if r.u == 0 and r.c > 0 and math.random() > 0.18 then
+					table.insert(c.pulls, { car = r.c, seat = r.s, at = 0.6 + math.random() * (Staff.PULL_BY - 0.6), done = false })
+				end
+			end
+			for _, p in c.attendants do
+				plan(c, p, e)
+			end
+		end
+		for _, pull in c.pulls do
+			if not pull.done and e >= pull.at then
+				pull.done = true
+				setBar(c, pull.car, pull.seat, true)
+			end
+		end
+		if e < 2.5 and not c.said.pull then
+			c.said.pull = true
+			local r = c.crew.restraint
+			say(opModel, pick(if r == "harness" then Staff.LINES.pullHarness elseif r == "belt" then Staff.LINES.belt elseif r == "lapbar" then Staff.LINES.pull else Staff.LINES.checkNone))
+		end
+		if e >= B - Staff.DISPATCH and not c.said.dispatch then
+			c.said.dispatch = true
+			say(opModel, pick(Staff.LINES.dispatch))
+		end
+		for k, p in c.attendants do
+			local pose = step(c, p, dt, list)
+			if e >= B - Staff.ALL_CLEAR and #p.tasks > 0 then
+				finish(c, p, list)
+			end
+			if #p.tasks == 0 and e >= B - Staff.ALL_CLEAR then
+				pose = "thumbs"
+				if k == 1 and not c.said.clear then
+					c.said.clear = true
+					say(p.models.thumbs, pick(Staff.LINES.clear))
+				end
+			end
+			show(p, pose)
+		end
+	elseif status == "Running" then
+		if c.status ~= "Running" then
+			-- every restraint locks as the train leaves the station
+			for _, b in c.bars do
+				b.angle, b.target = 0, 0
+				poseBar(c, b)
+			end
+			for _, p in c.attendants do
+				p.tasks = {
+					{ kind = "wave", dur = 2.4, time = 0, done = false },
+					{ kind = "walk", to = p.homePos, yaw = p.homeYaw, time = 0, done = false, speed = Staff.WALK * 0.7 },
+				}
+			end
+		end
+		for _, p in c.attendants do
+			show(p, step(c, p, dt, list))
+		end
+	else
+		if status == "Unloading" and c.status ~= "Unloading" then
+			setAll(c, false)
+			say(opModel, pick(Staff.LINES.unload))
+		elseif status ~= c.status then
+			setAll(c, false)
+		end
+		for _, p in c.attendants do
+			show(p, step(c, p, dt, list))
+		end
+		c.chatter -= dt
+		if c.chatter <= 0 then
+			c.chatter = 20 + math.random() * 25
+			local character = localPlayer.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if status == "Open" and root and opModel and opModel.PrimaryPart and (root.Position - opModel.PrimaryPart.Position).Magnitude < 30 then
+				say(opModel, pick(Staff.LINES.wait))
+			end
+		end
+	end
+	c.status = status
+	-- swing restraints (only while the cars sit in the station)
+	if status ~= "Running" then
+		for _, b in c.bars do
+			if b.angle ~= b.target then
+				local stepA = dt * 3
+				local d = b.target - b.angle
+				b.angle = if math.abs(d) <= stepA then b.target else b.angle + math.sign(d) * stepA
+				poseBar(c, b)
+			end
+		end
+	end
+end
+
+---------------------------------------------------------------------------
+-- Park staff: greetings, and sweepers on the walkways
+---------------------------------------------------------------------------
+type Greeter = { model: Model, role: string, kind: string, greeted: boolean }
+local greeters: { Greeter } = {}
+
+local SWEEP_LINES = {
+	{ Vector3.new(-14, 0.4, 222), Vector3.new(-14, 0.4, 6) },
+	{ Vector3.new(-30, 0.4, 15), Vector3.new(-158, 0.4, 15) },
+	{ Vector3.new(0, 0.4, -118), Vector3.new(0, 0.4, -290) },
+	{ Vector3.new(112, 0.4, 60), Vector3.new(112, 0.4, 246) },
+	{ Vector3.new(130, 0.4, -120), Vector3.new(215, 0.4, -180) },
+}
+type Sweeper = { model: Model, a: Vector3, b: Vector3, s: number, dir: number, pause: number }
+local sweepers: { Sweeper } = {}
+
+local function broom(m: Model)
+	local root = m.PrimaryPart :: BasePart
+	local function bit(size: Vector3, offset: CFrame, color: Color3, material: Enum.Material)
+		local p = Instance.new("Part")
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.Size = size
+		p.Color = color
+		p.Material = material
+		p.CFrame = root.CFrame * offset
+		p.Parent = m
+	end
+	bit(Vector3.new(0.2, 4.4, 0.2), CFrame.new(0.9, -1.3, -1.3) * CFrame.Angles(math.rad(-30), 0, 0), Color3.fromRGB(110, 76, 44), Enum.Material.Wood)
+	bit(Vector3.new(1.6, 0.4, 0.4), CFrame.new(0.9, -2.8, -2.35), Color3.fromRGB(170, 130, 70), Enum.Material.Fabric)
+end
+
+local function updatePark(dt: number)
+	local character = localPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if root then
+		for _, g in greeters do
+			local pp = g.model.PrimaryPart
+			if pp then
+				local d = (pp.Position - root.Position).Magnitude
+				local range = if g.role == "greeter" then 22 else 15
+				if d < range and not g.greeted then
+					g.greeted = true
+					local key = if g.role == "cashier" then (if g.kind == "restaurant" then "food" else "shop") elseif g.role == "vendor" then g.kind else g.role
+					say(g.model, pick((Staff.LINES :: any)[key]))
+				elseif d > 30 then
+					g.greeted = false
+				end
+			end
+		end
+	end
+	for _, s in sweepers do
+		local len = (s.b - s.a).Magnitude
+		if s.pause > 0 then
+			s.pause -= dt
+		else
+			s.s += dt * 0.9 * s.dir / len
+			if s.s > 1 or s.s < 0 then
+				s.dir = -s.dir
+				s.s = math.clamp(s.s, 0, 1)
+				s.pause = 3
+			end
+		end
+		local p = s.a:Lerp(s.b, s.s) + (s.b - s.a).Unit:Cross(Vector3.yAxis) * 6
+		local look = (s.b - s.a).Unit * s.dir
+		s.model:PivotTo(CFrame.lookAt(p + Vector3.new(0, STAND, 0), p + Vector3.new(0, STAND, 0) + look))
+	end
+end
+
+---------------------------------------------------------------------------
+-- The player's own restraint
+---------------------------------------------------------------------------
+local function pullMine()
+	local riding = localPlayer:GetAttribute("Riding")
+	if type(riding) ~= "string" or riding == "" then
+		return
+	end
+	for _, c in crews do
+		if c.ride.id == riding and c.status == "Boarding" then
+			for _, r in riders(c) do
+				if r.u == localPlayer.UserId then
+					setBar(c, r.c, r.s, true)
+				end
+			end
+		end
+	end
+end
+
+function RideStaff.start(root: Instance)
+	holder = Instance.new("Folder")
+	holder.Name = "RideStaff"
+	holder.Parent = workspace
+	local rides = root:WaitForChild("Rides")
+	local stateRides = Net.state():WaitForChild("Rides")
+	for _, ride in Config.Rides do
+		local crew = Staff.crew(ride.id)
+		local model = rides:WaitForChild(ride.id, 30)
+		local folder = stateRides:WaitForChild(ride.id, 30)
+		if crew and model and folder then
+			local motion = RideMotion.get(ride.id)
+			local carsFolder = model:WaitForChild("Cars")
+			local cars = {}
+			for i = 1, motion.carCount do
+				cars[i] = carsFolder:WaitForChild("Car" .. i) :: Model
+			end
+			local c: CrewState = {
+				ride = ride,
+				crew = crew,
+				folder = folder,
+				cars = cars,
+				seats = motion.seats,
+				bars = {},
+				attendants = {},
+				operator = nil,
+				cycle = -1,
+				status = "",
+				said = {},
+				pulls = {},
+				runSince = 0,
+				chatter = 10 + math.random() * 20,
+			}
+			for _, m in CollectionService:GetTagged("StaffSpot") do
+				if m:GetAttribute("RideId") == ride.id and m:IsA("Model") then
+					c.operator = m :: Model
+				end
+			end
+			collectBars(c)
+			for k = 1, crew.attendants do
+				local p = newPerson(#ride.id * 53 + k * 7, ride.land, crew.homes[k])
+				p.route = Staff.route(crew, k)
+				show(p, "stand")
+				table.insert(c.attendants, p)
+			end
+			table.insert(crews, c)
+		end
+	end
+	for _, m in CollectionService:GetTagged("StaffSpot") do
+		local role = m:GetAttribute("Role")
+		if m:IsA("Model") and type(role) == "string" and role ~= "operator" then
+			local kind = m:GetAttribute("Kind")
+			table.insert(greeters, { model = m :: Model, role = role, kind = if type(kind) == "string" then kind else "", greeted = false })
+		end
+	end
+	for i, line in SWEEP_LINES do
+		local m = Staff.figure(7700 + i * 13, "Plaza", "check")
+		m.Name = "Sweeper"
+		m.Parent = holder
+		broom(m)
+		table.insert(sweepers, { model = m, a = line[1], b = line[2], s = i * 0.17, dir = if i % 2 == 0 then 1 else -1, pause = 0 })
+	end
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if not processed and input.KeyCode == Enum.KeyCode.E then
+			pullMine()
+		end
+	end)
+	RunService.RenderStepped:Connect(function(dt: number)
+		for _, c in crews do
+			updateCrew(c, math.min(dt, 0.25))
+		end
+		updatePark(dt)
+	end)
+end
+
+return RideStaff
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="42">
           <Properties>
             <string name="Name">ShowPlayer</string>
             <string name="Source"><![CDATA[-- Plays the park's shows locally, in sync with the start time the server
@@ -11748,7 +12801,7 @@ return ShowPlayer
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="41">
+        <Item class="ModuleScript" referent="43">
           <Properties>
             <string name="Name">SoundPlayer</string>
             <string name="Source"><![CDATA[-- Plays the park's sounds on each client: land music that crossfades as you
@@ -11953,7 +13006,7 @@ return SoundPlayer
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="42">
+        <Item class="ModuleScript" referent="44">
           <Properties>
             <string name="Name">UI</string>
             <string name="Source"><![CDATA[-- Tiny UI toolkit + the Benton App look (navy panels, orange accents).
@@ -12131,14 +13184,14 @@ return UI
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="43">
+  <Item class="Workspace" referent="45">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="Gravity">196.2</float>
       <bool name="NeedsPivotMigration">false</bool>
       <bool name="StreamingEnabled">false</bool>
     </Properties>
-    <Item class="Part" referent="44">
+    <Item class="Part" referent="46">
       <Properties>
         <string name="Name">PressPlay</string>
         <bool name="Anchored">true</bool>
@@ -12164,7 +13217,7 @@ return UI
           <Z>2</Z>
         </Vector3>
       </Properties>
-      <Item class="SurfaceGui" referent="45">
+      <Item class="SurfaceGui" referent="47">
         <Properties>
           <string name="Name">Sign</string>
           <token name="Face">2</token>
@@ -12172,7 +13225,7 @@ return UI
           <float name="PixelsPerStud">20</float>
           <token name="SizingMode">1</token>
         </Properties>
-        <Item class="TextLabel" referent="46">
+        <Item class="TextLabel" referent="48">
           <Properties>
             <string name="Name">Text</string>
             <float name="BackgroundTransparency">1</float>
@@ -12193,7 +13246,7 @@ Press PLAY to build the park!</string>
           </Properties>
         </Item>
       </Item>
-      <Item class="SurfaceGui" referent="47">
+      <Item class="SurfaceGui" referent="49">
         <Properties>
           <string name="Name">SignFront</string>
           <token name="Face">5</token>
@@ -12201,7 +13254,7 @@ Press PLAY to build the park!</string>
           <float name="PixelsPerStud">20</float>
           <token name="SizingMode">1</token>
         </Properties>
-        <Item class="TextLabel" referent="48">
+        <Item class="TextLabel" referent="50">
           <Properties>
             <string name="Name">Text</string>
             <float name="BackgroundTransparency">1</float>

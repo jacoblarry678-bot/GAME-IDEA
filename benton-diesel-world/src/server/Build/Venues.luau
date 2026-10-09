@@ -5,6 +5,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local Items = require(Shared.Items)
 local Props = require(Shared.Props)
+local Staff = require(Shared.Staff)
 local Kit = require(script.Parent.Kit)
 
 local M = Enum.Material
@@ -109,11 +110,13 @@ local function build(parent: Instance, venue: Config.Venue): VenueInfo
 			preview.Parent = model
 		end
 	end
-	-- cashier figure behind the counter
-	local cashier = Props.guest(#venue.id * 31, "stand")
-	cashier:PivotTo(cf * CFrame.new(venue.size.X / 4, 3.4, -hz + 5.5) * CFrame.Angles(0, 0, 0))
-	cashier.Name = "Cashier"
-	cashier.Parent = model
+	-- cashiers behind the counter, facing out
+	for k, x in { venue.size.X / 4, -venue.size.X / 5 } do
+		local cashier = Staff.place(model, "cashier", venue.land, #venue.id * 31 + k * 7, cf * CFrame.new(x, 0.55, -hz + 5.5))
+		cashier.Name = "Cashier"
+		cashier:SetAttribute("VenueId", venue.id)
+		cashier:SetAttribute("Kind", venue.kind)
+	end
 	-- sidewalk menu board on legs
 	local boardCF = cf * CFrame.new(-venue.size.X / 2 + 4, 0, -hz - 5)
 	for _, sx in { -4, 4 } do

@@ -5,6 +5,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local RideMotion = require(Shared.RideMotion)
 local Track = require(Shared.Track)
+local Staff = require(Shared.Staff)
 local QueueLine = require(Shared.QueueLine)
 local Kit = require(script.Parent.Kit)
 local Vehicles = require(script.Parent.Vehicles)
@@ -243,17 +244,8 @@ end
 local function station(parent: Instance, ride: Ride, motion: RideMotion.Motion, rest: { CFrame })
 	local f = Kit.folder("Station", parent)
 	local landColor = (Config.landById(ride.land) :: Config.Land).color
-	local first, last = rest[1], rest[#rest]
-	local trackY = first.Y
-	local dir = flat(first.Position - last.Position)
-	if #rest == 1 then
-		dir = flat(first.LookVector)
-	end
-	local center = (first.Position + last.Position) / 2
-	local length = (first.Position - last.Position).Magnitude + 12
-	local frame = CFrame.lookAt(Vector3.new(center.X, 0, center.Z), Vector3.new(center.X, 0, center.Z) + dir)
-	local platformTop = math.max(1.2, trackY + (if ride.kind == "train" then -0.4 elseif ride.kind == "tram" then 0.6 else 0.6))
-	local halfGap = if ride.kind == "train" or ride.kind == "tram" then 5.2 else 4.6
+	local sf = Staff.stationFrame(ride, rest)
+	local frame, length, platformTop, halfGap = sf.frame, sf.length, sf.platformTop, sf.halfGap
 	for _, sx in { -1, 1 } do
 		Kit.block(f, Vector3.new(4, platformTop, length), frame * CFrame.new(sx * (halfGap + 2), platformTop / 2, 0), C.Concrete, M.Concrete)
 		Kit.block(f, Vector3.new(0.5, 0.1, length), frame * CFrame.new(sx * (halfGap + 0.3), platformTop + 0.05, 0), Color3.fromRGB(250, 210, 40), M.SmoothPlastic)
@@ -443,6 +435,9 @@ local function dropTower(parent: Instance, ride: Ride, motion: RideMotion.Motion
 	local f = Kit.folder("Tower", parent)
 	local H = 172
 	Kit.block(f, Vector3.new(7, H, 7), o * CFrame.new(0, H / 2, 0), dark, M.Metal)
+	-- loading deck around the tower, where the crew checks the harnesses
+	Kit.disc(f, 24, 2.4, (o * CFrame.new(0, Staff.FLAT.droptower.floor, 0)).Position, C.Concrete, M.Concrete)
+	Kit.disc(f, 24.6, 0.2, (o * CFrame.new(0, Staff.FLAT.droptower.floor + 0.05, 0)).Position, Color3.fromRGB(250, 210, 40), M.SmoothPlastic).CastShadow = false
 	for _, sx in { -1, 1 } do
 		for _, sz in { -1, 1 } do
 			local strip_ = Kit.block(f, Vector3.new(0.5, H - 6, 0.5), o * CFrame.new(sx * 3.6, H / 2, sz * 3.6), blue, M.Neon)
@@ -573,6 +568,45 @@ local function pendulumStructure(parent: Instance, ride: Ride, motion: RideMotio
 end
 
 ---------------------------------------------------------------------------
+-- Ride crew: the control console and its operator (attendants are
+-- animated by the clients)
+---------------------------------------------------------------------------
+local function crewPost(parent: Instance, ride: Ride)
+	local crew = Staff.crew(ride.id)
+	if not crew then
+		return
+	end
+	local f = Kit.folder("Crew", parent)
+	local cf = crew.console
+	local cabinet = Color3.fromRGB(46, 52, 64)
+	Kit.block(f, Vector3.new(2.8, 3.1, 1.3), cf * CFrame.new(0, 1.55, 0), cabinet, M.Metal)
+	-- sloped control panel facing the operator, with its buttons
+	local panel = cf * CFrame.new(0, 3.2, -0.1) * CFrame.Angles(math.rad(-22), 0, 0)
+	Kit.block(f, Vector3.new(3.0, 0.3, 1.7), panel, Color3.fromRGB(30, 32, 38), M.Metal)
+	local buttons = {
+		{ -0.9, Color3.fromRGB(60, 220, 90) }, -- dispatch
+		{ -0.3, Color3.fromRGB(250, 200, 40) },
+		{ 0.3, Color3.fromRGB(60, 140, 240) },
+		{ 0.95, Color3.fromRGB(230, 40, 40) }, -- emergency stop
+	}
+	for _, b in buttons do
+		local p = (panel * CFrame.new(b[1] :: number, 0.2, 0.1)).Position
+		Kit.disc(f, if b[1] == 0.95 then 0.55 else 0.38, 0.14, p + Vector3.new(0, 0.07, 0), b[2] :: Color3, M.Neon).CastShadow = false
+	end
+	local screen = Kit.block(f, Vector3.new(1.4, 0.8, 0.12), cf * CFrame.new(0, 4.0, 0.45) * CFrame.Angles(math.rad(-10), 0, 0), Color3.fromRGB(40, 120, 170), M.Neon)
+	screen.CastShadow = false
+	-- stack light: green / amber / red
+	local pole = (cf * CFrame.new(1.25, 0, 0.45)).Position
+	Kit.post(f, 5.6, 0.18, Vector3.new(pole.X, cf.Y + 3.1, pole.Z), cabinet, M.Metal)
+	for i, c in { Color3.fromRGB(60, 220, 90), Color3.fromRGB(250, 190, 40), Color3.fromRGB(230, 50, 40) } do
+		local lamp = Kit.block(f, Vector3.new(0.42, 0.36, 0.42), CFrame.new(pole + Vector3.new(0, cf.Y + 3.1 + 2.3 + i * 0.38, 0)), c, if i == 1 then M.Neon else M.SmoothPlastic)
+		lamp.Name = "StackLight" .. i
+		lamp.CastShadow = false
+	end
+	Staff.place(f, "operator", ride.land, #ride.id * 97 + 5, crew.operator, ride.id, "operate")
+end
+
+---------------------------------------------------------------------------
 -- Entry point
 ---------------------------------------------------------------------------
 function RideBuilder.build(root: Instance): { [string]: RideInfo }
@@ -619,6 +653,7 @@ function RideBuilder.build(root: Instance): { [string]: RideInfo }
 		for _, m in (model:FindFirstChild("Moving") :: Folder):GetChildren() do
 			(m :: Model).ModelStreamingMode = Enum.ModelStreamingMode.Persistent
 		end
+		crewPost(model, ride)
 		local nameLabel, waitLabel, statusLabel, join, express = queueEntrance(model, ride)
 		infos[ride.id] = {
 			ride = ride,

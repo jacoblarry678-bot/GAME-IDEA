@@ -12,6 +12,7 @@ import * as THREE from 'three';
 export const R = {
   SKIN: 0, SHIRT: 1, SLEEVE: 2, PANTS: 3, LEGWEAR: 4, SHOES: 5,
   HAIR: 6, HAIR_LONG: 7, HAIR_TAIL: 8, HAT: 9, DARK: 10, WHITE: 11, LIPS: 12, BRIM: 13,
+  BADGE: 14, HANDLE: 15, BRISTLES: 16,
 };
 
 // ---------------------------------------------------------------- rig
@@ -166,6 +167,8 @@ function segments(f, detail) {
       { t: 0.96, w: lerp(0.32, 0.27), d: 0.18 },
       { t: 1, w: 0.16, d: 0.14 },
     ], S, () => R.SHIRT);
+    // name badge on the left of the chest (shown on staff)
+    ellipsoid(m, [-0.21, 3.98, lerp(-0.325, -0.4)], [0.12, 0.065, 0.025], 6, () => R.BADGE);
     out.spine = m;
   }
   // head and neck, face, hair, hat
@@ -355,7 +358,7 @@ export function poseIdle(kind = 0, t = 0) {
   };
   if (kind === 1) {
     // checking a phone
-    Object.assign(base, { neck: [0.38, 0, 0], shoulderR: [0.45, 0, 0.12], elbowR: [1.65, -0.5, 0], shoulderL: [0.25, 0, -0.08], elbowL: [1.3, 0.5, 0] });
+    Object.assign(base, { neck: [-0.38, 0, 0], shoulderR: [0.45, 0, 0.12], elbowR: [1.65, -0.5, 0], shoulderL: [0.25, 0, -0.08], elbowL: [1.3, 0.5, 0] });
   } else if (kind === 2) {
     // hands on hips
     Object.assign(base, { shoulderL: [-0.15, 0, -0.55], elbowL: [1.5, 0.9, 0], shoulderR: [-0.15, 0, 0.55], elbowR: [1.5, -0.9, 0], hipL: [0.05, 0, -0.08], hipR: [0, 0, 0.06], kneeR: [-0.06, 0, 0] });
@@ -370,7 +373,7 @@ export function poseCheer(t = 0) {
   const wave = Math.sin(t * 7) * 0.25;
   return {
     hips: { pos: [0, 0, 0], rot: [0, 0, 0] },
-    spine: [-0.04, 0, 0], neck: [-0.18, 0, 0],
+    spine: [-0.04, 0, 0], neck: [0.18, 0, 0],
     shoulderL: [0.1, 0, -2.6 + wave], elbowL: [0.35, 0, 0],
     shoulderR: [0.1, 0, 2.6 - wave], elbowR: [0.35, 0, 0],
     hipL: [0, 0, -0.06], kneeL: [-0.05, 0, 0], hipR: [0, 0, 0.06], kneeR: [-0.05, 0, 0],
@@ -378,11 +381,12 @@ export function poseCheer(t = 0) {
   };
 }
 
-// Seated: the hips sit at the seat origin used by rides (y = -1.5 is the
-// hip joint below the seat pivot).
+// Seated: the hip joint sits SEAT_HIPS below the seat point rides use, so
+// the thighs rest on the seat cushion.
+export const SEAT_HIPS = -0.95;
 export function poseSit(cheer = false) {
   return {
-    hips: { pos: [0, -1.5 - 2.82, 0.15], rot: [0.08, 0, 0], abs: true },
+    hips: { pos: [0, SEAT_HIPS - 2.82, 0.15], rot: [0.08, 0, 0], abs: true },
     spine: [-0.1, 0, 0], neck: [0.02, 0, 0],
     shoulderL: cheer ? [0.2, 0, -2.5] : [0.55, 0, -0.12], elbowL: cheer ? [0.3, 0, 0] : [0.75, 0, 0],
     shoulderR: cheer ? [0.2, 0, 2.5] : [0.55, 0, 0.12], elbowR: cheer ? [0.3, 0, 0] : [0.75, 0, 0],
@@ -399,6 +403,62 @@ export function poseJump(fall = 0) {
     shoulderR: [0.4 - fall * 0.9, 0, 0.35 + fall * 0.5], elbowR: [0.6, 0, 0],
     hipL: [0.9 - fall * 0.5, 0, -0.05], kneeL: [-1.1 + fall * 0.6, 0, 0],
     hipR: [0.2, 0, 0.05], kneeR: [-0.5, 0, 0],
+  };
+}
+
+// ------------------------------------------------------------ staff poses
+const stand = () => ({
+  hips: { pos: [0, 0, 0], rot: [0, 0, 0] },
+  spine: [0, 0, 0], neck: [0, 0, 0],
+  shoulderL: [0.04, 0, -0.07], elbowL: [0.15, 0, 0],
+  shoulderR: [0.04, 0, 0.07], elbowR: [0.15, 0, 0],
+  hipL: [0, 0, -0.03], kneeL: [-0.03, 0, 0], hipR: [0, 0, 0.03], kneeR: [-0.03, 0, 0],
+  ground: true,
+});
+
+// hands resting on a control console
+export function poseOperate() {
+  return { ...stand(), neck: [-0.28, 0, 0], shoulderL: [0.62, 0, -0.14], elbowL: [0.9, 0, 0], shoulderR: [0.62, 0, 0.14], elbowR: [0.9, 0, 0] };
+}
+
+// reaching for the dispatch button, eyes on the train
+export function poseDispatch() {
+  return { ...stand(), neck: [-0.05, 0.25, 0], shoulderL: [0.62, 0, -0.14], elbowL: [0.9, 0, 0], shoulderR: [0.9, 0, 0.05], elbowR: [0.45, 0, 0] };
+}
+
+// bending over a car to push a lap bar down
+export function poseCheck() {
+  return {
+    ...stand(),
+    hips: { pos: [0, 0, 0], rot: [-0.18, 0, 0] },
+    spine: [-0.5, 0, 0], neck: [0.25, 0, 0],
+    shoulderL: [1.15, 0, -0.1], elbowL: [0.25, 0, 0],
+    shoulderR: [1.15, 0, 0.1], elbowR: [0.25, 0, 0],
+    hipL: [0.25, 0, -0.04], kneeL: [-0.3, 0, 0], hipR: [0.25, 0, 0.04], kneeR: [-0.3, 0, 0],
+  };
+}
+
+// thumbs up to the operator
+export function poseThumbs() {
+  return { ...stand(), neck: [0.05, 0, 0], shoulderR: [1.35, 0, 0.15], elbowR: [1.35, 0, 0] };
+}
+
+// waving (two frames)
+export function poseWave(k) {
+  return { ...stand(), neck: [0.08, 0, 0], shoulderR: [0.25, 0, 2.3], elbowR: [0.25 + 0.6 * k, 0, 0] };
+}
+
+// sweeping with a broom (frames swing the broom side to side)
+export function poseSweep(phase) {
+  const s = Math.sin(phase);
+  return {
+    ...stand(),
+    hips: { pos: [0, 0, 0], rot: [-0.08, -0.12 * s, 0] },
+    spine: [-0.18, 0.3 * s, 0], neck: [-0.35, -0.2 * s, 0],
+    shoulderL: [0.6, 0, -0.12], elbowL: [0.55, 0, 0],
+    shoulderR: [0.3, 0, 0.18], elbowR: [0.7, 0, 0],
+    hipL: [0.08, 0, -0.06], kneeL: [-0.15, 0, 0], hipR: [0.08, 0, 0.06], kneeR: [-0.15, 0, 0],
+    broom: true,
   };
 }
 
@@ -484,6 +544,35 @@ export function bakePose(pose, detail = 2) {
     const ia = g.index.array;
     for (let i = 0; i < ia.length; i++) idx.push(ia[i] + base);
   }
+  if (pose.broom) {
+    // a push broom held in both hands, its head on the ground in front
+    const hand = new THREE.Vector3(0.02, -WRIST_DROP - 0.17, -0.02).applyMatrix4(mA.elbowR);
+    const bottom = new THREE.Vector3(hand.x - 0.5, 0.18, hand.z - 1.7);
+    const dir = hand.clone().sub(bottom).normalize();
+    const top = hand.clone().addScaledVector(dir, 1.0);
+    const len = top.distanceTo(bottom);
+    const handle = new THREE.CylinderGeometry(0.055, 0.055, len, 6, 1, true);
+    handle.translate(0, len / 2, 0);
+    handle.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir)));
+    handle.translate(bottom.x, bottom.y, bottom.z);
+    const head = new THREE.BoxGeometry(1.3, 0.3, 0.32);
+    const yaw = Math.atan2(dir.x, dir.z);
+    head.applyMatrix4(new THREE.Matrix4().makeRotationY(yaw));
+    head.translate(bottom.x, 0.15, bottom.z);
+    for (const [g, region] of [[handle, R.HANDLE], [head, R.BRISTLES]]) {
+      const gi = g.index ? g : g;
+      const pa = gi.getAttribute('position'), na = gi.getAttribute('normal');
+      const base = pos.length / 3;
+      for (let i = 0; i < pa.count; i++) {
+        pos.push(pa.getX(i), pa.getY(i), pa.getZ(i));
+        nrm.push(na.getX(i), na.getY(i), na.getZ(i));
+        del.push(0, 0, 0);
+        reg.push(region);
+      }
+      const ia = gi.index.array;
+      for (let i = 0; i < ia.length; i++) idx.push(ia[i] + base);
+    }
+  }
   const out = new THREE.BufferGeometry();
   out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   out.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
@@ -542,7 +631,7 @@ export function outfit(seed) {
 export function packOutfit(o, outA = [0, 0, 0, 0], outB = [0, 0, 0, 0]) {
   outA[0] = o.skin; outA[1] = o.shirt; outA[2] = o.pants; outA[3] = o.hair;
   outB[0] = o.shoes; outB[1] = o.hat;
-  outB[2] = o.sleeves + 2 * o.longPants + 4 * o.hairStyle + 16 * o.hatOn;
+  outB[2] = o.sleeves + 2 * o.longPants + 4 * o.hairStyle + 16 * o.hatOn + 32 * (o.staff ? 1 : 0);
   outB[3] = o.fem;
   return [outA, outB];
 }
@@ -573,6 +662,7 @@ export function humanMaterial() {
           float longPants = mod(floor(style / 2.0), 2.0);
           float hairStyle = mod(floor(style / 4.0), 4.0);
           float hat = mod(floor(style / 16.0), 2.0);
+          float staff = mod(floor(style / 32.0), 2.0);
           transformed += aDelta * iColB.w;
           int r = int(aRegion + 0.5);
           vec3 skin = unpackRGB(iColA.x);
@@ -591,6 +681,9 @@ export function humanMaterial() {
           else if (r == 10) { c = vec3(0.025, 0.02, 0.018); rough = 0.3; }
           else if (r == 11) { c = vec3(0.85); rough = 0.25; }
           else if (r == 12) { c = skin * vec3(0.78, 0.5, 0.5); rough = 0.45; }
+          else if (r == 14) { c = vec3(0.86, 0.86, 0.84); rough = 0.4; hide = staff > 0.5 ? 0.0 : 1.0; }
+          else if (r == 15) { c = vec3(0.32, 0.2, 0.1); rough = 0.6; }
+          else if (r == 16) { c = vec3(0.62, 0.48, 0.22); rough = 0.95; }
           if (hide > 0.5) transformed = vec3(0.0);
           vTint = c;
           vRough = rough;

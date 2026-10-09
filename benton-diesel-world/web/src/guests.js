@@ -3,7 +3,7 @@
 // look around).
 import * as THREE from 'three';
 import * as Clock from './clock.js';
-import { bakePose, poseIdle, poseCheer, poseSit, singleFigure } from './people/human.js';
+import { bakePose, poseIdle, poseCheer, poseSit, singleFigure, SEAT_HIPS } from './people/human.js';
 import { lookFor, strideLength } from './people/crowd.js';
 
 // Height of the standing pivot above the feet (rides and shows place
@@ -31,9 +31,9 @@ export class GuestFactory {
     const sitting = pose === 'sit' || pose === 'sitcheer';
     if (sitting) {
       // scale about the hips so smaller riders still sit on the seat
-      const m = new THREE.Matrix4().makeTranslation(0, -1.5, 0)
+      const m = new THREE.Matrix4().makeTranslation(0, SEAT_HIPS, 0)
         .multiply(new THREE.Matrix4().makeScale(look.width, look.height, look.width))
-        .multiply(new THREE.Matrix4().makeTranslation(0, 1.5, 0));
+        .multiply(new THREE.Matrix4().makeTranslation(0, -SEAT_HIPS, 0));
       mesh.setMatrixAt(0, m);
     } else {
       mesh.position.y = -PIVOT;
@@ -46,7 +46,7 @@ export class GuestFactory {
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // Walkway lines guests stroll back and forth on.
-const LINES = [
+export const LINES = [
   [V(-14, 0, 222), V(-14, 0, 6)],
   [V(14, 0, 6), V(14, 0, 222)],
   [V(-6, 0, 210), V(-6, 0, 20)],

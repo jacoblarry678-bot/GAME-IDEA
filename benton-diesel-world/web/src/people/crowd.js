@@ -2,13 +2,29 @@
 // stances) is a baked body drawn with instancing, in a near and a far
 // level of detail, each person colored by their own outfit.
 import * as THREE from 'three';
-import { bakePose, poseWalk, poseIdle, outfit, packOutfit, humanMaterial, withOutfitAttributes } from './human.js';
+import {
+  bakePose, poseWalk, poseIdle, outfit, packOutfit, humanMaterial, withOutfitAttributes,
+  poseOperate, poseDispatch, poseCheck, poseThumbs, poseWave, poseSweep,
+} from './human.js';
 
 export const WALK_FRAMES = 16;
 export const IDLE_KINDS = 4;
+// staff stances (index into the 'staff' set)
+export const STAFF = { OPERATE: 0, DISPATCH: 1, CHECK: 2, THUMBS: 3, WAVE: 4, SWEEP: 6 };
+export const SWEEP_FRAMES = 4;
+const STAFF_POSES = [
+  poseOperate(), poseDispatch(), poseCheck(), poseThumbs(), poseWave(0), poseWave(1),
+  ...Array.from({ length: SWEEP_FRAMES }, (_, k) => poseSweep((k / SWEEP_FRAMES) * Math.PI * 2)),
+];
 const NEAR = 70; // studs: closer people get the detailed body
 
 const looks = new Map();
+// give a seed a particular outfit (staff uniforms)
+export function registerLook(seed, o) {
+  const [A, B] = packOutfit(o);
+  looks.set(seed, { o, A, B });
+}
+
 // A guest's outfit by seed (cached), packed for the shader.
 export function lookFor(seed) {
   let l = looks.get(seed);
@@ -39,8 +55,8 @@ class Batch {
 }
 
 export class CrowdRenderer {
-  constructor(scene, { walkCapacity = 160, idleCapacity = 700, shadows = true } = {}) {
-    this.batches = { walk: [[], []], idle: [[], []] };
+  constructor(scene, { walkCapacity = 160, idleCapacity = 700, staffCapacity = 40, shadows = true } = {}) {
+    this.batches = { walk: [[], []], idle: [[], []], staff: [[], []] };
     for (const lod of [0, 1]) {
       for (let f = 0; f < WALK_FRAMES; f++) {
         this.batches.walk[lod].push(new Batch(scene, bakePose(poseWalk((f / WALK_FRAMES) * Math.PI * 2), lod), walkCapacity));
@@ -48,8 +64,9 @@ export class CrowdRenderer {
       for (let k = 0; k < IDLE_KINDS; k++) {
         this.batches.idle[lod].push(new Batch(scene, bakePose(poseIdle(k), lod), idleCapacity));
       }
+      for (const p of STAFF_POSES) this.batches.staff[lod].push(new Batch(scene, bakePose(p, lod), staffCapacity));
     }
-    this.all = [...this.batches.walk[0], ...this.batches.walk[1], ...this.batches.idle[0], ...this.batches.idle[1]];
+    this.all = Object.values(this.batches).flatMap((l) => [...l[0], ...l[1]]);
     for (const b of this.all) b.mesh.castShadow = shadows;
     this.m = new THREE.Matrix4();
     this.q = new THREE.Quaternion();
@@ -72,7 +89,7 @@ export class CrowdRenderer {
   add(kind, frame, x, y, z, yaw, seed) {
     const near = (x - this.cam.x) ** 2 + (z - this.cam.z) ** 2 < NEAR * NEAR ? 1 : 0;
     const list = this.batches[kind][near];
-    const idx = kind === 'walk' ? Math.floor(((frame % 1) + 1) % 1 * WALK_FRAMES) % WALK_FRAMES : frame % IDLE_KINDS;
+    const idx = kind === 'walk' ? Math.floor(((frame % 1) + 1) % 1 * WALK_FRAMES) % WALK_FRAMES : frame % list.length;
     const b = list[idx];
     if (b.used >= b.capacity) return;
     const look = lookFor(seed);

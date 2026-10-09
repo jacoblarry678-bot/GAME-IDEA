@@ -494,14 +494,21 @@ local PANTS = {
 }
 local GUEST_HATS = { "GearEars", "TruckerCap", "CowboyHat", "HardHat", "CaptainHat", "RacingHelmet" }
 
+export type Uniform = { shirt: Color3, pants: Color3, cap: Color3? }
+
 -- Build a guest figure. The root sits where a player's HumanoidRootPart
--- would be. pose = "sit" | "stand" | "cheer".
-function Props.guest(seed: number, pose: string): Model
+-- would be. pose = "sit" | "stand" | "cheer", and for staff also "check"
+-- (reaching down to a lap bar), "operate" (hands on a console), "thumbs"
+-- (thumbs up) and "wave". A uniform dresses the figure as park staff.
+function Props.guest(seed: number, pose: string, uniform: Uniform?): Model
 	local rng = Random.new(seed)
 	local skin = SKIN[rng:NextInteger(1, #SKIN)]
 	local shirt = SHIRTS[rng:NextInteger(1, #SHIRTS)]
 	local pants = PANTS[rng:NextInteger(1, #PANTS)]
 	local scale = rng:NextNumber(0.75, 1.0)
+	if uniform then
+		shirt, pants, scale = uniform.shirt, uniform.pants, 1
+	end
 	local pieces: { Piece } = {
 		piece("block", Vector3.new(1.9, 1.9, 1) * scale, CFrame.new(0, 0, 0), shirt), -- torso / root
 		piece("round", Vector3.new(1.15, 1.15, 1.15) * scale, CFrame.new(0, 1.55 * scale, 0), skin),
@@ -511,6 +518,17 @@ function Props.guest(seed: number, pose: string): Model
 		local armCF = if armUp
 			then CFrame.new(side * 1.45 * scale, 1.2 * scale, 0) * CFrame.Angles(0, 0, side * math.rad(-20))
 			else CFrame.new(side * 1.45 * scale, -0.05 * scale, 0)
+		-- staff poses swing the arms about the shoulder
+		local swing = if pose == "check" then 65 elseif pose == "operate" then 45 else 0
+		if pose == "thumbs" and side == 1 then
+			swing = 150
+		elseif pose == "wave" and side == 1 then
+			swing = 0
+			armCF = CFrame.new(side * 1.45 * scale, 1.2 * scale, 0) * CFrame.Angles(0, 0, math.rad(25))
+		end
+		if swing ~= 0 then
+			armCF = CFrame.new(side * 1.45 * scale, 0.9 * scale, 0) * CFrame.Angles(math.rad(swing), 0, 0) * CFrame.new(0, -0.95 * scale, 0)
+		end
 		table.insert(pieces, piece("block", Vector3.new(0.9, 1.9, 0.9) * scale, armCF, shirt))
 		if pose == "sit" then
 			table.insert(pieces, piece("block", Vector3.new(0.9, 0.9, 1.9) * scale, CFrame.new(side * 0.48 * scale, -1.4 * scale, -0.5 * scale), pants))
@@ -522,20 +540,31 @@ function Props.guest(seed: number, pose: string): Model
 	-- eyes
 	table.insert(pieces, piece("block", Vector3.new(0.14, 0.2, 0.05) * scale, CFrame.new(-0.22 * scale, 1.62 * scale, -0.56 * scale), Color3.fromRGB(20, 20, 20)))
 	table.insert(pieces, piece("block", Vector3.new(0.14, 0.2, 0.05) * scale, CFrame.new(0.22 * scale, 1.62 * scale, -0.56 * scale), Color3.fromRGB(20, 20, 20)))
+	if uniform then
+		-- name badge and a cap
+		table.insert(pieces, piece("block", Vector3.new(0.45, 0.25, 0.06), CFrame.new(-0.45, 0.5, -0.52), Color3.fromRGB(245, 245, 240)))
+		if uniform.cap then
+			table.insert(pieces, piece("round", Vector3.new(1.25, 0.55, 1.25), CFrame.new(0, 2.0, 0), uniform.cap))
+			table.insert(pieces, piece("block", Vector3.new(1.0, 0.1, 0.6), CFrame.new(0, 1.9, -0.75), uniform.cap))
+		end
+	end
 	local model = Instance.new("Model")
-	model.Name = "Guest"
+	model.Name = if uniform then "Staff" else "Guest"
 	local root, parts = assemble(pieces, "Root", false)
 	root.Parent = model
 	model.PrimaryPart = root
 	for _, p in parts do
 		p.CastShadow = false
 	end
-	if rng:NextNumber() < 0.35 then
+	if not uniform and rng:NextNumber() < 0.35 then
 		local hat = Items.ById[GUEST_HATS[rng:NextInteger(1, #GUEST_HATS)]]
 		local hatModel = Props.hatModel(hat, CFrame.new(0, 2.1 * scale, 0))
 		hatModel.Parent = model
 	end
 	return model
 end
+
+-- Distance from a standing figure's root down to its feet.
+Props.STAND_HEIGHT = 2.85
 
 return Props

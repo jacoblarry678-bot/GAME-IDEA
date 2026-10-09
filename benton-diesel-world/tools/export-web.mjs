@@ -21,6 +21,7 @@ local Items = require(Shared.Items)
 local Props = require(Shared.Props)
 local RideMotion = require(Shared.RideMotion)
 local QueueLine = require(Shared.QueueLine)
+local Staff = require(Shared.Staff)
 local Clock = require(Shared.Clock)
 local root = workspace.BentonDieselWorld
 
@@ -131,6 +132,16 @@ for _, m in CollectionService:GetTagged("Tree") do
     hide(m)
   end
 end
+-- staff figures (cashiers, operators, greeters, vendors): drawn as people
+local staffSpots = {}
+for _, m in CollectionService:GetTagged("StaffSpot") do
+  if m:IsDescendantOf(root) then
+    local feet = m:GetPivot() * CFrame.new(0, -Props.STAND_HEIGHT, 0)
+    table.insert(staffSpots, { role = m:GetAttribute("Role"), land = m:GetAttribute("Land"), seed = m:GetAttribute("Seed"),
+      ride = m:GetAttribute("RideId"), venue = m:GetAttribute("VenueId"), kind = m:GetAttribute("Kind"), cf = comps(feet) })
+    hide(m)
+  end
+end
 local bushes = {}
 for _, b in CollectionService:GetTagged("Bush") do
   if b:IsDescendantOf(root) and index[b] ~= nil then
@@ -216,7 +227,12 @@ for _, ride in Config.Rides do
     r.seats[c] = list
     local car = model.Cars["Car" .. c]
     local pivot = car:GetPivot()
-    r.cars[c] = { pivot = comps(pivot), parts = partsOf(car, pivot:Inverse()) }
+    -- lap bars and harnesses are drawn (and moved) by the browser itself
+    local skip = {}
+    for _, d in car:GetDescendants() do
+      if d.Name == "Restraint" then skip[d] = true end
+    end
+    r.cars[c] = { pivot = comps(pivot), parts = partsOf(car, pivot:Inverse(), skip) }
   end
   for _, ex in model.Moving:GetChildren() do
     local pivot = ex:GetPivot()
@@ -240,6 +256,13 @@ for _, ride in Config.Rides do
       table.insert(up, u.X) table.insert(up, u.Y) table.insert(up, u.Z)
     end
     r.track = { length = s.length, cum = s.cum, pos = pos, tan = tan, up = up, times = m.timing.times }
+  end
+  local crew = Staff.crew(ride.id)
+  if crew then
+    local list = function(cfs) local out = {} for _, cf in cfs do table.insert(out, comps(cf)) end return out end
+    r.crew = { restraint = crew.restraint, console = comps(crew.console), operator = comps(crew.operator), stops = list(crew.stops),
+      stopCars = crew.stopCars, homes = list(crew.homes), exit = comps(crew.exit), attendants = crew.attendants,
+      routes = { Staff.route(crew, 1), Staff.route(crew, 2) } }
   end
   local line = QueueLine.get(ride.id)
   if line then
@@ -334,7 +357,9 @@ local config = {
 
 return HttpService:JSONEncode({
   materials = materials, static = static, signs = signs, dynamicSigns = dynamicSigns, terrain = terrain,
-  rides = rides, queue = { spacing = QueueLine.SPACING, lane = QueueLine.LANE }, globe = globeRec, spinners = spinners, trees = trees, bushes = bushes, hidden = hidden, guests = guests, items = items, tags = tags, config = config,
+  rides = rides, queue = { spacing = QueueLine.SPACING, lane = QueueLine.LANE }, globe = globeRec, spinners = spinners, trees = trees, bushes = bushes, hidden = hidden, staffSpots = staffSpots,
+  staff = { lines = Staff.LINES, pullBy = Staff.PULL_BY, checkFrom = Staff.CHECK_FROM, allClear = Staff.ALL_CLEAR, dispatch = Staff.DISPATCH,
+    walk = Staff.WALK, checkTime = Staff.CHECK_TIME, pants = rgb(Staff.PANTS), cap = rgb(Staff.CAP) }, guests = guests, items = items, tags = tags, config = config,
 })
 `);
 

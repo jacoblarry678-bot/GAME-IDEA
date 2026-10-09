@@ -73,6 +73,24 @@ check('themed props built in every land', `
   for _ in lands do n += 1 end
   return f ~= nil and #f:GetChildren() >= #Theming.PROPS and n == 7, #Theming.PROPS .. " props in " .. n .. " lands"
 `);
+check('ride crews: consoles, operators and staff in shops, carts and the gate', `
+  local CS = game:GetService("CollectionService")
+  local roles = {}
+  for _, m in CS:GetTagged("StaffSpot") do
+    local r = m:GetAttribute("Role")
+    roles[r] = (roles[r] or 0) + 1
+  end
+  local consoles = 0
+  for _, rm in workspace.BentonDieselWorld.Rides:GetChildren() do
+    if rm:FindFirstChild("Crew") then consoles += 1 end
+  end
+  local bars = 0
+  for _, d in workspace.BentonDieselWorld.Rides.DieselThunder.Cars:GetDescendants() do
+    if d.Name == "Restraint" then bars += 1 end
+  end
+  return roles.operator == 13 and consoles == 13 and (roles.cashier or 0) >= 13 and (roles.vendor or 0) > 0 and (roles.greeter or 0) > 0 and bars == 12,
+    string.format("%d operators, %d consoles, %d cashiers, %d vendors, %d greeters, %d lap bars", roles.operator or 0, consoles, roles.cashier or 0, roles.vendor or 0, roles.greeter or 0, bars)
+`);
 check('ride state published', `
   local f = game.ReplicatedStorage.BentonState.Rides.DieselThunder
   return f:GetAttribute("Wait") ~= nil and f:GetAttribute("Duration") > 0, "wait " .. tostring(f:GetAttribute("Wait"))
@@ -195,6 +213,22 @@ for (let i = 0; i < 200 && !boarded; i++) {
 check('player boarded', `return ${boarded}, nil`);
 if (hasClient) {
   step(6);
+  check('attendants walk the platform checking the cars', `
+    local Staff = require(game.ReplicatedStorage.BentonShared.Staff)
+    local crew = Staff.crew("TruckTrek")
+    local f = workspace:FindFirstChild("RideStaff")
+    if not f then return false, "no staff folder" end
+    local best = math.huge
+    for _, m in f:GetChildren() do
+      if m.Name == "Attendant" and m:GetPivot().Y > -100 then
+        for _, stop in crew.stops do
+          best = math.min(best, (m:GetPivot().Position - stop.Position).Magnitude)
+        end
+      end
+    end
+    return best < 8, string.format("closest attendant %.1f studs from a stop", best)
+  `);
+  step(8);
   check('ride animates on the client', `
     local car = workspace.BentonDieselWorld.Rides.TruckTrek.Cars.Car1
     local rest = require(game.ReplicatedStorage.BentonShared.RideMotion).get("TruckTrek").pose(0)[1]
@@ -226,6 +260,18 @@ for (let i = 0; i < 60 && !closed; i++) {
   closed = lua('return game.ReplicatedStorage.BentonState.Rides.DieselThunder:GetAttribute("Status") == "Closed"')[0];
 }
 check('ride can be closed for testing', `return ${closed}, nil`);
+if (hasClient) {
+  step(2);
+  check('lap bars lift while the ride waits', `
+    local car = workspace.BentonDieselWorld.Rides.DieselThunder.Cars.Car1
+    local seat = require(game.ReplicatedStorage.BentonShared.RideMotion).get("DieselThunder").seats[1][1]
+    local bar
+    for _, d in car:GetDescendants() do if d.Name == "Restraint" then bar = d break end end
+    local closed = car:GetPivot() * seat * CFrame.new(0, -0.6, -0.85)
+    local d = (bar.Position - closed.Position).Magnitude
+    return d > 0.5, string.format("bar %.2f studs from closed", d)
+  `);
+}
 lua(`
   local p = game.Players.TestGuest
   local QueueLine = require(game.ReplicatedStorage.BentonShared.QueueLine)

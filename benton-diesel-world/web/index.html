@@ -138,6 +138,8 @@
   button:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
   .tab.on .lbl { color: #1b1000; }
 
+  #restraint-btn { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(134px + var(--safe-b)); padding: 12px 20px; border-radius: 999px; border: 2px solid rgba(255,255,255,.4); border-top: 4px solid var(--orange); background: rgba(18, 28, 48, 0.94); color: #fff; font: 700 17px/1.2 inherit; box-shadow: var(--shadow); animation: tin .2s ease-out; cursor: pointer; }
+  #restraint-btn kbd { margin-right: 6px; }
   #jump-btn { display: none; position: absolute; right: 18px; bottom: calc(96px + var(--safe-b)); width: 74px; height: 74px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(18, 28, 48, 0.55); font-size: 30px; font-weight: 800; touch-action: none; }
   body.touch #jump-btn { display: block; }
   body.touch.panel-open #jump-btn { display: none; }
@@ -258,6 +260,7 @@
   <div id="guide-chip" hidden><span></span><button aria-label="Stop directions">✕</button></div>
   <div id="pill" hidden><span></span><button>Leave line</button></div>
   <div id="prompt" hidden></div>
+  <button id="restraint-btn" hidden></button>
   <div id="food"></div>
   <section id="panel" hidden><header><h2></h2><button class="close" aria-label="Close">✕</button></header><div class="content"></div></section>
   <button id="jump-btn" aria-label="Jump">⤒</button>

@@ -13,6 +13,8 @@ import { Effects } from './fx.js';
 import { GuestFactory, Crowd } from './guests.js';
 import { QueueCrowd } from './queue.js';
 import { CrowdRenderer } from './people/crowd.js';
+import { StaffSystem } from './staff.js';
+import { Bubbles } from './bubbles.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -112,12 +114,16 @@ async function main() {
     startRide: (id, car, seat) => {
       player.riding = { id, car, seat, matrix: rideVis.seatMatrix(id, car, seat) || new THREE.Matrix4() };
       const name = rideCfg.get(id).name;
-      const lines = [
-        `Welcome aboard ${name}! Please keep your hands, arms, feet and legs inside the vehicle, and enjoy the ride!`,
-        `Please remain seated with your restraint secured. ${name} is ready to roll!`,
-        `Hold on tight! ${name} is now departing the station.`,
-      ];
-      audio.voice.say(lines[Math.floor(Math.random() * lines.length)], { interrupt: true });
+      const kind = data.rides.find((r) => r.id === id)?.crew?.restraint;
+      // the station spiel: restraints down, a team member will check them
+      const lines = kind === 'lapbar'
+        ? [`Welcome aboard ${name}! Please pull down on your lap bar until it locks. A ride attendant will be by to check it.`]
+        : kind === 'harness'
+          ? [`Welcome aboard ${name}! Pull your shoulder harness all the way down. Our team will check every harness before we go.`]
+          : kind === 'belt'
+            ? [`Welcome to ${name}! Please fasten your seatbelt. A team member will check it before you roll out.`]
+            : [`Welcome aboard ${name}! Please keep your hands, arms, feet and legs inside the vehicle, and enjoy the ride!`];
+      audio.voice.say(lines[0], { interrupt: true });
     },
     endRide: (id) => {
       const r = rideCfg.get(id);
@@ -138,9 +144,15 @@ async function main() {
   const player = new Player(scene, data, collision, sim.profile.look);
   game.player = player;
   const people = new CrowdRenderer(scene, { shadows: PRESETS[qualityName].shadows });
+  const bubbles = new Bubbles(scene);
   const queueCrowd = new QueueCrowd(people, data, sim.paths);
   let queueSnap = true; // place guests already in line without walking them in
   let crowd = new Crowd(people, PRESETS[qualityName].crowd);
+  const staff = new StaffSystem({
+    data, people, rideVis, sim, bubbles,
+    hooks: { toast: (text, kind) => game.ui?.toast(text, kind), sound: (k) => audio.ui(k), latch: () => audio.ui('latch') },
+  });
+  game.staff = staff;
 
   game.applyWear = () => {
     const eq = sim.profile.equipped;
@@ -299,7 +311,10 @@ async function main() {
       world.updateSigns(signRides, (id) => sim.rideState(id));
     }
     crowd.update(dt, time);
+    staff.update(dt, now, time, camera.position, player.pos);
     people.end();
+    rideVis.animateRestraints(dt);
+    bubbles.update(dt, camera.position);
     const caption = shows.update(sim.shows, now, player.pos);
     fx.update(dt, daylight);
     if (started) {

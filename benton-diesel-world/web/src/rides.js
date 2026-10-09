@@ -2,6 +2,7 @@
 // visuals: vehicles, moving platforms, and guests riding along.
 import * as THREE from 'three';
 import { buildModel, cfMatrix } from './geom.js';
+import { material } from './render/materials.js';
 
 const TAU = Math.PI * 2;
 
@@ -215,6 +216,82 @@ export function makeMotion(r, cfg) {
   };
 }
 
+// ------------------------------------------------------------ restraints
+// Lap bars hinge at the floor in front of the seat; shoulder harnesses
+// hinge above the seat back. Angle 0 = closed over the rider.
+export const RESTRAINT = {
+  lapbar: { hinge: [0, -2.1, -1.5], open: -0.95 },
+  harness: { hinge: [0, 1.25, 0.6], open: 1.9 },
+};
+
+function colored(g, rgb) {
+  const n = g.getAttribute('position').count;
+  const c = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) c.set(rgb, i * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g.index ? g.toNonIndexed() : g;
+}
+
+function joinGeos(list) {
+  const out = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'uv', 'color']) {
+    const arrays = list.map((g) => g.getAttribute(name).array);
+    const total = arrays.reduce((n, a) => n + a.length, 0);
+    const buf = new Float32Array(total);
+    let o = 0;
+    for (const a of arrays) { buf.set(a, o); o += a.length; }
+    out.setAttribute(name, new THREE.BufferAttribute(buf, name === 'uv' ? 2 : 3));
+  }
+  out.computeBoundingSphere();
+  return out;
+}
+
+// a tube from a to b (hinge-local)
+function rod(a, b, r, rgb) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const len = A.distanceTo(B);
+  const g = new THREE.CylinderGeometry(r, r, len, 8);
+  g.translate(0, len / 2, 0);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()));
+  g.translate(A.x, A.y, A.z);
+  return colored(g, rgb);
+}
+
+const restraintGeos = {};
+export function restraintGeometry(kind) {
+  if (restraintGeos[kind]) return restraintGeos[kind];
+  const steel = [0.72, 0.74, 0.78], pad = [0.05, 0.05, 0.06], yellow = [0.95, 0.72, 0.1];
+  let parts;
+  if (kind === 'lapbar') {
+    // two arms up from the floor hinge to a padded bar across the lap
+    const top = [0, 1.48, 0.88];
+    const padG = new THREE.CylinderGeometry(0.17, 0.17, 1.55, 12);
+    padG.rotateZ(Math.PI / 2);
+    padG.translate(...top);
+    parts = [
+      rod([-0.72, 0, 0], [-0.72, top[1], top[2]], 0.075, steel),
+      rod([0.72, 0, 0], [0.72, top[1], top[2]], 0.075, steel),
+      rod([-0.72, 0, 0], [0.72, 0, 0], 0.09, steel),
+      colored(padG, pad),
+    ];
+  } else {
+    // two padded shoulder bars down to a chest plate, on a yellow yoke
+    const mid = [0, -0.5, -0.5], low = [0, -1.6, -0.97];
+    parts = [];
+    for (const x of [-0.32, 0.32]) {
+      parts.push(rod([x, 0, 0], [x, mid[1], mid[2]], 0.13, pad));
+      parts.push(rod([x, mid[1], mid[2]], [x, low[1], low[2]], 0.13, pad));
+    }
+    parts.push(rod([-0.55, 0.05, 0.05], [0.55, 0.05, 0.05], 0.12, yellow));
+    const plate = new THREE.BoxGeometry(0.95, 0.55, 0.26);
+    plate.rotateX(0.35);
+    plate.translate(0, low[1] + 0.05, low[2] - 0.02);
+    parts.push(colored(plate, pad));
+  }
+  restraintGeos[kind] = joinGeos(parts);
+  return restraintGeos[kind];
+}
+
 // --------------------------------------------------------------- visuals
 export class RideVisuals {
   constructor(scene, data, guestFactory) {
@@ -243,7 +320,27 @@ export class RideVisuals {
         extras[name] = g;
       }
       const seats = r.seats.map((list) => list.map((c) => cfMatrix(c)));
-      this.rides.set(r.id, { r, cfg, motion, cars, extras, seats, guests: [], ridersKey: '', lastT: -1, poses: null });
+      // lap bars / harnesses on every seat, starting open
+      const kind = r.crew?.restraint;
+      const restraints = [];
+      if (RESTRAINT[kind]) {
+        const spec = RESTRAINT[kind];
+        const geo = restraintGeometry(kind);
+        const mat = material('metal');
+        seats.forEach((list, ci) => {
+          restraints[ci] = list.map((seat) => {
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.matrixAutoUpdate = false;
+            mesh.castShadow = true;
+            const base = seat.clone().multiply(new THREE.Matrix4().makeTranslation(...spec.hinge));
+            cars[ci].add(mesh);
+            const b = { mesh, base, angle: spec.open, target: spec.open, open: spec.open, closed: false };
+            this.poseRestraint(b);
+            return b;
+          });
+        });
+      }
+      this.rides.set(r.id, { r, cfg, motion, cars, extras, seats, restraints, restraint: kind || 'none', guests: [], ridersKey: '', lastT: -1, poses: null });
     }
   }
 
@@ -296,6 +393,52 @@ export class RideVisuals {
     v.lastT = t;
     v.poses = p;
     return p;
+  }
+
+  poseRestraint(b) {
+    b.mesh.matrix.copy(b.base).multiply(new THREE.Matrix4().makeRotationX(b.angle));
+    b.mesh.matrixWorldNeedsUpdate = true;
+  }
+
+  // close (true) or open (false) one seat's restraint; returns whether it changed
+  setRestraint(id, car, seat, closed) {
+    const b = this.rides.get(id)?.restraints[car - 1]?.[seat - 1];
+    if (!b || b.closed === closed) return false;
+    b.closed = closed;
+    b.target = closed ? 0 : b.open;
+    return true;
+  }
+
+  restraintClosed(id, car, seat) {
+    const b = this.rides.get(id)?.restraints[car - 1]?.[seat - 1];
+    return b ? b.closed : true;
+  }
+
+  // set every restraint on a ride at once (snap: no animation)
+  setAllRestraints(id, closed, snap = false) {
+    const v = this.rides.get(id);
+    for (const list of v.restraints) {
+      for (const b of list || []) {
+        b.closed = closed;
+        b.target = closed ? 0 : b.open;
+        if (snap) { b.angle = b.target; this.poseRestraint(b); }
+      }
+    }
+  }
+
+  // swing restraints toward their targets
+  animateRestraints(dt) {
+    for (const v of this.rides.values()) {
+      for (const list of v.restraints) {
+        for (const b of list || []) {
+          if (b.angle === b.target) continue;
+          const step = dt * 3.2;
+          const d = b.target - b.angle;
+          b.angle = Math.abs(d) <= step ? b.target : b.angle + Math.sign(d) * step;
+          this.poseRestraint(b);
+        }
+      }
+    }
   }
 
   seatMatrix(id, car, seat) {

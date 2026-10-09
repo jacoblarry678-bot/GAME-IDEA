@@ -158,6 +158,23 @@ umbrellas at Family Landing. The windmill, gears, film reels, show cars and
 lighthouse lamp turn, and the searchlights and lighthouse beam light up at
 night.
 
+**Staff.** Every ride has a crew in a polo in its land's color, with a name
+badge. The operator works a control console (buttons, a screen and a
+green/amber/red stack light) at the front of the loading platform. When a
+train boards, riders pull their own lap bars or shoulder harnesses down, then
+one or two attendants walk the platform car by car, bend over each row and
+push every restraint down until it locks. They give the operator a thumbs
+up, the operator calls "Clear!" and hits dispatch, and the attendants wave
+the train off. The restraints lift again when it comes back. Coasters and the
+spinning cups have lap bars, the drop tower and Piston Pounder have shoulder
+harnesses, and the trucks and karts have seatbelts that get checked. When
+you ride, press **E** (or tap the button) to pull your own lap bar down, or
+an attendant will do it for you. Cashiers work every shop and restaurant
+counter, greeters welcome you at the gate, vendors run the popcorn and
+balloon carts, and sweepers keep the walkways clean. They all wave and say
+hello as you pass, in speech bubbles over their heads. Boarding takes 12
+seconds so the crew has time to check every row.
+
 **Shows** (times are park time):
 
 - **Big Dreams Live!** at the Lakeside Stage: dancers, stage lights, lake

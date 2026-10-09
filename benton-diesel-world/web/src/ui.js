@@ -473,6 +473,19 @@ export class UI {
     });
   }
 
+  // the "pull down your lap bar" button while your ride boards
+  updateRestraintHint() {
+    const el = $('#restraint-btn');
+    const kind = this.g.staff?.playerAction();
+    if (!kind) { el.hidden = true; this.restraintKind = null; return; }
+    if (kind !== this.restraintKind) {
+      this.restraintKind = kind;
+      el.replaceChildren(h('kbd', {}, 'E'), kind === 'harness' ? 'Pull your harness down' : 'Pull your lap bar down');
+      el.onclick = () => this.g.staff.playerPull();
+    }
+    el.hidden = false;
+  }
+
   // -------------------------------------------------------------- prompts
   findPrompt(pos) {
     let best = null, bestD = 14;
@@ -589,6 +602,7 @@ export class UI {
       $('span', gc).textContent = `📍 ${this.g.guide.name}  ·  ${Math.round(state.guideDist)} m`;
     } else gc.hidden = true;
 
+    this.updateRestraintHint();
     this.updatePrompt(state.pos, sim.ridingRide);
     this.lastTick += dt;
     if (this.lastTick > 0.25) {
@@ -612,7 +626,11 @@ export class UI {
 
   // keyboard shortcuts
   handleKeys(input) {
-    if (input.consume('e')) this.primary();
+    if (input.consume('e')) {
+      // on a ride: E pulls your own lap bar down
+      if (this.g.staff?.playerAction()) this.g.staff.playerPull();
+      else this.primary();
+    }
     if (input.consume('f')) this.secondary();
     for (const k of ['1', '2', '3']) {
       if (input.consume(k)) { this.g.sim.eat(Number(k) - 1); this.renderFood(); }

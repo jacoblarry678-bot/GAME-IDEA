@@ -3,6 +3,7 @@
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local Kit = require(script.Parent.Kit)
+local Staff = require(Shared.Staff)
 
 local M = Enum.Material
 local C = Config.Colors
@@ -186,6 +187,10 @@ local function gate(parent: Instance)
 		post.CanCollide = false
 		local top = Kit.block(parent, Vector3.new(0.6, 0.6, 0.6), CFrame.new(x - 2.4, 4.3, z - 1), C.Green, M.Neon)
 		top.CanCollide = false
+	end
+	-- greeters just inside the gate, welcoming guests in
+	for i, x in { -24, 24 } do
+		Staff.place(parent, "greeter", "Plaza", 4100 + i * 13, CFrame.lookAt(Vector3.new(x, 0.4, z - 10), Vector3.new(x * 0.6, 0.4, z + 10)))
 	end
 	-- palms and planters on the forecourt
 	for _, x in { -60, -48, 48, 60 } do

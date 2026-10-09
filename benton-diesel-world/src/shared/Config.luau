@@ -410,7 +410,7 @@ for _, ride in Config.Rides do
 	Config.RideById[ride.id] = ride
 end
 
-Config.BoardingTime = 5 -- seconds riders sit in the station before dispatch
+Config.BoardingTime = 12 -- seconds in the station: riders sit down, staff check every restraint, dispatch
 Config.UnloadTime = 3
 
 ---------------------------------------------------------------------------

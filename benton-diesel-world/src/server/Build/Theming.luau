@@ -11,6 +11,7 @@
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("BentonShared")
 local Config = require(Shared.Config)
 local Kit = require(script.Parent.Kit)
+local Staff = require(Shared.Staff)
 
 local M = Enum.Material
 local C = Config.Colors
@@ -1205,6 +1206,13 @@ function Theming.build(parent: Instance): { { number } }
 			local cf = CFrame.new(p[3] :: number, y, p[4] :: number) * CFrame.Angles(0, math.rad(p[5] :: number), 0)
 			local holder = Kit.folder(p[2] :: string, f)
 			builder(holder, cf, land.color, rng)
+			if p[2] == "popcorn_cart" or p[2] == "balloon_cart" then
+				-- a vendor minding the cart, by its push handle
+				local at = (cf * CFrame.new(4.4, 0.15, 1.0)).Position
+				local look = cf:VectorToWorldSpace(Vector3.new(-0.5, 0, -1))
+				local vendor = Staff.place(holder, "vendor", land.id, 5200 + #footprints * 11, CFrame.lookAt(at, at + look))
+				vendor:SetAttribute("Kind", p[2] :: string)
+			end
 			table.insert(footprints, { p[3] :: number, p[4] :: number, (Theming.RADIUS[p[2] :: string] or 2) + 1 })
 		end
 	end
