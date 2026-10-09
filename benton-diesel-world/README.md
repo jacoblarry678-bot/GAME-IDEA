@@ -17,6 +17,29 @@ from the Roblox game's own build code: same lands, rides, wait times, shows,
 shops, restaurants, Benton Bucks and passport. Progress is saved in your
 browser.
 
+It is drawn as its own realistic game rather than a copy of the Roblox look:
+
+- **People** are smooth, properly proportioned humans with faces, hair styles
+  (short, long, ponytail, buzz cut, caps), shirts, shorts or long pants and
+  shoes, in two body builds and many skin tones. You walk, run (hold Shift),
+  jump and sit on rides with a real walk cycle; the strolling crowds and the
+  guests in every queue line walk, stop to look around and shuffle forward.
+- **Materials** are physically based: painted steel, timber and planks,
+  concrete, brick, fabric and rubber each get their own procedural surface
+  detail, and box edges are softly rounded so light catches them.
+- **Light:** an atmospheric sky with drifting clouds, the sun crossing it
+  through the day, a moonlit starry night, soft shadows, reflections of the
+  sky in metal, glass and water, filmic tone mapping and bloom on neon,
+  string lights and signs (plus ambient occlusion on Ultra).
+- **Nature:** one smooth terrain with hills, the rocky mountain, a sandy
+  lake shore and rolling countryside with woods; broadleaf trees, pines and
+  palms that sway in the breeze; blades of grass around you; rippling water
+  in the lake and the log flume.
+- **Rides** run on smooth swept track: tubular steel coaster rails with
+  spines and brackets, a timber mine-coaster track, the flume channel,
+  roads and the railway.
+- **Graphics settings** (⚙ Settings): Fast for phones, High, and Ultra.
+
 ```bash
 npm install
 npm run export-web   # export the park from the Roblox build to web/public/park.json
@@ -24,9 +47,10 @@ npm run build-web    # bundle web/dist (index.html, game.js, park.json)
 npm run serve-web    # open http://localhost:8080
 ```
 
-Controls: WASD or arrows to walk, drag to look, wheel to zoom, Space to jump,
-E to join a line or open a shop, F for an Express Pass, 1–3 to eat. On a phone,
-use your left thumb to walk and drag anywhere else to look.
+Controls: WASD or arrows to walk, hold Shift to run, drag to look, wheel to
+zoom, Space to jump, E to join a line or open a shop, F for an Express Pass,
+1–3 to eat. On a phone, use your left thumb to walk (push all the way to run)
+and drag anywhere else to look.
 
 **Sound.** The browser edition makes all of its sound itself, with the Web
 Audio API (no audio files):

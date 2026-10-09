@@ -38,7 +38,10 @@ const TABS = [
 
 const SHIRTS = [0x1e6ee6, 0xc42828, 0xff8c1a, 0x2e9e52, 0x7a3fc4, 0xf0c040, 0x222831, 0xf5f5f0];
 const PANTS = [0x283c6e, 0x2b2b30, 0x5a4632, 0x3a6ea5, 0x6e6e74, 0x8a2a2a];
-const SKINS = [0xffcc99, 0xe8b07c, 0xc68a5a, 0x8d5a3b, 0x5c3a24, 0xf2d0b8];
+const SKINS = [0xf3d2bd, 0xe8b996, 0xd29e78, 0xb07a55, 0x8a5a3c, 0x62402b];
+const HAIRS = [0x1d1612, 0x4a3020, 0x6b4a2e, 0xc9a46a, 0xa04a24, 0x8c8a86];
+const HAIR_STYLES = [['Short', 0], ['Long', 1], ['Ponytail', 2], ['Buzz cut', 3]];
+const BUILDS = [['Build A', 0], ['Build B', 1]];
 
 const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
@@ -358,7 +361,20 @@ export class UI {
           onChange();
         },
       })));
-    return h('div', { class: 'outfit' }, row('Shirt', 'shirt', SHIRTS), row('Pants', 'pants', PANTS), row('Skin', 'skin', SKINS));
+    // styles: a row of small text buttons
+    const choice = (label, key, options) => h('div', { class: 'swatches' }, h('span', {}, label),
+      ...options.map(([name, value]) => h('button', {
+        class: `btn small ${(look[key] ?? 0) === value ? '' : 'ghost'}`,
+        onclick: (e) => {
+          look[key] = value;
+          for (const b of e.currentTarget.parentNode.querySelectorAll('.btn')) b.classList.add('ghost');
+          e.currentTarget.classList.remove('ghost');
+          this.g.sim.save();
+          onChange();
+        },
+      }, name)));
+    return h('div', { class: 'outfit' }, row('Shirt', 'shirt', SHIRTS), row('Pants', 'pants', PANTS), row('Skin', 'skin', SKINS),
+      row('Hair', 'hair', HAIRS), choice('Style', 'hairStyle', HAIR_STYLES), choice('Body', 'build', BUILDS));
   }
 
   // -------------------------------------------------------- venue window
@@ -426,7 +442,8 @@ export class UI {
       h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(a.prefs[key]), id: `vol-${key}`, oninput: (e) => a.setPref(key, Number(e.target.value)) }));
     body.append(slider('Music', 'music'), slider('Effects', 'effects'));
     body.append(h('h4', {}, 'Graphics'));
-    body.append(h('div', { class: 'row' }, ...['low', 'high'].map((q) => h('button', { class: `btn small ${g.qualityName === q ? '' : 'ghost'}`, onclick: () => { g.setQuality(q); this.renderVenueModal(); } }, q === 'high' ? 'High (shadows)' : 'Fast'))));
+    const qualityLabel = { low: 'Fast', high: 'High', ultra: 'Ultra' };
+    body.append(h('div', { class: 'row' }, ...['low', 'high', 'ultra'].map((q) => h('button', { class: `btn small ${g.qualityName === q ? '' : 'ghost'}`, onclick: () => { g.setQuality(q); this.renderVenueModal(); } }, qualityLabel[q]))));
     body.append(h('h4', {}, 'Getting around'));
     body.append(h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => { g.teleportHome(); this.closeModal(); } }, '🚪 Back to the Main Gate')));
     body.append(h('h4', {}, 'Controls'));
@@ -626,12 +643,12 @@ export class UI {
 
 const HELP = `
 <div class="keys"><b>Computer</b>
-<span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows: walk</span>
+<span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows: walk · hold <kbd>Shift</kbd> to run</span>
 <span>Drag the mouse: look around · wheel: zoom</span>
 <span><kbd>Space</kbd> jump · <kbd>E</kbd> join a line / open a shop · <kbd>F</kbd> Express Pass</span>
 <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> eat food · <kbd>M</kbd> park map · <kbd>Tab</kbd> wait times</span></div>
 <div class="keys"><b>Phone &amp; tablet</b>
-<span>Left thumb: walk · drag anywhere else: look</span>
+<span>Left thumb: walk (push all the way to run) · drag anywhere else: look</span>
 <span>Pinch: zoom · tap ⤒ to jump · tap the buttons that pop up at rides and shops</span></div>
 <div class="keys"><b>Sound</b>
 <span>Every land has its own music, plus ride, show and park sounds and an announcer. Tap 🔊 to mute, or set volumes in ⚙ Settings.</span></div>`;

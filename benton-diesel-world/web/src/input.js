@@ -141,6 +141,12 @@ export class Input {
     return { x, y };
   }
 
+  // Shift, or the joystick pushed all the way, breaks into a run
+  wantsRun() {
+    if (!this.enabled) return false;
+    return this.keys.has('shift') || Math.hypot(this.joy.x, this.joy.y) > 0.9;
+  }
+
   wantsJump() {
     const j = this.jumpPressed || this.keys.has(' ');
     this.jumpPressed = false;

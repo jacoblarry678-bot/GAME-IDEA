@@ -62,6 +62,8 @@ local function steelTrack(parent: Instance, ride: Ride, sampler: Track.Sampler, 
 	local step = 3
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Track", parent)
+	f:SetAttribute("Style", if wooden then "wood" else "steel")
+	f:SetAttribute("Color", railColor)
 	local supports = Kit.folder("Supports", parent)
 	for i = 0, n - 1 do
 		local s0 = i * step
@@ -121,6 +123,8 @@ local function flumeTrack(parent: Instance, ride: Ride, sampler: Track.Sampler)
 	local step = 3
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Channel", parent)
+	f:SetAttribute("Style", "flume")
+	local supports = Kit.folder("Supports", parent)
 	local highest, highestS = -math.huge, 0
 	for i = 0, n - 1 do
 		local s0 = i * step
@@ -141,7 +145,7 @@ local function flumeTrack(parent: Instance, ride: Ride, sampler: Track.Sampler)
 		if i % 4 == 0 and cf0.Y > 5 then
 			for _, sx in { -3.6, 3.6 } do
 				local p = (cf0 * CFrame.new(sx, -1.6, 0)).Position
-				Kit.box(f, Vector3.new(1, p.Y, 1), Vector3.new(p.X, 0, p.Z), wood, M.Wood)
+				Kit.box(supports, Vector3.new(1, p.Y, 1), Vector3.new(p.X, 0, p.Z), wood, M.Wood)
 			end
 		end
 	end
@@ -176,6 +180,14 @@ local function groundStrip(parent: Instance, sampler: Track.Sampler, width: numb
 	local step = 4
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Road", parent)
+	f:SetAttribute("Style", "road")
+	f:SetAttribute("Width", width)
+	f:SetAttribute("Drop", drop)
+	f:SetAttribute("Color", color)
+	if dash then
+		f:SetAttribute("Dash", dash)
+	end
+	f:SetAttribute("Curbs", curbs == true)
 	for i = 0, n - 1 do
 		local s0 = i * step
 		local s1 = math.min((i + 1) * step, L)
@@ -207,6 +219,7 @@ local function railTrack(parent: Instance, sampler: Track.Sampler)
 	local step = 3
 	local n = math.ceil(L / step)
 	local f = Kit.folder("Rails", parent)
+	f:SetAttribute("Style", "rails")
 	for i = 0, n - 1 do
 		local s0 = i * step
 		local s1 = math.min((i + 1) * step, L)

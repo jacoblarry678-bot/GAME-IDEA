@@ -215,11 +215,18 @@ local LEAF = {
 	Color3.fromRGB(90, 150, 64),
 }
 
-function Kit.tree(parent: Instance, pos: Vector3, kind: string?, scale: number?)
+function Kit.tree(folder: Instance, pos: Vector3, kind: string?, scale: number?)
 	local rng = Kit.rng
 	local s = scale or rng:NextNumber(0.8, 1.25)
 	local k = kind or (if rng:NextNumber() < 0.5 then "round" else "pine")
 	local trunk = Color3.fromRGB(110, 78, 50)
+	-- each tree is its own tagged model so other renderers can swap in
+	-- their own trees (the browser edition does)
+	local parent = Kit.model("Tree", folder)
+	parent:SetAttribute("TreeKind", k)
+	parent:SetAttribute("TreeScale", s)
+	parent:SetAttribute("Base", pos)
+	parent:AddTag("Tree")
 	if k == "pine" then
 		Kit.post(parent, 6 * s, 1.4 * s, pos, trunk, M.Wood)
 		local leaf = Color3.fromRGB(40, 100, 56)
@@ -249,6 +256,7 @@ function Kit.bush(parent: Instance, pos: Vector3, size: number?)
 	local s = size or Kit.rng:NextNumber(2.5, 4)
 	local b = Kit.ball(parent, s, pos + Vector3.new(0, s * 0.35, 0), LEAF[Kit.rng:NextInteger(1, #LEAF)], M.Grass)
 	b.CastShadow = false
+	b:AddTag("Bush")
 end
 
 -- Flower bed: low box of soil with colorful blooms.

@@ -1,73 +1,72 @@
-// The static park: merged geometry chunks, terrain, the lake, sign text,
-// live wait-time signs, sky and day/night lighting.
+// The static park: merged geometry chunks per material, the terrain and
+// water, sign text, live wait-time signs, trees, ride tracks, and the sky
+// with its day/night lighting.
 import * as THREE from 'three';
-import { Merger, Materials, P, partMatrix, cfMatrix, buildModel } from './geom.js';
+import { Merger, P, partMatrix, cfMatrix, buildModel, partFamily } from './geom.js';
+import { material } from './render/materials.js';
+import { Terrain } from './render/terrain.js';
+import { waterMaterial } from './render/water.js';
+import { SkySystem } from './render/sky.js';
+import { Trees } from './render/trees.js';
+import { buildTracks } from './render/tracks.js';
+import { Grass } from './render/grass.js';
 import * as Clock from './clock.js';
 
-const CHUNK = 120;
+const CHUNK = 160;
 const SIGN_FONT = '"Barlow Semi Condensed", "Arial Narrow", Arial, sans-serif';
 
 export class World {
-  constructor(scene, data, quality) {
+  constructor(scene, data, quality, renderer) {
     this.scene = scene;
     this.data = data;
     this.quality = quality;
     this.materials = data.materials;
     this.signMaterials = [];
-    this.litSignMaterials = [];
     this.dynamicSigns = [];
+    this.hidden = new Set(data.hidden || []);
+    this.terrain = new Terrain(data);
+    this.lake = this.terrain.lake;
+    this.sky = new SkySystem(scene, renderer, quality);
+    this.sun = this.sky.sun;
     this.buildTerrain();
     this.buildStatic();
     this.buildSigns();
-    this.buildSky();
     this.globe = this.buildGlobe();
     this.spinners = this.buildSpinners();
+    this.trees = new Trees(scene, data, this.terrain, quality);
+    this.tracks = buildTracks(scene, data, quality);
+    // blades of grass around the camera (not on the fast setting)
+    if (quality.grass) this.grass = new Grass(scene, data, this.terrain, { count: quality.grass, radius: quality.name === 'ultra' ? 60 : 46 });
+  }
+
+  updateGrass(t, cam) {
+    this.grass?.update(t, cam);
+  }
+
+  // graphics preset changed: grass comes and goes with it
+  setQuality(preset) {
+    if (preset.grass && !this.grass) this.grass = new Grass(this.scene, this.data, this.terrain, { count: preset.grass, radius: preset.name === 'ultra' ? 60 : 46 });
+    if (this.grass) this.grass.enabled = !!preset.grass;
   }
 
   // ---------------------------------------------------------------- terrain
   buildTerrain() {
-    const grassTex = noiseTexture(256, [86, 150, 70], 18);
-    grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
-    grassTex.repeat.set(160, 160);
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(2600, 2600),
-      new THREE.MeshLambertMaterial({ map: grassTex }),
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.set(0, -0.02, 0);
-    ground.receiveShadow = true;
-    this.scene.add(ground);
-    const colors = { Grass: 0x5d9a4a, Rock: 0x8a8580, Ground: 0x7a6248, Sand: 0xd9c49a };
-    for (const op of this.data.terrain) {
-      if (op.kind === 'ball') {
-        const mesh = new THREE.Mesh(
-          new THREE.SphereGeometry(op.radius, 18, 12),
-          new THREE.MeshLambertMaterial({ color: colors[op.material] ?? 0x5d9a4a, flatShading: op.material === 'Rock' }),
-        );
-        mesh.position.set(...op.center);
-        mesh.receiveShadow = true;
-        this.scene.add(mesh);
-      } else if (op.kind === 'cylinder' && (op.material === 'Water' || op.material === 'Sand')) {
-        const isWater = op.material === 'Water';
-        const disc = new THREE.Mesh(
-          new THREE.CircleGeometry(op.radius, 48),
-          isWater
-            ? new THREE.MeshPhongMaterial({ color: 0x3f86c8, shininess: 80, specular: 0x88bbee, transparent: true, opacity: 0.92 })
-            : new THREE.MeshLambertMaterial({ color: colors.Sand }),
-        );
-        disc.rotation.x = -Math.PI / 2;
-        disc.position.set(op.cf[0], isWater ? 0.05 : 0.02, op.cf[2]);
-        this.scene.add(disc);
-        if (isWater) this.lake = { x: op.cf[0], z: op.cf[2], r: op.radius };
-      } else if (op.kind === 'block' && op.material === 'Water') {
-        const box = new THREE.Mesh(
-          new THREE.PlaneGeometry(op.size[0], op.size[2]),
-          new THREE.MeshPhongMaterial({ color: 0x3f86c8, shininess: 80 }),
-        );
-        box.rotation.x = -Math.PI / 2;
-        box.position.set(op.cf[0], 0.3, op.cf[2]);
-        this.scene.add(box);
-      }
+    this.terrainMesh = this.terrain.buildMesh(this.quality);
+    this.scene.add(this.terrainMesh);
+    const L = this.terrain.lake;
+    if (L) {
+      const lake = new THREE.Mesh(new THREE.CircleGeometry(L.r + 4, 96), waterMaterial({ opacity: 0.88 }));
+      lake.rotation.x = -Math.PI / 2;
+      lake.position.set(L.x, -0.35, L.z);
+      lake.renderOrder = 1;
+      this.scene.add(lake);
+    }
+    for (const p of this.terrain.ponds) {
+      const pond = new THREE.Mesh(new THREE.PlaneGeometry(p.sx, p.sz), waterMaterial({ opacity: 0.9, color: 0x24505a }));
+      pond.rotation.x = -Math.PI / 2;
+      pond.position.set(p.x, p.level, p.z);
+      pond.renderOrder = 1;
+      this.scene.add(pond);
     }
   }
 
@@ -76,31 +75,31 @@ export class World {
     const chunks = new Map();
     const glass = new Merger();
     const m = new THREE.Matrix4();
-    for (const p of this.data.static) {
-      const matName = this.materials[p[P.MAT]];
-      const kind = matName === 'Neon' ? 'neon' : (p[P.TRANS] > 0.05 || matName === 'Glass') ? 'glass' : 'solid';
-      if (kind === 'glass') {
+    this.data.static.forEach((p, i) => {
+      if (this.hidden.has(i)) return;
+      const fam = partFamily(p, this.materials);
+      if (fam === 'glass') {
         glass.add(p, partMatrix(p, m), this.materials, false);
-        continue;
+        return;
       }
-      const key = `${kind}:${Math.floor(p[P.X] / CHUNK)}:${Math.floor(p[P.Z] / CHUNK)}`;
+      const key = `${fam}:${Math.floor(p[P.X] / CHUNK)}:${Math.floor(p[P.Z] / CHUNK)}`;
       let merger = chunks.get(key);
       if (!merger) {
         merger = new Merger();
         chunks.set(key, merger);
       }
       merger.add(p, partMatrix(p, m), this.materials, false);
-    }
+    });
     for (const [key, merger] of chunks) {
-      const kind = key.split(':')[0];
-      const mesh = new THREE.Mesh(merger.build(), Materials[kind]);
-      mesh.castShadow = kind === 'solid' && this.quality.shadows;
-      mesh.receiveShadow = kind === 'solid' && this.quality.shadows;
+      const fam = key.split(':')[0];
+      const mesh = new THREE.Mesh(merger.build(), material(fam));
+      mesh.castShadow = fam !== 'neon';
+      mesh.receiveShadow = fam !== 'neon';
       mesh.matrixAutoUpdate = false;
       this.scene.add(mesh);
     }
     if (glass.count) {
-      const mesh = new THREE.Mesh(glass.build(), Materials.glass);
+      const mesh = new THREE.Mesh(glass.build(), material('glass'));
       mesh.renderOrder = 2;
       this.scene.add(mesh);
     }
@@ -162,9 +161,14 @@ export class World {
       tex.anisotropy = 4;
       for (const kind of ['glow', 'lit']) {
         if (!pg.quads[kind].length) continue;
-        const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
-        (kind === 'glow' ? this.signMaterials : this.litSignMaterials).push(mat);
+        // glowing signs shine on their own; painted ones take the light
+        const mat = kind === 'glow'
+          ? new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
+          : new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, roughness: 0.55, metalness: 0 });
+        if (kind === 'glow') mat.color.setScalar(1.35);
+        this.signMaterials.push(mat);
         const mesh = new THREE.Mesh(quadGeometry(pg.quads[kind]), mat);
+        mesh.receiveShadow = kind !== 'glow';
         mesh.renderOrder = 3;
         this.scene.add(mesh);
       }
@@ -178,7 +182,9 @@ export class World {
       canvas.height = ds.kind === 'board' ? 520 : 300;
       const tex = new THREE.CanvasTexture(canvas);
       tex.colorSpace = THREE.SRGBColorSpace;
+      // LED display boards
       const mat = new THREE.MeshBasicMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -2 });
+      mat.color.setScalar(1.15);
       const mesh = new THREE.Mesh(quadGeometry([{ frame, uv: [0, 0, 1, 1] }]), mat);
       this.scene.add(mesh);
       this.dynamicSigns.push({ ...ds, canvas, ctx: canvas.getContext('2d'), tex });
@@ -232,7 +238,7 @@ export class World {
   // ---------------------------------------------------------------- globe
   buildGlobe() {
     const g = this.data.globe;
-    const model = buildModel(g.parts, this.materials, { detail: true });
+    const model = buildModel(g.parts, this.materials, { detail: true, shadows: true });
     const holder = new THREE.Group();
     holder.matrixAutoUpdate = false;
     holder.matrix.copy(cfMatrix(g.pivot));
@@ -242,82 +248,13 @@ export class World {
   }
 
   // -------------------------------------------------------------- sky/light
-  buildSky() {
-    const geo = new THREE.SphereGeometry(1800, 32, 16);
-    this.skyUniforms = {
-      top: { value: new THREE.Color(0x4a8fd8) },
-      horizon: { value: new THREE.Color(0xbfdcf2) },
-      sunDir: { value: new THREE.Vector3(0, 1, 0) },
-      sunColor: { value: new THREE.Color(1, 0.95, 0.8) },
-      night: { value: 0 },
-    };
-    const sky = new THREE.Mesh(geo, new THREE.ShaderMaterial({
-      side: THREE.BackSide,
-      depthWrite: false,
-      fog: false,
-      uniforms: this.skyUniforms,
-      vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-      fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 sunDir; uniform vec3 sunColor; uniform float night; varying vec3 vDir;
-        float hash(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453); }
-        void main(){
-          float h = clamp(vDir.y, 0.0, 1.0);
-          vec3 col = mix(horizon, top, pow(h, 0.55));
-          float s = max(dot(normalize(vDir), normalize(sunDir)), 0.0);
-          col += sunColor * (pow(s, 600.0) * 2.0 + pow(s, 12.0) * 0.18) * (1.0 - night);
-          vec3 q = floor(vDir * 420.0);
-          float star = step(0.9975, hash(q)) * night * smoothstep(0.05, 0.3, vDir.y);
-          col += vec3(star);
-          gl_FragColor = vec4(col, 1.0);
-        }`,
-    }));
-    sky.renderOrder = -1;
-    sky.frustumCulled = false;
-    this.sky = sky;
-    this.scene.add(sky);
-    this.hemi = new THREE.HemisphereLight(0xdfefff, 0x506040, 1.0);
-    this.scene.add(this.hemi);
-    this.sun = new THREE.DirectionalLight(0xffffff, 1.6);
-    this.sun.castShadow = this.quality.shadows;
-    this.sun.shadow.mapSize.set(2048, 2048);
-    const sc = this.sun.shadow.camera;
-    sc.left = -110; sc.right = 110; sc.top = 110; sc.bottom = -110; sc.near = 10; sc.far = 900;
-    this.sun.shadow.bias = -0.0008;
-    this.sun.shadow.normalBias = 0.6;
-    this.scene.add(this.sun);
-    this.scene.add(this.sun.target);
-    this.scene.fog = new THREE.Fog(0xbfdcf2, 500, 1700);
-  }
-
   // daylight factor 0 (night) .. 1 (day)
-  updateLighting(focus) {
-    const minute = Clock.minutes();
-    const hour = minute / 60;
-    const sunAngle = (hour - 6) / 12 * Math.PI; // 6am rise, 6pm set
-    const elev = Math.sin(sunAngle);
-    const day = THREE.MathUtils.smoothstep(elev, -0.12, 0.25);
-    const dusk = Math.max(0, 1 - Math.abs(elev) / 0.3) * (elev > -0.2 ? 1 : 0);
-    const sunDir = new THREE.Vector3(Math.cos(sunAngle) * 0.8, Math.max(elev, 0.05), 0.45).normalize();
-    this.skyUniforms.sunDir.value.copy(sunDir);
-    const dayTop = new THREE.Color(0x3f86d6), nightTop = new THREE.Color(0x070c1e), duskTop = new THREE.Color(0x3a4f9a);
-    const dayHor = new THREE.Color(0xc4dff3), nightHor = new THREE.Color(0x1a2342), duskHor = new THREE.Color(0xf2a868);
-    const top = nightTop.clone().lerp(dayTop, day).lerp(duskTop, dusk * 0.5);
-    const hor = nightHor.clone().lerp(dayHor, day).lerp(duskHor, dusk * 0.65);
-    this.skyUniforms.top.value.copy(top);
-    this.skyUniforms.horizon.value.copy(hor);
-    this.skyUniforms.night.value = 1 - day;
-    this.scene.fog.color.copy(hor);
-    this.sun.intensity = 0.25 + 1.55 * day;
-    this.sun.color.setRGB(1, 0.92 + 0.08 * day - dusk * 0.15, 0.82 + 0.18 * day - dusk * 0.3);
-    this.hemi.intensity = 0.35 + 0.75 * day;
-    this.hemi.color.setRGB(0.55 + 0.33 * day, 0.6 + 0.34 * day, 0.85 + 0.15 * day);
-    // follow the player with the shadow camera
+  updateLighting(focus, t = 0) {
+    const hour = Clock.minutes() / 60;
     const f = focus ?? new THREE.Vector3();
-    const lightDir = elev > 0 ? sunDir : new THREE.Vector3(0.3, 0.8, 0.4).normalize();
-    this.sun.position.copy(f).addScaledVector(lightDir, 400);
-    this.sun.target.position.copy(f);
-    const signBrightness = 0.55 + 0.45 * day;
-    for (const m of this.litSignMaterials) m.color.setScalar(signBrightness);
-    this.sky.position.copy(f);
+    const day = this.sky.update(hour, f, t);
+    this.sky.updateEnvironment();
+    this.trees?.update(t);
     this.daylight = day;
     return day;
   }
@@ -330,7 +267,7 @@ export class World {
       holder.matrixAutoUpdate = false;
       const base = cfMatrix(sp.pivot);
       holder.matrix.copy(base);
-      holder.add(buildModel(sp.parts, this.materials, { detail: true }));
+      holder.add(buildModel(sp.parts, this.materials, { detail: true, shadows: true }));
       this.scene.add(holder);
       return { name: sp.name, holder, base, axis: axes[sp.axis] || axes.Y, speed: sp.speed, pos: new THREE.Vector3().setFromMatrixPosition(base), angle: 0 };
     });
@@ -447,23 +384,4 @@ function drawLabels(ctx, x, y, w, h, labels) {
     const align = l.align === 'Left' ? 'left' : l.align === 'Right' ? 'right' : 'center';
     fitText(ctx, l.text, bx, by, bw, bh, cssColor(l.color), weight, align, l.stroke);
   }
-}
-
-function noiseTexture(size, rgb, amount) {
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  const ctx = c.getContext('2d');
-  const img = ctx.createImageData(size, size);
-  for (let i = 0; i < size * size; i++) {
-    const n = (Math.random() - 0.5) * amount * 2;
-    const blade = Math.random() < 0.08 ? 14 : 0;
-    img.data[i * 4] = Math.max(0, Math.min(255, rgb[0] + n));
-    img.data[i * 4 + 1] = Math.max(0, Math.min(255, rgb[1] + n + blade));
-    img.data[i * 4 + 2] = Math.max(0, Math.min(255, rgb[2] + n));
-    img.data[i * 4 + 3] = 255;
-  }
-  ctx.putImageData(img, 0, 0);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
 }

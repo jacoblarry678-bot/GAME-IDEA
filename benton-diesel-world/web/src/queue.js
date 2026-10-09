@@ -2,10 +2,9 @@
 // src/shared/QueueLine.luau): the path through each ride's switchback maze,
 // the guests standing in line, and helpers for walking the player along it.
 import * as THREE from 'three';
-import { buildModel } from './geom.js';
 
 const FLOOR = 0.55; // top of the queue floor
-const WALK = 7; // how fast guests shuffle forward (studs/s)
+const WALK = 4.5; // how fast guests shuffle forward (studs/s)
 
 export class QueuePath {
   constructor(q) {
@@ -69,39 +68,19 @@ export function slotAt(index, spacing) {
   return index * spacing; // index 0 = next to board
 }
 
-// Guests standing in every line, drawn with one instanced mesh per figure.
+// Guests standing in every line (drawn by the shared crowd renderer):
+// they shuffle forward when the line moves and fidget while they wait.
 export class QueueCrowd {
-  constructor(scene, data, paths) {
+  constructor(people, data, paths) {
+    this.people = people;
     this.paths = paths;
     this.spacing = data.queue.spacing;
-    this.variants = data.guests.filter((g) => g.pose === 'stand').map((g) => {
-      const model = buildModel(g.parts, data.materials, { detail: false });
-      const meshes = model.children.map((m) => {
-        const inst = new THREE.InstancedMesh(m.geometry, m.material, 160);
-        inst.frustumCulled = false;
-        inst.count = 0;
-        inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        scene.add(inst);
-        return inst;
-      });
-      return { meshes, used: 0 };
-    });
-    this.visual = new Map(); // entry id -> { s, walking }
-    this.m = new THREE.Matrix4();
-    this.q = new THREE.Quaternion();
-    this.p = new THREE.Vector3();
-    this.one = new THREE.Vector3(1, 1, 1);
-    this.up = new THREE.Vector3(0, 1, 0);
+    this.visual = new Map(); // entry id -> { s, walking, cycle }
     this.pt = { x: 0, z: 0, fx: 0, fz: 1 };
-  }
-
-  variantOf(seed) {
-    return (Math.abs(Math.imul(seed | 0, 2654435761)) >>> 0) % this.variants.length;
   }
 
   // rides: sim ride states; cam: camera position; first: snap everyone in place
   update(dt, time, rides, cam, first) {
-    for (const v of this.variants) v.used = 0;
     const seen = new Set();
     for (const st of rides) {
       const path = this.paths.get(st.id);
@@ -115,34 +94,24 @@ export class QueueCrowd {
         if (!v) {
           // newcomers walk in from outside the entrance sign
           const start = first ? target : Math.max(target, Math.min(path.length, path.signAt + 4));
-          v = { s: start, walking: false };
+          v = { s: start, walking: false, cycle: (e.seed % 100) / 100 };
           this.visual.set(e.id, v);
         }
         const gap = target - v.s;
         const stepMax = WALK * dt;
+        const step = Math.max(-stepMax, Math.min(stepMax, gap));
         v.walking = Math.abs(gap) > 0.05;
-        v.s += Math.max(-stepMax, Math.min(stepMax, gap));
+        v.s += step;
+        v.cycle += Math.abs(step) / 5;
         if (!near) return;
-        const variant = this.variants[this.variantOf(e.seed)];
-        if (variant.used >= variant.meshes[0].instanceMatrix.count) return;
         path.pointAt(v.s, this.pt);
-        const bob = v.walking ? Math.abs(Math.sin(time * 9 + e.seed)) * 0.35 : 0;
         // idle guests glance around now and then
         const look = v.walking ? 0 : Math.sin(time * 0.6 + (e.seed % 97)) * 0.5;
         const yaw = Math.atan2(-this.pt.fx, -this.pt.fz) + look;
-        this.q.setFromAxisAngle(this.up, yaw);
-        this.p.set(this.pt.x, FLOOR + 2.8 + bob, this.pt.z);
-        this.m.compose(this.p, this.q, this.one);
-        for (const mesh of variant.meshes) mesh.setMatrixAt(variant.used, this.m);
-        variant.used++;
+        if (v.walking) this.people.add('walk', v.cycle, this.pt.x, FLOOR, this.pt.z, yaw, e.seed);
+        else this.people.add('idle', (e.seed >> 3) % 7 < 4 ? 0 : (e.seed >> 3) % 3 + 1, this.pt.x, FLOOR, this.pt.z, yaw, e.seed);
       });
     }
     for (const id of this.visual.keys()) if (!seen.has(id)) this.visual.delete(id);
-    for (const v of this.variants) {
-      for (const mesh of v.meshes) {
-        mesh.count = v.used;
-        mesh.instanceMatrix.needsUpdate = true;
-      }
-    }
   }
 }

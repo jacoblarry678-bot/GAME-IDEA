@@ -110,6 +110,35 @@ for _, d in root:GetDescendants() do
   end
 end
 
+-- scenery the browser edition draws its own way: trees, bushes and ride
+-- tracks keep their parts for collisions but are hidden from view
+local CollectionService = game:GetService("CollectionService")
+local hidden = {}
+local function hide(inst)
+  for _, d in inst:GetDescendants() do
+    if index[d] ~= nil then table.insert(hidden, index[d]) end
+  end
+  if index[inst] ~= nil then table.insert(hidden, index[inst]) end
+end
+local trees = {}
+for _, m in CollectionService:GetTagged("Tree") do
+  if m:IsDescendantOf(root) then
+    local leaf = nil
+    for _, d in m:GetDescendants() do
+      if d:IsA("BasePart") and d.Material == Enum.Material.Grass then leaf = d.Color break end
+    end
+    table.insert(trees, { kind = m:GetAttribute("TreeKind"), pos = v3(m:GetAttribute("Base")), s = m:GetAttribute("TreeScale"), leaf = leaf and rgb(leaf) or 0 })
+    hide(m)
+  end
+end
+local bushes = {}
+for _, b in CollectionService:GetTagged("Bush") do
+  if b:IsDescendantOf(root) and index[b] ~= nil then
+    table.insert(bushes, { pos = v3(b.Position), size = b.Size.X, color = rgb(b.Color) })
+    hide(b)
+  end
+end
+
 -- signs (SurfaceGui text)
 local function fontName(f)
   local fam = tostring(f.Family)
@@ -192,6 +221,14 @@ for _, ride in Config.Rides do
   for _, ex in model.Moving:GetChildren() do
     local pivot = ex:GetPivot()
     r.extras[ex.Name] = { pivot = comps(pivot), parts = partsOf(ex, pivot:Inverse()) }
+  end
+  for _, f in model:GetChildren() do
+    local style = f:IsA("Folder") and f:GetAttribute("Style")
+    if style then
+      local a = f:GetAttributes()
+      r.trackStyle = { style = style, color = a.Color and rgb(a.Color), width = a.Width, drop = a.Drop, dash = a.Dash and rgb(a.Dash), curbs = a.Curbs }
+      hide(f)
+    end
   end
   if m.sampler then
     local s = m.sampler
@@ -297,7 +334,7 @@ local config = {
 
 return HttpService:JSONEncode({
   materials = materials, static = static, signs = signs, dynamicSigns = dynamicSigns, terrain = terrain,
-  rides = rides, queue = { spacing = QueueLine.SPACING, lane = QueueLine.LANE }, globe = globeRec, spinners = spinners, guests = guests, items = items, tags = tags, config = config,
+  rides = rides, queue = { spacing = QueueLine.SPACING, lane = QueueLine.LANE }, globe = globeRec, spinners = spinners, trees = trees, bushes = bushes, hidden = hidden, guests = guests, items = items, tags = tags, config = config,
 })
 `);
 

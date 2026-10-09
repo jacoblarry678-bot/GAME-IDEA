@@ -1,5 +1,6 @@
 // Small rendered pictures of shop items for the venue windows.
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildModel } from './geom.js';
 
 export class Thumbs {
@@ -19,9 +20,13 @@ export class Thumbs {
     }
     this.renderer.setSize(size, size, false);
     this.renderer.setPixelRatio(1);
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.scene = new THREE.Scene();
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 1.6));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+    // a soft studio light for reflections on metal and plastic
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x8090a0, 0.6));
+    const sun = new THREE.DirectionalLight(0xffffff, 2.2);
     sun.position.set(3, 5, 4);
     this.scene.add(sun);
     this.camera = new THREE.PerspectiveCamera(30, 1, 0.1, 200);

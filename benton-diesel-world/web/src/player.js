@@ -1,10 +1,12 @@
-// The guest you play: a blocky avatar, walking physics with collisions
-// against the park's parts, and a Roblox-style orbit camera.
+// The guest you play: an animated person, walking and running physics with
+// collisions against the park, and an orbit camera that keeps out of walls.
 import * as THREE from 'three';
 import { P, buildModel } from './geom.js';
+import { Figure } from './people/figure.js';
 
-const GRAVITY = 196.2;
-const JUMP_SPEED = 50;
+const GRAVITY = 110;
+const JUMP_SPEED = 25;
+const WALK_FRACTION = 0.45; // walking pace as a share of running speed
 const STEP = 1.8;
 const RADIUS = 1.1;
 const HEIGHT = 5;
@@ -12,9 +14,9 @@ const CELL = 16;
 
 // ------------------------------------------------------------- collisions
 export class Collision {
-  constructor(staticParts, lake) {
+  constructor(staticParts, terrain) {
     this.cells = new Map();
-    this.lake = lake;
+    this.terrain = terrain;
     let id = 0;
     for (const p of staticParts) {
       if (p[P.COLLIDE] !== 1) continue;
@@ -91,11 +93,7 @@ export class Collision {
   }
 
   groundHeight(x, z) {
-    if (this.lake) {
-      const d = Math.hypot(x - this.lake.x, z - this.lake.z);
-      if (d < this.lake.r - 2) return -2.6;
-    }
-    return 0;
+    return this.terrain ? this.terrain.heightAt(x, z) : 0;
   }
 
   // Resolve one step for a cylinder at (pos) with feet at pos.y
@@ -140,58 +138,15 @@ export class Collision {
 }
 
 // ------------------------------------------------------------------ avatar
-const SKINS = [0xffdcbe, 0xf0be96, 0xc88c64, 0x96644a, 0x64422e, 0xfacd46];
+const SKIN_TONES = [0xf3d2bd, 0xe8b996, 0xd29e78, 0xb07a55, 0x8a5a3c, 0x62402b];
 
-export function makeAvatar(look) {
-  const root = new THREE.Group();
-  const mat = (c) => new THREE.MeshLambertMaterial({ color: c });
-  const box = (w, h, d, c) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c));
-    m.castShadow = true;
-    return m;
+// the saved look (colors and styles) as a full outfit for the body
+export function playerOutfit(look) {
+  const skin = look.skin < SKIN_TONES.length ? SKIN_TONES[look.skin] : look.skin;
+  return {
+    skin, shirt: look.shirt, pants: look.pants, hair: look.hair ?? 0x2e2018, shoes: look.shoes ?? 0xf5f5f2, hat: 0x1f2a38,
+    sleeves: 0, longPants: look.shorts ? 0 : 1, hairStyle: look.hairStyle ?? 0, hatOn: 0, fem: look.build ?? 0, height: 1, width: 1,
   };
-  const shirt = look.shirt, pants = look.pants, skin = look.skin >= SKINS.length ? look.skin : SKINS[look.skin];
-  const torso = box(2, 2, 1, shirt);
-  torso.position.y = 3;
-  root.add(torso);
-  const headPivot = new THREE.Group();
-  headPivot.position.y = 4;
-  root.add(headPivot);
-  const head = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 1.2, 16), mat(skin));
-  head.position.y = 0.6;
-  head.castShadow = true;
-  headPivot.add(head);
-  const face = new THREE.Group();
-  for (const sx of [-0.22, 0.22]) {
-    const eye = box(0.14, 0.22, 0.04, 0x141414);
-    eye.position.set(sx, 0.7, -0.6);
-    face.add(eye);
-  }
-  const smile = box(0.42, 0.08, 0.04, 0x141414);
-  smile.position.set(0, 0.36, -0.6);
-  face.add(smile);
-  headPivot.add(face);
-  const limb = (x, y, c, w = 1) => {
-    const pivot = new THREE.Group();
-    pivot.position.set(x, y, 0);
-    const m = box(w, 2, 1, c);
-    m.position.y = -1;
-    pivot.add(m);
-    root.add(pivot);
-    return pivot;
-  };
-  const armL = limb(-1.5, 4, shirt);
-  const armR = limb(1.5, 4, shirt);
-  const legL = limb(-0.5, 2, pants);
-  const legR = limb(0.5, 2, pants);
-  // hands for held items and balloon strings
-  const handR = new THREE.Group();
-  handR.position.set(0, -2, -0.2);
-  armR.add(handR);
-  const handL = new THREE.Group();
-  handL.position.set(0, -2, 0);
-  armL.add(handL);
-  return { root, torso, headPivot, head, armL, armR, legL, legR, handR, handL, hatSlot: headPivot, phase: 0 };
 }
 
 export class Player {
@@ -209,27 +164,22 @@ export class Player {
     this.autopilot = null; // { x, z, final } point to walk to while in a queue line
     this.faceDir = null; // { fx, fz } direction to face when standing in line
     this.riding = null; // { cf: Matrix4 } while on a ride
-    this.avatar = makeAvatar(look);
+    this.figure = new Figure(playerOutfit(look));
     this.holder = new THREE.Group();
-    this.holder.add(this.avatar.root);
+    this.holder.add(this.figure.root);
     scene.add(this.holder);
     this.wear = { hat: null, face: null, balloon: null, held: null };
     this.balloon = null;
     // camera
     this.camYaw = 0;
-    this.camPitch = -0.3;
-    this.camDist = 22;
-    this.camEff = 22; // distance after pulling in front of walls
+    this.camPitch = -0.22;
+    this.camDist = 16;
+    this.camEff = 16; // distance after pulling in front of walls
     this.camTarget = new THREE.Vector3();
   }
 
   setLook(look) {
-    this.holder.remove(this.avatar.root);
-    const old = this.wear;
-    this.avatar = makeAvatar(look);
-    this.holder.add(this.avatar.root);
-    this.wear = { hat: null, face: null, balloon: null, held: null };
-    for (const k of ['hat', 'face', 'held']) if (old[k]) this.setWear(k, old[k].userData.item, old[k].userData.items);
+    this.figure.setLook(playerOutfit(look));
   }
 
   // Put an item model on the avatar (hat/face/held), or clear it.
@@ -243,12 +193,14 @@ export class Player {
     const model = buildModel(def.wear, this.data.materials, { detail: true });
     model.userData.item = item;
     model.userData.items = items;
+    // souvenirs were made for a bigger, rounder head: scale them to fit
     if (slot === 'hat' || slot === 'face') {
-      model.position.set(0, 1.2, 0);
-      this.avatar.headPivot.add(model);
+      model.scale.setScalar(0.6);
+      this.figure.headTop.add(model);
     } else if (slot === 'held') {
       model.rotation.set(-Math.PI / 2, 0, 0);
-      this.avatar.handR.add(model);
+      model.scale.setScalar(0.75);
+      this.figure.handR.add(model);
     }
     this.wear[slot] = model;
   }
@@ -284,7 +236,10 @@ export class Player {
       const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
       const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const wish = fwd.multiplyScalar(mv.y).add(right.multiplyScalar(mv.x));
-      let speed = this.speed;
+      if (wish.lengthSq() > 1) wish.normalize();
+      // walk by default, run with Shift (or the stick pushed all the way)
+      this.running = input.wantsRun();
+      let speed = this.running ? this.speed : this.speed * WALK_FRACTION;
       // in a queue line: with no input, walk the switchbacks to our spot
       const ap = this.autopilot;
       if (wish.lengthSq() < 0.001 && ap) {
@@ -292,12 +247,12 @@ export class Player {
         const dist = Math.hypot(dx, dz);
         if (dist > 0.2) {
           wish.set(dx / dist, 0, dz / dist);
-          speed = Math.min(this.speed, 12) * (ap.final ? Math.min(1, 0.25 + dist / 1.5) : 1);
+          speed = this.speed * WALK_FRACTION * (ap.final ? Math.min(1, 0.25 + dist / 1.5) : 1);
         }
       }
       const moving = wish.lengthSq() > 0.001;
       const target = wish.multiplyScalar(speed);
-      const accel = this.onGround ? 14 : 4;
+      const accel = this.onGround ? (moving ? 8 : 11) : 2.5;
       this.vel.x += (target.x - this.vel.x) * Math.min(1, accel * dt);
       this.vel.z += (target.z - this.vel.z) * Math.min(1, accel * dt);
       const face = moving ? wish : this.faceDir ? new THREE.Vector3(this.faceDir.fx, 0, this.faceDir.fz) : null;
@@ -305,10 +260,10 @@ export class Player {
         const desired = Math.atan2(-face.x, -face.z);
         let d = desired - this.yaw;
         d = Math.atan2(Math.sin(d), Math.cos(d));
-        this.yaw += d * Math.min(1, (moving ? 12 : 4) * dt);
+        this.yaw += d * Math.min(1, (moving ? 9 : 4) * dt);
       }
       if (this.onGround && input.wantsJump()) {
-        this.vel.y = JUMP_SPEED + this.jumpBoost;
+        this.vel.y = JUMP_SPEED + this.jumpBoost * 0.6;
         this.onGround = false;
       }
       this.vel.y -= GRAVITY * dt;
@@ -332,7 +287,7 @@ export class Player {
       this.pos.z = THREE.MathUtils.clamp(this.pos.z, -600, 520);
       this.holder.position.copy(this.pos);
       this.holder.rotation.set(0, this.yaw, 0);
-      this.animate(dt, moving && this.onGround, !this.onGround, false);
+      this.figure.update(dt, { speed: Math.hypot(this.vel.x, this.vel.z), onGround: this.onGround, vy: this.vel.y, holding: !!this.wear.held });
     }
     this.updateBalloon(dt);
     this.updateCamera(camera, dt);
@@ -340,17 +295,17 @@ export class Player {
 
   // jump the camera straight to the player (after teleports and rides)
   snapCamera() {
-    this.camTarget.set(this.pos.x, this.pos.y + 5.3, this.pos.z);
+    this.camTarget.set(this.pos.x, this.pos.y + 5.4, this.pos.z);
   }
 
   updateRiding() {
-    // holder follows the ride seat; avatar root sits so its hips match
+    // holder follows the ride seat; the seated pose puts the hips on it
     this.holder.matrixAutoUpdate = false;
-    this.holder.matrix.copy(this.riding.matrix).multiply(new THREE.Matrix4().makeTranslation(0, -2.9, 0));
+    this.holder.matrix.copy(this.riding.matrix);
     this.holder.matrixWorldNeedsUpdate = true;
     this.holder.updateMatrixWorld(true);
     this.pos.setFromMatrixPosition(this.riding.matrix);
-    this.animate(0, false, false, true);
+    this.figure.update(0, { sitting: true });
   }
 
   stopRiding(exit) {
@@ -365,35 +320,11 @@ export class Player {
     this.holder.rotation.set(0, this.yaw, 0);
   }
 
-  animate(dt, walking, airborne, sitting) {
-    const a = this.avatar;
-    a.phase += dt * (walking ? 9 : 0);
-    const swing = walking ? Math.sin(a.phase) * 0.9 : 0;
-    if (sitting) {
-      a.legL.rotation.x = Math.PI / 2;
-      a.legR.rotation.x = Math.PI / 2;
-      a.armL.rotation.x = 0.5;
-      a.armR.rotation.x = 0.5;
-      return;
-    }
-    if (airborne) {
-      a.armL.rotation.x = Math.PI * 0.9;
-      a.armR.rotation.x = this.wear.held ? -0.3 : Math.PI * 0.9;
-      a.legL.rotation.x = -0.2;
-      a.legR.rotation.x = 0.2;
-      return;
-    }
-    a.armL.rotation.x = swing;
-    a.armR.rotation.x = this.wear.held ? -0.6 : -swing;
-    a.legL.rotation.x = -swing;
-    a.legR.rotation.x = swing;
-  }
-
   updateBalloon(dt) {
     const b = this.balloon;
     if (!b) return;
     const hand = new THREE.Vector3();
-    this.avatar.handL.getWorldPosition(hand);
+    this.figure.handL.getWorldPosition(hand);
     const target = hand.clone().add(new THREE.Vector3(0, 7.5, 0));
     const toTarget = target.sub(b.pos);
     b.vel.addScaledVector(toTarget, dt * 9);
@@ -411,8 +342,8 @@ export class Player {
   }
 
   headPosition(out = new THREE.Vector3()) {
-    this.avatar.headPivot.getWorldPosition(out);
-    return out.add(new THREE.Vector3(0, 0.7, 0));
+    this.figure.headTop.getWorldPosition(out);
+    return out.add(new THREE.Vector3(0, -0.3, 0));
   }
 
   updateCamera(camera, dt = 1 / 60) {
@@ -437,7 +368,7 @@ export class Player {
     }
     this.camEff = dist < this.camEff ? dist : this.camEff + (dist - this.camEff) * (1 - Math.pow(0.85, dt * 60));
     const firstPerson = this.camEff < 2.5;
-    this.avatar.root.visible = !firstPerson;
+    this.figure.root.visible = !firstPerson;
     if (firstPerson) {
       camera.position.copy(this.camTarget);
       camera.lookAt(this.camTarget.clone().sub(dir));

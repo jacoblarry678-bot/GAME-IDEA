@@ -26,7 +26,7 @@ const RZ = (a) => new THREE.Matrix4().makeRotationZ(a);
 const TR = (x, y, z) => new THREE.Matrix4().makeTranslation(x, y, z);
 const mul = (...ms) => ms.reduce((acc, m) => acc.multiply(m), new THREE.Matrix4());
 
-class Sampler {
+export class Sampler {
   constructor(tr) {
     this.length = tr.length;
     this.cum = tr.cum;
@@ -265,7 +265,7 @@ export class RideVisuals {
       const seat = v.seats[x.car - 1]?.[x.seat - 1];
       const car = v.cars[x.car - 1];
       if (!seat || !car) continue;
-      const g = this.guestFactory(x.npc, thrill && x.npc % 2 === 0 ? 'cheer' : 'sit');
+      const g = this.guestFactory(x.npc, thrill && x.npc % 2 === 0 ? 'sitcheer' : 'sit');
       g.matrixAutoUpdate = false;
       g.matrix.copy(seat);
       car.add(g);

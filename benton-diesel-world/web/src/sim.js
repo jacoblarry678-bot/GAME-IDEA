@@ -25,7 +25,7 @@ function loadProfile(economy) {
     stamps: [],
     stats: { rides: 0, shows: 0, meals: 0 },
     lastDaily: 0,
-    look: { shirt: 0x1e6ee6, pants: 0x283c6e, skin: 0xffcc99 },
+    look: { shirt: 0x1e6ee6, pants: 0x283c6e, skin: 0xe8b996, hair: 0x4a3020, hairStyle: 0, build: 0 },
     seenHelp: false,
   };
   if (!p || typeof p !== 'object') return base;

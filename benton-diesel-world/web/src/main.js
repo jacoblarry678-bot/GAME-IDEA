@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import * as Clock from './clock.js';
 import { World } from './world.js';
+import { geomOptions } from './geom.js';
 import { Input } from './input.js';
 import { Collision, Player } from './player.js';
 import { RideVisuals } from './rides.js';
@@ -11,19 +12,31 @@ import { Sim } from './sim.js';
 import { Effects } from './fx.js';
 import { GuestFactory, Crowd } from './guests.js';
 import { QueueCrowd } from './queue.js';
+import { CrowdRenderer } from './people/crowd.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
 import { Thumbs } from './thumbs.js';
 import { UI } from './ui.js';
+import { configureMaterials } from './render/materials.js';
+import { Post } from './render/post.js';
+import { waterTime } from './render/water.js';
 
 const QUALITY_KEY = 'bentonDieselWorld.quality';
 const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+// graphics presets: shadows, post-processing (bloom, ambient occlusion),
+// resolution and texture detail
+const PRESETS = {
+  low: { name: 'low', shadows: false, shadowSize: 1024, shadowRange: 90, post: false, ao: false, samples: 0, pixelRatio: 1.25, crowd: 30, grass: 0 },
+  high: { name: 'high', shadows: true, shadowSize: 2048, shadowRange: 110, post: true, ao: false, samples: 4, pixelRatio: 1.5, crowd: 54, grass: 60000 },
+  ultra: { name: 'ultra', shadows: true, shadowSize: 4096, shadowRange: 140, post: true, ao: true, samples: 4, pixelRatio: 2, crowd: 72, grass: 120000 },
+};
+
 function loadQuality() {
   try {
     const q = localStorage.getItem(QUALITY_KEY);
-    if (q === 'low' || q === 'high') return q;
+    if (PRESETS[q]) return q;
   } catch (e) { /* ignore */ }
   return touch ? 'low' : 'high';
 }
@@ -55,16 +68,22 @@ async function main() {
   Clock.start(540);
 
   const canvas = document.getElementById('view');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !touch, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.9;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.5, 3200);
+  const camera = new THREE.PerspectiveCamera(65, 1, 0.3, 3200);
 
   let qualityName = loadQuality();
-  const world = new World(scene, data, { shadows: true });
-  const collision = new Collision(data.static, world.lake);
-  const guests = new GuestFactory(data);
+  configureMaterials({ size: qualityName === 'low' ? 256 : 512, aniso: Math.min(8, renderer.capabilities.getMaxAnisotropy()) });
+  geomOptions.bevel = qualityName !== 'low';
+  geomOptions.maxLod = qualityName === 'low' ? 1 : 2;
+  const world = new World(scene, data, PRESETS[qualityName], renderer);
+  const post = new Post(renderer, scene, camera);
+  const collision = new Collision(data.static, world.terrain);
+  const guests = new GuestFactory();
   const rideVis = new RideVisuals(scene, data, (seed, pose) => guests.make(seed, pose));
   rideVis.frame = 0;
   const fx = new Effects(scene, data);
@@ -118,9 +137,10 @@ async function main() {
   game.sim = sim;
   const player = new Player(scene, data, collision, sim.profile.look);
   game.player = player;
-  const queueCrowd = new QueueCrowd(scene, data, sim.paths);
+  const people = new CrowdRenderer(scene, { shadows: PRESETS[qualityName].shadows });
+  const queueCrowd = new QueueCrowd(people, data, sim.paths);
   let queueSnap = true; // place guests already in line without walking them in
-  let crowd = new Crowd(scene, guests, qualityName === 'high' ? 54 : 30);
+  let crowd = new Crowd(people, PRESETS[qualityName].crowd);
 
   game.applyWear = () => {
     const eq = sim.profile.equipped;
@@ -154,21 +174,24 @@ async function main() {
   };
 
   const applyQuality = () => {
-    const high = qualityName === 'high';
-    renderer.setPixelRatio(high ? Math.min(window.devicePixelRatio, 2) : Math.min(window.devicePixelRatio, 1.25));
-    renderer.shadowMap.enabled = high;
-    world.sun.castShadow = high;
+    const preset = PRESETS[qualityName];
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, preset.pixelRatio));
+    renderer.shadowMap.enabled = preset.shadows;
+    world.sky.setShadowQuality(preset);
+    world.setQuality(preset);
     scene.traverse((o) => {
       if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true;
     });
+    resize();
+    post.configure(preset);
     resize();
   };
   game.setQuality = (q) => {
     qualityName = q;
     game.qualityName = q;
     try { localStorage.setItem(QUALITY_KEY, q); } catch (e) { /* ignore */ }
-    scene.remove(...crowd.walkers.map((w) => w.model));
-    crowd = new Crowd(scene, guests, q === 'high' ? 54 : 30);
+    crowd = new Crowd(people, PRESETS[q].crowd);
+    people.setShadows(PRESETS[q].shadows);
     applyQuality();
   };
 
@@ -176,9 +199,10 @@ async function main() {
     const w = window.innerWidth, h = window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.fov = w < h ? 80 : 70;
+    camera.fov = w < h ? 75 : 65;
     camera.updateProjectionMatrix();
     fx.setViewport(h * renderer.getPixelRatio(), camera.fov);
+    post.setSize(w, h);
   }
   window.addEventListener('resize', resize);
   applyQuality();
@@ -244,6 +268,7 @@ async function main() {
       if (m) player.riding.matrix = m;
     }
 
+    people.begin(camera.position);
     queueCrowd.update(dt, time, sim.order, camera.position, queueSnap);
     queueSnap = false;
 
@@ -265,13 +290,16 @@ async function main() {
     world.spinSpinners(time, camera.position);
     const lamp = world.spinners.find((sp) => sp.name === 'LighthouseLamp');
     if (lamp) fx.lighthouseAngle = lamp.angle;
-    const daylight = world.updateLighting(started ? player.pos : new THREE.Vector3(0, 0, -40));
+    waterTime.value = time;
+    world.updateGrass(time, camera.position);
+    const daylight = world.updateLighting(started ? player.pos : new THREE.Vector3(0, 0, -40), time);
     signTimer -= dt;
     if (signTimer <= 0) {
       signTimer = 1;
       world.updateSigns(signRides, (id) => sim.rideState(id));
     }
     crowd.update(dt, time);
+    people.end();
     const caption = shows.update(sim.shows, now, player.pos);
     fx.update(dt, daylight);
     if (started) {
@@ -290,14 +318,14 @@ async function main() {
         riding: sim.ridingRide,
         showPos: shows.audioPos,
         walking: !player.riding && player.onGround && flat > 3,
-        stepRate: 2.9 * Math.min(1.2, flat / 15),
+        stepRate: player.figure.stepRate,
       });
     }
     const guideDist = guide.update(player.pos, time, (name) => ui.toast(`You've arrived at ${name}!`, 'info'));
 
     if (started) ui.update(dt, { pos: player.pos, caption, guideDist, movement: sim.movement() });
     input.endFrame();
-    renderer.render(scene, camera);
+    post.render(1 - daylight);
     requestAnimationFrame(frame);
   }
 
