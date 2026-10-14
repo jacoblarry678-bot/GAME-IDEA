@@ -56,6 +56,8 @@ export class Sim {
         id: r.id, cfg, capacity, seatList, duration,
         queue: [], status: 'Open', cycleStart: 0, cycleEnds: 0, riders: [], downUntil: 0, player: null, cycleId: 0,
       };
+      // closed for a refurbishment: no line, no running
+      if (cfg.refurb) Object.assign(st, { refurb: true, status: 'Closed', downUntil: Infinity });
       this.rides.set(r.id, st);
       this.order.push(st);
     }
@@ -116,7 +118,7 @@ export class Sim {
 
   rideState(id) {
     const st = this.rides.get(id);
-    return { status: st.status, wait: this.postedWait(st), queue: st.queue.length };
+    return { status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb };
   }
 
   playerQueue() {
@@ -130,6 +132,10 @@ export class Sim {
   join(id, express) {
     const st = this.rides.get(id);
     if (!st) return;
+    if (st.refurb) {
+      this.hooks.toast(`${st.cfg.name} is closed for a small refurbishment. It'll be back very soon!`, 'warn');
+      return;
+    }
     if (this.ridingRide) {
       this.hooks.toast('Finish your current ride first!', 'warn');
       return;
@@ -273,6 +279,7 @@ export class Sim {
     const crowd = Clock.crowd(minute);
     const t = Clock.now();
     this.order.forEach((st, i) => {
+      if (st.refurb) return;
       const wobble = 0.8 + 0.4 * (0.5 + 0.5 * Math.sin(t / 90 + i * 7.31) * Math.cos(t / 57 + i));
       const target = st.cfg.baseWait * crowd * wobble;
       const desired = Math.floor(target / this.cycleTotal(st) * st.capacity);

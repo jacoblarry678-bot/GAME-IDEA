@@ -201,7 +201,8 @@ export class UI {
       c.append(this.card(ride.name, `${ride.category}  ${stars(ride.thrill)}  |  ${this.sortWaits ? land.name : ride.kind}`, land.color, wait, this.guideButton(ride.entrance, ride.name)));
       this.live.push(() => {
         const s = sim.rideState(ride.id);
-        if (s.status === 'Closed') { wait.textContent = 'CLOSED'; wait.style.color = '#f04636'; }
+        if (s.refurb) { wait.textContent = 'REFURB'; wait.style.color = '#f0a040'; }
+        else if (s.status === 'Closed') { wait.textContent = 'CLOSED'; wait.style.color = '#f04636'; }
         else { wait.textContent = `${s.wait} min`; wait.style.color = waitColor(s.wait); }
       });
     }
@@ -531,11 +532,11 @@ export class UI {
     if (p.kind === 'ride') {
       const s = sim.rideState(p.ride.id);
       const inLine = sim.queueRide === p.ride.id;
-      this.promptSub.textContent = s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  Wait ${s.wait} min`;
+      this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  Wait ${s.wait} min`;
       this.promptJoin.replaceChildren(h('kbd', {}, 'E'), inLine ? ' In line ✓' : ' Join Line');
-      this.promptJoin.disabled = inLine;
+      this.promptJoin.disabled = inLine || s.refurb;
       this.promptExpress.replaceChildren(h('kbd', {}, 'F'), ` Express Pass (${sim.profile.passes})`);
-      this.promptExpress.disabled = sim.profile.passes <= 0;
+      this.promptExpress.disabled = sim.profile.passes <= 0 || s.refurb;
     }
   }
 

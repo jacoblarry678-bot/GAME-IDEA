@@ -422,6 +422,7 @@ export class StaffSystem {
     this.cam.copy(cam);
     this.player.copy(playerPos);
     for (const crew of this.crews) {
+      if (this.sim.rides.get(crew.id)?.refurb) continue; // no crew while the ride is being refurbished
       const near = crew.center.distanceToSquared(cam) < NEAR * NEAR || this.sim.ridingRide === crew.id;
       crew.update(clockDt, now, time, near);
     }

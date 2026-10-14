@@ -213,7 +213,7 @@ export class World {
         fitText(ctx, 'CURRENT WAIT', 20, 126, W - 40, 28, '#b4bed2', 700);
         const closed = st.status === 'Closed';
         fitText(ctx, closed ? 'CLOSED' : `${st.wait} MIN`, 20, 156, W - 40, 90, closed ? '#f04636' : waitColor(st.wait), 800);
-        const statusText = closed ? 'TEMPORARILY CLOSED' : st.status === 'Running' ? 'RIDE IN PROGRESS' : 'NOW BOARDING';
+        const statusText = st.refurb ? 'CLOSED FOR REFURBISHMENT' : closed ? 'TEMPORARILY CLOSED' : st.status === 'Running' ? 'RIDE IN PROGRESS' : 'NOW BOARDING';
         fitText(ctx, statusText, 20, 252, W - 40, 36, closed ? '#f04636' : st.status === 'Running' ? '#fad23c' : '#5adc6e', 700);
       } else {
         ctx.fillStyle = '#101624';

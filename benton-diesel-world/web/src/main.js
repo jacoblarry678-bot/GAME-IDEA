@@ -16,7 +16,8 @@ import { CrowdRenderer } from './people/crowd.js';
 import { StaffSystem } from './staff.js';
 import { Bubbles } from './bubbles.js';
 import { buildEntrance, Entrance } from './entrance.js';
-import { buildConstruction, Construction } from './construction.js';
+import { buildOverdrive } from './overdrive.js';
+import { buildRefurb } from './refurb.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -70,8 +71,10 @@ async function main() {
 
   // parking, traffic lanes and the security checkpoint join the park
   const entranceLayout = buildEntrance(data);
-  // construction walls up beside Diesel Thunder for a new ride
-  const siteLayout = buildConstruction(data);
+  // Overdrive, the new coaster beyond the west wall
+  buildOverdrive(data);
+  // the Backlot Tram Tour is closed for a small refurbishment
+  buildRefurb(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -164,8 +167,6 @@ async function main() {
     hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) },
   });
   game.entrance = entrance;
-  const site = new Construction(scene, data, siteLayout, { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
-  game.site = site;
 
   game.applyWear = () => {
     const eq = sim.profile.equipped;
@@ -326,7 +327,6 @@ async function main() {
     crowd.update(dt, time);
     staff.update(dt, now, time, camera.position, player.pos);
     entrance.update(dt, camera.position, player.pos);
-    site.update(dt, time, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);
