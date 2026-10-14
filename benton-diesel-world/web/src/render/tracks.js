@@ -248,7 +248,8 @@ function railway(fr, boxes) {
 export function buildTracks(scene, data) {
   const group = new THREE.Group();
   group.name = 'tracks';
-  for (const r of data.rides) {
+  // rides, plus tracks with no ride yet (the one being built)
+  for (const r of [...data.rides, ...(data.extraTracks || [])]) {
     const cfg = r.trackStyle;
     if (!cfg || !r.track) continue;
     const sampler = new Sampler(r.track);

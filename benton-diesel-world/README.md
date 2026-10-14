@@ -49,13 +49,18 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
-- **Coming soon (browser only):** construction walls have gone up beside
-  Diesel Thunder for a new ride. The site is so big that part of the park's
-  west wall has come down and it runs out onto the hills beyond, mostly to
-  make room for the biggest queue in the park, already laid out with rows
-  of stanchion posts. Over the walls you can see a tower crane swinging its
-  jib, the first steel of a lift hill, machines, a site office and workers
-  in hard hats, and you can hear them hammering away.
+- **Coming soon (browser only):** a new ride is nearly finished beside
+  Diesel Thunder. The site is so big that part of the park's west wall has
+  come down and it runs out onto the hills beyond. Behind the construction
+  walls the coaster track is complete: a lift hill, a turning first drop, a
+  camelback, a turnaround and a swoop over the queue, all on dark steel
+  supports, with a test train of water dummies running it all day (you can
+  hear the lift chain clank). The biggest queue in the park is finished: a
+  long switchback maze under orange and blue shade sails, with lamps, oil
+  drums and a 1952 diesel engine on display, reached through a brick
+  entrance arch. The ride's station is themed as Benton Engine Works, an
+  old brick diesel engine factory with a sawtooth roof, tall factory
+  windows, a gear emblem, a water tower and two smoking chimneys.
 
 ```bash
 npm install

@@ -165,6 +165,7 @@ async function main() {
   });
   game.entrance = entrance;
   const site = new Construction(scene, data, siteLayout, { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
+  game.site = site;
 
   game.applyWear = () => {
     const eq = sim.profile.equipped;
