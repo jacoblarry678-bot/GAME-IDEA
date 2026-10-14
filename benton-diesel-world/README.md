@@ -39,6 +39,16 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   spines and brackets, a timber mine-coaster track, the flume channel,
   roads and the railway.
 - **Graphics settings** (⚙ Settings): Fast for phones, High, and Ultra.
+- **Arriving (browser only):** pick where to park on the start screen:
+  Regular (free, at the back of the lot), Preferred (B$20) or Deluxe (B$40,
+  right by the gate). You start beside your own car. Cars drive in from the
+  road all morning, stop at the toll booths and follow coned lanes to their
+  tier, with parking attendants in hi-vis vests waving them through; the lot
+  fills up as the day goes on. Everyone then walks to the security
+  checkpoint: six lanes under an orange-paneled canopy, each with a bag
+  check table (some with x-ray scanners) and a walk-through metal detector
+  that beeps and flashes green as you pass. Officers in white shirts check
+  bags and wave you in. ⚙ Settings has **Back to my car**.
 
 ```bash
 npm install

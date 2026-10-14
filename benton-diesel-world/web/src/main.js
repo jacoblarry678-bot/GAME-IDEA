@@ -15,6 +15,7 @@ import { QueueCrowd } from './queue.js';
 import { CrowdRenderer } from './people/crowd.js';
 import { StaffSystem } from './staff.js';
 import { Bubbles } from './bubbles.js';
+import { buildEntrance, Entrance } from './entrance.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -66,6 +67,8 @@ async function main() {
   } catch (e) { /* fall back to Arial Narrow */ }
   await nextFrame();
 
+  // parking, traffic lanes and the security checkpoint join the park
+  const entranceLayout = buildEntrance(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -153,6 +156,11 @@ async function main() {
     hooks: { toast: (text, kind) => game.ui?.toast(text, kind), sound: (k) => audio.ui(k), latch: () => audio.ui('latch') },
   });
   game.staff = staff;
+  const entrance = new Entrance({
+    scene, data, layout: entranceLayout, people, staff,
+    hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) },
+  });
+  game.entrance = entrance;
 
   game.applyWear = () => {
     const eq = sim.profile.equipped;
@@ -312,6 +320,7 @@ async function main() {
     }
     crowd.update(dt, time);
     staff.update(dt, now, time, camera.position, player.pos);
+    entrance.update(dt, camera.position, player.pos);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);
@@ -352,6 +361,8 @@ async function main() {
     // sound has to start from this click
     audio.start(rideVis);
     setTimeout(() => audio.voice.say('Welcome to Benton Diesel World, where speed fuels people together!'), 900);
+    // start the day beside your car in the lot you picked
+    entrance.arrive(game.parkingTier || 'Regular', player, sim, sim.profile.look.shirt);
     player.snapCamera();
     document.getElementById('hud').hidden = false;
     document.body.classList.toggle('touch', touch);

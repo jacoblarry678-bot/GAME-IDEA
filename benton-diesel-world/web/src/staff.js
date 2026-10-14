@@ -24,12 +24,20 @@ const turn = (from, to, k) => {
 let nextSeed = 910000;
 
 // a uniformed staff member's look
-function uniform(landColor, cfg) {
+// security officers wear white shirts and black trousers, parking crews
+// high-visibility vests
+const ROLE_UNIFORM = {
+  security: { shirt: 0xf4f4f0, pants: 0x1c1c20, hat: 0x16223a },
+  parking: { shirt: 0xcef03c, pants: 0x222c48, hat: 0xcef03c },
+};
+
+function uniform(landColor, cfg, role) {
   const seed = nextSeed++;
   const o = outfit(seed);
+  const special = ROLE_UNIFORM[role];
   Object.assign(o, {
-    shirt: landColor, pants: cfg.pants, longPants: 1, sleeves: 0, staff: true,
-    hatOn: seed % 5 < 2 ? 1 : 0, hat: cfg.cap, height: 0.95 + (seed % 11) / 100,
+    shirt: special ? special.shirt : landColor, pants: special ? special.pants : cfg.pants, longPants: 1, sleeves: 0, staff: true,
+    hatOn: seed % 5 < 2 ? 1 : 0, hat: special ? special.hat : cfg.cap, height: 0.95 + (seed % 11) / 100,
   });
   if (o.hairStyle === 1) o.hatOn = 0;
   registerLook(seed, o);
@@ -321,7 +329,7 @@ export class StaffSystem {
     this.crews = data.rides.filter((r) => r.crew).map((r) => new Crew(this, r, rideCfg.get(r.id), lands.get(rideCfg.get(r.id).land) ?? 0xc42828));
     // cashiers, greeters and vendors where the park builder put them
     this.spots = (data.staffSpots || []).filter((s) => s.role !== 'operator').map((s) => {
-      const p = new Person(uniform(lands.get(s.land) ?? 0xc42828, this.cfg), pos3(s.cf), yawOf(s.cf));
+      const p = new Person(uniform(lands.get(s.land) ?? 0xc42828, this.cfg, s.role), pos3(s.cf), yawOf(s.cf));
       p.role = s.role;
       p.kind = s.kind;
       p.home = { pos: p.pos.clone(), yaw: p.yaw };
@@ -347,6 +355,17 @@ export class StaffSystem {
     this.player = new THREE.Vector3();
     this.lastLatch = 0;
     this.time = 0;
+  }
+
+  // nearest staff member of a role (and kind) to a point
+  spotNear(role, x, z, kind) {
+    let best = null, bd = Infinity;
+    for (const p of this.spots) {
+      if (p.role !== role || (kind && p.kind !== kind)) continue;
+      const d = (p.pos.x - x) ** 2 + (p.pos.z - z) ** 2;
+      if (d < bd) { bd = d; best = p; }
+    }
+    return best;
   }
 
   isNear(p) {
@@ -422,8 +441,11 @@ export class StaffSystem {
       }
       p.waveFor -= dt;
       p.pose = p.waveFor > 0 ? STAFF.WAVE : null;
+      // parking crews wave cars through; security bends over the bags
+      if (p.role === 'parking' && p.kind !== 'booth') p.pose = STAFF.WAVE;
+      if (p.role === 'security' && p.busy) p.pose = STAFF.CHECK;
       // face the player while greeting, otherwise their post
-      const want = close ? Math.atan2(-(this.player.x - p.pos.x), -(this.player.z - p.pos.z)) : p.home.yaw;
+      const want = close && !p.busy && p.role !== 'parking' ? Math.atan2(-(this.player.x - p.pos.x), -(this.player.z - p.pos.z)) : p.home.yaw;
       p.yaw = turn(p.yaw, want, dt * 4);
       p.draw(this.people, time);
       this.bubbles.follow(p, p.headPos());

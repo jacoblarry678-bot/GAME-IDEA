@@ -445,7 +445,9 @@ export class UI {
     const qualityLabel = { low: 'Fast', high: 'High', ultra: 'Ultra' };
     body.append(h('div', { class: 'row' }, ...['low', 'high', 'ultra'].map((q) => h('button', { class: `btn small ${g.qualityName === q ? '' : 'ghost'}`, onclick: () => { g.setQuality(q); this.renderVenueModal(); } }, qualityLabel[q]))));
     body.append(h('h4', {}, 'Getting around'));
-    body.append(h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => { g.teleportHome(); this.closeModal(); } }, '🚪 Back to the Main Gate')));
+    body.append(h('div', { class: 'row' },
+      h('button', { class: 'btn small', onclick: () => { g.teleportHome(); this.closeModal(); } }, '🚪 Back to the Main Gate'),
+      h('button', { class: 'btn small ghost', onclick: () => { if (!g.player.riding) g.entrance?.toCar(g.player); this.closeModal(); } }, '🚗 Back to my car')));
     body.append(h('h4', {}, 'Controls'));
     body.append(h('div', { class: 'help', html: HELP }));
     let armed = false;
@@ -644,10 +646,43 @@ export class UI {
   }
 
   // ---------------------------------------------------------- start screen
+  // where you park today: Deluxe is right by security, Regular is free
+  parkingPicker() {
+    const g = this.g;
+    const tiers = [
+      { id: 'Regular', label: 'Regular', price: 0, note: 'Free' },
+      { id: 'Preferred', label: 'Preferred', price: 20, note: 'Closer' },
+      { id: 'Deluxe', label: 'Deluxe', price: 40, note: 'By the gate' },
+    ];
+    let saved = 'Regular';
+    try { saved = localStorage.getItem('bentonDieselWorld.parking') || 'Regular'; } catch (e) { /* ignore */ }
+    const bucks = g.sim.profile.bucks;
+    if (!tiers.some((t) => t.id === saved && t.price <= bucks)) saved = 'Regular';
+    g.parkingTier = saved;
+    const row = h('div', { class: 'swatches' }, h('span', {}, 'Parking'),
+      ...tiers.map((t) => {
+        const b = h('button', {
+          class: `btn small ${t.id === saved ? '' : 'ghost'}`,
+          disabled: t.price > bucks ? '' : null,
+          title: t.price > bucks ? 'Not enough Benton Bucks' : '',
+          onclick: (e) => {
+            g.parkingTier = t.id;
+            try { localStorage.setItem('bentonDieselWorld.parking', t.id); } catch (err) { /* ignore */ }
+            for (const x of e.currentTarget.parentNode.querySelectorAll('.btn')) x.classList.add('ghost');
+            e.currentTarget.classList.remove('ghost');
+          },
+        }, `${t.label} · ${t.price ? `B$${t.price}` : 'Free'}`);
+        if (t.price > bucks) b.disabled = true;
+        return b;
+      }));
+    return h('div', { class: 'outfit' }, row, h('p', { class: 'note' }, 'Deluxe parks you right by security, Preferred a short walk away, Regular is free at the back of the lot.'));
+  }
+
   showStart(onEnter) {
     const start = $('#start');
     const picker = $('#start .outfit-slot');
     picker.replaceChildren(this.outfitPicker(() => this.g.applyLook()));
+    $('#start .parking-slot').replaceChildren(this.parkingPicker());
     $('#start .help').innerHTML = HELP;
     $('#start .enter').onclick = () => {
       start.classList.add('gone');

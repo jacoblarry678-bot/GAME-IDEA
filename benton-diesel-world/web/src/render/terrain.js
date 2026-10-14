@@ -39,7 +39,7 @@ function smax(a, b, k) {
 export class Terrain {
   constructor(data) {
     const bounds = data.config.Bounds;
-    this.rect = { x0: bounds.minX - 150, x1: bounds.maxX + 150, z0: bounds.minZ - 150, z1: bounds.maxZ + 230 };
+    this.rect = { x0: bounds.minX - 150, x1: bounds.maxX + 150, z0: bounds.minZ - 150, z1: bounds.maxZ + 470 };
     this.hills = [];
     this.rocks = [];
     this.lake = null;
