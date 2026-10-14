@@ -66,8 +66,20 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   Tram Tour is closed for a small refurbishment. A painted wall closes the
   queue entrance, barriers close the tram road, one tram is half under a
   tarp, and a crew in hard hats repaints the trams and the station sign
-  from a scaffold. The app and the wait signs show it as closed for
-  refurbishment.
+  from a scaffold, and the tram road has been repaved. At the back of the
+  lot the road now runs under a row of red-and-white striped tents with
+  "Hooray for Hollywood" marquees, and inside it is Hollywood: the hills
+  with the big white letters, the Walk of Fame, the Grand Benton Theatre
+  with a world premiere on a red carpet, palms, a movie camera and lights,
+  director's chairs, a golden statue and strings of lights. The app and
+  the wait signs show the tram as closed for refurbishment.
+- **Accurate wait times (browser only):** posted waits are worked out from
+  the real line (the guests ahead, how many fit on each train, how long a
+  cycle takes, and any breakdown still being fixed), shown to the exact
+  park minute instead of rounded up to 5 ("No wait" when you'd walk right
+  on), and converted to the park clock so they stay right at night. The
+  app also shows how long the last guest to board actually waited, and
+  guests who give up only ever leave from behind you.
 
 ```bash
 npm install

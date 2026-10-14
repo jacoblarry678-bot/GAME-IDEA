@@ -183,7 +183,7 @@ export class UI {
   // ---------------------------------------------------------- wait times
   renderWaits(c) {
     const sim = this.g.sim;
-    c.append(h('p', { class: 'note' }, 'Posted waits update live. One park minute is one real second, so a 20 min wait is about 20 seconds. Use an Express Pass to skip the line!'));
+    c.append(h('p', { class: 'note' }, 'Posted waits are worked out live from the real line: the guests ahead of you, how many fit on each train and how long a cycle takes, in park minutes. One park minute is one real second by day (night runs faster). "Last" is how long the most recent guest to board actually waited. Use an Express Pass to skip the line!'));
     c.append(h('div', { class: 'row' }, h('button', { class: 'btn ghost small', onclick: () => { this.sortWaits = !this.sortWaits; this.refresh(); } }, this.sortWaits ? 'Sort: shortest wait' : 'Sort: by land')));
     let rides = [...this.cfg.Rides];
     if (this.sortWaits) {
@@ -198,12 +198,14 @@ export class UI {
         c.append(h('h3', { style: `color:${css(land.color)}` }, land.name));
       }
       const wait = h('div', { class: 'wait' }, '--');
-      c.append(this.card(ride.name, `${ride.category}  ${stars(ride.thrill)}  |  ${this.sortWaits ? land.name : ride.kind}`, land.color, wait, this.guideButton(ride.entrance, ride.name)));
+      const last = h('div', { class: 'wait-last' }, '');
+      c.append(this.card(ride.name, `${ride.category}  ${stars(ride.thrill)}  |  ${this.sortWaits ? land.name : ride.kind}`, land.color, h('div', {}, wait, last), this.guideButton(ride.entrance, ride.name)));
       this.live.push(() => {
         const s = sim.rideState(ride.id);
+        last.textContent = !s.refurb && s.lastWait !== null ? `last ${s.lastWait} min` : '';
         if (s.refurb) { wait.textContent = 'REFURB'; wait.style.color = '#f0a040'; }
         else if (s.status === 'Closed') { wait.textContent = 'CLOSED'; wait.style.color = '#f04636'; }
-        else { wait.textContent = `${s.wait} min`; wait.style.color = waitColor(s.wait); }
+        else { wait.textContent = s.wait <= 0 ? 'No wait' : `${s.wait} min`; wait.style.color = waitColor(s.wait); }
       });
     }
   }
@@ -532,7 +534,7 @@ export class UI {
     if (p.kind === 'ride') {
       const s = sim.rideState(p.ride.id);
       const inLine = sim.queueRide === p.ride.id;
-      this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  Wait ${s.wait} min`;
+      this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}`;
       this.promptJoin.replaceChildren(h('kbd', {}, 'E'), inLine ? ' In line ✓' : ' Join Line');
       this.promptJoin.disabled = inLine || s.refurb;
       this.promptExpress.replaceChildren(h('kbd', {}, 'F'), ` Express Pass (${sim.profile.passes})`);
@@ -580,7 +582,7 @@ export class UI {
       const st = sim.rides.get(sim.queueRide);
       $('span', pill).textContent = st.status === 'Closed'
         ? `⏳ ${q.ride.name}: temporarily closed (#${q.pos} in line)`
-        : `⏳ In line for ${q.ride.name}  ·  #${q.pos} in line  ·  about ${Math.max(1, q.eta)} min`;
+        : `⏳ In line for ${q.ride.name}  ·  #${q.pos} in line  ·  ${q.eta <= 0 ? 'boarding next' : `about ${q.eta} min`}`;
     } else pill.hidden = true;
 
     // land banner

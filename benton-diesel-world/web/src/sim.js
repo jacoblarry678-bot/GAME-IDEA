@@ -6,8 +6,12 @@ import { QueuePath, slotAt } from './queue.js';
 
 const SAVE_KEY = 'bentonDieselWorld.v1';
 
-function roundUp5(m) {
-  return Math.max(5, Math.ceil(m / 5) * 5);
+// park minutes that pass in the next `seconds` real seconds (the park
+// clock runs faster at night)
+function parkMinutes(seconds) {
+  if (seconds <= 0) return 0;
+  const now = Clock.now();
+  return (Clock.minutesAt(now + seconds) - Clock.minutesAt(now) + 1440) % 1440;
 }
 
 function loadProfile(economy) {
@@ -104,21 +108,27 @@ export class Sim {
     return this.cfg.BoardingTime + st.duration + this.cfg.UnloadTime;
   }
 
+  // Seconds until the guest at position `pos` in line boards: what is left
+  // of the train out now (or of a breakdown), then one full cycle for every
+  // trainload of guests ahead of them.
   eta(st, pos) {
     const cap = Math.max(1, st.capacity);
     const ahead = Math.floor((pos - 1) / cap);
     const now = Clock.now();
-    const current = st.status === 'Boarding' || st.status === 'Running' || st.status === 'Unloading' ? Math.max(0, st.cycleEnds - now) : 0;
+    let current = st.status === 'Boarding' || st.status === 'Running' || st.status === 'Unloading' ? Math.max(0, st.cycleEnds - now) : 0;
+    if (st.status === 'Closed' && Number.isFinite(st.downUntil)) current = Math.max(0, st.downUntil - now);
     return current + ahead * this.cycleTotal(st);
   }
 
+  // The posted wait in park minutes for a guest joining now, exact to the
+  // minute (no rounding up), measured on the park clock.
   postedWait(st) {
-    return roundUp5(this.eta(st, st.queue.length + 1));
+    return Math.round(parkMinutes(this.eta(st, st.queue.length + 1)));
   }
 
   rideState(id) {
     const st = this.rides.get(id);
-    return { status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb };
+    return { status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, lastWait: st.lastWait ?? null };
   }
 
   playerQueue() {
@@ -126,7 +136,7 @@ export class Sim {
     const st = this.rides.get(this.queueRide);
     const pos = st.queue.findIndex((e) => e.player) + 1;
     if (pos <= 0) return null;
-    return { ride: st.cfg, pos, eta: Math.ceil(this.eta(st, pos)) };
+    return { ride: st.cfg, pos, eta: Math.round(parkMinutes(this.eta(st, pos))) };
   }
 
   join(id, express) {
@@ -155,13 +165,13 @@ export class Sim {
       this.hooks.sound?.('express');
       let at = 0;
       st.queue.forEach((e, i) => { if (e.express) at = i + 1; });
-      st.queue.splice(at, 0, { id: 'player', player: true, express: true });
+      st.queue.splice(at, 0, { id: 'player', player: true, express: true, at: Clock.now() });
       this.hooks.toast(`Express Pass used! Head past the line to the front for ${st.cfg.name}.`, 'reward');
     } else {
-      st.queue.push({ id: 'player', player: true });
+      st.queue.push({ id: 'player', player: true, at: Clock.now() });
       this.hooks.sound?.('join');
-      const wait = Math.max(1, Math.ceil(this.eta(st, st.queue.length)));
-      this.hooks.toast(`You joined the line for ${st.cfg.name} - about ${wait} min. Stand still and you'll move up with the line.`, 'info');
+      const wait = Math.round(parkMinutes(this.eta(st, st.queue.length)));
+      this.hooks.toast(`You joined the line for ${st.cfg.name} - ${wait <= 0 ? 'no wait' : `about ${wait} min`}. Stand still and you'll move up with the line.`, 'info');
     }
     this.queueRide = id;
     this.joinedAt = Clock.now();
@@ -211,8 +221,11 @@ export class Sim {
 
   dispatch(st, now) {
     const riders = [];
+    const boardedAt = Clock.now();
     while (riders.length < st.capacity && st.queue.length) {
       const e = st.queue.shift();
+      // how long the last guest on this train really waited
+      if (e.at !== undefined) st.lastWait = Math.round((Clock.minutesAt(boardedAt) - Clock.minutesAt(e.at) + 1440) % 1440);
       riders.push(e.player ? { player: true } : { npc: e.seed });
     }
     if (!riders.length) return;
@@ -286,11 +299,11 @@ export class Sim {
       const npcs = st.queue.filter((e) => !e.player).length;
       if (npcs < desired) {
         const add = Math.min(desired - npcs, Math.max(1, Math.ceil(st.capacity / 4)));
-        for (let k = 0; k < add; k++) st.queue.push({ id: ++this.entryId, seed: 1 + Math.floor(Math.random() * 1e6) });
-      } else if (npcs > desired + st.capacity) {
-        for (let k = st.queue.length - 1; k >= 0; k--) {
-          if (!st.queue[k].player) { st.queue.splice(k, 1); break; }
-        }
+        for (let k = 0; k < add; k++) st.queue.push({ id: ++this.entryId, seed: 1 + Math.floor(Math.random() * 1e6), at: warmup ? undefined : t });
+      } else if (npcs > desired + st.capacity && !st.queue[st.queue.length - 1].player) {
+        // a guest at the back gives up (never one ahead of you, so your
+        // posted wait stays true)
+        st.queue.pop();
       }
       if (!warmup && st.status === 'Open' && !st.player && Math.random() < 0.004) {
         st.status = 'Closed';

@@ -212,7 +212,7 @@ export class World {
         fitText(ctx, `${ride.category.toUpperCase()}  |  THRILL ${'★'.repeat(ride.thrill)}${'☆'.repeat(5 - ride.thrill)}  |  ${land.name}`, 20, 88, W - 40, 30, land.colorCss, 700);
         fitText(ctx, 'CURRENT WAIT', 20, 126, W - 40, 28, '#b4bed2', 700);
         const closed = st.status === 'Closed';
-        fitText(ctx, closed ? 'CLOSED' : `${st.wait} MIN`, 20, 156, W - 40, 90, closed ? '#f04636' : waitColor(st.wait), 800);
+        fitText(ctx, closed ? 'CLOSED' : st.wait <= 0 ? 'NO WAIT' : `${st.wait} MIN`, 20, 156, W - 40, 90, closed ? '#f04636' : waitColor(st.wait), 800);
         const statusText = st.refurb ? 'CLOSED FOR REFURBISHMENT' : closed ? 'TEMPORARILY CLOSED' : st.status === 'Running' ? 'RIDE IN PROGRESS' : 'NOW BOARDING';
         fitText(ctx, statusText, 20, 252, W - 40, 36, closed ? '#f04636' : st.status === 'Running' ? '#fad23c' : '#5adc6e', 700);
       } else {
@@ -228,7 +228,7 @@ export class World {
           const st = rideState(ride.id);
           fitText(ctx, ride.name, 28, y + 2, W * 0.66, rowH - 6, '#faf3e0', 700, 'left');
           const closed = st.status === 'Closed';
-          fitText(ctx, closed ? 'CLOSED' : `${st.wait} MIN`, W * 0.7, y + 2, W * 0.28 - 12, rowH - 6, closed ? '#f04636' : waitColor(st.wait), 800, 'right');
+          fitText(ctx, closed ? 'CLOSED' : st.wait <= 0 ? 'NO WAIT' : `${st.wait} MIN`, W * 0.7, y + 2, W * 0.28 - 12, rowH - 6, closed ? '#f04636' : waitColor(st.wait), 800, 'right');
         });
       }
       s.tex.needsUpdate = true;

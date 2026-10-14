@@ -443,7 +443,11 @@ export function buildOverdrive(data) {
     capacity: CARS * 4, queue: path, trackStyle: { style: 'steel', color: TRACK }, extras: {}, extrasNames: [], crew,
   };
   data.rides.push(ride);
-  data.config.Rides.push({
+  // listed with the rest of Diesel District
+  const rides = data.config.Rides;
+  let at = rides.length;
+  rides.forEach((r, i) => { if (r.land === 'Diesel') at = i + 1; });
+  rides.splice(at, 0, {
     id: RIDE_ID, name: 'Overdrive', land: 'Diesel', category: 'Thrill', thrill: 5, kind: 'coaster', carStyle: 'coaster',
     description: 'Ride a runaway test train out of the old Benton Engine Works: an 80-stud lift, a turning first drop, a camelback and a swoop right over the biggest queue in the park.',
     baseWait: 90, origin, entrance: [entrance[0], 0, entrance[1]], exit: [exitDoor[0], 0, exitDoor[1]], yaw: 0, layout: RIDE_ID,
