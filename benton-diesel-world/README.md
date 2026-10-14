@@ -49,6 +49,13 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Coming soon (browser only):** construction walls have gone up beside
+  Diesel Thunder for a new ride. The site is so big that part of the park's
+  west wall has come down and it runs out onto the hills beyond, mostly to
+  make room for the biggest queue in the park, already laid out with rows
+  of stanchion posts. Over the walls you can see a tower crane swinging its
+  jib, the first steel of a lift hill, machines, a site office and workers
+  in hard hats, and you can hear them hammering away.
 
 ```bash
 npm install

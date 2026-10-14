@@ -29,6 +29,7 @@ let nextSeed = 910000;
 const ROLE_UNIFORM = {
   security: { shirt: 0xf4f4f0, pants: 0x1c1c20, hat: 0x16223a },
   parking: { shirt: 0xcef03c, pants: 0x222c48, hat: 0xcef03c },
+  construction: { shirt: 0xff8a1e, pants: 0x3a3f4a, hat: 0xf2c818, hardHat: true },
 };
 
 function uniform(landColor, cfg, role) {
@@ -40,6 +41,7 @@ function uniform(landColor, cfg, role) {
     hatOn: seed % 5 < 2 ? 1 : 0, hat: special ? special.hat : cfg.cap, height: 0.95 + (seed % 11) / 100,
   });
   if (o.hairStyle === 1) o.hatOn = 0;
+  if (special?.hardHat) o.hatOn = 1;
   registerLook(seed, o);
   return seed;
 }
@@ -444,6 +446,8 @@ export class StaffSystem {
       // parking crews wave cars through; security bends over the bags
       if (p.role === 'parking' && p.kind !== 'booth') p.pose = STAFF.WAVE;
       if (p.role === 'security' && p.busy) p.pose = STAFF.CHECK;
+      // construction crews work in spells
+      if (p.role === 'construction' && p.kind === 'work') p.pose = Math.floor((time + p.seed) / 2.5) % 3 ? STAFF.CHECK : null;
       // face the player while greeting, otherwise their post
       const want = close && !p.busy && p.role !== 'parking' ? Math.atan2(-(this.player.x - p.pos.x), -(this.player.z - p.pos.z)) : p.home.yaw;
       p.yaw = turn(p.yaw, want, dt * 4);

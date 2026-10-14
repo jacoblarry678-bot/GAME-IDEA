@@ -44,6 +44,7 @@ export class Terrain {
     this.rocks = [];
     this.lake = null;
     this.ponds = [];
+    this.flat = data.flatZones || []; // leveled ground (construction sites)
     for (const op of data.terrain) {
       if (op.kind === 'ball') {
         const b = { x: op.center[0], y: op.center[1], z: op.center[2], r: op.radius };
@@ -99,6 +100,15 @@ export class Terrain {
     }
     for (const p of this.ponds) {
       if (Math.abs(x - p.x) < p.sx / 2 && Math.abs(z - p.z) < p.sz / 2) h = Math.min(h, p.level - 1.5);
+    }
+    for (const f of this.flat) {
+      const dx = Math.max(f.x0 - x, 0, x - f.x1), dz = Math.max(f.z0 - z, 0, z - f.z1);
+      const d = Math.hypot(dx, dz);
+      if (d < f.margin) {
+        const t = THREE.MathUtils.smoothstep(d, 0, f.margin);
+        h = BASE + (h - BASE) * t;
+        rock *= t;
+      }
     }
     out.h = h;
     out.rock = rock;
