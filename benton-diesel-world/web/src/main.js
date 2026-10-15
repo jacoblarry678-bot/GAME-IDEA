@@ -19,6 +19,7 @@ import { buildEntrance, Entrance } from './entrance.js';
 import { buildOverdrive } from './overdrive.js';
 import { buildRefurb } from './refurb.js';
 import { buildBackstage, Backstage } from './backstage.js';
+import { buildFamilyBackstage, buildScareZones, FB } from './haunt.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -78,6 +79,8 @@ async function main() {
   buildRefurb(data);
   // backstage, where the crews are setting up Benton Haunt
   buildBackstage(data);
+  buildFamilyBackstage(data);
+  const scareZones = buildScareZones(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -170,7 +173,8 @@ async function main() {
     hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) },
   });
   game.entrance = entrance;
-  const backstage = new Backstage({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
+  game.scareZones = scareZones;
+  const backstage = new Backstage({ family: FB, sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
 
   game.applyWear = () => {
     const eq = sim.profile.equipped;

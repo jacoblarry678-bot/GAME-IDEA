@@ -1,11 +1,12 @@
 // Backstage: a huge lot behind the Studios wall, reached through a gate
 // between two of the wall's pillars. Five giant soundstages hold most of
 // the Benton Haunt houses, each with a big switchback queue on turf behind
-// black "Benton Haunt" barricades. Right now the crews are setting up for
-// the event: house facades half built and half painted, scaffolds and
-// scissor lifts, barricade lines still going in, production trailers,
-// road cases, a makeup tent and pallets of pumpkins, coffins, tombstones
-// and scarecrows waiting to go out.
+// black "Benton Haunt" barricades. The houses are finished now: themed,
+// lit facades with fog at the doors and the queues all in, while the
+// production yard (trailers, a generator, the makeup tent, pallets of
+// props) keeps the crews busy with final preparations. The sixth house is
+// going up in a tent in the small backstage behind Benton Family Landing
+// (see haunt.js).
 import * as THREE from 'three';
 
 export const BS = { x0: -250, x1: 250, z0: -700, z1: -405 };
@@ -15,11 +16,11 @@ const STAGE_Z = -605; // front faces of the soundstages
 const QUEUE = { z0: -597, z1: -505 }; // the turf queue areas in front of them
 
 export const HOUSES = [
-  { name: "DEAD MAN'S GARAGE", theme: 'garage', color: 0x3a3e46 },
-  { name: 'THE LOST MINERS OF BACKWOODS HOLLOW', theme: 'mine', color: 0x4a3626 },
-  { name: 'FINAL CUT: A HOLLYWOOD HORROR', theme: 'film', color: 0x6a1a22 },
-  { name: 'CRASH TEST', theme: 'crash', color: 0x2a2a2e },
-  { name: 'LIGHTS OUT AT LAKESIDE', theme: 'lodge', color: 0x5a3a24 },
+  { name: "DEAD MAN'S GARAGE", theme: 'garage', color: 0x4a4e56, glow: 0xff3030 },
+  { name: 'THE LOST MINERS OF BACKWOODS HOLLOW', theme: 'mine', color: 0x4a4440, glow: 0xffb040 },
+  { name: 'FINAL CUT: A HOLLYWOOD HORROR', theme: 'film', color: 0x6a1a22, glow: 0xffd27a },
+  { name: 'CRASH TEST', theme: 'crash', color: 0x2a2a2e, glow: 0xf2c818 },
+  { name: 'ENGINE WORKS: MELTDOWN', theme: 'engine', color: 0x2c2e32, glow: 0xff6a10 },
 ];
 
 export function buildBackstage(data) {
@@ -43,7 +44,7 @@ export function buildBackstage(data) {
   const cf = (x, y, z, yaw = 0) => [x, y, z, Math.cos(yaw), 0, Math.sin(yaw), 0, 1, 0, -Math.sin(yaw), 0, Math.cos(yaw)];
   const inRect = (x, z, r, pad = 0) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad;
   const STONE = 0x96928c, CAP = 0xc4beb4, BLACK = 0x101012, ORANGE = 0xff7a1a, PUMPKIN = 0xd85400, WHITE = 0xf4f4f0;
-  const STEEL = 0xb8bcc0, PLY = 0xc8a878;
+  const STEEL = 0xb8bcc0;
   const crew = [];
 
   // ---- open the gate in the south wall, clear the lot and level it
@@ -79,7 +80,7 @@ export function buildBackstage(data) {
   add([gw, 3.4, 2], [gx, G + 20.6, -409], BLACK, 'Metal', { collide: 0 });
   sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -407.9], BLACK, ORANGE, 'Back', 'GothamBlack', true);
   sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -410.1], BLACK, ORANGE, 'Front', 'GothamBlack', true);
-  sign('NOW SETTING UP  ·  6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
+  sign('FINAL PREPARATIONS  ·  6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
   data.tags.Searchlight = data.tags.Searchlight || [];
   data.tags.SteamVent = data.tags.SteamVent || [];
   for (const x of [GATE.x0 - 4, GATE.x1 + 4]) {
@@ -144,44 +145,61 @@ export function buildBackstage(data) {
       sign(house.name, [44, 4.4, 0.3], [x, G + 27, STAGE_Z + 0.4], BLACK, ORANGE, 'Back', 'GothamBlack');
     }
 
-    // the house facade in front of the door: half built, half painted
+    // the finished house facade in front of the door, lit and fogged
     const fz = STAGE_Z + 4;
-    box([30, 16, 1.2], [x, G, fz], PLY, 'WoodPlanks');
-    box([15, 16, 1.3], [x - 7.5, G, fz + 0.05], house.color, 'SmoothPlastic');
-    add([6, 9, 0.3], [x, G + 4.5, fz + 0.7], 0x0a0a0c, 'SmoothPlastic', { collide: 0 });
-    sign(house.name, [26, 2, 0.2], [x, G + 14, fz + 0.75], BLACK, house.theme === 'garage' ? 0xff3030 : ORANGE, 'Back', 'GothamBlack', house.theme === 'garage');
-    // scaffold on the unpainted half, a painter on top
-    for (const [dx, dz] of [[2, 1.4], [14, 1.4], [2, 4], [14, 4]]) box([0.25, 15, 0.25], [x + dx, G, fz + dz], 0xb8b8b4, 'Metal', { collide: 0 });
-    for (const y of [7, 14]) box([12.4, 0.25, 2.8], [x + 8, G + y, fz + 2.7], 0x8a6a44, 'WoodPlanks', { collide: 0 });
-    crew.push(['work', x + 8, G + 14.25, fz + 2, 0], ['work', x - 9, G, fz + 3, 0]);
-    // theme props
     const T = house.theme;
+    const wallMat = { garage: 'CorrodedMetal', mine: 'Slate', film: 'SmoothPlastic', crash: 'SmoothPlastic', engine: 'DiamondPlate' }[T];
+    box([32, 18, 1.2], [x, G, fz], house.color, wallMat);
+    add([33, 1, 1.6], [x, G + 18.3, fz], 0x1a1a1c, 'Metal', { collide: 0 });
+    add([7, 9.4, 0.3], [x, G + 4.7, fz + 0.7], 0x050506, 'SmoothPlastic', { collide: 0 });
+    sign(house.name, [28, 2.4, 0.2], [x, G + 15.4, fz + 0.75], BLACK, house.glow, 'Back', 'GothamBlack', true);
+    // uplights along the foot of the facade and a fog machine at the door
+    for (let k = 0; k < 6; k++) add([0.8, 0.5, 0.6], [x - 14 + k * 5.6, G + 0.25, fz + 1.2], house.glow, 'Neon', { collide: 0 });
+    data.tags.SteamVent.push([x - 5, G + 0.6, fz + 1.4, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
+    box([1.2, 0.8, 1.6], [x - 5, G, fz + 1.4], 0x2a2a2e, 'Metal', { collide: 0 });
+    const disk = [0, 0, -1, 0, 1, 0, 1, 0, 0]; // a cylinder facing out of the facade
     if (T === 'garage') {
-      box([10, 3, 5], [x - 18, G + 0.8, fz + 6], 0x6a2a20, 'CorrodedMetal');
-      box([6, 2.2, 4.6], [x - 18.5, G + 3.8, fz + 6], 0x5a2a20, 'CorrodedMetal');
-      for (const dx of [-3.4, 3.4]) for (const dz of [-2.6, 2.6]) add([1.6, 1.6, 0.8], [x - 18 + dx, G + 0.8, fz + 6 + dz], 0x1a1a1a, 'Rubber', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
-      for (let k = 0; k < 4; k++) add([2.4, 0.8, 2.4], [x + 18, G + 0.4 + k * 0.8, fz + 4], 0x1a1a1a, 'Rubber', { shape: 5 });
+      for (let k = 0; k < 5; k++) add([7.2, 0.3, 0.2], [x, G + 1 + k * 1.8, fz + 0.86], 0x8a8e96, 'Metal', { collide: 0 });
+      box([10, 3, 5], [x - 20, G + 0.8, fz + 6], 0x6a2a20, 'CorrodedMetal');
+      box([6, 2.2, 4.6], [x - 20.5, G + 3.8, fz + 6], 0x5a2a20, 'CorrodedMetal');
+      for (const dx of [-3.4, 3.4]) for (const dz of [-2.6, 2.6]) add([1.6, 1.6, 0.8], [x - 20 + dx, G + 0.8, fz + 6 + dz], 0x1a1a1a, 'Rubber', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
+      for (let k = 0; k < 4; k++) add([2.4, 0.8, 2.4], [x + 19, G + 0.4 + k * 0.8, fz + 4], 0x1a1a1a, 'Rubber', { shape: 5 });
+      for (let k = 0; k < 3; k++) box([2.2, 3, 2.2], [x + 13 + k * 2.4, G, fz + 3], [0xc8322d, 0x3a3a3e, 0xc8322d][k], 'CorrodedMetal', { shape: 5 });
     } else if (T === 'mine') {
-      for (const dx of [-4, 4]) box([1.2, 11, 1.2], [x + dx, G, fz + 1.2], 0x3a2a1c, 'Wood');
-      add([10, 1.4, 1.4], [x, G + 11.7, fz + 1.2], 0x3a2a1c, 'Wood');
-      box([4, 2.4, 3], [x - 12, G + 0.6, fz + 6], 0x5a5e66, 'CorrodedMetal');
-      for (const dx of [-6, 6]) add([0.6, 0.9, 0.6], [x + dx, G + 9, fz + 1], 0xffb040, 'Neon', { collide: 0 });
+      for (const dx of [-5, 5]) box([1.4, 12, 1.4], [x + dx, G, fz + 1.2], 0x3a2a1c, 'Wood');
+      add([12.4, 1.6, 1.6], [x, G + 12.6, fz + 1.2], 0x3a2a1c, 'Wood');
+      for (const dx of [-1.6, 1.6]) add([0.3, 0.2, 9], [x + dx, G + 0.1, fz + 5], 0x5a5e66, 'Metal', { collide: 0 });
+      box([4, 2.4, 3], [x - 14, G + 0.6, fz + 6], 0x5a5e66, 'CorrodedMetal');
+      for (const dx of [-7, 7]) add([0.7, 1, 0.7], [x + dx, G + 9, fz + 1], 0xffb040, 'Neon', { collide: 0 });
+      for (let k = 0; k < 5; k++) add([3, 3, 3], [x + 12 + (k % 3) * 2.6, G + 1.2 + Math.floor(k / 3) * 2, fz + 2.4], 0x5a524a, 'Slate', { shape: 3, collide: 0 });
     } else if (T === 'film') {
-      add([22, 3, 3], [x, G + 18.5, fz + 1.6], 0x1a1a1c, 'Metal', { collide: 0 });
-      for (let k = 0; k < 16; k++) add([0.4, 0.4, 0.4], [x - 10.5 + k * 1.4, G + 17, fz + 3.2], 0xfff2c0, 'Neon', { shape: 3, collide: 0 });
-      sign('NOW SHOWING', [12, 1.6, 0.2], [x, G + 18.5, fz + 3.15], 0xfaf3e0, 0x8a1c22, 'Back', 'GothamBold');
-      add([0.6, 5, 5], [x + 18, G + 2.6, fz + 5], 0x2a2a2e, 'Metal', { shape: 2, collide: 0 });
+      add([24, 3.2, 3], [x, G + 20.6, fz + 1.6], 0x1a1a1c, 'Metal', { collide: 0 });
+      for (let k = 0; k < 18; k++) add([0.4, 0.4, 0.4], [x - 11.9 + k * 1.4, G + 19, fz + 3.2], 0xfff2c0, 'Neon', { shape: 3, collide: 0 });
+      sign('NOW SHOWING', [12, 1.8, 0.2], [x, G + 20.6, fz + 3.15], 0xfaf3e0, 0x8a1c22, 'Back', 'GothamBold', true);
+      for (const dx of [-11, 11]) {
+        add([6, 8, 0.3], [x + dx, G + 7, fz + 0.8], 0xd8b060, 'Metal', { collide: 0 });
+        sign('FINAL CUT', [5.2, 7.2, 0.1], [x + dx, G + 7, fz + 1], 0x1a0a0c, 0xe03030, 'Back', 'GothamBlack');
+      }
+      add([0.6, 5, 5], [x + 19, G + 2.6, fz + 5], 0x2a2a2e, 'Metal', { shape: 2, collide: 0 });
     } else if (T === 'crash') {
-      for (let k = 0; k < 6; k++) box([2.5, 6, 1.4], [x - 21 + k * 2.5, G, fz + 4], k % 2 ? 0xf2c818 : 0x1a1a1c, 'SmoothPlastic');
-      box([1.4, 2.6, 1], [x + 18, G + 1, fz + 5], 0xf2c818, 'SmoothPlastic');
-      add([1, 1, 1], [x + 18, G + 4.3, fz + 5], 0xf2c818, 'SmoothPlastic', { shape: 3 });
-      box([1.6, 1, 1.2], [x + 18, G, fz + 5], 0x2a2a2e, 'SmoothPlastic');
-    } else {
-      for (let k = 0; k < 6; k++) add([20, 1.2, 1.2], [x - 9, G + 0.6 + k * 1.3, fz + 1.8], 0x6a4428, 'Wood', { shape: 2, collide: 0 });
-      add([2, 0.8, 9], [x + 18, G + 0.4, fz + 6], 0x8a3a22, 'Wood', { collide: 0 });
+      for (let k = 0; k < 8; k++) add([4, 1.6, 0.2], [x - 14 + k * 4, G + 12.6, fz + 0.75], k % 2 ? 0xf2c818 : 0x1a1a1c, 'SmoothPlastic', { collide: 0 });
+      for (let k = 0; k < 6; k++) box([2.5, 3, 1.4], [x - 22 + k * 2.5, G, fz + 5], k % 2 ? 0xf2c818 : 0xe8e8e4, 'SmoothPlastic');
+      add([9, 4, 5], [x + 14, G + 2.2, fz + 3.4], 0x3a5a8a, 'Metal', { collide: 0, rot: [0.97, 0, 0.24, 0, 1, 0, -0.24, 0, 0.97] });
+      box([1.4, 2.6, 1], [x + 21, G + 1, fz + 6], 0xf2c818, 'SmoothPlastic');
+      add([1, 1, 1], [x + 21, G + 4.3, fz + 6], 0xf2c818, 'SmoothPlastic', { shape: 3 });
+      add([0.8, 0.8, 0.8], [x, G + 10.2, fz + 0.9], 0xff2020, 'Neon', { shape: 3, collide: 0 });
+    } else if (T === 'engine') {
+      for (const [dx, d] of [[-10, 9], [11, 6]]) {
+        add([0.8, d, d], [x + dx, G + 8, fz + 1], 0x8a5a2a, 'CorrodedMetal', { shape: 2, collide: 0, rot: disk });
+        add([1, d * 0.4, d * 0.4], [x + dx, G + 8, fz + 1.2], 0x2a2a2e, 'Metal', { shape: 2, collide: 0, rot: disk });
+      }
+      for (const dx of [-15, -13.4, 13.4, 15]) box([1, 18, 1], [x + dx, G, fz + 1.2], 0x5a5e66, 'Metal', { shape: 5, collide: 0 });
+      add([6.4, 8.8, 0.2], [x, G + 4.6, fz + 0.75], 0xff6a10, 'Neon', { collide: 0 });
+      add([7, 9.4, 0.3], [x, G + 4.7, fz + 0.9], 0x050506, 'Glass', { collide: 0 });
     }
 
-    // the queue: turf, a switchback of barricades, black covers out front
+    // the queue: turf, a finished switchback of barricades, black covers out
+    // front and the house's name at the way in
     const qx0 = x - 35, qx1 = x + 35;
     add([qx1 - qx0 + 2, 0.15, QUEUE.z1 - QUEUE.z0], [x, G + 0.08, (QUEUE.z0 + QUEUE.z1) / 2], 0x2f6a2a, 'SmoothPlastic', { collide: 0 });
     for (let z = QUEUE.z0 + 10; z < QUEUE.z1; z += 20) add([qx1 - qx0 + 2, 0.02, 3], [x, G + 0.17, z], 0x9a9a96, 'SmoothPlastic', { collide: 0 });
@@ -189,23 +207,15 @@ export function buildBackstage(data) {
     barricadeZ(qx0, QUEUE.z0, QUEUE.z1);
     barricadeZ(qx1, QUEUE.z0, QUEUE.z1);
     const rows = Math.floor((QUEUE.z1 - QUEUE.z0) / 7);
-    const done = 6 + ((i * 3) % 5); // the crews are partway down each maze
     for (let k = 1; k < rows; k++) {
       const z = QUEUE.z1 - k * 7;
       const xa = k % 2 ? qx0 : qx0 + 7, xb = k % 2 ? qx1 - 7 : qx1;
-      barricade(xa, xb, z, { unfinished: k > done });
+      barricade(xa, xb, z);
     }
-    cart(x + 26, QUEUE.z1 - (done + 1.5) * 7);
-    crew.push(['work', x + 20, G, QUEUE.z1 - (done + 1) * 7 - 1, Math.PI], ['work', x - 10, G, QUEUE.z1 - (done + 1) * 7 + 1, 0]);
+    box([0.4, 7, 0.4], [qx0 + 4, G, QUEUE.z1 + 2], BLACK, 'Metal');
+    sign(house.name, [12, 2.4, 0.2], [qx0 + 4, G + 6.4, QUEUE.z1 + 2.2], BLACK, house.glow, 'Back', 'GothamBlack', true);
+    crew.push(['idle', qx0 + 1, G, QUEUE.z1 + 3, 0], ['work', x + 6, G, fz + 3, 0]);
   });
-
-  // ---- the middle stage gets a scissor lift for the banner crew
-  const lx = 0, lz = STAGE_Z + 9;
-  box([4, 1.2, 7], [lx + 14, G, lz], 0xf2c818, 'SmoothPlastic');
-  box([3.4, 18, 5], [lx + 14, G + 1.2, lz], 0x3a3f46, 'Metal', { collide: 0 });
-  box([4.6, 0.4, 7.4], [lx + 14, G + 19.2, lz], 0xf2c818, 'SmoothPlastic', { collide: 0 });
-  add([4.4, 0.15, 0.15], [lx + 14, G + 20.6, lz + 3.6], 0xf2c818, 'Metal', { collide: 0 });
-  crew.push(['work', lx + 14, G + 19.6, lz - 1.5, 0]);
 
   // ---- the production yard along the wall
   // trailers
@@ -271,8 +281,8 @@ export function buildBackstage(data) {
   );
   for (const [kind, x, y, z, yaw] of crew) data.staffSpots.push({ role: 'haunt', kind, land: 'Studios', seed: 0, cf: cf(x, y, z, yaw) });
   data.staff.lines.haunt = [
-    'Backstage is where the magic happens!', 'Benton Haunt is almost ready!', 'Mind the barricades, still setting up!',
-    "You didn't see anything back here...", 'Five houses in these stages - wait till you see them!', 'Six scare zones, six houses. Through November 2!',
+    'Backstage is where the magic happens!', 'The houses are finished - Benton Haunt is almost here!', 'Final touches on the scare zones today!',
+    "You didn't see anything back here...", 'Five houses in these stages, one more in a tent at Family Landing!', 'Six scare zones, six houses. Through November 2!',
   ];
   return { gate: { x: gx, z: -405 } };
 }
@@ -287,10 +297,16 @@ export class Backstage {
 
   update(dt, playerPos, started) {
     if (!started) return;
-    const inside = playerPos.x > BS.x0 && playerPos.x < BS.x1 && playerPos.z > BS.z0 && playerPos.z < BS.z1;
-    if (inside && !this.told) {
+    const R = this.hooks.family;
+    const family = R && playerPos.x > R.x0 && playerPos.x < R.x1 && playerPos.z > R.z0 && playerPos.z < R.z1;
+    if (family && !this.toldFamily) {
+      this.toldFamily = true;
+      this.hooks.toast("Family Landing backstage: crews are putting up Benton Haunt's sixth house, Lights Out at Lakeside, in this tent.", 'info');
+    }
+    const inside = family || (playerPos.x > BS.x0 && playerPos.x < BS.x1 && playerPos.z > BS.z0 && playerPos.z < BS.z1);
+    if (inside && !family && !this.told) {
       this.told = true;
-      this.hooks.toast("You're backstage! Crews are setting up Benton Haunt: five of the six houses are in these soundstages. Benton Haunt runs through November 2.", 'info');
+      this.hooks.toast("You're backstage! Five of the six Benton Haunt houses are finished in these soundstages. Benton Haunt runs through November 2.", 'info');
     }
     this.next -= dt;
     if (this.next <= 0) {
