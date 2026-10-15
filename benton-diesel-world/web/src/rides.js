@@ -96,6 +96,8 @@ export class Sampler {
 export function makeMotion(r, cfg) {
   const origin = cfMatrix(r.origin);
   const n = r.carCount;
+  // walk-through houses have no vehicles: guests walk them
+  if (r.kind === 'walkthrough') return { duration: r.duration, pose: () => ({ cars: [], extras: {} }) };
   if (r.track) {
     const sampler = new Sampler(r.track);
     if (r.kind === 'karts') {

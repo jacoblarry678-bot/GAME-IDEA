@@ -283,8 +283,8 @@ export class Player {
         }
       }
       // keep inside the world
-      this.pos.x = THREE.MathUtils.clamp(this.pos.x, -560, 560);
-      this.pos.z = THREE.MathUtils.clamp(this.pos.z, -600, 520);
+      this.pos.x = THREE.MathUtils.clamp(this.pos.x, -580, 580);
+      this.pos.z = THREE.MathUtils.clamp(this.pos.z, -720, 520);
       this.holder.position.copy(this.pos);
       this.holder.rotation.set(0, this.yaw, 0);
       this.figure.update(dt, { speed: Math.hypot(this.vel.x, this.vel.z), onGround: this.onGround, vy: this.vel.y, holding: !!this.wear.held });

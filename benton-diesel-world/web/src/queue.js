@@ -14,6 +14,7 @@ export class QueuePath {
     this.length = q.length;
     this.signAt = q.signAt;
     this.gate = { x: q.gate[0], z: q.gate[1] };
+    this.floor = q.floor ?? FLOOR;
   }
 
   // position `s` studs back from the gate and the direction toward the front
@@ -108,8 +109,8 @@ export class QueueCrowd {
         // idle guests glance around now and then
         const look = v.walking ? 0 : Math.sin(time * 0.6 + (e.seed % 97)) * 0.5;
         const yaw = Math.atan2(-this.pt.fx, -this.pt.fz) + look;
-        if (v.walking) this.people.add('walk', v.cycle, this.pt.x, FLOOR, this.pt.z, yaw, e.seed);
-        else this.people.add('idle', (e.seed >> 3) % 7 < 4 ? 0 : (e.seed >> 3) % 3 + 1, this.pt.x, FLOOR, this.pt.z, yaw, e.seed);
+        if (v.walking) this.people.add('walk', v.cycle, this.pt.x, path.floor, this.pt.z, yaw, e.seed);
+        else this.people.add('idle', (e.seed >> 3) % 7 < 4 ? 0 : (e.seed >> 3) % 3 + 1, this.pt.x, path.floor, this.pt.z, yaw, e.seed);
       });
     }
     for (const id of this.visual.keys()) if (!seen.has(id)) this.visual.delete(id);

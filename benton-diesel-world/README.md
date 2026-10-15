@@ -62,39 +62,32 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   over the queue, then brakes back into the station. It works like every
   other ride: posted waits, guests in line, an operator and two attendants
   who check every lap bar, a passport stamp, and you can ride it yourself.
-- **Backlot Tram Tour refurbishment (browser only):** the Studio Backlot
-  Tram Tour is closed for a small refurbishment. A painted wall closes the
-  queue entrance, barriers close the tram road, one tram is half under a
-  tarp, and a crew in hard hats repaints the trams and the station sign
-  from a scaffold, and the tram road has been repaved. At the back of the
-  lot the road now runs under a row of red-and-white striped tents with
-  "Hooray for Hollywood" marquees, and inside it is Hollywood: the hills
-  with the big white letters, the Walk of Fame, the Grand Benton Theatre
-  with a world premiere on a red carpet, palms, a movie camera and lights,
-  director's chairs, a golden statue and strings of lights. The app and
-  the wait signs show the tram as closed for refurbishment.
-- **Benton Haunt, final preparations (browser only):** Benton Haunt, the
-  park's Halloween event (6 houses and 6 scare zones, through November 2),
-  is almost here.
-  - *Backstage:* a gate in the Studios' back wall, under a black "Benton
-    Haunt · Backstage" arch with searchlights and fog machines, leads to a
-    huge lot past the old wall. Five giant art deco soundstages (Stages 21
-    to 25) hold five of the houses, now finished with lit, fogged facades:
-    Dead Man's Garage, The Lost Miners of Backwoods Hollow, Final Cut: A
-    Hollywood Horror, Crash Test and Engine Works: Meltdown. Each has a
-    big switchback queue on turf behind black "Benton Haunt" barricades.
-    The production yard (trailers, a generator, a makeup tent, a lighting
-    truss, pallets of props) keeps the crews in black and orange hard hats
-    busy.
-  - *Family Landing backstage:* a smaller lot through a gate in the east
-    wall, where the sixth house, Lights Out at Lakeside, is going up in a
-    big white clear-span tent: the lodge facade half built under a
-    scaffold, its sign waiting by the scissor lift, a rope-and-stanchion
-    queue half roped, a scare actors' tent and a lighting truck.
-  - *Scare zones:* the six zones are starting to go up around the park
-    (Midnight at the Gate, Smokestack Alley, Scarecrow Crossing, The Hollow
-    Woods, Backlot Bloodbath and Burnout Boulevard), each with its first
-    props, a fog machine, crates still to unpack, a setup sign and crew.
+- **Benton Haunt is open (browser only):** the park's Halloween event, with
+  6 haunted houses and 6 scare zones, through November 2.
+  - *The houses:* walk-through mazes you can join like rides, with posted
+    waits, long switchback lines, a passport stamp each and Express Passes.
+    Your group walks the dark corridors together past themed scenes, under
+    colored lights, while scare actors jump out ("BOO!") as you pass. Five
+    are in the giant backstage soundstages behind the Studios' back wall
+    (Dead Man's Garage, The Lost Miners of Backwoods Hollow, Final Cut: A
+    Hollywood Horror, Crash Test and Engine Works: Meltdown), each with a
+    lit, fogged facade and a turf queue behind black "Benton Haunt"
+    barricades; the sixth, Lights Out at Lakeside, is in a big white tent in
+    the Family Landing backstage, with a rope-and-stanchion queue.
+  - *Scare zones:* Midnight at the Gate, Smokestack Alley, Scarecrow
+    Crossing, The Hollow Woods, Backlot Bloodbath and Burnout Boulevard,
+    one in each land, with a lit sign, fog machines, colored lights, props
+    and scare actors who lunge at you.
+  - *New food:* Graveyard Grub, on the backstage avenue: Monster Burger,
+    Pumpkin Spice Churro, Witch's Brew Slushie (jump boost), Graveyard Dirt
+    Cup, Bloody Funnel Cake and Haunted Hot Cocoa (speed boost).
+- **Studio Backlot Tram Tour reopened (browser only):** after its
+  refurbishment the road is repaved, and at the back of the lot the tram
+  now rolls under a row of red-and-white striped tents where it is
+  Hollywood inside: the hills and the big white letters, the Walk of Fame,
+  the Grand Benton Theatre with a world premiere on a red carpet (its
+  flashbulbs pop as the tram goes by), palms, a movie camera and lights,
+  director's chairs, a golden statue and strings of lights.
 - **Accurate wait times (browser only):** posted waits are worked out from
   the real line (the guests ahead, how many fit on each train, how long a
   cycle takes, and any breakdown still being fixed), shown to the exact

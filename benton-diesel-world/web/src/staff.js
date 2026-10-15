@@ -32,6 +32,8 @@ const ROLE_UNIFORM = {
   construction: { shirt: 0xff8a1e, pants: 0x3a3f4a, hat: 0xf2c818, hardHat: true },
   // the Benton Haunt production crew: black crew shirts, orange hard hats
   haunt: { shirt: 0x1c1c20, pants: 0x2a2a30, hat: 0xff7a1a, hardHat: true },
+  // scare actors in tattered dark costumes
+  scare: { shirt: 0x2a1616, pants: 0x101012, hat: 0x1a0a0a },
 };
 
 function uniform(landColor, cfg, role) {
@@ -431,13 +433,14 @@ export class StaffSystem {
     // shop, gate and cart staff: wave and say hello when you come by
     for (const p of this.spots) {
       if (p.pos.distanceToSquared(cam) > 220 * 220) continue;
-      const close = this.playerNear(p.pos, p.role === 'greeter' ? 22 : 15);
+      const close = this.playerNear(p.pos, p.role === 'greeter' ? 22 : p.role === 'scare' ? 9 : 15);
       if (close && !p.greeted) {
         p.greeted = true;
         p.waveFor = 2.2;
+        if (p.role === 'scare') this.hooks.sound('scare'); // a scare actor lunges
         const kind = p.role === 'cashier' ? (p.kind === 'restaurant' ? 'food' : 'shop') : p.role === 'vendor' ? p.kind : p.role;
         this.say(p, pick(this.lines[kind]));
-      } else if (!this.playerNear(p.pos, 30)) {
+      } else if (!this.playerNear(p.pos, p.role === 'scare' ? 16 : 30)) {
         p.greeted = false;
       }
       if (p.role === 'greeter') {

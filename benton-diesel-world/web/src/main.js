@@ -17,9 +17,10 @@ import { StaffSystem } from './staff.js';
 import { Bubbles } from './bubbles.js';
 import { buildEntrance, Entrance } from './entrance.js';
 import { buildOverdrive } from './overdrive.js';
-import { buildRefurb } from './refurb.js';
+import { buildTramTour } from './refurb.js';
 import { buildBackstage, Backstage } from './backstage.js';
-import { buildFamilyBackstage, buildScareZones, FB } from './haunt.js';
+import { buildFamilyBackstage, buildScareZones, buildHauntFood, FB } from './haunt.js';
+import { buildHouses, HouseWalks } from './houses.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -75,11 +76,14 @@ async function main() {
   const entranceLayout = buildEntrance(data);
   // Overdrive, the new coaster beyond the west wall
   buildOverdrive(data);
-  // the Backlot Tram Tour is closed for a small refurbishment
-  buildRefurb(data);
+  // the Backlot Tram Tour, reopened with its new Hollywood tents
+  buildTramTour(data);
   // backstage, where the crews are setting up Benton Haunt
   buildBackstage(data);
-  buildFamilyBackstage(data);
+  const familyLayout = buildFamilyBackstage(data);
+  // Benton Haunt: six walk-through houses, a food stand and six scare zones
+  const houses = buildHouses(data, familyLayout);
+  buildHauntFood(data);
   const scareZones = buildScareZones(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
@@ -127,6 +131,12 @@ async function main() {
     toast: (text, kind, amount) => game.ui?.toast(text, kind, amount),
     sound: (kind) => audio.ui(kind),
     startRide: (id, car, seat) => {
+      if (rideCfg.get(id).kind === 'walkthrough') {
+        // a haunted house: the group walks it
+        game.walk = id;
+        audio.voice.say(`Welcome to ${rideCfg.get(id).name}. Stay with your group, keep moving, and do not touch the scare actors. Good luck...`, { interrupt: true });
+        return;
+      }
       player.riding = { id, car, seat, matrix: rideVis.seatMatrix(id, car, seat) || new THREE.Matrix4() };
       const name = rideCfg.get(id).name;
       const kind = data.rides.find((r) => r.id === id)?.crew?.restraint;
@@ -141,6 +151,7 @@ async function main() {
       audio.voice.say(lines[0], { interrupt: true });
     },
     endRide: (id) => {
+      if (game.walk === id) game.walk = null;
       const r = rideCfg.get(id);
       // step off a few studs past the exit sign, facing away from the ride
       let dx = r.exit[0] - r.origin[0], dz = r.exit[2] - r.origin[2];
@@ -161,6 +172,7 @@ async function main() {
   const people = new CrowdRenderer(scene, { shadows: PRESETS[qualityName].shadows });
   const bubbles = new Bubbles(scene);
   const queueCrowd = new QueueCrowd(people, data, sim.paths);
+  const houseWalks = new HouseWalks(houses, people);
   let queueSnap = true; // place guests already in line without walking them in
   let crowd = new Crowd(people, PRESETS[qualityName].crowd);
   const staff = new StaffSystem({
@@ -304,6 +316,7 @@ async function main() {
 
     people.begin(camera.position);
     queueCrowd.update(dt, time, sim.order, camera.position, queueSnap);
+    houseWalks.update(sim, now, camera.position);
     queueSnap = false;
 
     if (started) {
@@ -311,6 +324,12 @@ async function main() {
       const slot = player.riding ? null : sim.playerSlot();
       player.autopilot = slot ? sim.lineTarget(player.pos) : null;
       player.faceDir = slot ? slot.path.pointAt(slot.s) : null;
+      // walking a haunted house with your group
+      const walk = game.walk && houseWalks.playerTarget(sim, game.walk, now, player.pos);
+      if (walk) {
+        if (walk.lost) player.pos.set(walk.here.x, player.pos.y, walk.here.z);
+        player.autopilot = walk.target;
+      }
       player.update(dt, input, camera);
     } else {
       // attract mode: slow orbit over the park

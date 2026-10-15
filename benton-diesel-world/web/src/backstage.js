@@ -1,26 +1,26 @@
 // Backstage: a huge lot behind the Studios wall, reached through a gate
 // between two of the wall's pillars. Five giant soundstages hold most of
 // the Benton Haunt houses, each with a big switchback queue on turf behind
-// black "Benton Haunt" barricades. The houses are finished now: themed,
-// lit facades with fog at the doors and the queues all in, while the
-// production yard (trailers, a generator, the makeup tent, pallets of
-// props) keeps the crews busy with final preparations. The sixth house is
-// going up in a tent in the small backstage behind Benton Family Landing
-// (see haunt.js).
+// black "Benton Haunt" barricades and a themed, lit facade with fog at the
+// door. The stages are hollow: the walk-through mazes inside them are
+// built in houses.js. A production yard (trailers, a generator, the makeup
+// tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
 
 export const BS = { x0: -250, x1: 250, z0: -700, z1: -405 };
 const GATE = { x0: -81, x1: -44 }; // between the wall pillars at x -83.3 and -41.7
 const G = 0.1; // top of the backstage paving
-const STAGE_Z = -605; // front faces of the soundstages
-const QUEUE = { z0: -597, z1: -505 }; // the turf queue areas in front of them
+export const STAGE_Z = -605; // front faces of the soundstages
+export const QUEUE = { z0: -597, z1: -505 }; // the turf queue areas in front of them
+export const STAGE = { W: 76, D: 90, H: 40 };
+export const stageX = (i) => -200 + i * 100;
 
 export const HOUSES = [
-  { name: "DEAD MAN'S GARAGE", theme: 'garage', color: 0x4a4e56, glow: 0xff3030 },
-  { name: 'THE LOST MINERS OF BACKWOODS HOLLOW', theme: 'mine', color: 0x4a4440, glow: 0xffb040 },
-  { name: 'FINAL CUT: A HOLLYWOOD HORROR', theme: 'film', color: 0x6a1a22, glow: 0xffd27a },
-  { name: 'CRASH TEST', theme: 'crash', color: 0x2a2a2e, glow: 0xf2c818 },
-  { name: 'ENGINE WORKS: MELTDOWN', theme: 'engine', color: 0x2c2e32, glow: 0xff6a10 },
+  { name: "DEAD MAN'S GARAGE", title: "Dead Man's Garage", theme: 'garage', color: 0x4a4e56, glow: 0xff3030 },
+  { name: 'THE LOST MINERS OF BACKWOODS HOLLOW', title: 'The Lost Miners of Backwoods Hollow', theme: 'mine', color: 0x4a4440, glow: 0xffb040 },
+  { name: 'FINAL CUT: A HOLLYWOOD HORROR', title: 'Final Cut: A Hollywood Horror', theme: 'film', color: 0x6a1a22, glow: 0xffd27a },
+  { name: 'CRASH TEST', title: 'Crash Test', theme: 'crash', color: 0x2a2a2e, glow: 0xf2c818 },
+  { name: 'ENGINE WORKS: MELTDOWN', title: 'Engine Works: Meltdown', theme: 'engine', color: 0x2c2e32, glow: 0xff6a10 },
 ];
 
 export function buildBackstage(data) {
@@ -80,7 +80,7 @@ export function buildBackstage(data) {
   add([gw, 3.4, 2], [gx, G + 20.6, -409], BLACK, 'Metal', { collide: 0 });
   sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -407.9], BLACK, ORANGE, 'Back', 'GothamBlack', true);
   sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -410.1], BLACK, ORANGE, 'Front', 'GothamBlack', true);
-  sign('FINAL PREPARATIONS  ·  6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
+  sign('NOW OPEN  ·  6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
   data.tags.Searchlight = data.tags.Searchlight || [];
   data.tags.SteamVent = data.tags.SteamVent || [];
   for (const x of [GATE.x0 - 4, GATE.x1 + 4]) {
@@ -122,10 +122,28 @@ export function buildBackstage(data) {
   // ---- the soundstages, their houses and queues
   const TAN = 0xe6cc94, ROSE = 0xc07a76, MAROON = 0x8e4656;
   HOUSES.forEach((house, i) => {
-    const x = -200 + i * 100;
-    const W = 76, D = 90, Hs = 40, cz = STAGE_Z - D / 2;
-    box([W, Hs, D], [x, G, cz], TAN, 'Concrete');
-    add([W + 0.6, 5, D + 0.6], [x, G + 2.5, cz], ROSE, 'Concrete', { collide: 0 });
+    const x = stageX(i);
+    const { W, D, H: Hs } = STAGE;
+    const cz = STAGE_Z - D / 2;
+    // hollow, so the house can be walked inside: a door in the front, an
+    // exit in the east wall a little way in
+    const Tw = 1.2, exz = STAGE_Z - 6;
+    box([W, Hs, Tw], [x, G, STAGE_Z - D + Tw / 2], TAN, 'Concrete');
+    box([Tw, Hs, D], [x - W / 2 + Tw / 2, G, cz], TAN, 'Concrete');
+    box([Tw, Hs, 2.5], [x + W / 2 - Tw / 2, G, STAGE_Z - 1.25], TAN, 'Concrete');
+    box([Tw, Hs, exz - 3.5 - (STAGE_Z - D)], [x + W / 2 - Tw / 2, G, (exz - 3.5 + STAGE_Z - D) / 2], TAN, 'Concrete');
+    box([Tw, Hs - 10, 7], [x + W / 2 - Tw / 2, G + 10, exz], TAN, 'Concrete');
+    for (const sx of [-1, 1]) box([W / 2 - 3.5, Hs, Tw], [x + sx * (W / 4 + 1.75), G, STAGE_Z - Tw / 2], TAN, 'Concrete');
+    box([7, Hs - 10, Tw], [x, G + 10, STAGE_Z - Tw / 2], TAN, 'Concrete');
+    add([W, 1, D], [x, G + Hs - 0.5, cz], TAN, 'Concrete', { collide: 0 });
+    sign('EXIT', [0.2, 1.4, 4], [x + W / 2 + 0.15, G + 11.2, exz], 0x101012, 0x5adc6e, 'Right', 'GothamBold', true);
+    // the rose base band, as trim on the outside of the walls
+    const band = (sx, sz, px, pz) => add([sx, 5, sz], [px, G + 2.5, pz], ROSE, 'Concrete', { collide: 0 });
+    band(W + 0.6, 0.3, x, STAGE_Z - D - 0.15);
+    band(0.3, D + 0.6, x - W / 2 - 0.15, cz);
+    band(0.3, exz - 3.5 - (STAGE_Z - D), x + W / 2 + 0.15, (exz - 3.5 + STAGE_Z - D) / 2);
+    band(0.3, 2.5, x + W / 2 + 0.15, STAGE_Z - 1.25);
+    for (const sx of [-1, 1]) band(W / 2 - 3.5, 0.3, x + sx * (W / 4 + 1.75), STAGE_Z + 0.15);
     add([W + 1, 1, D + 1], [x, G + Hs + 0.5, cz], 0xd8bc84, 'Concrete', { collide: 0 });
     // stepped art deco parapet over the front, and maroon pilasters
     add([46, 4, 2], [x, G + Hs + 2, STAGE_Z - 1], TAN, 'Concrete', { collide: 0 });
@@ -133,9 +151,6 @@ export function buildBackstage(data) {
     add([10, 3, 2], [x, G + Hs + 9.5, STAGE_Z - 1], TAN, 'Concrete', { collide: 0 });
     for (const dx of [-34, -23, 23, 34]) box([3, Hs, 1.2], [x + dx, G, STAGE_Z + 0.5], MAROON, 'Concrete', { collide: 0 });
     sign(`STAGE ${21 + i}`, [7, 2, 0.2], [x - 28.5, G + 33, STAGE_Z + 1.2], MAROON, WHITE, 'Back', 'GothamBold');
-    // the big roll-up door, half open
-    add([18, 20, 0.3], [x, G + 10, STAGE_Z + 0.2], 0x3a3a3e, 'Metal', { collide: 0 });
-    add([18, 10, 0.4], [x, G + 5, STAGE_Z + 0.3], 0x0c0c0e, 'SmoothPlastic', { collide: 0 });
     // the house name hangs high on the stage (the middle stage carries the
     // big Benton Haunt banner instead)
     if (i === 2) {
@@ -149,9 +164,10 @@ export function buildBackstage(data) {
     const fz = STAGE_Z + 4;
     const T = house.theme;
     const wallMat = { garage: 'CorrodedMetal', mine: 'Slate', film: 'SmoothPlastic', crash: 'SmoothPlastic', engine: 'DiamondPlate' }[T];
-    box([32, 18, 1.2], [x, G, fz], house.color, wallMat);
+    for (const sx of [-1, 1]) box([12.5, 18, 1.2], [x + sx * 9.75, G, fz], house.color, wallMat);
+    box([7, 8.6, 1.2], [x, G + 9.4, fz], house.color, wallMat);
+    for (const sx of [-1, 1]) box([0.6, 10, 4], [x + sx * 3.8, G, fz - 2], 0x101012, 'SmoothPlastic');
     add([33, 1, 1.6], [x, G + 18.3, fz], 0x1a1a1c, 'Metal', { collide: 0 });
-    add([7, 9.4, 0.3], [x, G + 4.7, fz + 0.7], 0x050506, 'SmoothPlastic', { collide: 0 });
     sign(house.name, [28, 2.4, 0.2], [x, G + 15.4, fz + 0.75], BLACK, house.glow, 'Back', 'GothamBlack', true);
     // uplights along the foot of the facade and a fog machine at the door
     for (let k = 0; k < 6; k++) add([0.8, 0.5, 0.6], [x - 14 + k * 5.6, G + 0.25, fz + 1.2], house.glow, 'Neon', { collide: 0 });
@@ -159,7 +175,6 @@ export function buildBackstage(data) {
     box([1.2, 0.8, 1.6], [x - 5, G, fz + 1.4], 0x2a2a2e, 'Metal', { collide: 0 });
     const disk = [0, 0, -1, 0, 1, 0, 1, 0, 0]; // a cylinder facing out of the facade
     if (T === 'garage') {
-      for (let k = 0; k < 5; k++) add([7.2, 0.3, 0.2], [x, G + 1 + k * 1.8, fz + 0.86], 0x8a8e96, 'Metal', { collide: 0 });
       box([10, 3, 5], [x - 20, G + 0.8, fz + 6], 0x6a2a20, 'CorrodedMetal');
       box([6, 2.2, 4.6], [x - 20.5, G + 3.8, fz + 6], 0x5a2a20, 'CorrodedMetal');
       for (const dx of [-3.4, 3.4]) for (const dz of [-2.6, 2.6]) add([1.6, 1.6, 0.8], [x - 20 + dx, G + 0.8, fz + 6 + dz], 0x1a1a1a, 'Rubber', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
@@ -194,8 +209,8 @@ export function buildBackstage(data) {
         add([1, d * 0.4, d * 0.4], [x + dx, G + 8, fz + 1.2], 0x2a2a2e, 'Metal', { shape: 2, collide: 0, rot: disk });
       }
       for (const dx of [-15, -13.4, 13.4, 15]) box([1, 18, 1], [x + dx, G, fz + 1.2], 0x5a5e66, 'Metal', { shape: 5, collide: 0 });
-      add([6.4, 8.8, 0.2], [x, G + 4.6, fz + 0.75], 0xff6a10, 'Neon', { collide: 0 });
-      add([7, 9.4, 0.3], [x, G + 4.7, fz + 0.9], 0x050506, 'Glass', { collide: 0 });
+      for (const sx of [-1, 1]) add([0.4, 9.4, 0.3], [x + sx * 3.7, G + 4.7, fz + 0.75], 0xff6a10, 'Neon', { collide: 0 });
+      add([7.8, 0.4, 0.3], [x, G + 9.6, fz + 0.75], 0xff6a10, 'Neon', { collide: 0 });
     }
 
     // the queue: turf, a finished switchback of barricades, black covers out
@@ -212,9 +227,9 @@ export function buildBackstage(data) {
       const xa = k % 2 ? qx0 : qx0 + 7, xb = k % 2 ? qx1 - 7 : qx1;
       barricade(xa, xb, z);
     }
-    box([0.4, 7, 0.4], [qx0 + 4, G, QUEUE.z1 + 2], BLACK, 'Metal');
-    sign(house.name, [12, 2.4, 0.2], [qx0 + 4, G + 6.4, QUEUE.z1 + 2.2], BLACK, house.glow, 'Back', 'GothamBlack', true);
-    crew.push(['idle', qx0 + 1, G, QUEUE.z1 + 3, 0], ['work', x + 6, G, fz + 3, 0]);
+    box([0.4, 7, 0.4], [qx0 - 2, G, QUEUE.z1 + 2], BLACK, 'Metal');
+    sign(house.name, [12, 2.4, 0.2], [qx0 - 2, G + 6.4, QUEUE.z1 + 2.2], BLACK, house.glow, 'Back', 'GothamBlack', true);
+    crew.push(['idle', qx0 + 1, G, QUEUE.z1 + 3, 0]);
   });
 
   // ---- the production yard along the wall
@@ -257,7 +272,7 @@ export function buildBackstage(data) {
     box([1.6, 2.4, 0.9], [x, G + 3.4, -440], [0x8a3a22, 0x3a5a8a, 0x5a6a2a][k], 'Fabric', { collide: 0 });
   }
   for (let k = 0; k < 8; k++) box([3.6, 1.6, 2], [152 + (k % 4) * 3.8, G + Math.floor(k / 4) * 1.6, -438], 0xd8b850, 'Fabric');
-  for (const [x, z] of [[176, -446], [184, -446], [-30, -446], [-22, -446]]) cart(x, z);
+  for (const [x, z] of [[176, -446], [184, -446]]) cart(x, z);
   // a forklift with a coffin on its forks
   box([4, 2.6, 6], [190, G + 0.6, -430], 0xf2c818, 'SmoothPlastic');
   box([3.4, 3, 3], [190, G + 3.2, -429], 0x2a2a2e, 'Metal', { collide: 0 });
@@ -281,7 +296,7 @@ export function buildBackstage(data) {
   );
   for (const [kind, x, y, z, yaw] of crew) data.staffSpots.push({ role: 'haunt', kind, land: 'Studios', seed: 0, cf: cf(x, y, z, yaw) });
   data.staff.lines.haunt = [
-    'Backstage is where the magic happens!', 'The houses are finished - Benton Haunt is almost here!', 'Final touches on the scare zones today!',
+    'Welcome to Benton Haunt!', 'All six houses are open tonight!', 'Check the app for house wait times!',
     "You didn't see anything back here...", 'Five houses in these stages, one more in a tent at Family Landing!', 'Six scare zones, six houses. Through November 2!',
   ];
   return { gate: { x: gx, z: -405 } };
@@ -301,12 +316,12 @@ export class Backstage {
     const family = R && playerPos.x > R.x0 && playerPos.x < R.x1 && playerPos.z > R.z0 && playerPos.z < R.z1;
     if (family && !this.toldFamily) {
       this.toldFamily = true;
-      this.hooks.toast("Family Landing backstage: crews are putting up Benton Haunt's sixth house, Lights Out at Lakeside, in this tent.", 'info');
+      this.hooks.toast("Family Landing backstage: Benton Haunt's sixth house, Lights Out at Lakeside, is open in this tent. Lights out...", 'info');
     }
     const inside = family || (playerPos.x > BS.x0 && playerPos.x < BS.x1 && playerPos.z > BS.z0 && playerPos.z < BS.z1);
     if (inside && !family && !this.told) {
       this.told = true;
-      this.hooks.toast("You're backstage! Five of the six Benton Haunt houses are finished in these soundstages. Benton Haunt runs through November 2.", 'info');
+      this.hooks.toast("Welcome to Benton Haunt! Five of the six houses are open in these soundstages - join a line and walk through if you dare. Through November 2.", 'info');
     }
     this.next -= dt;
     if (this.next <= 0) {

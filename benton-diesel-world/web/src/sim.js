@@ -261,7 +261,7 @@ export class Sim {
       this.ridingRide = st.id;
       st.player = me;
       this.hooks.startRide(st.id, me.car, me.seat);
-      this.hooks.toast(`Now boarding ${st.cfg.name}! Keep your arms and legs inside the vehicle.`, 'info');
+      this.hooks.toast(st.cfg.kind === 'walkthrough' ? `Your group is up for ${st.cfg.name}! Step inside... if you dare.` : `Now boarding ${st.cfg.name}! Keep your arms and legs inside the vehicle.`, 'info');
     }
   }
 

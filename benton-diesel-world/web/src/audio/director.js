@@ -429,6 +429,7 @@ export class GameAudio {
     this.fxSrc = E.source3d(new THREE.Vector3(), { ref: 30, rolloff: 0.8, reverb: 0.3 });
     // rides
     for (const r of this.data.rides) {
+      if (r.kind === 'walkthrough') continue; // the haunted houses make their own noise
       const cfg = this.data.config.Rides.find((c) => c.id === r.id);
       this.rides.push(new RideSound(this, r, cfg, this.rideVis.get(r.id)));
     }
@@ -526,6 +527,7 @@ export class GameAudio {
     // rides
     for (const r of this.rides) {
       const st = s.sim.rides.get(r.ride.id);
+      if (!st) continue;
       r.update(dt, this.listener, st.status, s.sim.rideTime(r.ride.id, s.now));
     }
     this.updateShows(s);
@@ -677,7 +679,7 @@ export class GameAudio {
   ui(kind, extra) {
     if (!this.started) return;
     const E = this.E, t = E.now, out = E.ui;
-    if (kind !== 'click' && kind !== 'latch' && kind !== 'detector' && kind !== 'clank') this.lastCue = t;
+    if (kind !== 'click' && kind !== 'latch' && kind !== 'detector' && kind !== 'clank' && kind !== 'scare') this.lastCue = t;
     switch (kind) {
       case 'click': E.blip(out, t, 1300, 0.05, 0.05, 'sine', 0.8); break;
       case 'open': E.blip(out, t, 660, 0.08, 0.05, 'triangle'); E.blip(out, t + 0.06, 990, 0.1, 0.04, 'triangle'); break;
@@ -712,6 +714,13 @@ export class GameAudio {
         break;
       }
       case 'land': E.blip(out, t, 120, 0.12, 0.08, 'sine', 0.6); break;
+      case 'scare': {
+        // a shriek and a thump: a scare actor jumping out
+        const h = E.hiss(out, t, 0.5, 0.2, 'bandpass', 1400, 2.5);
+        h.f.frequency.exponentialRampToValueAtTime(3200, t + 0.25);
+        E.boom(out, t, 0.25, 0.4);
+        break;
+      }
       case 'clank': E.blip(out, t, 2300, 0.03, 0.02, 'square', 0.3); E.blip(out, t + 0.02, 1150, 0.09, 0.018, 'triangle', 0.2); break;
       case 'detector': E.blip(out, t, 1760, 0.07, 0.035, 'sine'); E.blip(out, t + 0.1, 2093, 0.12, 0.035, 'sine'); break;
       case 'latch': E.blip(out, t, 190, 0.04, 0.07, 'square', 0.5); E.blip(out, t + 0.045, 130, 0.07, 0.06, 'square', 0.5); break;

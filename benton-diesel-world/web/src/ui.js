@@ -230,6 +230,7 @@ export class UI {
       map.append(h('div', { class: 'land-label', style: `left:${px(land.center[0])};top:${pz(land.center[2])}` }, land.name.toUpperCase()));
     }
     const pin = (pos, color, name, kind) => {
+      if (pos[0] < B.minX || pos[0] > B.maxX || pos[2] < B.minZ || pos[2] > B.maxZ) return; // backstage, off the map
       map.append(h('button', { class: `pin ${kind}`, title: name, style: `left:${px(pos[0])};top:${pz(pos[2])};background:${color}`, onclick: () => this.guideTo(pos, name) }, h('span', {}, name)));
     };
     for (const ride of this.cfg.Rides) pin(ride.entrance, '#ff8c1a', ride.name, 'ride');
@@ -575,7 +576,8 @@ export class UI {
     if (sim.ridingRide) {
       pill.hidden = false;
       pill.classList.add('riding');
-      $('span', pill).textContent = `🎢 Enjoy ${sim.rides.get(sim.ridingRide).cfg.name}! Keep your hands inside.`;
+      const rc = sim.rides.get(sim.ridingRide).cfg;
+      $('span', pill).textContent = rc.kind === 'walkthrough' ? `👻 ${rc.name}: stay with your group and keep moving...` : `🎢 Enjoy ${rc.name}! Keep your hands inside.`;
     } else if (q) {
       pill.hidden = false;
       pill.classList.remove('riding');
