@@ -6,13 +6,9 @@ import { QueuePath, slotAt } from './queue.js';
 
 const SAVE_KEY = 'bentonDieselWorld.v1';
 
-// park minutes that pass in the next `seconds` real seconds (the park
-// clock runs faster at night)
-function parkMinutes(seconds) {
-  if (seconds <= 0) return 0;
-  const now = Clock.now();
-  return (Clock.minutesAt(now + seconds) - Clock.minutesAt(now) + 1440) % 1440;
-}
+// Waits are posted in real minutes: a 45 minute wait is 45 minutes of
+// standing in line.
+const realMinutes = (seconds) => Math.max(0, seconds) / 60;
 
 function loadProfile(economy) {
   let p = null;
@@ -56,8 +52,16 @@ export class Sim {
       const seatList = [];
       r.seats.forEach((list, ci) => list.forEach((_, si) => seatList.push([ci + 1, si + 1])));
       const duration = r.kind === 'karts' ? (cfg.duration ?? 34) : r.duration;
+      // each spot in line is one party, and every train takes the party at
+      // the front plus enough other guests to fill it, so the line moves
+      // up one spot per dispatch; haunted houses send groups of four through
+      // their long mazes. The maze holds this many parties.
+      const party = r.kind === 'walkthrough' ? 4 : 1;
+      const gap = this.spacing * party;
+      const path = this.paths.get(r.id);
+      const slots = path ? Math.max(4, Math.floor((path.length - 8) / gap)) : 40;
       const st = {
-        id: r.id, cfg, capacity, seatList, duration,
+        id: r.id, cfg, capacity, seatList, duration, slots, party, gap,
         queue: [], status: 'Open', cycleStart: 0, cycleEnds: 0, riders: [], downUntil: 0, player: null, cycleId: 0,
       };
       // closed for a refurbishment: no line, no running
@@ -108,22 +112,21 @@ export class Sim {
     return this.cfg.BoardingTime + st.duration + this.cfg.UnloadTime;
   }
 
-  // Seconds until the guest at position `pos` in line boards: what is left
+  // Seconds until the party at position `pos` in line boards: what is left
   // of the train out now (or of a breakdown), then one full cycle for every
-  // trainload of guests ahead of them.
+  // party ahead of them (each fills a train).
   eta(st, pos) {
-    const cap = Math.max(1, st.capacity);
-    const ahead = Math.floor((pos - 1) / cap);
+    const ahead = Math.max(0, pos - 1);
     const now = Clock.now();
     let current = st.status === 'Boarding' || st.status === 'Running' || st.status === 'Unloading' ? Math.max(0, st.cycleEnds - now) : 0;
     if (st.status === 'Closed' && Number.isFinite(st.downUntil)) current = Math.max(0, st.downUntil - now);
     return current + ahead * this.cycleTotal(st);
   }
 
-  // The posted wait in park minutes for a guest joining now, exact to the
-  // minute (no rounding up), measured on the park clock.
+  // The posted wait in real minutes for a guest joining now, exact to the
+  // minute (no rounding up).
   postedWait(st) {
-    return Math.round(parkMinutes(this.eta(st, st.queue.length + 1)));
+    return Math.round(realMinutes(this.eta(st, st.queue.length + 1)));
   }
 
   rideState(id) {
@@ -136,7 +139,7 @@ export class Sim {
     const st = this.rides.get(this.queueRide);
     const pos = st.queue.findIndex((e) => e.player) + 1;
     if (pos <= 0) return null;
-    return { ride: st.cfg, pos, eta: Math.round(parkMinutes(this.eta(st, pos))) };
+    return { ride: st.cfg, pos, eta: Math.round(realMinutes(this.eta(st, pos))) };
   }
 
   join(id, express) {
@@ -170,7 +173,7 @@ export class Sim {
     } else {
       st.queue.push({ id: 'player', player: true, at: Clock.now() });
       this.hooks.sound?.('join');
-      const wait = Math.round(parkMinutes(this.eta(st, st.queue.length)));
+      const wait = Math.round(realMinutes(this.eta(st, st.queue.length)));
       this.hooks.toast(`You joined the line for ${st.cfg.name} - ${wait <= 0 ? 'no wait' : `about ${wait} min`}. Stand still and you'll move up with the line.`, 'info');
     }
     this.queueRide = id;
@@ -185,7 +188,7 @@ export class Sim {
     const index = st.queue.findIndex((e) => e.player);
     const path = this.paths.get(this.queueRide);
     if (index < 0 || !path) return null;
-    return { path, s: slotAt(index, this.spacing) };
+    return { path, s: slotAt(index, st.gap) };
   }
 
   // Point the player should walk to next to keep their place in line, or
@@ -220,15 +223,15 @@ export class Sim {
   }
 
   dispatch(st, now) {
-    const riders = [];
+    if (!st.queue.length) return;
     const boardedAt = Clock.now();
-    while (riders.length < st.capacity && st.queue.length) {
-      const e = st.queue.shift();
-      // how long the last guest on this train really waited
-      if (e.at !== undefined) st.lastWait = Math.round((Clock.minutesAt(boardedAt) - Clock.minutesAt(e.at) + 1440) % 1440);
-      riders.push(e.player ? { player: true } : { npc: e.seed });
-    }
-    if (!riders.length) return;
+    // the party at the front boards, and the rest of the train fills up
+    const e = st.queue.shift();
+    // how long they really waited, in real minutes
+    if (e.at !== undefined) st.lastWait = Math.round(realMinutes(boardedAt - e.at));
+    const riders = [e.player ? { player: true } : { npc: e.seed }];
+    const base = e.seed ?? 7;
+    while (riders.length < st.capacity) riders.push({ npc: 1 + ((base * 7919 + riders.length * 104729) % 999983) });
     let next = 0;
     const used = new Set();
     for (const r of riders) {
@@ -294,13 +297,15 @@ export class Sim {
     this.order.forEach((st, i) => {
       if (st.refurb) return;
       const wobble = 0.8 + 0.4 * (0.5 + 0.5 * Math.sin(t / 90 + i * 7.31) * Math.cos(t / 57 + i));
-      const target = st.cfg.baseWait * crowd * wobble;
-      const desired = Math.floor(target / this.cycleTotal(st) * st.capacity);
+      // the line it takes for the wait to be about baseWait real minutes
+      // (scaled by the crowd), as long as the maze can hold it
+      const target = st.cfg.baseWait * 60 * crowd * wobble;
+      const desired = Math.min(st.slots - 2, Math.floor(target / this.cycleTotal(st)));
       const npcs = st.queue.filter((e) => !e.player).length;
       if (npcs < desired) {
-        const add = Math.min(desired - npcs, Math.max(1, Math.ceil(st.capacity / 4)));
+        const add = warmup ? desired - npcs : Math.min(desired - npcs, 2);
         for (let k = 0; k < add; k++) st.queue.push({ id: ++this.entryId, seed: 1 + Math.floor(Math.random() * 1e6), at: warmup ? undefined : t });
-      } else if (npcs > desired + st.capacity && !st.queue[st.queue.length - 1].player) {
+      } else if (npcs > desired + 2 && !st.queue[st.queue.length - 1].player) {
         // a guest at the back gives up (never one ahead of you, so your
         // posted wait stays true)
         st.queue.pop();

@@ -103,13 +103,15 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   the Grand Benton Theatre with a world premiere on a red carpet (its
   flashbulbs pop as the tram goes by), palms, a movie camera and lights,
   director's chairs, a golden statue and strings of lights.
-- **Accurate wait times (browser only):** posted waits are worked out from
-  the real line (the guests ahead, how many fit on each train, how long a
-  cycle takes, and any breakdown still being fixed), shown to the exact
-  park minute instead of rounded up to 5 ("No wait" when you'd walk right
-  on), and converted to the park clock so they stay right at night. The
-  app also shows how long the last guest to board actually waited, and
-  guests who give up only ever leave from behind you.
+- **Real wait times (browser only):** posted waits are real minutes: a
+  45 minute wait is 45 minutes of standing in line (an Express Pass skips
+  it). Each spot in line is a party that fills one train (a group of four
+  for the haunted houses), so the line moves up one spot every dispatch,
+  and a long wait means a long line: the posted time is worked out from
+  the parties actually ahead of you, the cycle time and any breakdown
+  still being fixed, shown to the exact minute ("No wait" when you'd walk
+  right on). The app also shows how long the last guest to board actually
+  waited, and guests who give up only ever leave from behind you.
 
 ```bash
 npm install

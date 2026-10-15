@@ -87,10 +87,11 @@ export class QueueCrowd {
       const path = this.paths.get(st.id);
       if (!path) continue;
       const near = Math.hypot(path.gate.x - cam.x, path.gate.z - cam.z) < 420;
+      const party = st.party || 1;
       st.queue.forEach((e, index) => {
         if (e.player) return;
         seen.add(e.id);
-        const target = slotAt(index, this.spacing);
+        const target = slotAt(index, st.gap || this.spacing);
         let v = this.visual.get(e.id);
         if (!v) {
           // newcomers walk in from outside the entrance sign
@@ -105,12 +106,16 @@ export class QueueCrowd {
         v.s += step;
         v.cycle += Math.abs(step) / 5;
         if (!near) return;
-        path.pointAt(v.s, this.pt);
-        // idle guests glance around now and then
-        const look = v.walking ? 0 : Math.sin(time * 0.6 + (e.seed % 97)) * 0.5;
-        const yaw = Math.atan2(-this.pt.fx, -this.pt.fz) + look;
-        if (v.walking) this.people.add('walk', v.cycle, this.pt.x, path.floor, this.pt.z, yaw, e.seed);
-        else this.people.add('idle', (e.seed >> 3) % 7 < 4 ? 0 : (e.seed >> 3) % 3 + 1, this.pt.x, path.floor, this.pt.z, yaw, e.seed);
+        // a party stands one behind another
+        for (let j = 0; j < party; j++) {
+          const seed = j ? e.seed + j * 7919 : e.seed;
+          path.pointAt(Math.min(path.length, v.s + j * this.spacing), this.pt);
+          // idle guests glance around now and then
+          const look = v.walking ? 0 : Math.sin(time * 0.6 + (seed % 97)) * 0.5;
+          const yaw = Math.atan2(-this.pt.fx, -this.pt.fz) + look;
+          if (v.walking) this.people.add('walk', v.cycle + j * 0.37, this.pt.x, path.floor, this.pt.z, yaw, seed);
+          else this.people.add('idle', (seed >> 3) % 7 < 4 ? 0 : (seed >> 3) % 3 + 1, this.pt.x, path.floor, this.pt.z, yaw, seed);
+        }
       });
     }
     for (const id of this.visual.keys()) if (!seen.has(id)) this.visual.delete(id);
