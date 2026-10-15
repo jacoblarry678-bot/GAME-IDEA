@@ -18,6 +18,7 @@ import { Bubbles } from './bubbles.js';
 import { buildEntrance, Entrance } from './entrance.js';
 import { buildOverdrive } from './overdrive.js';
 import { buildRefurb } from './refurb.js';
+import { buildBackstage, Backstage } from './backstage.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -75,6 +76,8 @@ async function main() {
   buildOverdrive(data);
   // the Backlot Tram Tour is closed for a small refurbishment
   buildRefurb(data);
+  // backstage, where the crews are setting up Benton Haunt
+  buildBackstage(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -167,6 +170,7 @@ async function main() {
     hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) },
   });
   game.entrance = entrance;
+  const backstage = new Backstage({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
 
   game.applyWear = () => {
     const eq = sim.profile.equipped;
@@ -327,6 +331,7 @@ async function main() {
     crowd.update(dt, time);
     staff.update(dt, now, time, camera.position, player.pos);
     entrance.update(dt, camera.position, player.pos);
+    backstage.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);

@@ -30,6 +30,8 @@ const ROLE_UNIFORM = {
   security: { shirt: 0xf4f4f0, pants: 0x1c1c20, hat: 0x16223a },
   parking: { shirt: 0xcef03c, pants: 0x222c48, hat: 0xcef03c },
   construction: { shirt: 0xff8a1e, pants: 0x3a3f4a, hat: 0xf2c818, hardHat: true },
+  // the Benton Haunt production crew: black crew shirts, orange hard hats
+  haunt: { shirt: 0x1c1c20, pants: 0x2a2a30, hat: 0xff7a1a, hardHat: true },
 };
 
 function uniform(landColor, cfg, role) {
@@ -448,7 +450,7 @@ export class StaffSystem {
       if (p.role === 'parking' && p.kind !== 'booth') p.pose = STAFF.WAVE;
       if (p.role === 'security' && p.busy) p.pose = STAFF.CHECK;
       // construction crews work in spells
-      if (p.role === 'construction' && p.kind === 'work') p.pose = Math.floor((time + p.seed) / 2.5) % 3 ? STAFF.CHECK : null;
+      if ((p.role === 'construction' || p.role === 'haunt') && p.kind === 'work') p.pose = Math.floor((time + p.seed) / 2.5) % 3 ? STAFF.CHECK : null;
       // face the player while greeting, otherwise their post
       const want = close && !p.busy && p.role !== 'parking' ? Math.atan2(-(this.player.x - p.pos.x), -(this.player.z - p.pos.z)) : p.home.yaw;
       p.yaw = turn(p.yaw, want, dt * 4);

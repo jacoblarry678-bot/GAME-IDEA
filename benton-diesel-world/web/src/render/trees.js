@@ -383,6 +383,8 @@ export class Trees {
       const x = (rand() - 0.5) * 2400, z = (rand() - 0.5) * 2400;
       const out = terrain.outside(x, z);
       if (out < 40) continue;
+      // no woods on leveled ground (the lots built out past the walls)
+      if (terrain.flat.some((f) => x > f.x0 - 12 && x < f.x1 + 12 && z > f.z0 - 12 && z < f.z1 + 12)) continue;
       // clumps of woodland
       if (fbm2(x * 0.006, z * 0.006, 3) < 0.48) continue;
       const kind = fbm2(x * 0.01 + 50, z * 0.01, 2) > 0.5 ? 'farpine' : 'farround';

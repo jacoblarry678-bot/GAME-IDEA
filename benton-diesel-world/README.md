@@ -73,6 +73,21 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   with a world premiere on a red carpet, palms, a movie camera and lights,
   director's chairs, a golden statue and strings of lights. The app and
   the wait signs show the tram as closed for refurbishment.
+- **Backstage, setting up for Benton Haunt (browser only):** Benton
+  Haunt, the park's Halloween event (6 houses and 6 scare zones, through
+  November 2), is on the way. A gate opens in the Studios' back wall under
+  a black "Benton Haunt · Backstage" arch with searchlights and fog
+  machines, and leads to a huge backstage lot past the old wall: five giant
+  art deco soundstages (Stages 21 to 25) hold most of the houses (Dead
+  Man's Garage, The Lost Miners of Backwoods Hollow, Final Cut: A Hollywood
+  Horror, Crash Test and Lights Out at Lakeside), each with a big
+  switchback queue on turf behind black "Benton Haunt" barricades. Crews
+  in black shirts and orange hard hats are setting up: facades half built
+  and half painted, scaffolds and a scissor lift hanging the giant Benton
+  Haunt banner, barricade lines still going in, production trailers, a
+  generator, a scare actor check-in and makeup tent, a lighting truss, a
+  forklift and pallets of pumpkins, coffins, tombstones, scarecrows and
+  hay bales.
 - **Accurate wait times (browser only):** posted waits are worked out from
   the real line (the guests ahead, how many fit on each train, how long a
   cycle takes, and any breakdown still being fixed), shown to the exact
