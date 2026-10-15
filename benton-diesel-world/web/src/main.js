@@ -21,6 +21,7 @@ import { buildTramTour } from './refurb.js';
 import { buildBackstage, Backstage } from './backstage.js';
 import { buildFamilyBackstage, buildScareZones, buildHauntFood, FB } from './haunt.js';
 import { buildHouses, HouseWalks } from './houses.js';
+import { ScareActors, HauntLights } from './scare.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -171,6 +172,9 @@ async function main() {
   game.player = player;
   const people = new CrowdRenderer(scene, { shadows: PRESETS[qualityName].shadows });
   const bubbles = new Bubbles(scene);
+  // Benton Haunt's scare actors, in the houses and the scare zones
+  const scares = new ScareActors(scene, data, { sound: (k) => audio.ui(k), bubbles });
+  game.scares = scares;
   const queueCrowd = new QueueCrowd(people, data, sim.paths);
   const houseWalks = new HouseWalks(houses, people);
   let queueSnap = true; // place guests already in line without walking them in
@@ -186,6 +190,7 @@ async function main() {
   });
   game.entrance = entrance;
   game.scareZones = scareZones;
+  game.houses = houses;
   const backstage = new Backstage({ family: FB, sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
 
   game.applyWear = () => {
@@ -262,6 +267,8 @@ async function main() {
 
   // ---------------------------------------------------------------- loop
   let started = false;
+  let indoor = 0;
+  const hauntLights = new HauntLights(scene, data.hauntLights || []);
   let wasOnGround = true;
   let fallSpeed = 0;
   let last = performance.now();
@@ -346,6 +353,14 @@ async function main() {
     waterTime.value = time;
     world.updateGrass(time, camera.position);
     const daylight = world.updateLighting(started ? player.pos : new THREE.Vector3(0, 0, -40), time);
+    // inside a haunted house the daylight is shut out, and the rooms' own
+    // colored lights take over
+    const inHouse = started && houses.some((h) => player.pos.x > h.rect.x0 && player.pos.x < h.rect.x1 && player.pos.z > h.rect.z0 && player.pos.z < h.rect.z1);
+    indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
+    world.sky.sun.intensity *= 1 - 0.95 * indoor;
+    world.sky.fill.intensity *= 1 - 0.85 * indoor;
+    scene.environmentIntensity = 1 - 0.9 * indoor;
+    hauntLights.update(dt, player.pos, indoor, 1 - daylight);
     signTimer -= dt;
     if (signTimer <= 0) {
       signTimer = 1;
@@ -353,6 +368,7 @@ async function main() {
     }
     crowd.update(dt, time);
     staff.update(dt, now, time, camera.position, player.pos);
+    if (started) scares.update(dt, camera.position, player.pos);
     entrance.update(dt, camera.position, player.pos);
     backstage.update(dt, player.pos, started);
     people.end();

@@ -66,8 +66,11 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   6 haunted houses and 6 scare zones, through November 2.
   - *The houses:* walk-through mazes you can join like rides, with posted
     waits, long switchback lines, a passport stamp each and Express Passes.
-    Your group walks the dark corridors together past themed scenes, under
-    colored lights, while scare actors jump out ("BOO!") as you pass. Five
+    Your group walks the dark corridors together through seven themed
+    rooms per house, each with its own walls, floor, colored light, fog and
+    set dressing (Dead Man's Garage alone goes office, service bay, paint
+    booth, junkyard, grease pit, body shop and tow lot). Costumed scare
+    actors hide behind cover and lunge across the corridor as you pass. Five
     are in the giant backstage soundstages behind the Studios' back wall
     (Dead Man's Garage, The Lost Miners of Backwoods Hollow, Final Cut: A
     Hollywood Horror, Crash Test and Engine Works: Meltdown), each with a
@@ -76,8 +79,20 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
     the Family Landing backstage, with a rope-and-stanchion queue.
   - *Scare zones:* Midnight at the Gate, Smokestack Alley, Scarecrow
     Crossing, The Hollow Woods, Backlot Bloodbath and Burnout Boulevard,
-    one in each land, with a lit sign, fog machines, colored lights, props
-    and scare actors who lunge at you.
+    one in each land. Each one takes over a whole walkway, with arches at
+    both ends, its own ground, fog machines and colored lights, and is
+    packed with props on both sides: headstones, iron fences and a mausoleum;
+    smokestacks, fire barrels and pipes; corn rows, hay bales and pumpkins;
+    a forest of dead trees and a stone altar; film lights, blood barrels
+    and a motel facade; burning wrecks and tire stacks.
+  - *Scare actors:* 19 costumes on the full animated character rig, each
+    with its own mask or face, glowing eyes and props: reapers with
+    scythes, ghouls, gas masks, scarecrows with pitchforks, pumpkin heads,
+    antlered wendigos, lantern wraiths, chainsaw racers, a hockey-masked
+    slasher, a megaphone director, crash test dummies, welders, miners with
+    lit helmets and pickaxes, and more. In the zones they prowl, stalk you
+    when you come near and lunge with a shriek and a line; in the houses
+    they burst out from cover.
   - *New food:* Graveyard Grub, on the backstage avenue: Monster Burger,
     Pumpkin Spice Churro, Witch's Brew Slushie (jump boost), Graveyard Dirt
     Cup, Bloody Funnel Cake and Haunted Hot Cocoa (speed boost).

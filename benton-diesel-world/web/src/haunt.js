@@ -5,6 +5,8 @@
 // machines, colored lights, props and scare actors; and Graveyard Grub,
 // the event's food stand on the backstage avenue with a Halloween menu.
 
+import { LINES as WALKWAYS } from './guests.js';
+
 export const FB = { x0: 375, x1: 500, z0: 128, z1: 236 };
 const GATE = { z0: 161.4, z1: 197.1 }; // between the east wall pillars at z 159.1 and 199.4
 const G = 0.1;
@@ -180,7 +182,7 @@ export function buildFamilyBackstage(data) {
 // ------------------------------------------------------------- scare zones
 // Find a clear patch of ground near (x, z): no buildings, props or trees,
 // away from ride tracks, queues, shops and water.
-function makeFinder(data) {
+export function makeFinder(data) {
   const CELL = 2;
   const blocked = new Set();
   const key = (i, j) => i * 100003 + j;
@@ -190,6 +192,9 @@ function makeFinder(data) {
     const top = p[5] + p[2] / 2, bottom = p[5] - p[2] / 2;
     if (top < 0.7 || bottom > 10) return;
     if (p[1] * p[3] > 30000) return;
+    // lamps, benches, bins and signs can stand inside a zone; buildings,
+    // walls and big set pieces can't
+    if (p[1] * p[3] < 6 && top < 8) return;
     const ax = [p[7], p[13]], az = [p[9], p[15]];
     const ex = (Math.abs(ax[0]) * p[1] + Math.abs(az[0]) * p[3]) / 2 + 1, ez = (Math.abs(ax[1]) * p[1] + Math.abs(az[1]) * p[3]) / 2 + 1;
     for (let i = Math.floor((p[4] - ex) / CELL); i <= Math.floor((p[4] + ex) / CELL); i++) {
@@ -208,17 +213,18 @@ function makeFinder(data) {
     return g;
   };
   const avoid = [];
-  for (const t of data.trees || []) avoid.push([t.pos[0], t.pos[2], 6]);
+  for (const t of data.trees || []) avoid.push([t.pos[0], t.pos[2], 3.5]);
   for (const r of data.rides) {
     if (r.track) for (let i = 0; i < r.track.pos.length; i += 9) if (r.track.pos[i + 1] < 16) avoid.push([r.track.pos[i], r.track.pos[i + 2], 9]);
-    if (r.queue) for (let i = 0; i < r.queue.points.length; i += 2) avoid.push([r.queue.points[i], r.queue.points[i + 1], 8]);
+    if (r.queue) for (let i = 0; i < r.queue.points.length; i += 2) avoid.push([r.queue.points[i], r.queue.points[i + 1], 5]);
     avoid.push([r.origin[0], r.origin[2], 18]);
   }
-  for (const v of data.config.Venues) avoid.push([v.position[0], v.position[2], 24]);
+  for (const v of data.config.Venues) avoid.push([v.position[0], v.position[2], Math.max(v.size[0], v.size[2]) / 2 + 6]);
   for (const t of data.terrain) {
     if (t.kind === 'ball') avoid.push([t.center[0], t.center[2], Math.max(0, Math.sqrt(Math.max(0, t.radius ** 2 - (0.7 - t.center[1]) ** 2))) + 3]);
     if (t.kind === 'cylinder') avoid.push([t.cf[0], t.cf[2], t.radius + 14]);
-    if (t.kind === 'block') avoid.push([t.cf[0], t.cf[2], Math.max(t.size[0], t.size[2]) / 2 + 8]);
+    // the big grass tiles are the ground itself; only water blocks count
+    if (t.kind === 'block' && t.material === 'Water') avoid.push([t.cf[0], t.cf[2], Math.max(t.size[0], t.size[2]) / 2 + 8]);
   }
   const clear = (x, z, r) => {
     for (let i = Math.floor((x - r) / CELL); i <= Math.floor((x + r) / CELL); i++) {
@@ -227,7 +233,7 @@ function makeFinder(data) {
     return !avoid.some(([ax, az, ar]) => Math.hypot(ax - x, az - z) < ar + r);
   };
   const B = data.config.Bounds;
-  return (x0, z0, r, region) => {
+  const finder = (x0, z0, r, region) => {
     for (let d = 0; d < 200; d += 3) {
       const n = Math.max(1, Math.round((d * Math.PI * 2) / 6));
       for (let k = 0; k < n; k++) {
@@ -240,139 +246,207 @@ function makeFinder(data) {
     }
     return null;
   };
+  finder.clear = clear;
+  finder.groundAt = groundAt;
+  return finder;
 }
 
 export const SCARE_ZONES = [
-  { name: 'MIDNIGHT AT THE GATE', land: 'Plaza', near: [40, 230], glow: 0x9a6aff },
-  { name: 'SMOKESTACK ALLEY', land: 'Diesel', near: [-160, 60], glow: 0xff3a10 },
-  { name: 'SCARECROW CROSSING', land: 'Haulers', near: [-200, 200], glow: 0xff8a10 },
-  { name: 'THE HOLLOW WOODS', land: 'Backwoods', near: [-230, -250], glow: 0x40ff80 },
-  { name: 'BACKLOT BLOODBATH', land: 'Studios', near: [-60, -200], glow: 0xff2030 },
-  { name: 'BURNOUT BOULEVARD', land: 'Velocity', near: [230, -150], glow: 0xff5a00 },
+  { name: 'MIDNIGHT AT THE GATE', land: 'Plaza', theme: 'graveyard', path: [-45, 252, 45, 252], len: 200, glow: 0x9a6aff, gaps: [[0, 252, 20]], ground: 0x2a2420,
+    actors: ['reaper', 'ghoul', 'ghoul', 'reaper', 'ghoul', 'ghoul', 'reaper'] },
+  { name: 'SMOKESTACK ALLEY', land: 'Diesel', theme: 'smokestacks', path: [-30, 15, -158, 15], len: 200, glow: 0xff3a10, ground: 0x26262a,
+    actors: ['gasMask', 'gasMask', 'gasMask', 'gasMask', 'gasMask', 'gasMask'] },
+  { name: 'SCARECROW CROSSING', land: 'Haulers', theme: 'cornfield', path: [-62, 240, -150, 232], len: 200, glow: 0xff8a10, ground: 0x6a5a30,
+    actors: ['scarecrow', 'pumpkinHead', 'scarecrow', 'scarecrow', 'pumpkinHead', 'scarecrow'] },
+  { name: 'THE HOLLOW WOODS', land: 'Backwoods', theme: 'woods', path: [-240, -200, -160, -175], len: 200, glow: 0x40ff80, ground: 0x3a2e1c,
+    actors: ['wendigo', 'lanternWraith', 'lanternWraith', 'wendigo', 'lanternWraith', 'lanternWraith'] },
+  { name: 'BACKLOT BLOODBATH', land: 'Studios', theme: 'filmset', path: [0, -118, 0, -290], len: 150, glow: 0xff2030, ground: 0x2a1a1a,
+    actors: ['slasher', 'zombieExtra', 'director', 'slasher', 'zombieExtra', 'slasher', 'zombieExtra'] },
+  { name: 'BURNOUT BOULEVARD', land: 'Velocity', theme: 'wrecks', path: [130, -120, 215, -180], len: 200, glow: 0xff5a00, ground: 0x1c1a18,
+    actors: ['racer', 'pitCrew', 'racer', 'pitCrew', 'racer', 'pitCrew'] },
 ];
 
+// Each zone takes over a stretch of one of the land's main walkways: an
+// arch at each end, its own colored ground, lights and fog down both
+// edges, the theme's props wherever the ground beside the path is free,
+// one big set piece, and scare actors prowling up and down.
 export function buildScareZones(data) {
-  const { add, box, sign, spot } = helpers(data);
+  const { add, box, sign } = helpers(data);
   const find = makeFinder(data);
   data.tags.SteamVent = data.tags.SteamVent || [];
+  data.tags.Campfire = data.tags.Campfire || [];
+  data.scareActors = data.scareActors || [];
+  data.hauntLights = data.hauntLights || [];
   const placed = [];
   for (const zone of SCARE_ZONES) {
-    const land = data.config.Lands.find((l) => l.id === zone.land);
-    const at = find(zone.near[0], zone.near[1], 9, land?.regions) || find(zone.near[0], zone.near[1], 7, land?.regions) || find(zone.near[0], zone.near[1], 6, land?.regions);
-    if (!at) continue;
-    const [x, z, G] = at;
-    placed.push({ ...zone, x, z });
-    // the zone's lit sign on a black frame, facing the land's center
-    const c = land ? land.center : [0, 0, 0];
-    const yaw = Math.atan2(c[0] - x, c[2] - z); // local +Z faces the center
-    const fwd = [Math.sin(yaw), Math.cos(yaw)], side = [Math.cos(yaw), -Math.sin(yaw)];
-    const P = (u, v) => [x + side[0] * u + fwd[0] * v, z + side[1] * u + fwd[1] * v];
-    const [sx, sz] = P(0, 7);
-    for (const u of [-4.2, 4.2]) {
-      const [px, pz] = P(u, 7);
-      box([0.4, 6, 0.4], [px, G, pz], BLACK, 'Metal', { yaw });
-    }
-    add([9, 2.6, 0.4], [sx, G + 5.6, sz], BLACK, 'Metal', { yaw, collide: 0 });
-    sign(zone.name, [8.4, 1.6, 0.2], [sx + fwd[0] * 0.25, G + 5.8, sz + fwd[1] * 0.25], BLACK, zone.glow, 'Back', 'GothamBlack', true, yaw);
-    sign('BENTON HAUNT SCARE ZONE', [8.4, 0.6, 0.2], [sx + fwd[0] * 0.25, G + 4.75, sz + fwd[1] * 0.25], BLACK, WHITE, 'Back', 'GothamBold', false, yaw);
-    // fog machines and colored light
-    for (const [u, v] of [[-6, 2], [6, -2]]) {
-      const [fx, fz] = P(u, v);
-      box([1.2, 0.8, 1.6], [fx, G, fz], 0x2a2a2e, 'Metal', { yaw, collide: 0 });
-      data.tags.SteamVent.push([fx, G + 0.9, fz, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
-    }
-    for (const [u, v] of [[-7, -5], [7, 4], [0, -7]]) {
-      const [lx, lz] = P(u, v);
-      box([0.25, 3, 0.25], [lx, G, lz], 0x2a2a2e, 'Metal', { collide: 0 });
-      add([0.9, 0.9, 0.9], [lx, G + 3.3, lz], zone.glow, 'Neon', { shape: 3, collide: 0 });
-    }
-    const props = {
-      'MIDNIGHT AT THE GATE': () => {
-        for (let k = 0; k < 4; k++) {
-          const [tx, tz] = P(-4 + k * 2.6, -2);
-          box([1.8, 2.6, 0.5], [tx, G, tz], 0x8a8a86, 'Concrete', { yaw });
+    const [ax0, az0, ax1, az1] = zone.path;
+    const full = Math.hypot(ax1 - ax0, az1 - az0);
+    const d = [(ax1 - ax0) / full, (az1 - az0) / full], n = [-d[1], d[0]];
+    const L = Math.min(zone.len || 60, full - 4);
+    const t0 = (full - L) / 2;
+    const at = (t, s) => [ax0 + d[0] * (t0 + t) + n[0] * s, az0 + d[1] * (t0 + t) + n[1] * s];
+    const yaw = Math.atan2(d[0], d[1]); // local +Z runs along the zone
+    const [cx, cz] = at(L / 2, 0);
+    const G = find.groundAt(cx, cz);
+    placed.push({ ...zone, x: cx, z: cz, len: L });
+    const put = (size, px, pz, y, color, mat, opts = {}) => add(size, [px, G + y, pz], color, mat, { collide: 0, ...opts });
+    // keep other walkways (and any crossing the zone leaves open) clear
+    const others = WALKWAYS.filter(([a, b]) => Math.hypot(a.x - ax0, a.z - az0) + Math.hypot(b.x - ax1, b.z - az1) > 1);
+    const offPath = (px, pz, r) => !others.some(([a, b]) => {
+      const ux = b.x - a.x, uz = b.z - a.z, l2 = ux * ux + uz * uz;
+      const u = Math.max(0, Math.min(1, ((px - a.x) * ux + (pz - a.z) * uz) / l2));
+      return Math.hypot(a.x + ux * u - px, a.z + uz * u - pz) < 6 + r;
+    }) && !(zone.gaps || []).some(([gx, gz, gr]) => Math.hypot(gx - px, gz - pz) < gr + r);
+    const free = (px, pz, r) => offPath(px, pz, r) && find.clear(px, pz, r);
+    // a prop beside the path on either side, wherever there is room; a
+    // band of props (not a single row like a fence) gets a second, deeper
+    // band behind it so the zone spills out over the land around the path
+    const beside = (step, s0, s1, fn) => {
+      let k = 0;
+      const bands = s1 > s0 ? [[s0, s1, 0], [s1 + 3, s1 + 14, step / 2]] : [[s0, s1, 0]];
+      for (const [b0, b1, shift] of bands) {
+        for (let t = 2 + shift; t < L - 2; t += step) {
+          for (const side of [-1, 1]) {
+            for (let s = b0; s <= b1; s += 1.5) {
+              const [px, pz] = at(t, side * s);
+              if (free(px, pz, 1.4)) { fn(px, pz, side, k++, t); break; }
+            }
+          }
         }
-        const [cx, cz] = P(0, -5);
-        box([2.4, 9, 2.4], [cx, G, cz], 0x2a2a2e, 'Wood', { yaw });
-        add([2.6, 2.6, 0.3], [cx + fwd[0] * 1.3, G + 7.4, cz + fwd[1] * 1.3], 0xf4f0e0, 'SmoothPlastic', { yaw, collide: 0 });
-      },
-      'SMOKESTACK ALLEY': () => {
-        for (let k = 0; k < 3; k++) {
-          const [px, pz] = P(-4 + k * 3.5, -3);
-          box([2, 10 + k * 3, 2], [px, G, pz], 0x5a3a2a, 'CorrodedMetal', { shape: 5 });
-        }
-        for (let k = 0; k < 4; k++) {
-          const [dx, dz] = P(-6 + k * 2.4, 3);
-          box([2, 2.8, 2], [dx, G, dz], k % 2 ? 0x3a3a3e : 0xc8322d, 'CorrodedMetal', { shape: 5 });
-        }
-        const [lx, lz] = P(0, 0);
-        add([0.8, 0.8, 0.8], [lx, G + 0.4, lz], 0xff2a10, 'Neon', { shape: 3, collide: 0 });
-      },
-      'SCARECROW CROSSING': () => {
-        for (let k = 0; k < 3; k++) {
-          const [px, pz] = P(-4 + k * 4, -3);
-          box([0.3, 6, 0.3], [px, G, pz], 0x6a4a30, 'Wood', { collide: 0 });
-          add([3.6, 0.3, 0.3], [px, G + 4.6, pz], 0x6a4a30, 'Wood', { yaw, collide: 0 });
-          add([1.2, 1.2, 1.2], [px, G + 6.2, pz], k === 1 ? PUMPKIN : 0xd8b060, 'Fabric', { shape: 3, collide: 0 });
-          box([1.6, 2.4, 0.9], [px, G + 3.4, pz], [0x8a3a22, 0x3a5a8a, 0x5a6a2a][k], 'Fabric', { yaw, collide: 0 });
-        }
-        for (let k = 0; k < 4; k++) {
-          const [hx, hz] = P(-5 + k * 3.8, 3);
-          box([3.6, 1.6, 2], [hx, G, hz], 0xd8b850, 'Fabric', { yaw });
-        }
-        for (let k = 0; k < 5; k++) {
-          const [px, pz] = P(-2 + k * 1.2, 5);
-          add([1.4, 1.2, 1.4], [px, G + 0.6, pz], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
-        }
-      },
-      'THE HOLLOW WOODS': () => {
-        for (let k = 0; k < 4; k++) {
-          const [px, pz] = P(-6 + k * 4, -3 + (k % 2) * 2);
-          box([0.3, 7, 0.3], [px, G, pz], 0x2a2a2e, 'Metal', { collide: 0 });
-          add([0.7, 1, 0.7], [px, G + 7.3, pz], 0xffb040, 'Neon', { collide: 0 });
-        }
-        for (let k = 0; k < 2; k++) {
-          const [tx, tz] = P(-3 + k * 6, 1);
-          box([1, 9, 1], [tx, G, tz], 0x2a2018, 'Wood', { collide: 0 });
-          add([0.4, 0.4, 5], [tx, G + 7, tz], 0x2a2018, 'Wood', { collide: 0, rot: [1, 0, 0, 0, 0.8, -0.6, 0, 0.6, 0.8] });
-          add([5, 0.4, 0.4], [tx, G + 5.5, tz], 0x2a2018, 'Wood', { collide: 0, rot: [0.8, -0.6, 0, 0.6, 0.8, 0, 0, 0, 1] });
-        }
-      },
-      'BACKLOT BLOODBATH': () => {
-        for (let k = 0; k < 2; k++) {
-          const [lx, lz] = P(-5 + k * 10, -2);
-          box([0.2, 6, 0.2], [lx, G, lz], 0x2a2a2e, 'Metal', { collide: 0 });
-          add([2, 2, 1.4], [lx, G + 6.4, lz], 0x2a2a2e, 'Metal', { yaw, collide: 0 });
-        }
-        for (let k = 0; k < 3; k++) {
-          const [bx, bz] = P(-2 + k * 2.4, 3);
-          box([2, 2.8, 2], [bx, G, bz], 0x8a0a0a, 'SmoothPlastic', { shape: 5 });
-        }
-        const [tx, tz] = P(0, -4);
-        add([12, 0.2, 0.1], [tx, G + 3, tz], 0xf2c818, 'SmoothPlastic', { yaw, collide: 0 });
-        sign('CLOSED SET', [3, 1, 0.1], [tx, G + 3.6, tz], 0xf2c818, BLACK, 'Back', 'GothamBlack', false, yaw);
-      },
-      'BURNOUT BOULEVARD': () => {
-        const [cx, cz] = P(-2, -2);
-        box([9, 2.6, 4.6], [cx, G + 0.6, cz], 0x2a2420, 'CorrodedMetal', { yaw });
-        box([5, 2, 4.2], [cx, G + 3.2, cz], 0x2a2420, 'CorrodedMetal', { yaw });
-        for (let k = 0; k < 4; k++) {
-          const [tx, tz] = P(6, -3 + k * 0.1);
-          add([2.4, 0.8, 2.4], [tx, G + 0.4 + k * 0.8, tz], 0x1a1a1a, 'Rubber', { shape: 5 });
-        }
-        for (let k = 0; k < 6; k++) {
-          const [ox, oz] = P(-7 + k * 2.6, 4);
-          box([0.9, 1.6, 0.9], [ox, G, oz], 0xff6a10, 'SmoothPlastic', { collide: 0 });
-          if (k % 2) add([0.3, 0.3, 0.3], [ox, G + 1.8, oz], 0xff2020, 'Neon', { shape: 3, collide: 0 });
-        }
-      },
+      }
     };
-    props[zone.name]?.();
-    // the scare actors who roam the zone
-    for (const [u, v] of [[-3, -1], [4, 2], [-1, 4]]) {
-      const [ax, az] = P(u, v);
-      spot('scare', 'idle', zone.land, ax, G, az, yaw);
+    // the zone's ground, arches at both ends
+    put([zone.width || 12, 0.04, L], cx, cz, 0.05, zone.ground, 'Ground', { yaw });
+    for (const t of [0, L]) {
+      const [gx, gz] = at(t, 0);
+      for (const sd of [-1, 1]) {
+        const [px, pz] = at(t, sd * 7);
+        box([0.9, 12, 0.9], [px, G, pz], 0x101012, 'Metal', { yaw });
+        put([1.4, 1.4, 1.4], px, pz, 12.6, zone.glow, 'Neon', { shape: 3 });
+      }
+      add([15, 2.8, 0.6], [gx, G + 10.6, gz], 0x101012, 'Metal', { yaw, collide: 0 });
+      // the name faces the way people arrive
+      const f = t === 0 ? -1 : 1;
+      sign(zone.name, [14.2, 1.9, 0.2], [gx + d[0] * f * 0.35, G + 10.8, gz + d[1] * f * 0.35], 0x101012, zone.glow, f < 0 ? 'Front' : 'Back', 'GothamBlack', true, yaw);
+      sign('BENTON HAUNT SCARE ZONE', [12, 0.6, 0.2], [gx + d[0] * f * 0.35, G + 9.5, gz + d[1] * f * 0.35], 0x101012, WHITE, f < 0 ? 'Front' : 'Back', 'GothamBold', false, yaw);
     }
+    // lights and fog down both edges
+    for (let t = 4; t < L - 2; t += 8) {
+      for (const sd of [-1, 1]) {
+        const [px, pz] = at(t + (sd > 0 ? 4 : 0), sd * 6.3);
+        if (!free(px, pz, 0.6)) continue;
+        if ((Math.round(t / 8) + (sd > 0 ? 1 : 0)) % 2) {
+          box([0.25, 6, 0.25], [px, G, pz], 0x1a1a1c, 'Metal', { collide: 0 });
+          put([1, 1, 1], px, pz, 6.3, zone.glow, 'Neon', { shape: 3 });
+          data.hauntLights.push([px, G + 5.5, pz, zone.glow]);
+        } else {
+          box([1.2, 0.8, 1.6], [px, G, pz], 0x2a2a2e, 'Metal', { collide: 0 });
+          data.tags.SteamVent.push([px, G + 0.9, pz, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
+        }
+      }
+    }
+    const fireAt = (px, pz) => { box([1.6, 2, 1.6], [px, G, pz], 0x3a2a20, 'CorrodedMetal', { shape: 5 }); data.tags.Campfire.push([px, G + 2.4, pz, 1, 0, 0, 0, 1, 0, 0, 0, 1]); };
+    // the big set piece: the best clear spot beside the middle of the zone
+    const piece = (r) => {
+      for (const s of [14, 17, 20, 11]) for (const sd of [1, -1]) for (const t of [L / 2, L * 0.35, L * 0.65]) {
+        const [px, pz] = at(t, sd * s);
+        if (free(px, pz, r)) return [px, pz, sd];
+      }
+      return null;
+    };
+    const T = zone.theme;
+    if (T === 'graveyard') {
+      beside(2.6, 7.5, 12, (px, pz, sd, k) => {
+        if (k % 5 === 4) { box([0.9, 9, 0.9], [px, G, pz], 0x2a2018, 'Wood', { collide: 0 }); put([0.4, 0.4, 5], px, pz, 7.5, 0x2a2018, 'Wood', { yaw: yaw + k }); put([4, 0.4, 0.4], px, pz, 6, 0x2a2018, 'Wood', { yaw: yaw - k }); return; }
+        box([0.6, 2.6 + (k % 3) * 0.6, 2], [px, G, pz], [0x8a8a86, 0x6a6a66, 0x9a9a92][k % 3], 'Concrete', { yaw: yaw + (k % 2 ? 0.15 : -0.1) });
+        put([0.7, 0.5, 2.2], px, pz, 2.85 + (k % 3) * 0.6, 0x7a7a76, 'Slate', { yaw });
+      });
+      beside(1.6, 6.8, 6.8, (px, pz) => { box([0.16, 4, 0.16], [px, G, pz], 0x101012, 'Metal', { collide: 0 }); put([0.36, 0.36, 0.36], px, pz, 4.2, 0x101012, 'Metal', { shape: 3 }); });
+      const m = piece(7);
+      if (m) {
+        const [mx, mz, sd] = m;
+        box([7, 8, 10], [mx, G, mz], 0x6a6a66, 'Concrete', { yaw });
+        put([8, 1, 11], mx, mz, 8.5, 0x5a5a56, 'Concrete', { yaw });
+        put([5, 1.4, 8], mx, mz, 9.6, 0x5a5a56, 'Concrete', { yaw });
+        const fx = mx - n[0] * sd * 3.6, fz = mz - n[1] * sd * 3.6; // the face toward the path
+        put([0.2, 5, 3], fx, fz, 2.5, 0x050505, 'SmoothPlastic', { yaw });
+        for (const u of [-3.4, 3.4]) box([1, 8, 1], [fx + d[0] * u - n[0] * sd * 0.6, G, fz + d[1] * u - n[1] * sd * 0.6], 0xd8d4c8, 'Concrete', { shape: 5, collide: 0 });
+        put([0.6, 0.6, 0.6], fx - n[0] * sd * 0.4, fz - n[1] * sd * 0.4, 6, zone.glow, 'Neon', { shape: 3 });
+        const k = piece(2.5);
+        if (k) { box([3, 18, 3], [k[0], G, k[1]], 0x2a2a2e, 'Brick', { yaw }); put([0.3, 2.6, 2.6], k[0] - n[0] * k[2] * 1.6, k[1] - n[1] * k[2] * 1.6, 15, 0xf4f0e0, 'Neon', { shape: 2, yaw }); }
+      }
+    } else if (T === 'smokestacks') {
+      beside(5, 7.5, 13, (px, pz, sd, k) => {
+        if (k % 3 === 0) { const h = 14 + (k % 4) * 4; box([2.6, h, 2.6], [px, G, pz], 0x5a3a2a, 'CorrodedMetal', { shape: 5 }); put([3, 1, 3], px, pz, h - 1, 0x2a2a2e, 'Metal', { shape: 5 }); data.tags.SteamVent.push([px, G + h + 0.4, pz, 1, 0, 0, 0, 1, 0, 0, 0, 1]); }
+        else if (k % 3 === 1) fireAt(px, pz);
+        else for (let j = 0; j < 3; j++) box([1.4, 2.2, 1.4], [px + d[0] * j * 1.5, G, pz + d[1] * j * 1.5], j % 2 ? 0xc8322d : 0x3a3a3e, 'CorrodedMetal', { shape: 5 });
+      });
+      for (let t = 6; t < L - 4; t += 14) { const [px, pz] = at(t, 0); put([16, 0.9, 0.9], px, pz, 10.5, 0x6a4a3a, 'CorrodedMetal', { yaw, shape: 2 }); }
+      beside(2.8, 6.8, 6.8, (px, pz, sd) => box([0.1, 7, 2.6], [px, G, pz], 0x8a8e96, 'Metal', { yaw }));
+    } else if (T === 'cornfield') {
+      beside(2.4, 7, 11, (px, pz, sd, k) => {
+        if (k % 6 === 5) {
+          box([0.3, 7, 0.3], [px, G, pz], 0x6a4a30, 'Wood', { collide: 0 });
+          put([0.3, 0.3, 3.8], px, pz, 5.4, 0x6a4a30, 'Wood', { yaw });
+          put([1.2, 1.3, 1.2], px, pz, 7, k % 4 ? 0xc8a868 : PUMPKIN, 'Fabric', { shape: 3 });
+          put([0.9, 2.6, 1.7], px, pz, 4.4, [0x8a3a22, 0x3a5a8a, 0x5a6a2a][k % 3], 'Fabric', { yaw });
+          return;
+        }
+        for (let j = 0; j < 2; j++) box([1.4, 6.5 + ((k + j) % 3) * 0.7, 2.2], [px + n[0] * sd * j * 1.5, G, pz + n[1] * sd * j * 1.5], [0x9a9a3a, 0x8a8a32, 0xa8a042][(k + j) % 3], 'Grass', { yaw, collide: 0 });
+      });
+      beside(7, 6.6, 6.6, (px, pz, sd, k) => (k % 2 ? box([3.6, 1.6, 2], [px, G, pz], 0xd8b850, 'Fabric', { yaw }) : [0, 1, 2].forEach((j) => put([1.4, 1.2, 1.4], px + d[0] * j * 1.4, pz + d[1] * j * 1.4, 0.6, PUMPKIN, 'SmoothPlastic', { shape: 3 }))));
+      const w = piece(4);
+      if (w) {
+        box([4, 1.6, 7], [w[0], G + 1, w[1]], 0x6a4428, 'WoodPlanks', { yaw });
+        for (const [du, dv] of [[-2.2, -2.4], [2.2, -2.4], [-2.2, 2.4], [2.2, 2.4]]) put([0.4, 2.2, 2.2], w[0] + n[0] * du + d[0] * dv, w[1] + n[1] * du + d[1] * dv, 1.1, 0x3a2a1a, 'Wood', { yaw, shape: 2 });
+        for (let j = 0; j < 6; j++) put([1.3, 1.1, 1.3], w[0] + d[0] * (j - 2.5) * 1.1, w[1] + d[1] * (j - 2.5) * 1.1, 3.2, PUMPKIN, 'SmoothPlastic', { shape: 3 });
+      }
+    } else if (T === 'woods') {
+      beside(3.4, 7, 13, (px, pz, sd, k) => {
+        if (k % 3 === 2) { box([0.2, 6, 0.2], [px, G, pz], 0x1a1a1c, 'Metal', { collide: 0 }); put([0.7, 1, 0.7], px, pz, 6.3, zone.glow, 'Neon'); return; }
+        const h = 10 + (k % 3) * 3;
+        box([1.1, h, 1.1], [px, G, pz], 0x2a2018, 'Wood', { shape: 5, collide: 0 });
+        put([0.4, 0.4, 5], px, pz, h - 2, 0x2a2018, 'Wood', { yaw: k });
+        put([4.5, 0.35, 0.35], px, pz, h - 4, 0x2a2018, 'Wood', { yaw: k * 1.7 });
+        put([0.35, 3.5, 0.35], px, pz, h - 1, 0x2a2018, 'Wood', { yaw: k, rot: [Math.cos(0.6), -Math.sin(0.6), 0, Math.sin(0.6), Math.cos(0.6), 0, 0, 0, 1] });
+      });
+      const a = piece(4);
+      if (a) {
+        box([5, 1.4, 3], [a[0], G, a[1]], 0x5a5a56, 'Slate', { yaw });
+        for (const u of [-3, 3]) { const tx = a[0] + d[0] * u, tz = a[1] + d[1] * u; box([1.4, 6, 1.4], [tx, G, tz], 0x4a4440, 'Slate', { yaw }); put([1.6, 1.4, 1.4], tx, tz, 6.5, 0xd8d0bc, 'SmoothPlastic', { shape: 3 }); }
+        put([0.6, 0.6, 0.6], a[0], a[1], 2, zone.glow, 'Neon', { shape: 3 });
+      }
+    } else if (T === 'filmset') {
+      beside(4.5, 7, 11, (px, pz, sd, k) => {
+        if (k % 3 === 0) { box([0.2, 6, 0.2], [px, G, pz], 0x2a2a2e, 'Metal', { collide: 0 }); put([1.4, 2, 2], px, pz, 6.6, 0x2a2a2e, 'Metal', { yaw }); put([0.1, 1.8, 1.8], px - n[0] * sd * 1.05, pz - n[1] * sd * 1.05, 6.6, 0xfff6d8, 'Neon', { yaw }); }
+        else if (k % 3 === 1) box([1.6, 2.2, 1.6], [px, G, pz], 0x8a0a0a, 'CorrodedMetal', { shape: 5 });
+        else { box([1.8, 1.6, 1.6], [px, G, pz], 0x6a4a30, 'Wood', { collide: 0 }); put([1.8, 1.4, 0.15], px, pz, 2.4, 0x101012, 'Fabric', { yaw }); }
+      });
+      beside(3, 6.4, 6.4, (px, pz) => put([0.1, 0.2, 3], px, pz, 2.8, 0xf2c818, 'SmoothPlastic', { yaw }));
+      const m = piece(6);
+      if (m) {
+        const [mx, mz, sd] = m;
+        box([2, 9, 16], [mx, G, mz], 0x8a7a5a, 'WoodPlanks', { yaw });
+        const fx = mx - n[0] * sd * 1.05, fz = mz - n[1] * sd * 1.05;
+        for (const u of [-5, 0, 5]) put([0.1, 5, 2.4], fx + d[0] * u, fz + d[1] * u, 2.5, 0x2a1a14, 'Wood', { yaw });
+        sign('VACANCY', [0.2, 1.4, 6], [fx, G + 7.4, fz], 0x101012, 0xff2030, sd > 0 ? 'Right' : 'Left', 'GothamBlack', true, yaw);
+      }
+    } else {
+      beside(4.5, 7, 12, (px, pz, sd, k) => {
+        if (k % 3 === 0) { box([4.6, 2.4, 9], [px, G + 0.5, pz], 0x2a2420, 'CorrodedMetal', { yaw: yaw + k * 0.4 }); box([4, 1.8, 4.6], [px, G + 2.9, pz], 0x1a1612, 'CorrodedMetal', { yaw: yaw + k * 0.4 }); }
+        else if (k % 3 === 1) fireAt(px, pz);
+        else for (let j = 0; j < 4; j++) put([2.4, 0.8, 2.4], px, pz, 0.4 + j * 0.8, 0x1a1a1a, 'Rubber', { shape: 5 });
+      });
+      beside(2.8, 6.4, 6.4, (px, pz, sd, k) => box([0.8, 1.4, 0.8], [px, G, pz], 0xff6a10, 'SmoothPlastic', { collide: 0 }));
+      beside(3, 7.6, 7.6, (px, pz, sd, k) => box([0.8, 1.6, 2.8], [px, G, pz], k % 2 ? 0xf2c818 : 0x1a1a1a, 'SmoothPlastic', { yaw }));
+    }
+    // the scare actors, prowling up and down the zone
+    // about one actor every 11 studs, cycling through the zone's cast
+    const cast = Array.from({ length: Math.max(zone.actors.length, Math.round(L / 11)) }, (_, k) => zone.actors[k % zone.actors.length]);
+    cast.forEach((costume, k) => {
+      const [px, pz] = at(((k + 0.5) / cast.length) * L, (k % 2 ? 1 : -1) * 2.5);
+      data.scareActors.push({ costume, x: px, z: pz, y: G, mode: 'roam', radius: 9, land: zone.land });
+    });
   }
   return placed;
 }
