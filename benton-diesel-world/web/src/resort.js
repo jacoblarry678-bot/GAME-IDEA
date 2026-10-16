@@ -123,8 +123,8 @@ const frame = (x, z, yaw) => {
 
 // after the event, the boards thank everyone and sell the park
 const ADS_OVER = [
-  { title: 'FAST & FURIOUS', sub: 'BENTON STREET RUN  ·  COMING SOON', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xff6a1a },
-  { title: "IT'S ABOUT FAMILY", sub: 'FAST & FURIOUS IS COMING TO BENTON DIESEL WORLD', foot: 'NOW UNDER CONSTRUCTION', art: 'moon', fg: 0x9ad8ff },
+  { title: 'FAST & FURIOUS', sub: 'BENTON STREET RUN  ·  NOW OPEN', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xff6a1a },
+  { title: "IT'S ABOUT FAMILY", sub: 'FAST & FURIOUS IS COMING TO BENTON DIESEL WORLD', foot: 'NOW OPEN IN VELOCITY CITY', art: 'moon', fg: 0x9ad8ff },
   { title: 'THANKS FOR SCREAMING!', sub: 'BENTON HAUNT RETURNS NEXT FALL', foot: 'BENTON DIESEL WORLD', art: 'pumpkin', fg: ORANGE },
   { title: 'RIDE OVERDRIVE', sub: 'THE NEW COASTER AT BENTON DIESEL WORLD', foot: 'NEXT EXIT', art: 'moon', fg: 0xff5a2a },
   { title: 'SEE YOU NEXT FALL', sub: 'THE HOUSES ARE COMING DOWN... FOR NOW', foot: 'BENTON HAUNT', art: 'skull', fg: 0xb08aff },

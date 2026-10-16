@@ -49,17 +49,20 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
-- **Fast & Furious: construction has started (browser only):** past
-  Velocity City's east wall, the show building for Fast & Furious: Benton
-  Street Run is going up: a huge warehouse (160 by 200 studs, 50 high) whose
-  north end is clad and carries a giant "Fast & Furious" banner facing the
-  park, while the south end is still a red steel frame with roof trusses
-  going in and track footings poured inside. Two tower cranes (one lifting
-  a beam), an excavator digging the launch pit, a dump truck, a mixer,
-  steel and cladding stacks, the site office, a covered car on a trailer
-  ("do not uncover") and hard-hat crews fill the fenced site. In the park,
-  a painted construction wall and a locked construction gate in the east
-  wall tease the ride, and two billboards on the parkway announce it.
+- **Fast & Furious: Benton Street Run, now open (browser only):** walk
+  through the new arch in Velocity City's east wall (with a live wait sign)
+  into a courtyard queue with shade sails, posters and a hero car on a
+  turntable, and board a train of three street cars (orange, blue and
+  black, each with a spoiler, wheels and its own underglow) inside a huge
+  warehouse where it is always night. The 769-stud, 49-second chase: a
+  nitrous launch up the street under a NOS banner, a drift onto a main drag
+  of neon storefronts, up the ramps of a parking garage, across a rooftop
+  and a jump to the next roof (with an explosion), along an elevated highway
+  with a sign gantry and police cars waiting below, a second launch through
+  the docks between stacked shipping containers and fire barrels, and home
+  through the family garage under a giant neon FAMILY sign. Lap bars, an
+  operator and an attendant, posted waits, a passport stamp and Express
+  Passes work like every other ride.
 - **Benton Haunt has ended (browser only):** the event closed after November 2.
   The houses are coming out of the soundstages: each facade is down to a
   stub, its sign lies face up in the debris, and dumpsters, scissor lifts

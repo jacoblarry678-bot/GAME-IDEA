@@ -94,7 +94,7 @@ async function main() {
   const scareZones = HAUNT_OVER ? [] : buildScareZones(data);
   // the hotels, the Benton Parkway and the shuttle Transit Center
   const resort = buildResort(data);
-  // Fast & Furious: Benton Street Run, under construction past Velocity City
+  // Fast & Furious: Benton Street Run, open past Velocity City
   const ffLayout = buildFastFurious(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
@@ -377,7 +377,9 @@ async function main() {
     const daylight = world.updateLighting(started ? player.pos : new THREE.Vector3(0, 0, -40), time);
     // inside a haunted house the daylight is shut out, and the rooms' own
     // colored lights take over
-    const inHouse = started && houses.some((h) => player.pos.x > h.rect.x0 && player.pos.x < h.rect.x1 && player.pos.z > h.rect.z0 && player.pos.z < h.rect.z1);
+    const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
+    // (and inside the Fast & Furious warehouse, where it is always night)
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
