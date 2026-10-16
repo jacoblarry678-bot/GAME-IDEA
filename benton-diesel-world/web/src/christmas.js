@@ -485,3 +485,71 @@ export class Christmas {
     }
   }
 }
+
+// ---- after the holidays: everything coming down. The giant tree is half
+// gone (its top tiers on a flatbed, a lift and a crew at work), crates of
+// decorations wait where the walkway decorations stood, the last light
+// strand is coming down over Main Street, and Santa's Workshop is being
+// packed up behind the locked backstage gate.
+export function buildXmasTeardown(data) {
+  const { add, box, sign, cf } = helpers(data);
+  const find = makeFinder(data);
+  data.staffSpots = data.staffSpots || [];
+  const crew = (kind, x, y, z, yaw) => data.staffSpots.push({ role: 'construction', kind, land: 'Plaza', seed: 0, cf: cf(x, y, z, yaw) });
+  const crate = (x, z, k = 0, label = false) => {
+    box([3.2, 2.4, 2.4], [x, G, z], 0x8a6a3a, 'WoodPlanks', { yaw: k * 0.3 });
+    if (k % 2 === 0) box([2.6, 2, 2], [x + 0.3, G + 2.4, z], 0x8a6a3a, 'WoodPlanks', { collide: 0, yaw: k * 0.3 + 0.2 });
+    if (label) sign([2.4, 0.9, 0.1], [x, G + 1.3, z + 1.25], 0x8a6a3a, 'Back', [['HOLIDAY DECOR', 0, 0, 1, 1, 0x1a1a1c, 'GothamBold']]);
+  };
+  const lift = (x, z, h, yaw = 0) => {
+    box([4, 1.2, 7], [x, G + 0.4, z], 0xf2c818, 'SmoothPlastic', { yaw });
+    for (const s of [-1, 1]) add([0.3, h - 1.6, 0.3], [x, G + h / 2, z], 0x2a2a2e, 'Metal', { collide: 0, rot: [1, 0, 0, 0, Math.cos(s * 0.55), -Math.sin(s * 0.55), 0, Math.sin(s * 0.55), Math.cos(s * 0.55)] });
+    box([4.4, 0.4, 7.4], [x, G + h, z], 0xf2c818, 'SmoothPlastic', { collide: 0, yaw });
+    crew('work', x, G + h + 0.4, z, yaw);
+  };
+  // the Plaza tree, half taken down
+  const [tx, tz] = find(0, 268, 11, [[-70, 230, 70, 290]]) || [24, 262];
+  const s = 4.2;
+  box([0.8 * s, 1.4 * s, 0.8 * s], [tx, G, tz], BROWN, 'Wood');
+  for (const [d, h, y] of [[5, 2.4, 2.2], [3.9, 2.2, 4.1]]) add([d * s, h * s, d * s], [tx, G + y * s, tz], GREEN, 'Grass', { shape: 5, collide: 0 });
+  add([0.5, 14, 0.5], [tx, G + 18 + 7, tz], 0x6a4a30, 'Wood', { collide: 0 }); // the bare pole the top hung on
+  // the top tiers, lying on a flatbed
+  box([20, 1.2, 8], [tx + 20, G + 1.2, tz - 4], 0x3a3a3e, 'Metal');
+  for (const [d, h, dx] of [[2.8 * s, 2 * s, -5], [1.6 * s, 1.7 * s, 5]]) add([h, d, d], [tx + 20 + dx, G + 2.4 + d / 2, tz - 4], GREEN, 'Grass', { shape: 2, collide: 0 });
+  add([0.9 * s, 0.9 * s, 0.9 * s], [tx + 12, G + 1.9, tz + 6], GOLD, 'Metal', { shape: 3, collide: 0 }); // the star, unplugged
+  lift(tx - 10, tz + 2, 16, Math.PI / 2);
+  for (let k = 0; k < 5; k++) crate(tx - 14 + k * 4, tz + 14, k, k === 2);
+  crew('idle', tx + 8, G, tz + 12, 0);
+  // crates where the walkway decorations stood
+  let k = 0;
+  for (const line of WALKWAYS) {
+    const [a, b] = line;
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const dx = (b.x - a.x) / len, dz = (b.z - a.z) / len, nx = -dz, nz = dx;
+    for (let t = 10; t < len - 6; t += 26) {
+      const side = (Math.round(t / 26) + k) % 2 ? 1 : -1;
+      const px = a.x + dx * t + nx * side * 9, pz = a.z + dz * t + nz * side * 9;
+      if (k++ % 3 || !find.clear(px, pz, 2.6)) continue;
+      crate(px, pz, k, k % 2 === 0);
+    }
+  }
+  // the last light strand over Main Street, half down
+  for (let j = 0; j < 12; j++) {
+    const x = -24 + j * 2.4, u = x / 24;
+    add([0.3, 0.3, 0.3], [x, G + 14.4 - 2.4 * (1 - u * u), 126], [0xff2a2a, 0x2aff4a, 0xffc030, 0x3a6aff][j % 4], 'SmoothPlastic', { collide: 0, shape: 3 });
+  }
+  lift(4, 126, 12, 0);
+  // Santa's Workshop, packed up behind the gate
+  const W = WORKSHOP, wz = W.front - 8.5;
+  box([40, 12, 17], [W.x, G, wz], 0x8a2a22, 'WoodPlanks');
+  for (const [d, y] of [[19, 12], [14.5, 13.4], [10, 14.8], [5.5, 16.2]]) box([44, 1.4, d], [W.x, G + y, wz], 0x5a3a2a, 'Slate', { collide: 0 });
+  sign([20, 3, 0.4], [W.x, G + 9, W.front + 0.4], 0x1a1a1c, 'Back', [['CLOSED FOR THE SEASON', 0, 0, 1, 1, WHITE]]);
+  for (let j = 0; j < 8; j++) crate(W.x - 14 + (j % 4) * 4, W.front + 6 + Math.floor(j / 4) * 4, j, j === 1);
+  box([10, 9, 22], [W.x + 30, G + 1.2, W.front + 8], WHITE, 'SmoothPlastic');
+  box([8, 7, 7], [W.x + 30, G + 1, W.front + 23], 0x2a3a5a, 'SmoothPlastic');
+  crew('work', W.x + 24, G, W.front + 8, Math.PI / 2);
+  data.staff.lines.construction = [
+    ...(data.staff.lines.construction || []),
+    'The holidays are over - taking it all down!', 'Happy New Year!', 'See you next holiday season!', 'Careful, this box is full of ornaments.',
+  ];
+}

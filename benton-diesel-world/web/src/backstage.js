@@ -6,7 +6,9 @@
 // built in houses.js. A production yard (trailers, a generator, the makeup
 // tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
-import { HAUNT_OVER, CHRISTMAS } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER } from './season.js';
+// the soundstages are clear of the haunt by the holidays
+const STAGES_CLEAR = CHRISTMAS || XMAS_OVER;
 
 export const BS = { x0: -250, x1: 250, z0: -700, z1: -405 };
 const GATE = { x0: -81, x1: -44 }; // between the wall pillars at x -83.3 and -41.7
@@ -106,7 +108,7 @@ export function buildBackstage(data) {
     add([0.2, 2.6, 0.2], [gx, G + 6.8, z + 0.3], 0x8a8e96, 'Metal', { collide: 0 });
     sign('BACKSTAGE CLOSED', [18, 3, 0.2], [gx, G + 10.2, z + 0.4], 0xc8322d, WHITE, 'Back', 'GothamBlack');
     sign('CAST MEMBERS ONLY  ·  NO ENTRY', [18, 1.4, 0.2], [gx, G + 7.9, z + 0.4], WHITE, 0xc8322d, 'Back', 'GothamBold');
-    sign('BENTON HAUNT HAS ENDED  ·  THANKS FOR SCREAMING!', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z + 0.4], BLACK, ORANGE, 'Back', 'GothamBold');
+    sign(XMAS_OVER ? 'HAPPY NEW YEAR!  ·  SEE YOU NEXT HOLIDAY SEASON' : 'BENTON HAUNT HAS ENDED  ·  THANKS FOR SCREAMING!', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z + 0.4], BLACK, ORANGE, 'Back', 'GothamBold');
     sign('TEARDOWN IN PROGRESS  ·  HARD HATS REQUIRED', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z - 0.4], 0xf2c818, BLACK, 'Front', 'GothamBold');
   }
 
@@ -174,7 +176,7 @@ export function buildBackstage(data) {
     if (HAUNT_OVER) {
       // the banners are down; the house's facade and maze are coming out
       // (and by Christmas they are long gone)
-      if (!CHRISTMAS) teardown(house, i, x);
+      if (!STAGES_CLEAR) teardown(house, i, x);
       return;
     }
     if (i === 2) {
@@ -306,7 +308,7 @@ export function buildBackstage(data) {
 
   // ---- the production yard along the wall
   // trailers
-  for (const [x, label] of [[-220, CHRISTMAS ? 'BENTON HOLIDAY PRODUCTIONS' : 'BENTON HAUNT PRODUCTIONS'], [-180, 'SCENIC & PROPS'], [-140, 'LIGHTING & SOUND']]) {
+  for (const [x, label] of [[-220, STAGES_CLEAR ? 'BENTON HOLIDAY PRODUCTIONS' : 'BENTON HAUNT PRODUCTIONS'], [-180, 'SCENIC & PROPS'], [-140, 'LIGHTING & SOUND']]) {
     box([26, 10, 8], [x, G + 1.6, -432], 0xf0f0ec, 'SmoothPlastic');
     sign(label, [22, 2, 0.2], [x, G + 8, -436.1], 0xf0f0ec, 0x16223a, 'Front', 'GothamBlack');
     box([6, 7, 7.6], [x + 16.5, G + 1, -432], 0x2a3a5a, 'SmoothPlastic');
@@ -322,13 +324,13 @@ export function buildBackstage(data) {
   for (const x of [tx - 15, tx + 15]) box([0.3, 7, 6], [x, G, tz + (x < tx ? -5 : 5)], WHITE, 'Fabric');
   add([30.4, 4, 8.2], [tx, G + 9, tz - 4.1], WHITE, 'Fabric', { shape: 1, collide: 0, yaw: Math.PI });
   add([30.4, 4, 8.2], [tx, G + 9, tz + 4.1], WHITE, 'Fabric', { shape: 1, collide: 0 });
-  sign(CHRISTMAS ? "SANTA'S MAILROOM" : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
+  sign(CHRISTMAS ? "SANTA'S MAILROOM" : XMAS_OVER ? 'HOLIDAY DECOR STORAGE' : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
   for (let k = 0; k < 4; k++) {
     box([4, 2.6, 1.4], [tx - 9 + k * 6, G, tz + 5], 0xf4f0e8, 'SmoothPlastic', { collide: 0 });
     add([3, 2, 0.1], [tx - 9 + k * 6, G + 4.2, tz + 5.8], 0xfff2d8, 'Neon', { collide: 0 });
   }
   // props waiting to go out: pumpkins, coffins, tombstones, scarecrows, hay
-  if (!CHRISTMAS) {
+  if (!STAGES_CLEAR) {
   for (let k = 0; k < 14; k++) add([1.6, 1.4, 1.6], [80 + (k % 5) * 1.8, G + 0.7 + Math.floor(k / 5) * 1.3, -440 + (k % 2) * 0.8], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
   for (let k = 0; k < 6; k++) box([2.6, 1.2, 6.2], [98 + (k % 2) * 3, G + Math.floor(k / 2) * 1.2, -440], 0x3a2418, 'Wood');
   for (let k = 0; k < 8; k++) {
@@ -369,7 +371,7 @@ export function buildBackstage(data) {
     ['work', 120, G, -446, 0], ['idle', gx + 8, G, -416, 0], ['work', 184, G, -449, 0], ['idle', 34, G, -437, 0],
   );
   for (const [kind, x, y, z, yaw] of crew) data.staffSpots.push({ role: CHRISTMAS ? 'elf' : HAUNT_OVER ? 'construction' : 'haunt', kind, land: 'Studios', seed: 0, cf: cf(x, y, z, yaw) });
-  if (HAUNT_OVER) {
+  if (HAUNT_OVER && !STAGES_CLEAR) {
     data.staff.lines.construction = [
       'Sorry, backstage is closed!', 'Benton Haunt is over - thanks for screaming!', 'Watch your step, we are tearing it all down.',
       'See you next fall!', 'Hard hats only back here!', 'That facade took weeks to build... and a day to tear down.',

@@ -25,8 +25,9 @@ import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
-import { buildChristmas, Christmas } from './christmas.js';
-import { CHRISTMAS } from './season.js';
+import { buildChristmas, buildXmasTeardown, Christmas } from './christmas.js';
+import { CHRISTMAS, XMAS_OVER, WOLVERINE_BUILDING } from './season.js';
+import { buildWolverine, WolverineSite } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
@@ -100,6 +101,9 @@ async function main() {
   const ffLayout = buildFastFurious(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
+  if (XMAS_OVER) buildXmasTeardown(data);
+  // Wolverine, going up past Backwoods
+  const wvLayout = WOLVERINE_BUILDING ? buildWolverine(data) : null;
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -212,6 +216,7 @@ async function main() {
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
+  const wvSite = wvLayout ? new WolverineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wvLayout) : null;
   const ffSite = new FastFuriousSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout);
   const backstage = new Backstage({ family: FB, sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
 
@@ -404,6 +409,7 @@ async function main() {
     entrance.update(dt, camera.position, player.pos);
     backstage.update(dt, player.pos, started);
     ffSite.update(dt, player.pos, started);
+    wvSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);

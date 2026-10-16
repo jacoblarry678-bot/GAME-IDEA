@@ -49,6 +49,24 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Wolverine is going up (browser only):** past Backwoods' west wall, the
+  next coaster is under construction. Its whole circuit is staked out with
+  footings; blue supports carry yellow track through the launch, an 80-stud
+  top hat and the turn behind it, and a tower crane is lifting the next
+  piece into place where the track ends. Further round, the supports are
+  part-built, track pieces and steel wait on the ground, the station is a
+  red steel frame on its slab, a second crane works by the camelback, and a
+  covered car sits on a flatbed ("do not uncover"). A claw-marked
+  "WOLVERINE · THE CLAWS ARE OUT · COMING SOON" board stands by the
+  Backwoods walkway, more banners hang on the wall, and the billboards and
+  shuttle wraps tease it too.
+- **The holidays are over (browser only):** Benton Holidays ended January 1
+  and everything is coming down: the giant Plaza tree is half gone (its top
+  tiers on a flatbed, the star on the ground, a lift and a crew at work),
+  crates of holiday decorations wait along the walkways, a lift is taking
+  down the last light strand over Main Street, the ride lights, snow and
+  Santa are gone, and the backstage is locked again ("Happy New Year! See
+  you next holiday season") with Santa's Workshop being packed into a truck.
 - **Unlimited Express (browser only):** your Express Pass never runs out
   (🎫 ∞): press F at any ride to skip straight to the front of the line.
   (Set `UNLIMITED_EXPRESS` in `web/src/sim.js` to go back to counted passes.)

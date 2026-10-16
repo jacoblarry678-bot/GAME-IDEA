@@ -4,4 +4,8 @@
 export const HAUNT_OVER = true;
 // Benton Holidays: Christmas decorations, lights on the rides, Santa in the
 // park and Santa's Workshop backstage, through January 1.
-export const CHRISTMAS = true;
+export const CHRISTMAS = false;
+// ...and the holidays are over: the decorations are coming down, the
+// backstage is locked again, and Wolverine is going up past Backwoods.
+export const XMAS_OVER = true;
+export const WOLVERINE_BUILDING = true;
