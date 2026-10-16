@@ -6,6 +6,7 @@
 // the event's food stand on the backstage avenue with a Halloween menu.
 
 import { LINES as WALKWAYS } from './guests.js';
+import { HAUNT_OVER } from './season.js';
 
 export const FB = { x0: 375, x1: 500, z0: 128, z1: 236 };
 const GATE = { z0: 161.4, z1: 197.1 }; // between the east wall pillars at z 159.1 and 199.4
@@ -66,6 +67,7 @@ export function buildFamilyBackstage(data) {
 
   // the gate arch, facing the park
   const gz = (GATE.z0 + GATE.z1) / 2, gw = GATE.z1 - GATE.z0;
+  if (HAUNT_OVER) return familyTeardown();
   for (const z of [GATE.z0 + 1.5, GATE.z1 - 1.5]) {
     box([2.6, 16, 2.6], [379, G, z], BLACK, 'Metal');
     for (let k = 0; k < 3; k++) add([1.6, 1.4, 1.6], [376.9, G + 0.7, z + (k - 1) * 1.8], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
@@ -177,6 +179,51 @@ export function buildFamilyBackstage(data) {
   data.tags.ParkLamp.push([408, G + 15, 170.4, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
   spot('haunt', 'idle', 'Family', 384, G, gz + 6, -Math.PI / 2);
   return { tent: { x0: HX0, x1: HX1, z: HZ, door: [fx - 2, HZ + 2], exit: [HX1 + 4, HZ - 6] } };
+
+  // after the event: the gate locked, the tent coming down to its frame,
+  // the lodge facade in a pile and the rope queue packed away
+  function familyTeardown() {
+    const STEEL = 0xb8bcc0;
+    const x = 377;
+    for (const z of [GATE.z0 + 0.8, gz, GATE.z1 - 0.8]) box([1, 14, 1], [x, G, z], STEEL, 'Metal', { shape: 5 });
+    data.static.push([0, 0.3, 13.4, gw, x, G + 6.7, gz, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0x8a9096, data.materials.indexOf('Metal'), 0.55, 1]);
+    for (const y of [0.4, 6.8, 13.2]) add([0.4, 0.3, gw], [x, G + y, gz], STEEL, 'Metal', { collide: 0 });
+    add([0.6, 1.6, 1.2], [x - 0.5, G + 6.2, gz], 0xb08a30, 'Metal', { collide: 0 });
+    sign('BACKSTAGE CLOSED', [0.2, 3, 18], [x - 0.4, G + 10.2, gz], 0xc8322d, WHITE, 'Left', 'GothamBlack');
+    sign('CAST MEMBERS ONLY  ·  NO ENTRY', [0.2, 1.4, 18], [x - 0.4, G + 7.9, gz], WHITE, 0xc8322d, 'Left', 'GothamBold');
+    sign('THANKS FOR SCREAMING!  SEE YOU NEXT FALL', [0.2, 1.2, gw - 6], [x - 0.4, G + 2.6, gz], BLACK, ORANGE, 'Left', 'GothamBold');
+    // the tent: the west half is down to its steel frame, the east half
+    // still has its walls; the canvas is folded on pallets
+    const HX0 = 420, HX1 = 482, HZ = 212, HW = 28, R = HW / 2, wallH = 7;
+    for (let xx = HX0; xx <= HX1 + 0.01; xx += 6.2) {
+      for (const sz of [-1, 1]) box([0.4, wallH, 0.4], [xx, G, HZ + sz * R], 0xd2d2ce, 'Metal');
+      for (let k = 0; k < 10; k++) {
+        const th = (Math.PI * (k + 0.5)) / 10, phi = Math.PI / 2 - th;
+        const rot = [1, 0, 0, 0, Math.cos(phi), -Math.sin(phi), 0, Math.sin(phi), Math.cos(phi)];
+        add([0.35, 0.45, 2 * R * Math.sin(Math.PI / 20) + 0.1], [xx, G + wallH + R * Math.sin(th), HZ + R * Math.cos(th)], 0xd2d2ce, 'Metal', { collide: 0, rot });
+      }
+    }
+    for (const sz of [-1, 1]) box([HX1 - 452, wallH, 0.6], [(452 + HX1) / 2, G, HZ + sz * (R - 0.3)], CANVAS, 'Fabric');
+    for (let k = 0; k < 6; k++) box([5, 1.2, 4], [400 + (k % 3) * 6, G + Math.floor(k / 3) * 1.2, 236 - 8], CANVAS, 'Fabric');
+    // the lodge facade, in a pile of logs and boards
+    for (let k = 0; k < 9; k++) add([1.2, 1.2, 9 + (k % 3)], [412 + (k % 3) * 1.3, G + 0.6 + Math.floor(k / 3) * 1.15, HZ + 2], 0x6a4428, 'Wood', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
+    for (let k = 0; k < 4; k++) add([6, 0.4, 10], [404, G + 0.3 + k * 0.4, HZ - 10], 0x2a1c14, 'WoodPlanks', { collide: 0 });
+    sign('LIGHTS OUT AT LAKESIDE', [20, 0.3, 2.4], [404, G + 0.2, HZ + 14], BLACK, 0xffb040, 'Top', 'GothamBlack');
+    // the rope queue: posts in a bin, ropes coiled
+    box([6, 3, 4], [396, G, 196], 0x3a3a3e, 'Metal');
+    for (let k = 0; k < 12; k++) box([0.22, 3.2, 0.22], [394 + (k % 6) * 0.8, G + 2.6, 195 + Math.floor(k / 6) * 1.6], 0x9a9ea6, 'Metal', { collide: 0 });
+    for (let k = 0; k < 3; k++) add([2.2, 0.6, 2.2], [402 + k * 2.6, G + 0.3, 196], WHITE, 'Fabric', { shape: 5, collide: 0 });
+    // a box truck being loaded, and the generator
+    box([10, 9, 22], [455, G + 1.2, 150], 0xf0f0ec, 'SmoothPlastic');
+    box([8, 7, 7], [455, G + 1, 165], 0x2a3a5a, 'SmoothPlastic');
+    sign('BENTON HAUNT PRODUCTIONS', [0.2, 2, 18], [449.9, G + 7, 150], 0xf0f0ec, 0x16223a, 'Left', 'GothamBlack');
+    box([9, 5.5, 4.5], [400, G, 140], 0x5a5e66, 'Metal');
+    spot('construction', 'work', 'Family', 414, G, HZ + 6, Math.PI / 2);
+    spot('construction', 'work', 'Family', 436, G, HZ + 2, 0);
+    spot('construction', 'idle', 'Family', 384, G, gz + 6, -Math.PI / 2);
+    spot('construction', 'work', 'Family', 452, G, 138, 0);
+    return { tent: { x0: HX0, x1: HX1, z: HZ, door: [HX0 - 3, HZ + 2], exit: [HX1 + 4, HZ - 6] } };
+  }
 }
 
 // ------------------------------------------------------------- scare zones

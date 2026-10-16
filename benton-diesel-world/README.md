@@ -49,6 +49,16 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Haunt has ended (browser only):** the event closed after November 2.
+  The houses are coming out of the soundstages: each facade is down to a
+  stub, its sign lies face up in the debris, and dumpsters, scissor lifts
+  and hard-hat crews are clearing the gutted mazes inside; the queue turf is
+  half rolled up and the barricades are stacked on carts. The scare zones
+  are gone, Graveyard Grub has closed, and both backstage areas are locked
+  behind chain-link gates ("Backstage closed · cast members only"), with the
+  Lights Out at Lakeside tent down to its frame. The billboards and shuttle
+  wraps now say "Thanks for screaming! Benton Haunt returns next fall."
+  (Set `HAUNT_OVER` in `web/src/season.js` to bring the event back.)
 - **Hotels and getting around (browser only):** past the lot, the Benton
   Parkway runs by three hotels: the Benton Diesel Grand (a 15-story tower
   with a porte-cochère, a fountain and a pool deck), the Haulers Roadside

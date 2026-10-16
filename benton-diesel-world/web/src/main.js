@@ -23,6 +23,7 @@ import { buildFamilyBackstage, buildScareZones, buildHauntFood, FB } from './hau
 import { buildHouses, HouseWalks } from './houses.js';
 import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
+import { HAUNT_OVER } from './season.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
@@ -85,9 +86,11 @@ async function main() {
   buildBackstage(data);
   const familyLayout = buildFamilyBackstage(data);
   // Benton Haunt: six walk-through houses, a food stand and six scare zones
-  const houses = buildHouses(data, familyLayout);
-  buildHauntFood(data);
-  const scareZones = buildScareZones(data);
+  // (Benton Haunt is over: the houses, the food stand and the scare zones
+  // are gone, and the backstages are being torn down)
+  const houses = HAUNT_OVER ? [] : buildHouses(data, familyLayout);
+  if (!HAUNT_OVER) buildHauntFood(data);
+  const scareZones = HAUNT_OVER ? [] : buildScareZones(data);
   // the hotels, the Benton Parkway and the shuttle Transit Center
   const resort = buildResort(data);
   Clock.configure(cfg.Clock);

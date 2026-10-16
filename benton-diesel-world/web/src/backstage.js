@@ -6,6 +6,7 @@
 // built in houses.js. A production yard (trailers, a generator, the makeup
 // tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
+import { HAUNT_OVER } from './season.js';
 
 export const BS = { x0: -250, x1: 250, z0: -700, z1: -405 };
 const GATE = { x0: -81, x1: -44 }; // between the wall pillars at x -83.3 and -41.7
@@ -30,9 +31,9 @@ export function buildBackstage(data) {
     if (i < 0) { mats.push(name); i = mats.length - 1; }
     return i;
   };
-  const add = (size, pos, color, mat, { yaw = 0, collide = 1, shape = 0, rot = null } = {}) => {
+  const add = (size, pos, color, mat, { yaw = 0, collide = 1, shape = 0, rot = null, trans = 0 } = {}) => {
     const c = Math.cos(yaw), s = Math.sin(yaw);
-    data.static.push([shape, size[0], size[1], size[2], pos[0], pos[1], pos[2], ...(rot || [c, 0, s, 0, 1, 0, -s, 0, c]), color, mi(mat), 0, collide]);
+    data.static.push([shape, size[0], size[1], size[2], pos[0], pos[1], pos[2], ...(rot || [c, 0, s, 0, 1, 0, -s, 0, c]), color, mi(mat), trans, collide]);
     return data.static.length - 1;
   };
   const box = (size, base, color, mat, opts) => add(size, [base[0], base[1] + size[1] / 2, base[2]], color, mat, opts);
@@ -72,24 +73,41 @@ export function buildBackstage(data) {
   for (let x = BS.x0 + 6; x < BS.x1 - 6; x += 12) add([6, 0.04, 0.4], [x, G + 0.02, -476], 0xe8c040, 'SmoothPlastic', { collide: 0 });
 
   // ---- the gate: a black arch with the event's name, searchlights, fog
+  // (now the event is over: a locked chain-link gate)
   const gx = (GATE.x0 + GATE.x1) / 2, gw = GATE.x1 - GATE.x0;
-  for (const x of [GATE.x0 + 1.5, GATE.x1 - 1.5]) {
+  data.tags.Searchlight = data.tags.Searchlight || [];
+  data.tags.SteamVent = data.tags.SteamVent || [];
+  if (HAUNT_OVER) closedGate();
+  else for (const x of [GATE.x0 + 1.5, GATE.x1 - 1.5]) {
     box([3, 19, 3], [x, G, -409], BLACK, 'Metal');
     for (let k = 0; k < 3; k++) add([1.6, 1.4, 1.6], [x + (k - 1) * 1.8, G + 0.7, -406.9], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
   }
-  add([gw, 3.4, 2], [gx, G + 20.6, -409], BLACK, 'Metal', { collide: 0 });
-  sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -407.9], BLACK, ORANGE, 'Back', 'GothamBlack', true);
-  sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -410.1], BLACK, ORANGE, 'Front', 'GothamBlack', true);
-  sign('NOW OPEN  ·  6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
-  data.tags.Searchlight = data.tags.Searchlight || [];
-  data.tags.SteamVent = data.tags.SteamVent || [];
-  for (const x of [GATE.x0 - 4, GATE.x1 + 4]) {
-    box([2.4, 1.6, 2.4], [x, G, -412], 0x2a2a2e, 'Metal');
-    data.tags.Searchlight.push([x, G + 2.2, -412, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
+  if (!HAUNT_OVER) {
+    add([gw, 3.4, 2], [gx, G + 20.6, -409], BLACK, 'Metal', { collide: 0 });
+    sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -407.9], BLACK, ORANGE, 'Back', 'GothamBlack', true);
+    sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -410.1], BLACK, ORANGE, 'Front', 'GothamBlack', true);
+    sign('NOW OPEN  ·  6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
+    for (const x of [GATE.x0 - 4, GATE.x1 + 4]) {
+      box([2.4, 1.6, 2.4], [x, G, -412], 0x2a2a2e, 'Metal');
+      data.tags.Searchlight.push([x, G + 2.2, -412, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
+    }
+    for (const x of [GATE.x0 + 5, GATE.x1 - 5]) {
+      box([1.4, 1, 2], [x, G, -414], 0x2a2a2e, 'Metal');
+      data.tags.SteamVent.push([x, G + 1, -414, 1, 0, 0, 0, 1, 0, 0, 0, 1]); // fog machines being tested
+    }
   }
-  for (const x of [GATE.x0 + 5, GATE.x1 - 5]) {
-    box([1.4, 1, 2], [x, G, -414], 0x2a2a2e, 'Metal');
-    data.tags.SteamVent.push([x, G + 1, -414, 1, 0, 0, 0, 1, 0, 0, 0, 1]); // fog machines being tested
+  // a locked gate: chain-link panels between steel posts, closed signs
+  function closedGate() {
+    const z = -406;
+    for (const x of [GATE.x0 + 0.8, gx, GATE.x1 - 0.8]) box([1, 14, 1], [x, G, z], STEEL, 'Metal', { shape: 5 });
+    box([gw, 13.4, 0.3], [gx, G, z], 0x8a9096, 'Metal', { trans: 0.55 });
+    for (const y of [0.4, 6.8, 13.2]) add([gw, 0.3, 0.4], [gx, G + y, z], STEEL, 'Metal', { collide: 0 });
+    add([1.2, 1.6, 0.6], [gx, G + 6.2, z + 0.5], 0xb08a30, 'Metal', { collide: 0 }); // the padlock
+    add([0.2, 2.6, 0.2], [gx, G + 6.8, z + 0.3], 0x8a8e96, 'Metal', { collide: 0 });
+    sign('BACKSTAGE CLOSED', [18, 3, 0.2], [gx, G + 10.2, z + 0.4], 0xc8322d, WHITE, 'Back', 'GothamBlack');
+    sign('CAST MEMBERS ONLY  ·  NO ENTRY', [18, 1.4, 0.2], [gx, G + 7.9, z + 0.4], WHITE, 0xc8322d, 'Back', 'GothamBold');
+    sign('BENTON HAUNT HAS ENDED  ·  THANKS FOR SCREAMING!', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z + 0.4], BLACK, ORANGE, 'Back', 'GothamBold');
+    sign('TEARDOWN IN PROGRESS  ·  HARD HATS REQUIRED', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z - 0.4], 0xf2c818, BLACK, 'Front', 'GothamBold');
   }
 
   // ---- bike-rack barricades: steel rails on posts, with black covers
@@ -153,6 +171,11 @@ export function buildBackstage(data) {
     sign(`STAGE ${21 + i}`, [7, 2, 0.2], [x - 28.5, G + 33, STAGE_Z + 1.2], MAROON, WHITE, 'Back', 'GothamBold');
     // the house name hangs high on the stage (the middle stage carries the
     // big Benton Haunt banner instead)
+    if (HAUNT_OVER) {
+      // the banners are down; the house's facade and maze are coming out
+      teardown(house, i, x);
+      return;
+    }
     if (i === 2) {
       sign('BENTON HAUNT', [54, 9, 0.3], [x, G + 29, STAGE_Z + 0.4], BLACK, ORANGE, 'Back', 'GothamBlack');
       sign('6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOVEMBER 2', [54, 2.6, 0.3], [x, G + 22.6, STAGE_Z + 0.4], BLACK, WHITE, 'Back', 'GothamBold');
@@ -232,6 +255,54 @@ export function buildBackstage(data) {
     crew.push(['idle', qx0 + 1, G, QUEUE.z1 + 3, 0]);
   });
 
+  // ---- teardown: a stub of the facade, debris and a dumpster out front,
+  // the maze gutted inside, the turf half rolled up and the barricades
+  // stacked on carts
+  function teardown(house, i, x) {
+    const fz = STAGE_Z + 4;
+    const wallMat = { garage: 'CorrodedMetal', mine: 'Slate', film: 'SmoothPlastic', crash: 'SmoothPlastic', engine: 'DiamondPlate' }[house.theme];
+    const r = (k) => ((i * 7 + k * 13) % 10) / 10;
+    // what is left of the facade: one jagged stub and its frame
+    box([12.5, 5 + (i % 3) * 2.5, 1.2], [x - 9.75, G, fz], house.color, wallMat);
+    box([4, 3, 1.2], [x - 13, G + 5 + (i % 3) * 2.5, fz], house.color, wallMat);
+    for (const dx of [-15, 0, 15]) box([0.5, 18, 0.5], [x + dx, G, fz - 1.4], 0x8a8e96, 'Metal', { collide: 0 });
+    add([31, 0.5, 0.5], [x, G + 18, fz - 1.4], 0x8a8e96, 'Metal', { collide: 0 });
+    // the old sign, face up on the ground
+    sign(house.name, [26, 0.3, 2.4], [x - 4, G + 0.15, fz + 12], BLACK, house.glow, 'Top', 'GothamBlack');
+    // a debris pile of facade pieces
+    for (let k = 0; k < 8; k++) {
+      const a = r(k) * 1.4 - 0.7;
+      add([3 + r(k + 1) * 4, 0.8 + r(k + 2), 2 + r(k + 3) * 3], [x + 2 + (k % 4) * 2.6 - 4, G + 0.5 + Math.floor(k / 4) * 0.9, fz + 6 + (k % 3)], k % 3 ? house.color : 0x2a2a2e, wallMat, { collide: 0, rot: [Math.cos(a), -Math.sin(a) * 0.3, Math.sin(a), 0.1, 0.99, 0, -Math.sin(a), 0, Math.cos(a)] });
+    }
+    // a roll-off dumpster, full
+    const dx = x + 22, dz = fz + 10;
+    box([7, 5, 16], [dx, G, dz], [0x2a6a3a, 0x2a4a8a, 0x8a2a22][i % 3], 'CorrodedMetal');
+    for (let k = 0; k < 5; k++) add([2.4 + r(k) * 2, 1.2, 3 + r(k + 4) * 3], [dx - 1.6 + (k % 2) * 3, G + 5.3 + r(k + 2) * 0.6, dz - 6 + k * 3], k % 2 ? house.color : 0x5a4a3a, wallMat, { collide: 0, rot: [1, 0, 0, 0, Math.cos(r(k) - 0.5), -Math.sin(r(k) - 0.5), 0, Math.sin(r(k) - 0.5), Math.cos(r(k) - 0.5)] });
+    sign('BENTON WASTE', [0.2, 1.2, 8], [dx + 3.6, G + 3, dz], [0x2a6a3a, 0x2a4a8a, 0x8a2a22][i % 3], WHITE, 'Right', 'GothamBold');
+    // a scissor lift taking down the lights
+    const lx = x + 10;
+    box([4, 1.2, 7], [lx, G + 0.4, fz + 2], 0xf2c818, 'SmoothPlastic');
+    for (const s of [-1, 1]) add([0.3, 9.6, 0.3], [lx, G + 6.2, fz + 2], 0x2a2a2e, 'Metal', { collide: 0, rot: [1, 0, 0, 0, Math.cos(s * 0.55), -Math.sin(s * 0.55), 0, Math.sin(s * 0.55), Math.cos(s * 0.55)] });
+    box([4.4, 0.4, 7.4], [lx, G + 10.4, fz + 2], 0xf2c818, 'SmoothPlastic', { collide: 0 });
+    add([4.4, 1.2, 0.1], [lx, G + 11.4, fz - 1.6], 0xf2c818, 'Metal', { collide: 0 });
+    crew.push(['work', lx, G + 10.8, fz + 2, Math.PI], ['work', x - 2, G, fz + 9, 0], ['idle', dx - 5, G, dz + 4, -Math.PI / 2]);
+    // inside: the maze walls down in stacks, piles and a forklift
+    const cz = STAGE_Z - STAGE.D / 2;
+    for (let k = 0; k < 6; k++) box([12, 0.6, 7], [x - 20, G + k * 0.6, cz + 10], [0x2a2a2e, house.color, 0x5a4a3a][k % 3], 'WoodPlanks', { collide: 0 });
+    for (let k = 0; k < 4; k++) add([10, 8, 0.4], [x + 14, G + 4, cz - 20 + k * 1.2], house.color, wallMat, { collide: 0, rot: [1, 0, 0, 0, 0.97, -0.24, 0, 0.24, 0.97] });
+    box([4, 2.6, 6], [x, G + 0.6, cz + 20], 0xf2c818, 'SmoothPlastic', { collide: 0 });
+    box([0.4, 8, 3], [x, G, cz + 16.6], 0x2a2a2e, 'Metal', { collide: 0 });
+    crew.push(['work', x - 14, G, cz + 10, Math.PI / 2], ['work', x + 8, G, cz - 18, 0]);
+    // the queue: turf half rolled up, rolls waiting, barricades on carts
+    const qx0 = x - 35, qx1 = x + 35, mid = (QUEUE.z0 + QUEUE.z1) / 2;
+    add([qx1 - qx0 + 2, 0.15, mid - QUEUE.z0], [x, G + 0.08, (QUEUE.z0 + mid) / 2], 0x2f6a2a, 'SmoothPlastic', { collide: 0 });
+    for (let k = 0; k < 5; k++) add([16, 2.6, 2.6], [x - 24 + (k % 3) * 18, G + 1.3 + Math.floor(k / 3) * 2.4, mid + 6 + Math.floor(k / 3) * 0.2], 0x2f6a2a, 'Fabric', { shape: 2, collide: 0 });
+    cart(x - 18, QUEUE.z1 - 8);
+    cart(x + 4, QUEUE.z1 - 8);
+    for (let k = 0; k < 10; k++) box([0.18, 3.4, 0.18], [x + 20 + (k % 5) * 0.5, G, QUEUE.z1 - 9 + Math.floor(k / 5) * 0.6], STEEL, 'Metal', { collide: 0 });
+    crew.push(['work', x - 14, G, mid + 9, 0]);
+  }
+
   // ---- the production yard along the wall
   // trailers
   for (const [x, label] of [[-220, 'BENTON HAUNT PRODUCTIONS'], [-180, 'SCENIC & PROPS'], [-140, 'LIGHTING & SOUND']]) {
@@ -250,7 +321,7 @@ export function buildBackstage(data) {
   for (const x of [tx - 15, tx + 15]) box([0.3, 7, 6], [x, G, tz + (x < tx ? -5 : 5)], WHITE, 'Fabric');
   add([30.4, 4, 8.2], [tx, G + 9, tz - 4.1], WHITE, 'Fabric', { shape: 1, collide: 0, yaw: Math.PI });
   add([30.4, 4, 8.2], [tx, G + 9, tz + 4.1], WHITE, 'Fabric', { shape: 1, collide: 0 });
-  sign('SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
+  sign(HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
   for (let k = 0; k < 4; k++) {
     box([4, 2.6, 1.4], [tx - 9 + k * 6, G, tz + 5], 0xf4f0e8, 'SmoothPlastic', { collide: 0 });
     add([3, 2, 0.1], [tx - 9 + k * 6, G + 4.2, tz + 5.8], 0xfff2d8, 'Neon', { collide: 0 });
@@ -294,7 +365,13 @@ export function buildBackstage(data) {
     ['work', -200, G, -440, 0], ['idle', -150, G, -440, Math.PI / 2], ['work', 90, G, -437, Math.PI],
     ['work', 120, G, -446, 0], ['idle', gx + 8, G, -416, 0], ['work', 184, G, -449, 0], ['idle', 34, G, -437, 0],
   );
-  for (const [kind, x, y, z, yaw] of crew) data.staffSpots.push({ role: 'haunt', kind, land: 'Studios', seed: 0, cf: cf(x, y, z, yaw) });
+  for (const [kind, x, y, z, yaw] of crew) data.staffSpots.push({ role: HAUNT_OVER ? 'construction' : 'haunt', kind, land: 'Studios', seed: 0, cf: cf(x, y, z, yaw) });
+  if (HAUNT_OVER) {
+    data.staff.lines.construction = [
+      'Sorry, backstage is closed!', 'Benton Haunt is over - thanks for screaming!', 'Watch your step, we are tearing it all down.',
+      'See you next fall!', 'Hard hats only back here!', 'That facade took weeks to build... and a day to tear down.',
+    ];
+  }
   data.staff.lines.haunt = [
     'Welcome to Benton Haunt!', 'All six houses are open tonight!', 'Check the app for house wait times!',
     "You didn't see anything back here...", 'Five houses in these stages, one more in a tent at Family Landing!', 'Six scare zones, six houses. Through November 2!',
@@ -314,11 +391,19 @@ export class Backstage {
     if (!started) return;
     const R = this.hooks.family;
     const family = R && playerPos.x > R.x0 && playerPos.x < R.x1 && playerPos.z > R.z0 && playerPos.z < R.z1;
+    if (family && !this.toldFamily && HAUNT_OVER) {
+      this.toldFamily = true;
+      this.hooks.toast('Backstage is closed: the crews are taking down the Lights Out at Lakeside tent. Benton Haunt returns next fall!', 'info');
+    }
     if (family && !this.toldFamily) {
       this.toldFamily = true;
       this.hooks.toast("Family Landing backstage: Benton Haunt's sixth house, Lights Out at Lakeside, is open in this tent. Lights out...", 'info');
     }
     const inside = family || (playerPos.x > BS.x0 && playerPos.x < BS.x1 && playerPos.z > BS.z0 && playerPos.z < BS.z1);
+    if (inside && !family && !this.told && HAUNT_OVER) {
+      this.told = true;
+      this.hooks.toast('Backstage is closed: Benton Haunt has ended and the crews are tearing down the houses. Thanks for screaming!', 'info');
+    }
     if (inside && !family && !this.told) {
       this.told = true;
       this.hooks.toast("Welcome to Benton Haunt! Five of the six houses are open in these soundstages - join a line and walk through if you dare. Through November 2.", 'info');

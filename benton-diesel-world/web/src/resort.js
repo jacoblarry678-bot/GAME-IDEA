@@ -1,3 +1,5 @@
+import { HAUNT_OVER } from './season.js';
+
 // The Benton resort district outside the gate: the Benton Parkway running
 // past the toll plaza, three hotels (the Benton Diesel Grand, the Haulers
 // Roadside Inn and the Backwoods Lodge), the Benton Transit Center beside
@@ -119,8 +121,19 @@ const frame = (x, z, yaw) => {
   return (u, n) => [x + ux * u + nx * n, z + uz * u + nz * n];
 };
 
+// after the event, the boards thank everyone and sell the park
+const ADS_OVER = [
+  { title: 'THANKS FOR SCREAMING!', sub: 'BENTON HAUNT RETURNS NEXT FALL', foot: 'BENTON DIESEL WORLD', art: 'pumpkin', fg: ORANGE },
+  { title: 'RIDE OVERDRIVE', sub: 'THE NEW COASTER AT BENTON DIESEL WORLD', foot: 'NEXT EXIT', art: 'moon', fg: 0xff5a2a },
+  { title: 'SEE YOU NEXT FALL', sub: 'THE HOUSES ARE COMING DOWN... FOR NOW', foot: 'BENTON HAUNT', art: 'skull', fg: 0xb08aff },
+  { title: 'SPEED FUELS PEOPLE TOGETHER', sub: 'BENTON DIESEL WORLD  ·  OPEN DAILY', foot: 'PARKING · SHUTTLES · HOTELS', art: 'moon', fg: 0xf2c818 },
+  { title: 'STAY AT THE GRAND', sub: 'FREE SHUTTLE TO THE PARK', foot: 'BENTON DIESEL GRAND HOTEL', art: 'pumpkin', fg: 0xf0c440 },
+  { title: 'WE SURVIVED BENTON HAUNT', sub: 'DID YOU?', foot: 'SEE YOU NEXT HALLOWEEN', art: 'skull', fg: 0xff3a20 },
+  { title: 'HOORAY FOR HOLLYWOOD', sub: 'THE BACKLOT TRAM TOUR', foot: 'BENTON DIESEL WORLD  ·  NEXT EXIT', art: 'moon', fg: 0xffd27a },
+];
+
 // the Benton Haunt ads on the billboards
-const ADS = [
+const ADS = HAUNT_OVER ? ADS_OVER : [
   { title: 'BENTON HAUNT', sub: '6 HOUSES  ·  6 SCARE ZONES', foot: 'SELECT NIGHTS THROUGH NOV 2', art: 'moon', fg: ORANGE },
   { title: "DEAD MAN'S GARAGE", sub: 'YOUR CAR IS OVERDUE FOR SERVICE...', foot: 'BENTON HAUNT  ·  NOW OPEN', art: 'skull', fg: 0xff3a20 },
   { title: 'LIGHTS OUT AT LAKESIDE', sub: 'THE LAKE REMEMBERS', foot: 'BENTON HAUNT  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0x9ad8ff },
@@ -151,7 +164,7 @@ export function buildResort(data) {
     }
   };
   Object.assign(data.staff.lines, {
-    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
+    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', HAUNT_OVER ? 'Benton Haunt is over - see you next fall!' : 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
     transit: ['Free shuttles to all three hotels!', 'Next bus is on its way!', 'Watch your step getting off!', 'Security is just this way!'],
   });
   const staff = (role, kind, x, y, z, yaw) => data.staffSpots.push({ role, kind, land: 'Plaza', seed: 0, cf: cf(x, y, z, yaw) });

@@ -8,6 +8,7 @@ import { buildModel } from './geom.js';
 import { Figure } from './people/figure.js';
 import { CAR_PARTS, CAR_COLORS } from './entrance.js';
 import { PARKWAY, EAST_LINK, WEST_LINK } from './resort.js';
+import { HAUNT_OVER } from './season.js';
 
 const ROAD = 0.34;
 const DEC = 10; // braking, studs/s²
@@ -150,11 +151,11 @@ function wrapTexture() {
     g.fill();
     g.textBaseline = 'middle';
     g.fillStyle = '#ff7a1a';
-    g.font = '900 64px "Arial Black", Arial, sans-serif';
-    g.fillText('BENTON HAUNT', 24, 50);
+    g.font = `900 ${HAUNT_OVER ? 52 : 64}px "Arial Black", Arial, sans-serif`;
+    g.fillText(HAUNT_OVER ? 'THANKS FOR SCREAMING!' : 'BENTON HAUNT', 24, 50);
     g.fillStyle = '#f2f2ee';
     g.font = '700 28px Arial, sans-serif';
-    g.fillText('6 HOUSES · 6 SCARE ZONES · THROUGH NOV 2', 26, 104);
+    g.fillText(HAUNT_OVER ? 'BENTON HAUNT RETURNS NEXT FALL' : '6 HOUSES · 6 SCARE ZONES · THROUGH NOV 2', 26, 104);
   });
 }
 
