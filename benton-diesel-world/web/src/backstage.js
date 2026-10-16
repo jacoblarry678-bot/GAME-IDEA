@@ -6,11 +6,12 @@
 // built in houses.js. A production yard (trailers, a generator, the makeup
 // tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
-import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS, FD_OPEN } from './season.js';
 // the soundstages are clear of the haunt by the holidays
 const STAGES_CLEAR = CHRISTMAS || XMAS_OVER;
 
-export const BS = { x0: -250, x1: 250, z0: -700, z1: -405 };
+// (the lot runs further east once Stage 6 is built for Final Destination)
+export const BS = { x0: -250, x1: FD_OPEN ? 350 : 250, z0: -700, z1: -405 };
 const GATE = { x0: -81, x1: -44 }; // between the wall pillars at x -83.3 and -41.7
 const G = 0.1; // top of the backstage paving
 export const STAGE_Z = -605; // front faces of the soundstages
@@ -24,7 +25,9 @@ export const HOUSES = [
   { name: 'FINAL CUT: A HOLLYWOOD HORROR', title: 'Final Cut: A Hollywood Horror', theme: 'film', color: 0x6a1a22, glow: 0xffd27a },
   { name: 'CRASH TEST', title: 'Crash Test', theme: 'crash', color: 0x2a2a2e, glow: 0xf2c818 },
   { name: 'ENGINE WORKS: MELTDOWN', title: 'Engine Works: Meltdown', theme: 'engine', color: 0x2c2e32, glow: 0xff6a10 },
+  ...(FD_OPEN ? [{ name: "FINAL DESTINATION: DEATH'S DESIGN", title: "Final Destination: Death's Design", theme: 'destination', color: 0x1a1c22, glow: 0xe02020 }] : []),
 ];
+const HOUSE_COUNT = HOUSES.length + 1; // and the tent at Family Landing
 
 export function buildBackstage(data) {
   const mats = data.materials;
@@ -88,7 +91,7 @@ export function buildBackstage(data) {
     add([gw, 3.4, 2], [gx, G + 20.6, -409], BLACK, 'Metal', { collide: 0 });
     sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -407.9], BLACK, ORANGE, 'Back', 'GothamBlack', true);
     sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -410.1], BLACK, ORANGE, 'Front', 'GothamBlack', true);
-    sign('NOW OPEN  ·  6 HOUSES  ·  7 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
+    sign(`NOW OPEN  ·  ${HOUSE_COUNT} HOUSES  ·  7 SCARE ZONES  ·  THROUGH NOV 2`, [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
     for (const x of [GATE.x0 - 4, GATE.x1 + 4]) {
       box([2.4, 1.6, 2.4], [x, G, -412], 0x2a2a2e, 'Metal');
       data.tags.Searchlight.push([x, G + 2.2, -412, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
@@ -170,7 +173,7 @@ export function buildBackstage(data) {
     add([26, 4, 2], [x, G + Hs + 6, STAGE_Z - 1], TAN, 'Concrete', { collide: 0 });
     add([10, 3, 2], [x, G + Hs + 9.5, STAGE_Z - 1], TAN, 'Concrete', { collide: 0 });
     for (const dx of [-34, -23, 23, 34]) box([3, Hs, 1.2], [x + dx, G, STAGE_Z + 0.5], MAROON, 'Concrete', { collide: 0 });
-    sign(`STAGE ${21 + i}`, [7, 2, 0.2], [x - 28.5, G + 33, STAGE_Z + 1.2], MAROON, WHITE, 'Back', 'GothamBold');
+    sign(i === 5 ? 'STAGE 6' : `STAGE ${21 + i}`, [7, 2, 0.2], [x - 28.5, G + 33, STAGE_Z + 1.2], MAROON, WHITE, 'Back', 'GothamBold');
     // the house name hangs high on the stage (the middle stage carries the
     // big Benton Haunt banner instead)
     if (HAUNT_OVER) {
@@ -181,7 +184,7 @@ export function buildBackstage(data) {
     }
     if (i === 2) {
       sign('BENTON HAUNT', [54, 9, 0.3], [x, G + 29, STAGE_Z + 0.4], BLACK, ORANGE, 'Back', 'GothamBlack');
-      sign('6 HOUSES  ·  7 SCARE ZONES  ·  THROUGH NOVEMBER 2', [54, 2.6, 0.3], [x, G + 22.6, STAGE_Z + 0.4], BLACK, WHITE, 'Back', 'GothamBold');
+      sign(`${HOUSE_COUNT} HOUSES  ·  7 SCARE ZONES  ·  THROUGH NOVEMBER 2`, [54, 2.6, 0.3], [x, G + 22.6, STAGE_Z + 0.4], BLACK, WHITE, 'Back', 'GothamBold');
     } else {
       sign(house.name, [44, 4.4, 0.3], [x, G + 27, STAGE_Z + 0.4], BLACK, ORANGE, 'Back', 'GothamBlack');
     }
@@ -189,7 +192,7 @@ export function buildBackstage(data) {
     // the finished house facade in front of the door, lit and fogged
     const fz = STAGE_Z + 4;
     const T = house.theme;
-    const wallMat = { garage: 'CorrodedMetal', mine: 'Slate', film: 'SmoothPlastic', crash: 'SmoothPlastic', engine: 'DiamondPlate' }[T];
+    const wallMat = { garage: 'CorrodedMetal', mine: 'Slate', film: 'SmoothPlastic', crash: 'SmoothPlastic', engine: 'DiamondPlate', destination: 'SmoothPlastic' }[T];
     for (const sx of [-1, 1]) box([12.5, 18, 1.2], [x + sx * 9.75, G, fz], house.color, wallMat);
     box([7, 8.6, 1.2], [x, G + 9.4, fz], house.color, wallMat);
     for (const sx of [-1, 1]) box([0.6, 10, 4], [x + sx * 3.8, G, fz - 2], 0x101012, 'SmoothPlastic');
@@ -237,6 +240,23 @@ export function buildBackstage(data) {
       for (const dx of [-15, -13.4, 13.4, 15]) box([1, 18, 1], [x + dx, G, fz + 1.2], 0x5a5e66, 'Metal', { shape: 5, collide: 0 });
       for (const sx of [-1, 1]) add([0.4, 9.4, 0.3], [x + sx * 3.7, G + 4.7, fz + 0.75], 0xff6a10, 'Neon', { collide: 0 });
       add([7.8, 0.4, 0.3], [x, G + 9.6, fz + 0.75], 0xff6a10, 'Neon', { collide: 0 });
+    } else if (T === 'destination') {
+      // the way in is Gate 47: a departures board over the door, Flight
+      // 180's tail fin and an engine in the wreckage, a log from Route 23
+      const board = add([15, 5.6, 0.3], [x, G + 12.2, fz + 0.9], BLACK, 'SmoothPlastic', { collide: 0 });
+      data.signs.push({ part: board, face: 'Back', glow: true, labels: [
+        ['DEPARTURES  ·  GATE 47', 0.02, 0xffc040], ['180   PARIS   DELAYED', 0.27, 0xe02020], ['23   ROUTE 23   CANCELLED', 0.51, 0xe02020], ['13   YOUR NAME   ON TIME', 0.75, WHITE],
+      ].map(([text, y, color]) => ({ text, x: 0, y, w: 1, h: 0.22, color, font: 'GothamBold', align: 'Center', stroke: false, pad: 0.1 })) });
+      add([1.2, 14, 16], [x - 22, G + 7, fz + 9], 0xe8e8e4, 'SmoothPlastic', { shape: 1, collide: 1, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
+      sign('180', [5, 3, 0.2], [x - 24, G + 5, fz + 9.75], 0xe8e8e4, 0xc81e1e, 'Back', 'GothamBlack');
+      add([15, 1.2, 0.3], [x - 22, G + 1.6, fz + 9.7], 0x1a2a5a, 'SmoothPlastic', { collide: 0 });
+      add([7, 6, 6], [x + 20, G + 3.2, fz + 7], 0xb8bcc4, 'Metal', { shape: 2, rot: disk });
+      add([0.4, 4.6, 4.6], [x + 20, G + 3.2, fz + 10.6], 0x101012, 'Metal', { shape: 2, rot: disk, collide: 0 });
+      add([1.6, 1.6, 1.6], [x + 20, G + 3.2, fz + 10.2], 0xff6a20, 'Neon', { shape: 3, collide: 0 });
+      data.tags.SteamVent.push([x + 20, G + 6.4, fz + 9, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
+      add([14, 2.4, 2.4], [x + 12, G + 1.2, fz + 14], 0x7a5434, 'Wood', { shape: 2, rot: [0.95, 0, 0.3, 0, 1, 0, -0.3, 0, 0.95] });
+      for (let k = 0; k < 9; k++) add([3.4, 0.3, 0.1], [x - 14 + k * 3.5, G + 3 + (k % 2) * 0.4, fz + 0.8], k % 2 ? BLACK : 0xf2c818, 'SmoothPlastic', { collide: 0 });
+      for (const dx of [-12.5, 12.5]) add([0.8, 0.8, 0.8], [x + dx, G + 18.4, fz + 1], 0xe02020, 'Neon', { shape: 3, collide: 0 });
     }
 
     // the queue: turf, a finished switchback of barricades, black covers out
@@ -378,8 +398,8 @@ export function buildBackstage(data) {
     ];
   }
   data.staff.lines.haunt = [
-    'Welcome to Benton Haunt!', 'All six houses are open tonight!', 'Check the app for house wait times!',
-    "You didn't see anything back here...", 'Five houses in these stages, one more in a tent at Family Landing!', 'Seven scare zones - try Fortnitemares at Family Landing!',
+    'Welcome to Benton Haunt!', `All ${HOUSE_COUNT === 7 ? 'seven' : 'six'} houses are open tonight!`, 'Check the app for house wait times!',
+    "You didn't see anything back here...", FD_OPEN ? "Final Destination is open on Stage 6 - you can't cheat Death!" : 'Five houses in these stages, one more in a tent at Family Landing!', 'Seven scare zones - try Fortnitemares at Family Landing!',
   ];
   return { gate: { x: gx, z: -405 } };
 }
@@ -415,7 +435,7 @@ export class Backstage {
     }
     if (inside && !family && !this.told) {
       this.told = true;
-      this.hooks.toast("Welcome to Benton Haunt! Five of the six houses are open in these soundstages - join a line and walk through if you dare. Through November 2.", 'info');
+      this.hooks.toast(FD_OPEN ? "Welcome to Benton Haunt! Six of the seven houses are open in these soundstages, including the brand-new Final Destination: Death's Design on Stage 6 at the east end. You can't cheat Death..." : "Welcome to Benton Haunt! Five of the six houses are open in these soundstages - join a line and walk through if you dare. Through November 2.", 'info');
     }
     this.next -= dt;
     if (this.next <= 0) {

@@ -49,6 +49,24 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Final Destination: Death's Design is open (browser only):** Stage 6
+  is finished at the east end of the backstage lot (the lot now runs out
+  to it), making Benton Haunt 7 houses. Out front: a "Gate 47" facade with
+  a departures board over the door ("180 PARIS DELAYED · 23 ROUTE 23
+  CANCELLED · 13 YOUR NAME ON TIME"), Flight 180's tail fin, a smoking jet
+  engine, a log from Route 23 and caution tape, plus the usual turf
+  switchback queue. Inside, seven rooms of Death's design: the Gate 47
+  lounge (rain on the windows, "no survivors" on the news), the Flight 180
+  cabin tearing open (oxygen masks down, fires in the aisle), Route 23
+  (logs rolling overhead, wrecked cars, brake lights), Devil's Flight
+  (carnival bulbs, track overhead, cars hanging off it), the Sun Shop
+  tanning salon ("max 13 min", timer broken), North Bay Bridge (orange
+  girders, cracks in the deck) and the morgue, where Bludworth keeps the
+  List. New scare actors: a sooty flight attendant, burned passengers, a
+  Route 23 trucker with a chain, a grinning Devil's Flight operator, a
+  sunburned tanner in UV goggles, Bludworth with his cane, and Death's
+  shadow. It has the longest wait in the haunt; billboards and the
+  shuttle wraps now say 7 houses.
 - **Benton Haunt is back, with Fortnitemares (browser only):** it's fall
   again. All six houses reopen (the five soundstage houses backstage and
   Lights Out at Lakeside at Family Landing), Graveyard Grub is serving

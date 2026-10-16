@@ -323,6 +323,72 @@ const ROOMS = {
       twoActors(R, ['welder', 'welder'], 0x5a6a5a, 'Metal');
     } },
   ],
+  destination: [
+    { wall: [0x5a6a7a, 'SmoothPlastic'], floor: 0x2a2e3a, light: 0xfff0d0, dress: (R) => { // Gate 47: the premonition starts here
+      R.sign(4, 1, 'GATE 47  ·  FLIGHT 180  ·  PARIS', 6, 1.2, 8, 0x0a0a0c, 0xffc040, true);
+      every(R, 4.5, (t, k) => { const sd = k % 2 ? 1 : -1; R.wall(t, sd, 3.4, 1, 1.4, 0x2a3a6a, 'Plastic', { y0: 1 }); R.wall(t, sd, 3.4, 1.6, 0.3, 0x2a3a6a, 'Plastic', { y0: 2 }); R.wall(t, sd, 0.3, 1, 1.2, 0x8a8e96, 'Metal'); }, 3);
+      every(R, 9, (t, k) => R.sign(t, k % 2 ? -1 : 1, k % 3 === 2 ? '180  PARIS  DEATH' : '180  PARIS  DELAYED', 4, 1, 7, 0x0a0a0c, 0xe02020, true), 6);
+      every(R, 10, (t) => R.wall(t, 1, 6, 5, 0.2, 0x1a2a3a, 'Glass', { y0: 3.5 }), 8);
+      R.sign(R.len - 6, -1, 'BREAKING NEWS: NO SURVIVORS', 4.6, 1.2, 6, 0x101418, 0xffffff, true);
+      twoActors(R, ['flightAttendant', 'passenger'], 0x2a3a6a, 'Plastic');
+    } },
+    { wall: [0xd8d8d0, 'SmoothPlastic'], floor: 0x2a3a5a, light: 0xff4020, dress: (R) => { // Flight 180: the cabin tears open
+      every(R, 2.4, (t, k) => { for (const sd of [-1, 1]) { R.wall(t, sd, 1.4, 2.2, 1.9, 0x2a3a6a, 'Fabric', { y0: 0.4 }); R.wall(t - 0.6, sd, 0.3, 3.4, 1.9, 0x2a3a6a, 'Fabric'); } });
+      for (const sd of [-1, 1]) R.wall(R.len / 2, sd, R.len - 2, 1.4, 1.6, 0xe8e8e0, 'SmoothPlastic', { y0: 7.4 });
+      every(R, 3, (t, k) => { const sd = k % 2 ? 1 : -1; R.put(t, sd * 1.7, [0.05, 1.4, 0.05], 6.6, 0xf2f2f2, 'Plastic'); R.put(t, sd * 1.7, [0.4, 0.3, 0.4], 5.8, 0xf2c818, 'SmoothPlastic'); });
+      R.sign(3, 1, 'FASTEN SEATBELT', 2.4, 0.7, 8.6, 0x101012, 0xffd27a, true);
+      every(R, 16, (t, k) => { R.fire(t, k % 2 ? 1 : -1); R.over(t + 1, 2, 0.5, 9.8, 0x1a1a1a, 'CorrodedMetal'); }, 10);
+      every(R, 7, (t, k) => R.fog(t, k % 2 ? 1 : -1), 4);
+      R.wall(R.len - 3, 1, 3, 6, 0.2, 0x050505, 'SmoothPlastic', { y0: 2 }); // the tear in the fuselage
+      twoActors(R, ['passenger', 'flightAttendant'], 0x2a3a6a, 'Fabric');
+    } },
+    { wall: [0x2a2c30, 'Concrete'], floor: 0x18181a, light: 0xff2a1a, dress: (R) => { // Route 23: the logs come loose
+      every(R, 4, (t) => R.put(t, 0, [0.3, 0.04, 2], 0.06, 0xf2c818, 'SmoothPlastic'), 2);
+      every(R, 9, (t, k) => R.put(t, 0, [W2, 1.7, 1.7], 6.5 + (k % 3) * 1.1, 0x7a5434, 'Wood', { shape: 2, turn: (k % 2 ? 0.25 : -0.2) }), 6);
+      every(R, 11, (t, k) => { const sd = k % 2 ? 1 : -1; R.wall(t, sd, 5.4, 2.6, 2, [0x8a2a22, 0x2a4a8a, 0x6a6a6e][k % 3], 'Metal'); R.wall(t - 2.8, sd, 0.2, 0.6, 1.4, 0xff2020, 'Neon', { y0: 1.4 }); }, 4);
+      R.sign(4, -1, 'ROUTE 23  ·  NORTH', 4.4, 1.6, 7.5, 0x1e6a3a, 0xffffff);
+      every(R, 6, (t, k) => R.fog(t, k % 2 ? 1 : -1), 3);
+      hangChains(R, 7, 0x5a5e66);
+      twoActors(R, ['trucker', 'passenger'], 0x6a6a6e, 'Metal');
+    } },
+    { wall: [0x2a0a0a, 'WoodPlanks'], floor: 0x140a0a, light: 0xffb030, dress: (R) => { // Devil's Flight: the restraints give way
+      every(R, 1.6, (t, k) => R.put(t, (k % 2 ? 1 : -1) * 2.7, [0.3, 0.3, 0.3], 9.6, [0xffd040, 0xff3030, 0xffffff][k % 3], 'Neon', { shape: 3 }));
+      for (const sd of [-1.1, 1.1]) R.put(R.len / 2, sd, [0.3, 0.3, R.len - 2], 10.2, 0xb8bcc0, 'Metal');
+      every(R, 14, (t, k) => { R.put(t, 0, [3.6, 2.2, 4.6], 7.6, 0xc81e1e, 'SmoothPlastic', { turn: k % 2 ? 0.3 : -0.3 }); R.put(t, 0, [3.8, 0.3, 0.3], 9, 0x1a1a1a, 'Metal'); }, 7);
+      R.sign(4, 1, "DEVIL'S FLIGHT", 5, 1.6, 7, 0x1a0a0a, 0xff3030, true);
+      R.sign(R.len / 2, -1, 'YOU MUST BE THIS TALL TO DIE', 4, 1, 5, 0xf2c818, 0x1a0a0a);
+      every(R, 13, (t, k) => R.wall(t, k % 2 ? -1 : 1, 0.6, 0.6, 0.3, 0xff2020, 'Neon', { y0: 3 }), 5);
+      twoActors(R, ['coasterOp', 'passenger'], 0x5a1a1a, 'WoodPlanks');
+    } },
+    { wall: [0xe8e0d0, 'SmoothPlastic'], floor: 0x7a7a76, light: 0x6ab8ff, dress: (R) => { // the tanning salon: thirteen minutes
+      every(R, 8, (t, k) => { const sd = k % 2 ? 1 : -1; R.wall(t, sd, 5, 1.8, 2.2, 0xf4f4f0, 'SmoothPlastic'); R.wall(t, sd, 4.8, 0.2, 2, 0x6ab8ff, 'Neon', { y0: 1.8 }); R.wall(t, sd, 5, 0.6, 2.2, 0xf4f4f0, 'SmoothPlastic', { y0: 3.6 }); }, 4);
+      every(R, 10, (t, k) => { R.put(t, 0, [0.1, 0.3, 3.4], 9.4, 0xd8d8d8, 'Metal'); R.put(t, 0, [0.4, 1, 0.4], 9.9, 0x8a8e96, 'Metal'); }, 7);
+      every(R, 12, (t, k) => { const sd = k % 2 ? -1 : 1; R.wall(t, sd, 3, 0.2, 0.9, 0x8a6a4a, 'Wood', { y0: 5.4 }); for (let j = 0; j < 3; j++) R.wall(t - 1 + j, sd, 0.4, 0.9, 0.4, [0xf2c818, 0x2a6ae0, 0xe02020][j], 'Glass', { y0: 5.6 }); }, 10);
+      R.sign(4, -1, 'SUN SHOP TANNING  ·  MAX 13 MIN', 5, 1.2, 7.5, 0x101418, 0x6ab8ff, true);
+      R.sign(R.len - 5, 1, 'TIMER BROKEN', 3, 1, 6.5, 0xf4f0e0, 0xc81e1e);
+      every(R, 9, (t, k) => R.fog(t, k % 2 ? 1 : -1), 5);
+      twoActors(R, ['tanner', 'shadow'], 0xf4f4f0, 'SmoothPlastic');
+    } },
+    { wall: [0xc85a1a, 'Metal'], floor: 0x4a4a4e, light: 0xc0d8ff, dress: (R) => { // North Bay Bridge: it gives way
+      every(R, 6, (t) => { R.over(t, 0.8, 0.8, 9.6, 0xc85a1a, 'Metal'); for (const sd of [-1, 1]) R.wall(t, sd, 0.8, 9.6, 0.8, 0xc85a1a, 'Metal'); });
+      every(R, 3, (t, k) => R.put(t, (k % 3 - 1) * 1.5, [1.2 + (k % 2), 0.05, 0.2], 0.07, 0x050505, 'SmoothPlastic', { turn: k }), 3);
+      for (const sd of [-1, 1]) R.wall(R.len / 2, sd, R.len - 2, 0.3, 0.6, 0x2a4a7a, 'Glass', { y0: 0.05 });
+      R.sign(4, 1, 'NORTH BAY BRIDGE  ·  LANE CLOSED', 5, 1.2, 7, 0xf2c818, 0x1a1a1a);
+      every(R, 5, (t, k) => R.fog(t, k % 2 ? 1 : -1));
+      every(R, 15, (t, k) => R.put(t, (k % 2 ? 1 : -1) * 1.5, [0.1, 6, 0.1], 7, 0x8a8e96, 'Metal', { turn: 0.5 }), 8);
+      twoActors(R, ['passenger', 'shadow'], 0xc85a1a, 'Metal');
+    } },
+    { wall: [0x3a4a48, 'Concrete'], floor: 0x1a2422, light: 0x9affd8, dress: (R) => { // the morgue: Bludworth and the List
+      every(R, 3.2, (t, k) => { for (const y of [1, 3.2, 5.4]) R.wall(t, k % 2 ? 1 : -1, 2.8, 2, 0.3, 0x8a9096, 'Metal', { y0: y }); }, 3);
+      every(R, 12, (t, k) => { R.put(t, 0, [1.8, 0.8, 4.4], 2.6, 0x8a9096, 'Metal'); R.put(t, 0, [1.4, 0.6, 4], 3.2, 0x1a1a1c, 'Plastic'); }, 8);
+      every(R, 2, (t, k) => R.wall(t, -1, 0.9, 0.7, 0.05, 0xf4f0e0, 'SmoothPlastic', { y0: 5 + (k % 3) * 1.1 }), R.len - 14);
+      R.put(R.len - 8, -(HALF - 0.4), [0.05, 0.08, 10], 6.3, 0xc81e1e, 'Neon');
+      R.sign(R.len - 8, -1, 'THE LIST', 3, 0.9, 8.6, 0x101012, 0xc81e1e, true);
+      R.sign(5, 1, "YOU CAN'T CHEAT DEATH", 5, 1.2, 8, 0x101012, 0xe02020, true);
+      every(R, 10, (t, k) => R.fog(t, k % 2 ? 1 : -1), 5);
+      twoActors(R, ['bludworth', 'shadow'], 0x8a9096, 'Metal');
+    } },
+  ],
   lodge: [
     { wall: [0x5a3a24, 'WoodPlanks'], floor: 0x2a1a10, light: 0xffb040, dress: (R) => { // the lodge hall
       R.sign(4, 1, 'WELCOME TO CAMP LAKESIDE', 5, 1.2, 7.5, 0x3a2418, 0xffb040);
@@ -497,6 +563,7 @@ export function buildHouses(data, familyLayout) {
     crash: 'Buckle up. The dummies have stopped taking the hits.',
     engine: 'The old Benton Engine Works never really shut down. Something is still working the night shift.',
     lodge: 'When the fountain lights go dark, the lake gives something back.',
+    destination: "Your flight is delayed... permanently. Walk through Death's design: Flight 180, Route 23, Devil's Flight, the tanning salon, North Bay Bridge and the List. You can't cheat Death.",
   };
 
   // the five soundstage houses
@@ -521,7 +588,7 @@ export function buildHouses(data, familyLayout) {
       land: 'Studios', theme: h.theme, glow: h.glow, interior,
       outsideIn: [L(0, 6.5), L(0, 2)], outsideOut: [L(STAGE.W / 2 + 4, -6)],
       queueFwd: fwd, signIndex: 1, entrance: [qx0 + 4, QUEUE.z1 + 2.5], origin: [x, 0, F - STAGE.D / 2],
-      baseWait: [80, 65, 95, 70, 85][i], description: DESCRIPTIONS[h.theme], speed: WALK * [1, 0.92, 0.85, 0.96, 0.88][i],
+      baseWait: [80, 65, 95, 70, 85, 110][i], description: DESCRIPTIONS[h.theme], speed: WALK * [1, 0.92, 0.85, 0.96, 0.88, 0.84][i],
     });
   });
 

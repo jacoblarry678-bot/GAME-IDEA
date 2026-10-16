@@ -10,5 +10,7 @@ export const XMAS_OVER = false;
 export const WOLVERINE_OPEN = true;
 // The temporary Mardi Gras bar at the Grand has come down.
 export const MARDI_GRAS = false;
-// Final Destination: Death's Design is still going up on Stage 6.
-export const FD_BUILDING = true;
+// Final Destination: Death's Design is finished and open on Stage 6, the
+// new soundstage at the east end of the backstage lot.
+export const FD_BUILDING = false;
+export const FD_OPEN = true;
