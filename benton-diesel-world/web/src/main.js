@@ -24,6 +24,7 @@ import { buildHouses, HouseWalks } from './houses.js';
 import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
+import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
@@ -93,6 +94,8 @@ async function main() {
   const scareZones = HAUNT_OVER ? [] : buildScareZones(data);
   // the hotels, the Benton Parkway and the shuttle Transit Center
   const resort = buildResort(data);
+  // Fast & Furious: Benton Street Run, under construction past Velocity City
+  const ffLayout = buildFastFurious(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -203,6 +206,7 @@ async function main() {
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
+  const ffSite = new FastFuriousSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout);
   const backstage = new Backstage({ family: FB, sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
 
   game.applyWear = () => {
@@ -389,6 +393,7 @@ async function main() {
     if (started) scares.update(dt, camera.position, player.pos);
     entrance.update(dt, camera.position, player.pos);
     backstage.update(dt, player.pos, started);
+    ffSite.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);

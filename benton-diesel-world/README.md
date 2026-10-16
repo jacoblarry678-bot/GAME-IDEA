@@ -49,6 +49,17 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Fast & Furious: construction has started (browser only):** past
+  Velocity City's east wall, the show building for Fast & Furious: Benton
+  Street Run is going up: a huge warehouse (160 by 200 studs, 50 high) whose
+  north end is clad and carries a giant "Fast & Furious" banner facing the
+  park, while the south end is still a red steel frame with roof trusses
+  going in and track footings poured inside. Two tower cranes (one lifting
+  a beam), an excavator digging the launch pit, a dump truck, a mixer,
+  steel and cladding stacks, the site office, a covered car on a trailer
+  ("do not uncover") and hard-hat crews fill the fenced site. In the park,
+  a painted construction wall and a locked construction gate in the east
+  wall tease the ride, and two billboards on the parkway announce it.
 - **Benton Haunt has ended (browser only):** the event closed after November 2.
   The houses are coming out of the soundstages: each facade is down to a
   stub, its sign lies face up in the debris, and dumpsters, scissor lifts
