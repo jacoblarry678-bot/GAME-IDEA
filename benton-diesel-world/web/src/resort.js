@@ -155,6 +155,7 @@ const ADS_NEWYEAR = [
 // Wolverine is open, and Mardi Gras at the Grand
 const ADS_MARDI = [
   { title: 'WOLVERINE', sub: 'THE CLAWS ARE OUT  ·  NOW OPEN', foot: 'BACKWOODS  ·  BENTON DIESEL WORLD', art: 'skull', fg: 0xf2c818 },
+  { title: 'FINAL DESTINATION', sub: "DEATH'S DESIGN  ·  COMING TO BENTON HAUNT", foot: 'CONSTRUCTION NOW UNDERWAY  ·  NEXT FALL', art: 'skull', fg: 0xe02020 },
   { title: 'MARDI GRAS AT THE GRAND', sub: "KING CAKE · BEIGNETS · PO'BOYS", foot: 'LIMITED TIME  ·  BENTON DIESEL GRAND HOTEL', art: 'moon', fg: 0xb070ff },
   { title: 'AN 80-STUD TOP HAT', sub: 'RIDE WOLVERINE TODAY', foot: 'NOW OPEN AT BENTON DIESEL WORLD', art: 'moon', fg: 0x3a6aff },
   { title: 'LAISSEZ LES BONS TEMPS ROULER', sub: 'MARDI GRAS BAR  ·  HURRICANE PUNCH', foot: 'BENTON DIESEL GRAND HOTEL', art: 'moon', fg: 0xf0c030 },

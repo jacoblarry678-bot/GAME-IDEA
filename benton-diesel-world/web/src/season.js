@@ -12,3 +12,6 @@ export const XMAS_OVER = true;
 export const WOLVERINE_OPEN = true;
 // Mardi Gras: a temporary bar at the Benton Diesel Grand Hotel.
 export const MARDI_GRAS = true;
+// Construction has started on next fall's first Benton Haunt house,
+// Final Destination: Death's Design, on a new Stage 6 past the backstage lot.
+export const FD_BUILDING = true;

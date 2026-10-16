@@ -26,7 +26,8 @@ import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas } from './christmas.js';
-import { CHRISTMAS, XMAS_OVER, WOLVERINE_OPEN, MARDI_GRAS } from './season.js';
+import { CHRISTMAS, XMAS_OVER, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
+import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
 import { buildMardiGras } from './mardigras.js';
 import { buildWolverine, WolverineSite } from './wolverine.js';
 import { Transit } from './transit.js';
@@ -107,6 +108,8 @@ async function main() {
   const wvLayout = WOLVERINE_OPEN ? buildWolverine(data) : null;
   // Mardi Gras: a temporary bar at the Grand
   if (MARDI_GRAS) buildMardiGras(data);
+  // Final Destination, going up on Stage 6 for next fall's Benton Haunt
+  const fdLayout = FD_BUILDING ? buildFinalDestination(data) : null;
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -219,6 +222,7 @@ async function main() {
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
+  const fdSite = fdLayout ? new FinalDestinationSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, fdLayout) : null;
   const wvSite = wvLayout ? new WolverineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wvLayout) : null;
   const ffSite = new FastFuriousSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout);
   const backstage = new Backstage({ family: FB, sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
@@ -413,6 +417,7 @@ async function main() {
     backstage.update(dt, player.pos, started);
     ffSite.update(dt, player.pos, started);
     wvSite?.update(dt, player.pos, started);
+    fdSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);

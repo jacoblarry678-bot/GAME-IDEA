@@ -49,6 +49,20 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Final Destination construction (browser only):** work has started on
+  next fall's first Benton Haunt house, Final Destination: Death's Design,
+  on a brand-new Stage 6 east of the backstage lot. The steel frame is up,
+  the back half is clad and roofed, a tower crane is lifting the next roof
+  panel, and the first set walls (Gate 47, Flight 180 to Paris) are going
+  up inside. Out in the fenced yard the sets are being built: a Volée
+  Airlines Flight 180 fuselage on cradles (nose on one end, a torn,
+  wire-tangled wreck on the other, tail fin "180" on the ground), a Route 23
+  log truck with one log already rolled off, a derailed Devil's Flight
+  coaster car, a tanning bed with its lid up, North Bay Bridge girders,
+  crates marked "13" and "McKinley", a departures board ("180 PARIS
+  DELAYED · 13 YOUR NAME ON TIME") and a site office with "Days without an
+  accident: 0". A teaser board by the Velocity City wall, a banner on the
+  stage and the billboards announce it.
 - **Wolverine is open (browser only):** the new coaster past Backwoods is
   finished. A path leads from the Backwoods plaza, round the south side of
   the Rapids, to a new gate in the west wall under a claw-slashed
