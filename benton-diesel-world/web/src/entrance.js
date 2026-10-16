@@ -22,6 +22,7 @@ const STALL_XS = [100, 120, 140, 160, 180, 200, 220, 240, 260, 280];
 const NEW_ROWS = [474, 500, 526, 552]; // rows added south of the original lot
 const BOOTH_Z = 604;
 const ROAD_END = 720;
+const PARKWAY_WB = 649, PARKWAY_EB = 661; // the Benton Parkway's lanes (see resort.js)
 const CONE_LINES = [[-21, 598, 562], [-7, 598, 436], [7, 598, 386], [21, 598, 386]];
 const ISLANDS = [-21, -7, 7, 21];
 const LAMPS = [[-150, 0], [150, 0]]; // no lamps in the stalls
@@ -280,7 +281,7 @@ function postGeometry() {
 }
 
 // the same simple car the park builder parks in the lot
-const CAR_PARTS = (bodyColor) => {
+export const CAR_PARTS = (bodyColor) => {
   const P = (sx, sy, sz, x, y, z, color, mat, shape = 0) => [shape, sx, sy, sz, x, y, z, 1, 0, 0, 0, 1, 0, 0, 0, 1, color, mat, 0, 0];
   return (mi) => [
     P(6.5, 2.4, 11, 0, 2.1, 0, bodyColor, mi('SmoothPlastic')),
@@ -289,7 +290,7 @@ const CAR_PARTS = (bodyColor) => {
     ...[[-3.2, -3.6], [-3.2, 3.6], [3.2, -3.6], [3.2, 3.6]].map(([x, z]) => P(0.8, 2.6, 2.6, x, 1.3, z, 0x191919, mi('Rubber'), 2)),
   ];
 };
-const CAR_COLORS = [0xc42828, 0x1e6ee6, 0xf0f0f0, 0x1e1e22, 0xf0c440, 0x78828c, 0x40a048, 0x8a2a2a, 0xd0d4da];
+export const CAR_COLORS = [0xc42828, 0x1e6ee6, 0xf0f0f0, 0x1e1e22, 0xf0c440, 0x78828c, 0x40a048, 0x8a2a2a, 0xd0d4da];
 
 export class Entrance {
   constructor({ scene, data, layout, people, staff, hooks }) {
@@ -393,12 +394,38 @@ export class Entrance {
     if (!stall) return;
     stall.taken = true;
     const lx = tier.lane;
+    // up the road from the south, or off the Benton Parkway from either way
+    const from = this.rand();
+    const prefix = from < 0.4 ? [[lx, ROAD_END + 20]]
+      : from < 0.7 ? [[-780, PARKWAY_EB], [lx - 10, PARKWAY_EB], [lx, PARKWAY_EB - 10]]
+        : [[780, PARKWAY_WB], [lx + 10, PARKWAY_WB], [lx, PARKWAY_WB - 6]];
+    const pts = [...prefix, ...this.routeIn(stall, tier)].map(([x, z]) => new THREE.Vector3(x, GROUND, z));
+    const yaw = from < 0.4 ? 0 : from < 0.7 ? -Math.PI / 2 : Math.PI / 2;
+    this.cars.push({ state: 'drive', pts, seg: 0, b: prefix.length - 1, pos: pts[0].clone(), yaw, speed: 0, color: CAR_COLORS[Math.floor(this.rand() * CAR_COLORS.length)], stall, lane: lx, stopped: 0, boothDone: false });
+  }
+
+  // from the toll booth to a stall: down the coned lane, along the aisle
+  // and nose in
+  routeIn(stall, tier = TIERS.find((t) => t.id === stall.tier)) {
+    const lx = tier.lane;
     const az = aisleZ(stall.row);
-    const pts = [
-      [lx, ROAD_END + 20], [lx, BOOTH_Z + 2], [lx, tier.endZ],
-      [lx, az], [stall.x - Math.sign(stall.x) * 8, az], [stall.x, az - 4], [stall.x, stall.z],
-    ].map(([x, z]) => new THREE.Vector3(x, GROUND, z));
-    this.cars.push({ state: 'drive', pts, seg: 0, pos: pts[0].clone(), yaw: 0, speed: 0, color: CAR_COLORS[Math.floor(this.rand() * CAR_COLORS.length)], stall, lane: lx, stopped: 0, boothDone: false });
+    return [[lx, BOOTH_Z + 2], [lx, tier.endZ], [lx, az], [stall.x - Math.sign(stall.x) * 8, az], [stall.x, az - 4], [stall.x, stall.z]];
+  }
+
+  aisle(stall) {
+    return aisleZ(stall.row);
+  }
+
+  // guests off the shuttle walk from the platform to the shortest bag check line
+  addWalkerFrom(x, z) {
+    const lanes = this.detectors;
+    const lane = lanes.reduce((a, b) => (b.queue.length < a.queue.length ? b : a), lanes[Math.floor(this.rand() * lanes.length)]);
+    const seed = 30000 + Math.floor(this.rand() * 1e6);
+    const pts = [[x, SECURITY.front + 8], [lane.x, SECURITY.front + 8], [lane.x, SECURITY.front + 3]];
+    this.walkers.push({
+      seed, lane, pts: pts.map(([px, pz]) => new THREE.Vector3(px, GROUND, pz)), seg: 0,
+      pos: new THREE.Vector3(x, GROUND, z), yaw: Math.PI / 2, cycle: this.rand(), phase: 'approach', wait: 0, speed: 3.8 + this.rand() * 1.2,
+    });
   }
 
   // guests leave their car and head for security
@@ -503,8 +530,9 @@ export class Entrance {
         for (let k = 0; k < n; k++) this.addWalker(c.stall);
         continue;
       }
+      const b = c.b || 0; // points before the one at the booth's lane entry
       // pause at the toll booth
-      if (!c.boothDone && c.seg === 1 && c.pos.z <= BOOTH_Z + 2.5) {
+      if (!c.boothDone && c.seg === 1 + b && c.pos.z <= BOOTH_Z + 2.5) {
         c.stopped += dt;
         c.speed = 0;
         if (c.stopped < 1.6) continue;
@@ -512,14 +540,15 @@ export class Entrance {
       }
       // keep a gap behind the car ahead in the same lane
       let blocked = false;
-      if (c.seg <= 2) {
+      if (c.seg >= b && c.seg <= 2 + b) {
         for (const o of this.cars) {
-          if (o === c || o.state !== 'drive' || o.lane !== c.lane || o.seg > 2) continue;
+          const ob = o.b || 0;
+          if (o === c || o.state !== 'drive' || o.lane !== c.lane || o.seg > 2 + ob || o.seg < ob) continue;
           const ahead = c.pos.z - o.pos.z;
           if (ahead > 0 && ahead < 14) { blocked = true; break; }
         }
       }
-      const turning = c.seg >= 3;
+      const turning = c.seg >= 3 + b || (b > 0 && c.seg >= 1 && c.seg < b);
       const want = blocked ? 0 : turning ? 6 : 13;
       c.speed += (want - c.speed) * Math.min(1, dt * 2.5);
       const d = this.v.copy(target).sub(c.pos);

@@ -49,6 +49,24 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Hotels and getting around (browser only):** past the lot, the Benton
+  Parkway runs by three hotels: the Benton Diesel Grand (a 15-story tower
+  with a porte-cochère, a fountain and a pool deck), the Haulers Roadside
+  Inn (a two-story motel with a big-rig roadside sign and a neon VACANCY)
+  and the Backwoods Lodge (a log lodge with cabins, pines and a campfire).
+  Free Benton Shuttle buses, wrapped in Benton Haunt ads, loop the Benton
+  Transit Center beside security and all three hotels, keeping right and
+  stopping at each stop, where guests wait and climb aboard. Walk up to any
+  stop and press E to wait for the next bus (the stop shows when it is
+  due, in real minutes), ride it with the other guests and press E at any
+  stop to get off. Your car can drive you too: at your car, pick a hotel
+  (F changes where) and press E to drive there along the parkway, then
+  drive back through the toll plaza into the lot. Cars come and go on the
+  parkway, and arriving guests turn off it into the toll plaza.
+- **Benton Haunt billboards (browser only):** 16 lit billboards along the
+  parkway, the access road and the connector roads advertise Benton Haunt
+  and its houses and scare zones, with a glowing moon, a jack-o'-lantern
+  or a skull standing out from each board.
 - **Overdrive, now open (browser only):** the new coaster beside Diesel
   Thunder. Part of the park's west wall came down and Diesel District now
   runs out onto the hills beyond. Guests come in through a brick arch with

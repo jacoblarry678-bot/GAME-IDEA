@@ -451,7 +451,7 @@ export class UI {
     body.append(h('h4', {}, 'Getting around'));
     body.append(h('div', { class: 'row' },
       h('button', { class: 'btn small', onclick: () => { g.teleportHome(); this.closeModal(); } }, '🚪 Back to the Main Gate'),
-      h('button', { class: 'btn small ghost', onclick: () => { if (!g.player.riding) g.entrance?.toCar(g.player); this.closeModal(); } }, '🚗 Back to my car')));
+      h('button', { class: 'btn small ghost', onclick: () => { if (!g.player.riding) (g.transit || g.entrance)?.toCar(g.player); this.closeModal(); } }, '🚗 Back to my car')));
     body.append(h('h4', {}, 'Controls'));
     body.append(h('div', { class: 'help', html: HELP }));
     let armed = false;
@@ -494,6 +494,10 @@ export class UI {
 
   // -------------------------------------------------------------- prompts
   findPrompt(pos) {
+    // bus stops, the shuttle you're on, and your car
+    const tp = this.g.transit?.prompt(pos);
+    if (tp) return { kind: 'transit', t: tp };
+    if (this.g.transit?.trip) return null;
     let best = null, bestD = 14;
     for (const ride of this.cfg.Rides) {
       const d = Math.hypot(pos.x - ride.entrance[0], pos.z - ride.entrance[2]);
@@ -510,7 +514,7 @@ export class UI {
   updatePrompt(pos, riding) {
     const el = $('#prompt');
     const p = riding || this.venueOpen ? null : this.findPrompt(pos);
-    const key = p ? (p.kind === 'ride' ? `r:${p.ride.id}` : `v:${p.venue.id}`) : '';
+    const key = p ? (p.kind === 'ride' ? `r:${p.ride.id}` : p.kind === 'transit' ? `t:${p.t.key}` : `v:${p.venue.id}`) : '';
     this.prompt = p;
     if (!p) { el.hidden = true; this.promptKey = ''; return; }
     el.hidden = false;
@@ -518,7 +522,17 @@ export class UI {
     if (key !== this.promptKey) {
       this.promptKey = key;
       el.replaceChildren();
-      if (p.kind === 'ride') {
+      if (p.kind === 'transit') {
+        el.style.setProperty('--accent', css(p.t.color));
+        this.promptSub = h('div', { class: 'psub' });
+        const keys = ['E', 'F'];
+        const btns = p.t.actions.map((a, i) => {
+          const b = h('button', { class: i ? 'btn ghost' : 'btn', onclick: () => (i ? this.secondary() : this.primary()) }, h('kbd', {}, keys[i]), ` ${a.label}`);
+          b.disabled = !!a.disabled;
+          return b;
+        });
+        el.append(h('div', { class: 'ptitle' }, p.t.title), this.promptSub, h('div', { class: 'pbtns' }, ...btns));
+      } else if (p.kind === 'ride') {
         const land = this.lands.get(p.ride.land);
         el.style.setProperty('--accent', css(land.color));
         this.promptSub = h('div', { class: 'psub' });
@@ -532,6 +546,7 @@ export class UI {
           h('div', { class: 'pbtns' }, h('button', { class: 'btn', onclick: () => this.primary() }, h('kbd', {}, 'E'), p.venue.kind === 'restaurant' ? ' Order Food' : ' Browse Shop')));
       }
     }
+    if (p.kind === 'transit') this.promptSub.textContent = p.t.sub;
     if (p.kind === 'ride') {
       const s = sim.rideState(p.ride.id);
       const inLine = sim.queueRide === p.ride.id;
@@ -546,12 +561,14 @@ export class UI {
   primary() {
     const p = this.prompt;
     if (!p) return;
+    if (p.kind === 'transit') { const a = p.t.actions[0]; if (a && !a.disabled) a.run(); return; }
     if (p.kind === 'ride') this.g.sim.join(p.ride.id, false);
     else this.openVenue(p.venue.id);
   }
 
   secondary() {
     const p = this.prompt;
+    if (p && p.kind === 'transit') { const a = p.t.actions[1]; if (a && !a.disabled) a.run(); return; }
     if (p && p.kind === 'ride') this.g.sim.join(p.ride.id, true);
   }
 
@@ -573,7 +590,12 @@ export class UI {
     // queue / riding pill
     const pill = $('#pill');
     const q = sim.playerQueue();
-    if (sim.ridingRide) {
+    const tp = this.g.transit?.pill();
+    if (tp) {
+      pill.hidden = false;
+      pill.classList.add('riding');
+      $('span', pill).textContent = tp;
+    } else if (sim.ridingRide) {
       pill.hidden = false;
       pill.classList.add('riding');
       const rc = sim.rides.get(sim.ridingRide).cfg;

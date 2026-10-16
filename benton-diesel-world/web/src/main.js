@@ -22,6 +22,8 @@ import { buildBackstage, Backstage } from './backstage.js';
 import { buildFamilyBackstage, buildScareZones, buildHauntFood, FB } from './haunt.js';
 import { buildHouses, HouseWalks } from './houses.js';
 import { ScareActors, HauntLights } from './scare.js';
+import { buildResort } from './resort.js';
+import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
 import { Guide } from './guide.js';
@@ -86,6 +88,8 @@ async function main() {
   const houses = buildHouses(data, familyLayout);
   buildHauntFood(data);
   const scareZones = buildScareZones(data);
+  // the hotels, the Benton Parkway and the shuttle Transit Center
+  const resort = buildResort(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -188,6 +192,11 @@ async function main() {
     scene, data, layout: entranceLayout, people, staff,
     hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) },
   });
+  const transit = new Transit({
+    scene, data, layout: resort, people, entrance, player,
+    hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind), voice: (text) => audio.voice.say(text, { interrupt: true }) },
+  });
+  game.transit = transit;
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
@@ -316,12 +325,18 @@ async function main() {
         });
       }
     }
-    if (player.riding) {
+    if (player.riding && !player.riding.transit) {
       const m = rideVis.seatMatrix(player.riding.id, player.riding.car, player.riding.seat);
       if (m) player.riding.matrix = m;
     }
 
     people.begin(camera.position);
+    // shuttles, parkway traffic and your car
+    transit.update(dt, camera.position);
+    if (player.riding?.transit) {
+      const m = transit.seatMatrix();
+      if (m) player.riding.matrix = m;
+    }
     queueCrowd.update(dt, time, sim.order, camera.position, queueSnap);
     houseWalks.update(sim, now, camera.position);
     queueSnap = false;

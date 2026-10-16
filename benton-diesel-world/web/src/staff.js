@@ -34,6 +34,9 @@ const ROLE_UNIFORM = {
   haunt: { shirt: 0x1c1c20, pants: 0x2a2a30, hat: 0xff7a1a, hardHat: true },
   // scare actors in tattered dark costumes
   scare: { shirt: 0x2a1616, pants: 0x101012, hat: 0x1a0a0a },
+  // hotel bell staff and the shuttle crew
+  hotel: { shirt: 0x7a1a2a, pants: 0x1c1c20, hat: 0x7a1a2a },
+  transit: { shirt: 0x16223a, pants: 0x1c1c20, hat: 0xf2c818 },
 };
 
 function uniform(landColor, cfg, role) {
