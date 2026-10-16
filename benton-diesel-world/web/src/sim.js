@@ -5,6 +5,8 @@ import * as Clock from './clock.js';
 import { QueuePath, slotAt } from './queue.js';
 
 const SAVE_KEY = 'bentonDieselWorld.v1';
+// You have unlimited Express Passes: they never run out.
+export const UNLIMITED_EXPRESS = true;
 
 // Waits are posted in real minutes: a 45 minute wait is 45 minutes of
 // standing in line.
@@ -159,11 +161,11 @@ export class Sim {
     }
     if (this.queueRide) this.leave(true);
     if (express) {
-      if (this.profile.passes <= 0) {
+      if (!UNLIMITED_EXPRESS && this.profile.passes <= 0) {
         this.hooks.toast("You don't have any Express Passes. Buy them at the shops!", 'warn');
         return;
       }
-      this.profile.passes -= 1;
+      if (!UNLIMITED_EXPRESS) this.profile.passes -= 1;
       this.save();
       this.hooks.sound?.('express');
       let at = 0;

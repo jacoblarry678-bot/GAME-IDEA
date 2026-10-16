@@ -2,6 +2,7 @@
 // venue prompts, the queue pill, food hotbar, show captions, the tabbed
 // app panel (waits, map, shows, dining, shops, passport, bag), shop
 // windows and the settings sheet.
+import { UNLIMITED_EXPRESS } from './sim.js';
 import * as Clock from './clock.js';
 import { waitColor } from './world.js';
 
@@ -327,7 +328,7 @@ export class UI {
   renderBag(c) {
     const sim = this.g.sim;
     const p = sim.profile;
-    c.append(h('h3', {}, `${this.cfg.CurrencyShort}${p.bucks}   |   Express Passes: ${p.passes}`));
+    c.append(h('h3', {}, `${this.cfg.CurrencyShort}${p.bucks}   |   Express Passes: ${UNLIMITED_EXPRESS ? '∞' : p.passes}`));
     c.append(h('p', { class: 'note' }, 'Earn Benton Bucks by riding rides, watching shows and spending time in the park.'));
     const slots = [['hat', 'Hats'], ['face', 'Shades'], ['balloon', 'Balloons'], ['held', 'Toys & tools']];
     for (const [slot, title] of slots) {
@@ -413,7 +414,7 @@ export class UI {
       const equipped = owned && sim.profile.equipped[item.kind] === id;
       let tag = '';
       if (item.kind === 'food') tag = `+${item.hunger} hunger${item.buff ? (item.buff.kind === 'speed' ? ' · ⚡ speed' : ' · 🦘 jump') : ''}`;
-      else if (item.kind === 'pass') tag = `You have ${sim.profile.passes}`;
+      else if (item.kind === 'pass') tag = UNLIMITED_EXPRESS ? 'You have unlimited' : `You have ${sim.profile.passes}`;
       const img = h('img', { alt: '', src: this.g.thumbs.get(id) || '' });
       const btn = owned
         ? h('button', { class: `btn small ${equipped ? 'ghost' : ''}`, onclick: () => { sim.equip(item.kind, equipped ? '' : id); this.g.applyWear(); this.renderVenueModal(); } }, equipped ? 'Take off' : 'Wear')
@@ -553,8 +554,8 @@ export class UI {
       this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}`;
       this.promptJoin.replaceChildren(h('kbd', {}, 'E'), inLine ? ' In line ✓' : ' Join Line');
       this.promptJoin.disabled = inLine || s.refurb;
-      this.promptExpress.replaceChildren(h('kbd', {}, 'F'), ` Express Pass (${sim.profile.passes})`);
-      this.promptExpress.disabled = sim.profile.passes <= 0 || s.refurb;
+      this.promptExpress.replaceChildren(h('kbd', {}, 'F'), ` Express Pass (${UNLIMITED_EXPRESS ? '∞' : sim.profile.passes})`);
+      this.promptExpress.disabled = (!UNLIMITED_EXPRESS && sim.profile.passes <= 0) || s.refurb;
     }
   }
 
@@ -579,7 +580,7 @@ export class UI {
     const minute = Clock.minutes();
     this.clockEl.textContent = `🕒 ${Clock.format(minute)}`;
     this.bucksEl.textContent = `${this.cfg.CurrencyShort}${p.bucks}`;
-    this.passesEl.textContent = `🎫 ${p.passes}`;
+    this.passesEl.textContent = `🎫 ${UNLIMITED_EXPRESS ? '∞' : p.passes}`;
     const hunger = sim.hunger / this.cfg.Hunger.Max;
     this.hungerEl.style.width = `${hunger * 100}%`;
     this.hungerChip.classList.toggle('low', sim.hunger <= this.cfg.Hunger.HungryAt);

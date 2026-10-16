@@ -49,6 +49,9 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Unlimited Express (browser only):** your Express Pass never runs out
+  (🎫 ∞): press F at any ride to skip straight to the front of the line.
+  (Set `UNLIMITED_EXPRESS` in `web/src/sim.js` to go back to counted passes.)
 - **Benton Holidays, through January 1 (browser only):** the park is
   decked out for Christmas: a giant decorated tree with presents in the
   Plaza and a "Happy Holidays" sign, decorated trees, piles of presents,
