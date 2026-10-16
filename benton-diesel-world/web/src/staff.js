@@ -37,6 +37,8 @@ const ROLE_UNIFORM = {
   // hotel bell staff and the shuttle crew
   hotel: { shirt: 0x7a1a2a, pants: 0x1c1c20, hat: 0x7a1a2a },
   transit: { shirt: 0x16223a, pants: 0x1c1c20, hat: 0xf2c818 },
+  // Santa's elves
+  elf: { shirt: 0x1e7a32, pants: 0xc8102e, hat: 0x1e7a32 },
 };
 
 function uniform(landColor, cfg, role) {

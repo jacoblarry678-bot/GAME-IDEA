@@ -1,4 +1,4 @@
-import { HAUNT_OVER } from './season.js';
+import { HAUNT_OVER, CHRISTMAS } from './season.js';
 
 // The Benton resort district outside the gate: the Benton Parkway running
 // past the toll plaza, three hotels (the Benton Diesel Grand, the Haulers
@@ -134,8 +134,17 @@ const ADS_OVER = [
   { title: 'HOORAY FOR HOLLYWOOD', sub: 'THE BACKLOT TRAM TOUR', foot: 'BENTON DIESEL WORLD  ·  NEXT EXIT', art: 'moon', fg: 0xffd27a },
 ];
 
+// at Christmas, the holiday ads (and the new ride)
+const ADS_XMAS = [
+  { title: 'HAPPY HOLIDAYS!', sub: 'BENTON HOLIDAYS  ·  THROUGH JANUARY 1', foot: 'BENTON DIESEL WORLD', art: 'moon', fg: 0xff3a3a },
+  { title: 'MEET SANTA', sub: "SANTA'S WORKSHOP IS OPEN", foot: 'BENTON HOLIDAYS  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xf0c040 },
+  { title: 'FAST & FURIOUS', sub: 'BENTON STREET RUN  ·  NOW OPEN', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xff6a1a },
+  { title: 'LIGHTS ON EVERY RIDE', sub: 'SEE THE PARK SPARKLE AFTER DARK', foot: 'BENTON HOLIDAYS  ·  THROUGH JAN 1', art: 'moon', fg: 0x40ff60 },
+  { title: 'STAY FOR THE HOLIDAYS', sub: 'FREE SHUTTLE TO THE PARK', foot: 'BENTON DIESEL GRAND HOTEL', art: 'moon', fg: 0xf0c040 },
+];
+
 // the Benton Haunt ads on the billboards
-const ADS = HAUNT_OVER ? ADS_OVER : [
+const ADS = CHRISTMAS ? ADS_XMAS : HAUNT_OVER ? ADS_OVER : [
   { title: 'BENTON HAUNT', sub: '6 HOUSES  ·  6 SCARE ZONES', foot: 'SELECT NIGHTS THROUGH NOV 2', art: 'moon', fg: ORANGE },
   { title: "DEAD MAN'S GARAGE", sub: 'YOUR CAR IS OVERDUE FOR SERVICE...', foot: 'BENTON HAUNT  ·  NOW OPEN', art: 'skull', fg: 0xff3a20 },
   { title: 'LIGHTS OUT AT LAKESIDE', sub: 'THE LAKE REMEMBERS', foot: 'BENTON HAUNT  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0x9ad8ff },
@@ -166,7 +175,7 @@ export function buildResort(data) {
     }
   };
   Object.assign(data.staff.lines, {
-    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', HAUNT_OVER ? 'Benton Haunt is over - see you next fall!' : 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
+    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', CHRISTMAS ? 'Happy holidays! Santa is at his workshop in the park!' : HAUNT_OVER ? 'Benton Haunt is over - see you next fall!' : 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
     transit: ['Free shuttles to all three hotels!', 'Next bus is on its way!', 'Watch your step getting off!', 'Security is just this way!'],
   });
   const staff = (role, kind, x, y, z, yaw) => data.staffSpots.push({ role, kind, land: 'Plaza', seed: 0, cf: cf(x, y, z, yaw) });

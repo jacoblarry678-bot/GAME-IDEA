@@ -49,6 +49,22 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Holidays, through January 1 (browser only):** the park is
+  decked out for Christmas: a giant decorated tree with presents in the
+  Plaza and a "Happy Holidays" sign, decorated trees, piles of presents,
+  candy canes and snowmen along every walkway, light strands across Main
+  Street and snow falling everywhere. Every coaster has strings of
+  Christmas lights along both rails that chase in red, green, gold, blue
+  and white, and the flat rides have rings of lights. Santa walks the
+  park's walkways with his sack of toys and stops to say hello when you come
+  near. The backstage gate is open again under a candy-cane arch: the yard
+  is snowy, the soundstages have wreaths and a "Happy Holidays" banner, and
+  Santa's Workshop is a red cottage with a snowy roof, a smoking chimney, a
+  sleigh and reindeer, elves, and a velvet-rope line of families. Walk up
+  and press E to meet Santa on his throne: he greets you and has a present
+  for you (B$25) the first time. The billboards and shuttle wraps wish
+  everyone happy holidays. (Set `CHRISTMAS` in `web/src/season.js` to end
+  the event.)
 - **Fast & Furious: Benton Street Run, now open (browser only):** walk
   through the new arch in Velocity City's east wall (with a live wait sign)
   into a courtyard queue with shade sails, posters and a hero car on a

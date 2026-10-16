@@ -495,7 +495,7 @@ export class UI {
   // -------------------------------------------------------------- prompts
   findPrompt(pos) {
     // bus stops, the shuttle you're on, and your car
-    const tp = this.g.transit?.prompt(pos);
+    const tp = this.g.transit?.prompt(pos) || this.g.christmas?.prompt(pos);
     if (tp) return { kind: 'transit', t: tp };
     if (this.g.transit?.trip) return null;
     let best = null, bestD = 14;

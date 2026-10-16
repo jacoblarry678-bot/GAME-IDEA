@@ -25,6 +25,8 @@ import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
+import { buildChristmas, Christmas } from './christmas.js';
+import { CHRISTMAS } from './season.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
@@ -96,6 +98,8 @@ async function main() {
   const resort = buildResort(data);
   // Fast & Furious: Benton Street Run, open past Velocity City
   const ffLayout = buildFastFurious(data);
+  // Benton Holidays: decorations, ride lights and Santa's Workshop
+  const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
@@ -203,6 +207,8 @@ async function main() {
     hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind), voice: (text) => audio.voice.say(text, { interrupt: true }) },
   });
   game.transit = transit;
+  const christmas = xmasLayout ? new Christmas({ scene, data, layout: xmasLayout, people, bubbles, player, sim, hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) } }) : null;
+  game.christmas = christmas;
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
@@ -233,6 +239,7 @@ async function main() {
     location.reload();
   };
   game.clockNow = Clock.now;
+  game.skipClock = (seconds) => Clock.skip(seconds); // handy for debugging
   game.skipTo = (show) => {
     const s = sim.showStatus(show);
     if (s.now || sim.ridingRide) return;
@@ -340,6 +347,7 @@ async function main() {
     people.begin(camera.position);
     // shuttles, parkway traffic and your car
     transit.update(dt, camera.position);
+    christmas?.update(dt, camera.position);
     if (player.riding?.transit) {
       const m = transit.seatMatrix();
       if (m) player.riding.matrix = m;

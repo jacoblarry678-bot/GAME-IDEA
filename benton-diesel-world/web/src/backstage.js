@@ -6,7 +6,7 @@
 // built in houses.js. A production yard (trailers, a generator, the makeup
 // tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
-import { HAUNT_OVER } from './season.js';
+import { HAUNT_OVER, CHRISTMAS } from './season.js';
 
 export const BS = { x0: -250, x1: 250, z0: -700, z1: -405 };
 const GATE = { x0: -81, x1: -44 }; // between the wall pillars at x -83.3 and -41.7
@@ -77,7 +77,7 @@ export function buildBackstage(data) {
   const gx = (GATE.x0 + GATE.x1) / 2, gw = GATE.x1 - GATE.x0;
   data.tags.Searchlight = data.tags.Searchlight || [];
   data.tags.SteamVent = data.tags.SteamVent || [];
-  if (HAUNT_OVER) closedGate();
+  if (HAUNT_OVER && !CHRISTMAS) closedGate(); // (at Christmas the gate is open: christmas.js)
   else for (const x of [GATE.x0 + 1.5, GATE.x1 - 1.5]) {
     box([3, 19, 3], [x, G, -409], BLACK, 'Metal');
     for (let k = 0; k < 3; k++) add([1.6, 1.4, 1.6], [x + (k - 1) * 1.8, G + 0.7, -406.9], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
@@ -173,7 +173,8 @@ export function buildBackstage(data) {
     // big Benton Haunt banner instead)
     if (HAUNT_OVER) {
       // the banners are down; the house's facade and maze are coming out
-      teardown(house, i, x);
+      // (and by Christmas they are long gone)
+      if (!CHRISTMAS) teardown(house, i, x);
       return;
     }
     if (i === 2) {
@@ -305,7 +306,7 @@ export function buildBackstage(data) {
 
   // ---- the production yard along the wall
   // trailers
-  for (const [x, label] of [[-220, 'BENTON HAUNT PRODUCTIONS'], [-180, 'SCENIC & PROPS'], [-140, 'LIGHTING & SOUND']]) {
+  for (const [x, label] of [[-220, CHRISTMAS ? 'BENTON HOLIDAY PRODUCTIONS' : 'BENTON HAUNT PRODUCTIONS'], [-180, 'SCENIC & PROPS'], [-140, 'LIGHTING & SOUND']]) {
     box([26, 10, 8], [x, G + 1.6, -432], 0xf0f0ec, 'SmoothPlastic');
     sign(label, [22, 2, 0.2], [x, G + 8, -436.1], 0xf0f0ec, 0x16223a, 'Front', 'GothamBlack');
     box([6, 7, 7.6], [x + 16.5, G + 1, -432], 0x2a3a5a, 'SmoothPlastic');
@@ -321,12 +322,13 @@ export function buildBackstage(data) {
   for (const x of [tx - 15, tx + 15]) box([0.3, 7, 6], [x, G, tz + (x < tx ? -5 : 5)], WHITE, 'Fabric');
   add([30.4, 4, 8.2], [tx, G + 9, tz - 4.1], WHITE, 'Fabric', { shape: 1, collide: 0, yaw: Math.PI });
   add([30.4, 4, 8.2], [tx, G + 9, tz + 4.1], WHITE, 'Fabric', { shape: 1, collide: 0 });
-  sign(HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
+  sign(CHRISTMAS ? "SANTA'S MAILROOM" : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
   for (let k = 0; k < 4; k++) {
     box([4, 2.6, 1.4], [tx - 9 + k * 6, G, tz + 5], 0xf4f0e8, 'SmoothPlastic', { collide: 0 });
     add([3, 2, 0.1], [tx - 9 + k * 6, G + 4.2, tz + 5.8], 0xfff2d8, 'Neon', { collide: 0 });
   }
   // props waiting to go out: pumpkins, coffins, tombstones, scarecrows, hay
+  if (!CHRISTMAS) {
   for (let k = 0; k < 14; k++) add([1.6, 1.4, 1.6], [80 + (k % 5) * 1.8, G + 0.7 + Math.floor(k / 5) * 1.3, -440 + (k % 2) * 0.8], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
   for (let k = 0; k < 6; k++) box([2.6, 1.2, 6.2], [98 + (k % 2) * 3, G + Math.floor(k / 2) * 1.2, -440], 0x3a2418, 'Wood');
   for (let k = 0; k < 8; k++) {
@@ -349,6 +351,7 @@ export function buildBackstage(data) {
   box([3.4, 3, 3], [190, G + 3.2, -429], 0x2a2a2e, 'Metal', { collide: 0 });
   box([0.4, 8, 3], [190, G, -434], 0x2a2a2e, 'Metal', { collide: 0 });
   box([2.6, 1.2, 6.2], [190, G + 1, -437.4], 0x3a2418, 'Wood', { collide: 0 });
+  }
   // a lighting truss being raised over the queues
   for (const x of [-14, 14]) box([1.2, 16, 1.2], [x, G, -500], 0x8a8e96, 'Metal', { collide: 0 });
   add([30, 1.2, 1.2], [0, G + 16.6, -500], 0x8a8e96, 'Metal', { collide: 0 });
@@ -365,7 +368,7 @@ export function buildBackstage(data) {
     ['work', -200, G, -440, 0], ['idle', -150, G, -440, Math.PI / 2], ['work', 90, G, -437, Math.PI],
     ['work', 120, G, -446, 0], ['idle', gx + 8, G, -416, 0], ['work', 184, G, -449, 0], ['idle', 34, G, -437, 0],
   );
-  for (const [kind, x, y, z, yaw] of crew) data.staffSpots.push({ role: HAUNT_OVER ? 'construction' : 'haunt', kind, land: 'Studios', seed: 0, cf: cf(x, y, z, yaw) });
+  for (const [kind, x, y, z, yaw] of crew) data.staffSpots.push({ role: CHRISTMAS ? 'elf' : HAUNT_OVER ? 'construction' : 'haunt', kind, land: 'Studios', seed: 0, cf: cf(x, y, z, yaw) });
   if (HAUNT_OVER) {
     data.staff.lines.construction = [
       'Sorry, backstage is closed!', 'Benton Haunt is over - thanks for screaming!', 'Watch your step, we are tearing it all down.',
@@ -400,6 +403,10 @@ export class Backstage {
       this.hooks.toast("Family Landing backstage: Benton Haunt's sixth house, Lights Out at Lakeside, is open in this tent. Lights out...", 'info');
     }
     const inside = family || (playerPos.x > BS.x0 && playerPos.x < BS.x1 && playerPos.z > BS.z0 && playerPos.z < BS.z1);
+    if (inside && !family && !this.told && CHRISTMAS) {
+      this.told = true;
+      this.hooks.toast("Welcome to Santa's Workshop! Join the line by the porch and press E to meet Santa. Ho ho ho!", 'reward');
+    }
     if (inside && !family && !this.told && HAUNT_OVER) {
       this.told = true;
       this.hooks.toast('Backstage is closed: Benton Haunt has ended and the crews are tearing down the houses. Thanks for screaming!', 'info');
