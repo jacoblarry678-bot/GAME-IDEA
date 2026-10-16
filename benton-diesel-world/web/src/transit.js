@@ -10,9 +10,9 @@ import { CAR_PARTS, CAR_COLORS } from './entrance.js';
 import { PARKWAY, EAST_LINK, WEST_LINK } from './resort.js';
 
 const ROAD = 0.34;
-const DEC = 7; // braking, studs/s²
-const ALAT = 12; // how hard vehicles corner
-const DWELL = 10; // seconds a bus waits at a stop
+const DEC = 10; // braking, studs/s²
+const ALAT = 20; // how hard vehicles corner
+const DWELL = 6; // seconds a bus waits at a stop
 
 // --------------------------------------------------------------- routes
 // rounded corners: each corner becomes a short curve
@@ -209,7 +209,7 @@ export class Transit {
     this.mi = mi;
 
     // the shuttle loop and its stops
-    this.loop = new Route(layout.loop, { closed: true, vmax: 20 });
+    this.loop = new Route(layout.loop, { closed: true, vmax: 34 });
     // in the order the bus reaches them
     this.stops = layout.stops.map((st) => ({ ...st, s: this.loop.nearestS(st.at[0], st.at[1]), waiting: 2 + Math.floor(Math.random() * 4), nextGuest: 5 + Math.random() * 10 })).sort((a, b) => a.s - b.s);
     const wrap = wrapTexture(), dest = signTexture('BENTON SHUTTLE  FREE');
@@ -243,7 +243,7 @@ export class Transit {
       group.add(seat);
       scene.add(group);
       const s = (k / COUNT) * this.loop.length;
-      this.buses.push({ kind: 'bus', group, seat, route: this.loop, s, v: 0, vmax: 20, half: 18, dwell: 0, next: this.nextStopIndex(s), passengers: 4 + k * 2, x: 0, z: 0, yaw: 0, stuck: 0, ghost: 0 });
+      this.buses.push({ kind: 'bus', group, seat, route: this.loop, s, v: 0, vmax: 34, half: 18, dwell: 0, next: this.nextStopIndex(s), passengers: 4 + k * 2, x: 0, z: 0, yaw: 0, stuck: 0, ghost: 0 });
     }
 
     // traffic on the parkway: instanced cars
@@ -260,13 +260,13 @@ export class Transit {
     this.bodyMesh = this.carMeshes.find((m) => m.material.name === 'paint') || this.carMeshes[0];
     const P = PARKWAY;
     this.lanes = [
-      new Route([[P.x1 + 40, P.wb], [P.x0 - 40, P.wb]], { vmax: 26 }),
-      new Route([[P.x0 - 40, P.eb], [P.x1 + 40, P.eb]], { vmax: 26 }),
+      new Route([[P.x1 + 40, P.wb], [P.x0 - 40, P.wb]], { vmax: 40 }),
+      new Route([[P.x0 - 40, P.eb], [P.x1 + 40, P.eb]], { vmax: 40 }),
     ];
     this.traffic = [];
     for (let k = 0; k < 12; k++) {
       const route = this.lanes[k % 2];
-      this.traffic.push({ kind: 'car', route, s: ((k >> 1) / 6) * route.length + Math.random() * 40, v: 18, vmax: 20 + Math.random() * 6, half: 5.5, color: CAR_COLORS[k % CAR_COLORS.length], x: 0, z: 0, yaw: 0, stuck: 0, ghost: 0, wait: 0 });
+      this.traffic.push({ kind: 'car', route, s: ((k >> 1) / 6) * route.length + Math.random() * 40, v: 18, vmax: 32 + Math.random() * 8, half: 5.5, color: CAR_COLORS[k % CAR_COLORS.length], x: 0, z: 0, yaw: 0, stuck: 0, ghost: 0, wait: 0 });
     }
 
     // your car: parked in the lot (drawn by the entrance) or at a hotel
@@ -343,7 +343,7 @@ export class Transit {
       if (veh.stuck > 6) { veh.ghost = 2.5; veh.stuck = 0; }
     } else veh.stuck = 0;
     // accelerate gently, brake as hard as needed
-    veh.v = want > veh.v ? Math.min(want, veh.v + 4.5 * dt) : Math.max(want, veh.v - 14 * dt);
+    veh.v = want > veh.v ? Math.min(want, veh.v + 9 * dt) : Math.max(want, veh.v - 14 * dt);
     veh.s += veh.v * dt;
     if (route.closed) veh.s = route.wrap(veh.s);
   }
@@ -390,7 +390,7 @@ export class Transit {
       const d = (st.s - b.s + L) % L;
       let between = 0;
       for (const o of this.stops) if (o !== st && (o.s - b.s + L) % L < d) between++;
-      best = Math.min(best, d / 13 + between * DWELL + Math.max(0, b.dwell));
+      best = Math.min(best, d / 22 + between * DWELL + Math.max(0, b.dwell));
     }
     return best;
   }
@@ -465,8 +465,8 @@ export class Transit {
     }
     const car = this.myCar;
     car.at = null;
-    const route = new Route(pts, { vmax: 18, round: 7 });
-    const veh = { kind: 'mine', group: car.group, route, s: 0, v: 0, vmax: 18, half: 5.5, x: car.x, z: car.z, yaw: car.yaw, stuck: 0, ghost: 0 };
+    const route = new Route(pts, { vmax: 32, round: 7 });
+    const veh = { kind: 'mine', group: car.group, route, s: 0, v: 0, vmax: 32, half: 5.5, x: car.x, z: car.z, yaw: car.yaw, stuck: 0, ghost: 0 };
     this.trip = { vehicle: veh, dest };
     car.group.updateMatrixWorld(true);
     this.player.riding = { transit: true, matrix: car.seat.matrixWorld.clone() };
