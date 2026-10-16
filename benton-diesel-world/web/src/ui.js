@@ -184,7 +184,7 @@ export class UI {
   // ---------------------------------------------------------- wait times
   renderWaits(c) {
     const sim = this.g.sim;
-    c.append(h('p', { class: 'note' }, 'Posted waits are worked out live from the real line: the guests ahead of you, how many fit on each train and how long a cycle takes, in park minutes. One park minute is one real second by day (night runs faster). "Last" is how long the most recent guest to board actually waited. Use an Express Pass to skip the line!'));
+    c.append(h('p', { class: 'note' }, 'Posted waits are worked out live from the real line: the guests ahead of you, how many fit on each train and how long a cycle takes. Waits are in real minutes: a 45 min wait is 45 minutes in line, and a long wait means a long line. "Last" is how long the most recent guest to board actually waited. Use an Express Pass to skip the line!'));
     c.append(h('div', { class: 'row' }, h('button', { class: 'btn ghost small', onclick: () => { this.sortWaits = !this.sortWaits; this.refresh(); } }, this.sortWaits ? 'Sort: shortest wait' : 'Sort: by land')));
     let rides = [...this.cfg.Rides];
     if (this.sortWaits) {

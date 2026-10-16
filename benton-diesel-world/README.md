@@ -332,8 +332,9 @@ a super jump.
 ### Park time and wait times
 
 The park has its own clock (top bar). During the day, **one real second is one
-park minute**, so a posted **25 min** wait really is about 25 seconds. Night
-passes four times faster.
+park minute**, and night passes four times faster. Posted wait times, though,
+are **real minutes** (see "Real wait times" above): a 25 min wait is 25 minutes
+in line, unless you use an Express Pass.
 
 Every ride has a real queue line: a railed switchback maze by its entrance
 sign, ending at a boarding gate. You stand in it alongside simulated guests,
