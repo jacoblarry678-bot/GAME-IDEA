@@ -29,7 +29,7 @@ import { buildChristmas, buildXmasTeardown, Christmas } from './christmas.js';
 import { CHRISTMAS, XMAS_OVER, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
 import { buildMardiGras } from './mardigras.js';
-import { buildWolverine, WolverineSite } from './wolverine.js';
+import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
@@ -91,9 +91,10 @@ async function main() {
   // backstage, where the crews are setting up Benton Haunt
   buildBackstage(data);
   const familyLayout = buildFamilyBackstage(data);
-  // Benton Haunt: six walk-through houses, a food stand and six scare zones
+  // Benton Haunt: six walk-through houses, a food stand and seven scare zones
   // (Benton Haunt is over: the houses, the food stand and the scare zones
   // are gone, and the backstages are being torn down)
+  if (WOLVERINE_OPEN) addWolverineWalkway();
   const houses = HAUNT_OVER ? [] : buildHouses(data, familyLayout);
   if (!HAUNT_OVER) buildHauntFood(data);
   const scareZones = HAUNT_OVER ? [] : buildScareZones(data);

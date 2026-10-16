@@ -311,6 +311,8 @@ export const SCARE_ZONES = [
     actors: ['slasher', 'zombieExtra', 'director', 'slasher', 'zombieExtra', 'slasher', 'zombieExtra'] },
   { name: 'BURNOUT BOULEVARD', land: 'Velocity', theme: 'wrecks', path: [130, -120, 215, -180], len: 200, glow: 0xff5a00, ground: 0x1c1a18,
     actors: ['racer', 'pitCrew', 'racer', 'pitCrew', 'racer', 'pitCrew'] },
+  { name: 'FORTNITEMARES', land: 'Family', theme: 'storm', path: [112, 246, 300, 246], len: 170, glow: 0xb04aff, ground: 0x1e1428,
+    actors: ['cubeMonster', 'husk', 'cubeMonster', 'husk', 'cubeMonster', 'husk', 'cubeMonster', 'cubeQueen', 'husk', 'cubeMonster', 'husk', 'cubeMonster', 'husk', 'cubeMonster', 'husk', 'cubeMonster'] },
 ];
 
 // Each zone takes over a stretch of one of the land's main walkways: an
@@ -477,6 +479,77 @@ export function buildScareZones(data) {
         const fx = mx - n[0] * sd * 1.05, fz = mz - n[1] * sd * 1.05;
         for (const u of [-5, 0, 5]) put([0.1, 5, 2.4], fx + d[0] * u, fz + d[1] * u, 2.5, 0x2a1a14, 'Wood', { yaw });
         sign('VACANCY', [0.2, 1.4, 6], [fx, G + 7.4, fz], 0x101012, 0xff2030, sd > 0 ? 'Right' : 'Left', 'GothamBlack', true, yaw);
+      }
+    } else if (T === 'storm') {
+      // Fortnitemares: supply drops, loot llamas, half-built walls and
+      // ramps, purple cubes, the Storm closing in, a crashed Battle Bus
+      const PURP = 0xb04aff, BLUE = 0x2a6ae0, ID = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+      const tilt = (a) => [Math.cos(a), -Math.sin(a), 0, Math.sin(a) * Math.cos(a), Math.cos(a) * Math.cos(a), -Math.sin(a), Math.sin(a) * Math.sin(a), Math.cos(a) * Math.sin(a), Math.cos(a)];
+      const llama = (px, pz, k) => {
+        const L2 = (u, v) => [px + d[0] * u + n[0] * v, pz + d[1] * u + n[1] * v];
+        box([1.6, 1.6, 2.6], [px, G + 1.8, pz], 0x8a4ad8, 'SmoothPlastic', { yaw });
+        put([1.7, 0.3, 1.2], px, pz, 3.45, 0xf2c818, 'SmoothPlastic', { yaw });
+        for (const [u, v] of [[-0.9, -0.5], [-0.9, 0.5], [0.9, -0.5], [0.9, 0.5]]) { const [lx, lz] = L2(u, v); put([0.4, 1.9, 0.4], lx, lz, 0.95, 0x6a2ab8, 'SmoothPlastic', { yaw }); }
+        let [hx, hz] = L2(1.2, 0); put([0.7, 1.8, 0.7], hx, hz, 4, 0x8a4ad8, 'SmoothPlastic', { yaw });
+        [hx, hz] = L2(1.5, 0); put([0.9, 0.9, 1.5], hx, hz, 5.1, 0x8a4ad8, 'SmoothPlastic', { yaw });
+        for (const v of [-0.3, 0.3]) { const [ex, ez] = L2(1.3, v); put([0.2, 0.7, 0.2], ex, ez, 5.9, 0x6a2ab8, 'SmoothPlastic', { yaw }); }
+        // one llama in three is not a pinata
+        for (const v of [-0.3, 0.3]) { const [ex, ez] = L2(2.2, v); put([0.18, 0.18, 0.1], ex, ez, 5.3, k % 3 === 1 ? 0xff1a1a : 0x101012, k % 3 === 1 ? 'Neon' : 'SmoothPlastic', { yaw }); }
+      };
+      beside(5, 7.5, 13, (px, pz, sd, k) => {
+        const j = k % 4;
+        if (j === 0) { // a supply drop, torn open, still smoking blue
+          box([3, 2.6, 3], [px, G, pz], BLUE, 'Metal', { yaw: yaw + k });
+          put([0.2, 2.7, 3.1], px, pz, 1.3, 0xf2c818, 'SmoothPlastic', { yaw: yaw + k });
+          put([3.2, 0.3, 3.2], px + 0.6, pz, 3.2, 0xe8e8f0, 'Metal', { rot: tilt(0.5) });
+          data.tags.SteamVent.push([px, G + 3, pz, ...ID]);
+        } else if (j === 1) llama(px, pz, k);
+        else if (j === 2) { // half-built walls and a ramp
+          box([0.4, 4, 4], [px, G, pz], 0x9a6a3a, 'WoodPlanks', { yaw: yaw + Math.PI / 2 });
+          put([4, 4, 4], px + d[0] * 4, pz + d[1] * 4, 2, 0x8a5a30, 'WoodPlanks', { shape: 1, yaw: yaw + (k % 2 ? 0 : Math.PI) });
+        } else { // a purple cube hovering over its rune
+          put([2.4, 2.4, 2.4], px, pz, 3.6 + (k % 3), PURP, 'Neon', { rot: tilt(0.6 + k) });
+          put([3.6, 0.06, 3.6], px, pz, 0.08, PURP, 'Neon', { yaw: yaw + 0.78 });
+          data.hauntLights.push([px, G + 3, pz, PURP]);
+        }
+      });
+      // the Storm: a wall of purple closing in along the far edge
+      beside(4, 16, 16, (px, pz) => put([0.3, 18, 4.2], px, pz, 9, 0x7a2ad8, 'Glass', { yaw, trans: 0.55 }));
+      // big cubes floating over the path
+      for (let t = 12; t < L - 6; t += 28) { const [px, pz] = at(t, 0); put([4, 4, 4], px, pz, 17, PURP, 'Neon', { rot: tilt(0.4 + t) }); data.hauntLights.push([px, G + 14, pz, PURP]); }
+      // the crashed Battle Bus and its torn balloon
+      const qpts = data.rides.flatMap((rd) => { const q = rd.queue?.points || []; const o = []; for (let i = 0; i + 1 < q.length; i += 2) o.push([q[i], q[i + 1]]); return o; });
+      const offQueue = (px, pz, r) => !qpts.some(([qx, qz]) => Math.hypot(qx - px, qz - pz) < r + 10);
+      const near = (r) => { const f = find(cx, cz, r, [[70, -60, 375, 280]]); if (!f || Math.hypot(f[0] - cx, f[1] - cz) > 45 || !offPath(f[0], f[1], r) || !offQueue(f[0], f[1], r)) return null; return [f[0], f[1], Math.sign((f[0] - cx) * n[0] + (f[1] - cz) * n[1]) || 1]; };
+      const b = piece(9) || near(9) || near(7);
+      if (b) {
+        const [bx, bz, sd] = b, cy = Math.cos(yaw), sy = Math.sin(yaw), r = 0.35 * sd, cr = Math.cos(r), sr = Math.sin(r);
+        const M = [cy * cr, -cy * sr, sy, sr, cr, 0, -sy * cr, sy * sr, cy];
+        const off = (u, v) => [bx + M[0] * u + M[1] * v, G + 3.8 + M[3] * u + M[4] * v, bz + M[6] * u + M[7] * v];
+        add([7, 7, 20], [bx, G + 3.8, bz], BLUE, 'SmoothPlastic', { rot: M });
+        add([7.1, 1.8, 18], off(0, 1.4), 0x10141c, 'Glass', { rot: M, collide: 0 });
+        add([7.2, 0.5, 20.2], off(0, -1.6), 0xf2c818, 'SmoothPlastic', { rot: M, collide: 0 });
+        for (const w of [-7, 7]) for (const u of [-3.6, 3.6]) { const p = off(u, -3.4); add([1, 2.6, 2.6], [p[0] + d[0] * w, p[1], p[2] + d[1] * w], 0x111111, 'Rubber', { shape: 2, rot: M, collide: 0 }); }
+        const [gx, gz] = [bx + d[0] * 15, bz + d[1] * 15];
+        put([9, 9, 9], gx, gz, 1.5, BLUE, 'Fabric', { shape: 3 });
+        put([9.4, 1, 9.4], gx, gz, 2.2, 0xe8e8f0, 'Fabric', { shape: 5 });
+        for (const v of [-2, 2]) { const p = off(v, 3.6); put([0.12, 0.12, 12], (p[0] + gx) / 2, (p[2] + gz) / 2, 4, 0x2a2a2e, 'Metal', { yaw }); }
+        data.tags.SteamVent.push([bx - d[0] * 10, G + 4, bz - d[1] * 10, ...ID]);
+        fireAt(bx - d[0] * 12 - n[0] * sd * 2, bz - d[1] * 12 - n[1] * sd * 2);
+        data.hauntLights.push([bx, G + 6, bz, 0xff6a20]);
+      }
+      // a torn, burning Victory Royale banner: nobody won this one
+      let v = null;
+      for (const s of [11, 14, 9, 17]) for (const sd of [-1, 1]) for (let f = 0.9; f > 0.05; f -= 0.1) {
+        const [px, pz] = at(L * f, sd * s);
+        if (!v && free(px, pz, 3) && offQueue(px, pz, 3) && (!b || Math.hypot(px - b[0], pz - b[1]) > 16)) v = [px, pz, sd];
+      }
+      if (v) {
+        const [vx, vz, sd] = v;
+        for (const u of [-4.5, 4.5]) box([0.4, 8, 0.4], [vx + d[0] * u, G, vz + d[1] * u], 0x1a1a1c, 'Metal', { collide: 0 });
+        sign('VICTORY ROYALE', [0.2, 2.2, 9], [vx, G + 6.4, vz], 0x1a0a2a, 0xf2c818, sd > 0 ? 'Right' : 'Left', 'GothamBlack', true, yaw);
+        put([0.25, 1.2, 3], vx + d[0] * 2.6, vz + d[1] * 2.6, 5.4, 0x0a0a0a, 'SmoothPlastic', { yaw });
+        fireAt(vx + d[0] * 3, vz + d[1] * 3);
       }
     } else {
       beside(4.5, 7, 12, (px, pz, sd, k) => {

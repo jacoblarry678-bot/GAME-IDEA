@@ -88,7 +88,7 @@ export function buildBackstage(data) {
     add([gw, 3.4, 2], [gx, G + 20.6, -409], BLACK, 'Metal', { collide: 0 });
     sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -407.9], BLACK, ORANGE, 'Back', 'GothamBlack', true);
     sign('BENTON HAUNT  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, -410.1], BLACK, ORANGE, 'Front', 'GothamBlack', true);
-    sign('NOW OPEN  ·  6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
+    sign('NOW OPEN  ·  6 HOUSES  ·  7 SCARE ZONES  ·  THROUGH NOV 2', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], BLACK, WHITE, 'Back', 'GothamBold');
     for (const x of [GATE.x0 - 4, GATE.x1 + 4]) {
       box([2.4, 1.6, 2.4], [x, G, -412], 0x2a2a2e, 'Metal');
       data.tags.Searchlight.push([x, G + 2.2, -412, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
@@ -181,7 +181,7 @@ export function buildBackstage(data) {
     }
     if (i === 2) {
       sign('BENTON HAUNT', [54, 9, 0.3], [x, G + 29, STAGE_Z + 0.4], BLACK, ORANGE, 'Back', 'GothamBlack');
-      sign('6 HOUSES  ·  6 SCARE ZONES  ·  THROUGH NOVEMBER 2', [54, 2.6, 0.3], [x, G + 22.6, STAGE_Z + 0.4], BLACK, WHITE, 'Back', 'GothamBold');
+      sign('6 HOUSES  ·  7 SCARE ZONES  ·  THROUGH NOVEMBER 2', [54, 2.6, 0.3], [x, G + 22.6, STAGE_Z + 0.4], BLACK, WHITE, 'Back', 'GothamBold');
     } else {
       sign(house.name, [44, 4.4, 0.3], [x, G + 27, STAGE_Z + 0.4], BLACK, ORANGE, 'Back', 'GothamBlack');
     }
@@ -379,7 +379,7 @@ export function buildBackstage(data) {
   }
   data.staff.lines.haunt = [
     'Welcome to Benton Haunt!', 'All six houses are open tonight!', 'Check the app for house wait times!',
-    "You didn't see anything back here...", 'Five houses in these stages, one more in a tent at Family Landing!', 'Six scare zones, six houses. Through November 2!',
+    "You didn't see anything back here...", 'Five houses in these stages, one more in a tent at Family Landing!', 'Seven scare zones - try Fortnitemares at Family Landing!',
   ];
   return { gate: { x: gx, z: -405 } };
 }

@@ -49,6 +49,20 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Haunt is back, with Fortnitemares (browser only):** it's fall
+  again. All six houses reopen (the five soundstage houses backstage and
+  Lights Out at Lakeside at Family Landing), Graveyard Grub is serving
+  again, and the six scare zones return after dark. A seventh zone,
+  **Fortnitemares**, takes over Family Landing's southern walkway in purple:
+  Cube Monsters, husks and the Cube Queen herself prowl the path; torn-open
+  supply drops smoke blue; purple loot llamas stand around (one in three
+  has glowing red eyes); half-built walls and ramps, glowing cubes over
+  their runes and big cubes floating overhead; a translucent purple Storm
+  wall closes in along the edge; the Battle Bus lies crashed on its side
+  with its balloon torn, and a Victory Royale banner burns. Wolverine
+  stays open (the haunt zones keep clear of its path), Final Destination
+  is still under construction on Stage 6, and the Mardi Gras bar has come
+  down. Billboards and shuttle wraps advertise 6 houses and 7 scare zones.
 - **Final Destination construction (browser only):** work has started on
   next fall's first Benton Haunt house, Final Destination: Death's Design,
   on a brand-new Stage 6 east of the backstage lot. The steel frame is up,

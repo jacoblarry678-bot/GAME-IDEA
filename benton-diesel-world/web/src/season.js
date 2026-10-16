@@ -1,17 +1,14 @@
-// The park calendar. Benton Haunt ran through November 2 and is over now:
-// the houses and their facades are being torn down, the scare zones are
-// gone and both backstage areas are closed off.
-export const HAUNT_OVER = true;
-// Benton Holidays: Christmas decorations, lights on the rides, Santa in the
-// park and Santa's Workshop backstage, through January 1.
+// The park calendar. It's fall again and Benton Haunt is back: all six
+// houses (and the food stand) reopen, the six scare zones return, and a
+// seventh zone, Fortnitemares, takes over a Family Landing walkway.
+export const HAUNT_OVER = false;
+// Benton Holidays (Christmas) is over...
 export const CHRISTMAS = false;
-// ...and the holidays are over: the backstage is locked again.
-export const XMAS_OVER = true;
-// The holiday decorations are all packed away now, and Wolverine, built
-// past Backwoods over the winter, is finished and open.
+// ...and so is the new-year teardown.
+export const XMAS_OVER = false;
+// Wolverine, past Backwoods, is open.
 export const WOLVERINE_OPEN = true;
-// Mardi Gras: a temporary bar at the Benton Diesel Grand Hotel.
-export const MARDI_GRAS = true;
-// Construction has started on next fall's first Benton Haunt house,
-// Final Destination: Death's Design, on a new Stage 6 past the backstage lot.
+// The temporary Mardi Gras bar at the Grand has come down.
+export const MARDI_GRAS = false;
+// Final Destination: Death's Design is still going up on Stage 6.
 export const FD_BUILDING = true;

@@ -164,7 +164,10 @@ const ADS_MARDI = [
 
 // the Benton Haunt ads on the billboards
 const ADS = MARDI_GRAS ? ADS_MARDI : CHRISTMAS ? ADS_XMAS : XMAS_OVER ? ADS_NEWYEAR : HAUNT_OVER ? ADS_OVER : [
-  { title: 'BENTON HAUNT', sub: '6 HOUSES  ·  6 SCARE ZONES', foot: 'SELECT NIGHTS THROUGH NOV 2', art: 'moon', fg: ORANGE },
+  { title: 'BENTON HAUNT IS BACK', sub: '6 HOUSES  ·  7 SCARE ZONES', foot: 'SELECT NIGHTS THROUGH NOV 2', art: 'moon', fg: ORANGE },
+  { title: 'FORTNITEMARES', sub: 'THE STORM IS CLOSING IN', foot: 'NEW SCARE ZONE  ·  FAMILY LANDING', art: 'skull', fg: 0xb04aff },
+  { title: 'WOLVERINE', sub: 'THE CLAWS ARE OUT  ·  NOW OPEN', foot: 'BACKWOODS  ·  BENTON DIESEL WORLD', art: 'skull', fg: 0xf2c818 },
+  { title: 'FINAL DESTINATION', sub: "DEATH'S DESIGN  ·  COMING SOON", foot: 'NOW BUILDING ON STAGE 6', art: 'skull', fg: 0xe02020 },
   { title: "DEAD MAN'S GARAGE", sub: 'YOUR CAR IS OVERDUE FOR SERVICE...', foot: 'BENTON HAUNT  ·  NOW OPEN', art: 'skull', fg: 0xff3a20 },
   { title: 'LIGHTS OUT AT LAKESIDE', sub: 'THE LAKE REMEMBERS', foot: 'BENTON HAUNT  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0x9ad8ff },
   { title: 'DO YOU DARE?', sub: 'BENTON HAUNT IS OPEN', foot: 'NEXT EXIT  ·  BENTON DIESEL WORLD', art: 'pumpkin', fg: ORANGE },

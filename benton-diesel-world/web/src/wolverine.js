@@ -69,6 +69,15 @@ export function helpers(data) {
   return { add, box, sign, cf, mi };
 }
 
+// the path to Wolverine joins the walkways (other builders keep clear of
+// it, guests stroll it); call before the scare zones are laid out
+let walkwaysAdded = false;
+export function addWolverineWalkway() {
+  if (walkwaysAdded) return;
+  walkwaysAdded = true;
+  for (let i = 0; i < ROUTE.length - 1; i++) LINES.push([new THREE.Vector3(ROUTE[i][0], 0, ROUTE[i][1]), new THREE.Vector3(ROUTE[i + 1][0], 0, ROUTE[i + 1][1])]);
+}
+
 // distance from (x, z) to a polyline
 function distTo(route, x, z) {
   let best = Infinity;
@@ -138,8 +147,8 @@ export function buildWolverine(data) {
     const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
     add([9, 0.4, len + 9], [(xa + xb) / 2, 0.22, (za + zb) / 2], 0x8a7a62, 'Pavement', { yaw, collide: 0 });
     add([10, 0.36, len + 10], [(xa + xb) / 2, 0.19, (za + zb) / 2], 0x5a4e3e, 'Pavement', { yaw, collide: 0 });
-    LINES.push([new THREE.Vector3(xa, 0, za), new THREE.Vector3(xb, 0, zb)]);
   }
+  addWolverineWalkway();
   box([0.6, 9, 0.6], [-252, G, -178], 0x3a2a1e, 'Wood');
   for (const face of ['Right', 'Left']) {
     sign([0.3, 3.4, 10], [-252 + (face === 'Right' ? 0.4 : -0.4), G + 9.4, -178], 0x14161c, face, [['WOLVERINE', 0, 0, 1, 0.66, YELLOW], ['NOW OPEN  ·  THIS WAY', 0, 0.66, 1, 0.34, WHITE, 'GothamBold']], { glow: true });
