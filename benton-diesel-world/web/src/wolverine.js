@@ -1,47 +1,50 @@
-// Wolverine, the next coaster, is going up beyond Backwoods' west wall: the
-// whole circuit is staked out with footings, the supports are up for the
-// first half (a launch, an 80-stud top hat and the turn behind it) and the
-// yellow track is bolted on most of the way, with a crane lifting the next
-// piece into place. The rest of the supports are part-built, track pieces
-// wait on the ground, the station is a steel frame on its slab, and claw
-// marked banners on the wall tease it from inside the park.
+// Wolverine is finished and open beyond Backwoods' west wall. A path from
+// the Backwoods plaza leads round the Rapids to a new gate in the wall,
+// where guests wind through the queue beside the launch and board inside a
+// "Weapon X" bunker. The ride: a launch out of the bunker, an 80-stud top
+// hat, an overbanked turn, a camelback, a swooping turn and home.
+//
+// Like Fast & Furious it is added to the park data as an ordinary ride
+// (track, cars, seats, queue, crew, wait sign), so the simulation, crews,
+// riders, sounds and the app all treat it the same way.
 import * as THREE from 'three';
-import { makeFinder } from './haunt.js';
+import { Sampler } from './rides.js';
+import { makeTrack, queuePath } from './fastfurious.js';
+import { LINES } from './guests.js';
 
+export const RIDE_ID = 'Wolverine';
 export const WV_SITE = { x0: -592, x1: -380, z0: -402, z1: -148 };
+const LAND = { x0: -596, x1: -375, z0: -405, z1: -140 };
+const GATE = { z0: -201.75, z1: -165.25 }; // between the west wall's pillars at z -204 and -163
 const G = 0.1;
-const YELLOW = 0xf2c818, BLUE = 0x1e3a8a, STEEL = 0xb8bcc0, BLACK = 0x101012, WHITE = 0xf4f4f0, RED = 0x8a3a22;
-// the circuit (x, y, z of the rails), starting at the station
+const FLOOR = 0.5; // top of the queue paving
+const PLATFORM = 1.4;
+const CARS = 4, SPACING = 7.5;
+const TRACK_X = -400, FRONT = -200;
+const BUNKER = { x0: -412, x1: -386, z0: -216, z1: -162, h: 16 };
+const YELLOW = 0xf2c818, BLUE = 0x1e3a8a, BLACK = 0x101012, WHITE = 0xf4f4f0, CLAW = 0xe8eef4, LAB = 0x5aa8ff;
+const CONCRETE = 0x8e8c88;
+// the path from the Backwoods plaza, south round the Rapids, to the gate
+const ROUTE = [[-244, -168], [-264, -153], [-310, -154], [-330, -176], [-372, -183.5]];
+
+// the circuit: x, y, z of the rails and the speed there, starting where
+// the front car stops in the station
 const CIRCUIT = [
-  [-400, 4, -176], [-400, 4, -200], [-400, 4, -240], [-401, 5, -285], // station and launch
-  [-405, 22, -318], [-414, 62, -338], [-425, 80, -351], [-438, 66, -362], [-452, 26, -373], [-470, 7, -381], // top hat
-  [-500, 9, -388], [-532, 16, -386], [-562, 30, -370], [-576, 34, -340], [-570, 28, -310], // overbanked turn
-  [-560, 12, -290], [-555, 44, -264], [-550, 14, -238], // camelback
-  [-546, 10, -205], [-532, 24, -176], [-502, 28, -162], [-470, 16, -166], // turn and swoop
-  [-444, 8, -160], [-420, 4, -157], [-404, 4, -165],
+  [TRACK_X, PLATFORM, FRONT, 2],
+  // out of the bunker and the launch
+  [TRACK_X, PLATFORM, -222, 7], [TRACK_X, 1.6, -245, 22], [-401, 2.4, -285, 38],
+  // the top hat
+  [-405, 22, -318, 32], [-414, 62, -338, 17], [-425, 80, -351, 9], [-438, 66, -362, 16], [-452, 26, -373, 34], [-470, 7, -381, 38],
+  // the overbanked turn
+  [-500, 9, -388, 36], [-532, 16, -386, 32], [-562, 30, -370, 24], [-576, 34, -340, 22], [-570, 28, -310, 25],
+  // the camelback
+  [-560, 12, -290, 32], [-555, 44, -264, 14], [-550, 14, -238, 30],
+  // the swooping turn and home
+  [-546, 10, -205, 31], [-532, 24, -176, 22], [-502, 28, -162, 20], [-470, 16, -166, 26], [-444, 8, -160, 22],
+  [-425, 3, -152, 12], [-407, PLATFORM, -156, 6], [TRACK_X, PLATFORM, -168, 4], [TRACK_X, PLATFORM, -184, 3],
 ];
-const BUILT = 0.47; // how much of the circuit has track on it
 
-function spline(pts) {
-  const n = pts.length;
-  const V = pts.map((p) => new THREE.Vector3(...p));
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const p0 = V[(i - 1 + n) % n], p1 = V[i], p2 = V[(i + 1) % n], p3 = V[(i + 2) % n];
-    const steps = Math.max(4, Math.ceil(p1.distanceTo(p2) / 2));
-    for (let k = 0; k < steps; k++) {
-      const t = k / steps, t2 = t * t, t3 = t2 * t;
-      out.push(new THREE.Vector3(
-        0.5 * (2 * p1.x + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-        0.5 * (2 * p1.y + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
-        0.5 * (2 * p1.z + (-p0.z + p2.z) * t + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 + (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * t3),
-      ));
-    }
-  }
-  return out;
-}
-
-function helpers(data) {
+export function helpers(data) {
   const mats = data.materials;
   const mi = (name) => {
     let i = mats.indexOf(name);
@@ -63,183 +66,343 @@ function helpers(data) {
     return i;
   };
   const cf = (x, y, z, yaw = 0) => [x, y, z, Math.cos(yaw), 0, Math.sin(yaw), 0, 1, 0, -Math.sin(yaw), 0, Math.cos(yaw)];
-  return { add, box, sign, cf };
+  return { add, box, sign, cf, mi };
 }
 
-// a rotation whose local Z runs along t (and X stays level)
-function along(t) {
-  const Z = t.clone().normalize();
-  const X = new THREE.Vector3(0, 1, 0).cross(Z).normalize();
-  if (X.lengthSq() < 1e-6) X.set(1, 0, 0);
-  const Y = Z.clone().cross(X);
-  return [X.x, Y.x, Z.x, X.y, Y.y, Z.y, X.z, Y.z, Z.z];
+// distance from (x, z) to a polyline
+function distTo(route, x, z) {
+  let best = Infinity;
+  for (let i = 0; i < route.length - 1; i++) {
+    const [xa, za] = route[i], [xb, zb] = route[i + 1];
+    const dx = xb - xa, dz = zb - za;
+    const t = Math.max(0, Math.min(1, ((x - xa) * dx + (z - za) * dz) / (dx * dx + dz * dz)));
+    best = Math.min(best, Math.hypot(x - xa - dx * t, z - za - dz * t));
+  }
+  return best;
 }
 
 export function buildWolverine(data) {
-  const { add, box, sign, cf } = helpers(data);
-  const S = WV_SITE;
+  const { add, box, sign, cf, mi } = helpers(data);
   const inRect = (x, z, r, pad = 0) => x > r.x0 - pad && x < r.x1 + pad && z > r.z0 - pad && z < r.z1 + pad;
   data.tags.ParkLamp = data.tags.ParkLamp || [];
+  data.hauntLights = data.hauntLights || [];
   data.staffSpots = data.staffSpots || [];
-  const crew = (kind, x, y, z, yaw) => data.staffSpots.push({ role: 'construction', kind, land: 'Backwoods', seed: 0, cf: cf(x, y, z, yaw) });
-
-  data.flatZones = [...(data.flatZones || []), { ...S, margin: 34 }];
-  data.trees = (data.trees || []).filter((t) => !inRect(t.pos[0], t.pos[2], S, 10));
-  add([S.x1 - S.x0, 1, S.z1 - S.z0], [(S.x0 + S.x1) / 2, G - 0.5, (S.z0 + S.z1) / 2], 0x7a7064, 'Ground');
-
-  // ---- the circuit: footings everywhere, supports and track on the first part
-  const pts = spline(CIRCUIT);
-  const cum = [0];
-  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
-  const L = cum[cum.length - 1];
-  const built = L * BUILT;
-  let nextSupport = 6;
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i], s = cum[i];
-    if (s < nextSupport) continue;
-    nextSupport = s + 13;
-    box([3.4, 0.8, 3.4], [p.x, G, p.z], 0xa8a49c, 'Concrete');
-    if (p.y < 5) continue;
-    const h = p.y - 1.4;
-    if (s < built + 20) box([1.6, h, 1.6], [p.x, G + 0.8, p.z], BLUE, 'Metal', { shape: 5 });
-    else if (s < L * 0.75) box([1.6, h * (0.25 + 0.5 * ((i * 7) % 5) / 5), 1.6], [p.x, G + 0.8, p.z], BLUE, 'Metal', { shape: 5 });
-  }
-  // the track itself: yellow rails on a blue spine, bolted on up to here
-  const T = new THREE.Vector3();
-  for (let i = 0; i < pts.length - 1; i++) {
-    if (cum[i] > built) break;
-    const a = pts[i], b = pts[i + 1];
-    T.subVectors(b, a);
-    const len = T.length() + 0.15, rot = along(T);
-    const c = a.clone().add(b).multiplyScalar(0.5);
-    const X = new THREE.Vector3(rot[0], rot[3], rot[6]);
-    add([0.9, 0.9, len], [c.x, c.y - 0.7, c.z], BLUE, 'Metal', { rot, collide: 0 });
-    for (const sd of [-1, 1]) add([0.35, 0.35, len], [c.x + X.x * sd * 1.1, c.y, c.z + X.z * sd * 1.1], YELLOW, 'Metal', { rot, collide: 0 });
-    if (i % 2 === 0) add([2.6, 0.25, 0.3], [c.x, c.y - 0.4, c.z], YELLOW, 'Metal', { rot, collide: 0 });
-  }
-  // the next piece, hanging from a crane at the end of the built track
-  let endI = 0;
-  while (endI < pts.length - 1 && cum[endI] < built) endI++;
-  const pe = pts[endI], pn = pts[Math.min(pts.length - 1, endI + 6)];
-  T.subVectors(pn, pe);
-  const hang = pe.clone().add(pn).multiplyScalar(0.5).add(new THREE.Vector3(0, 6, 0));
-  const hrot = along(T);
-  add([0.9, 0.9, T.length()], [hang.x, hang.y - 0.7, hang.z], BLUE, 'Metal', { rot: hrot, collide: 0 });
-  add([3, 0.35, T.length()], [hang.x, hang.y, hang.z], YELLOW, 'Metal', { rot: hrot, collide: 0 });
-  crane(hang.x + 22, hang.z + 18, 92, Math.atan2(hang.x - (hang.x + 22), hang.z - (hang.z + 18)), Math.hypot(22, 18), hang.y + 1.5);
-  crew('work', pe.x, pe.y + 0.6, pe.z, 0);
-  crew('work', pts[Math.max(0, endI - 8)].x, pts[Math.max(0, endI - 8)].y + 0.6, pts[Math.max(0, endI - 8)].z, Math.PI);
-
-  // ---- track pieces waiting on the ground, and support columns
-  for (let r = 0; r < 3; r++) {
-    for (let k = 0; k < 5; k++) {
-      const x = -520 + k * 14, z = -232 - r * 9;
-      box([1, 0.9, 12], [x, G + 0.6, z], BLUE, 'Metal', { collide: k === 0 ? 1 : 0 });
-      for (const sd of [-1.1, 1.1]) box([0.35, 0.35, 12], [x + sd, G + 1.6, z], YELLOW, 'Metal', { collide: 0 });
-      for (let j = -1; j <= 1; j++) box([1.6, 0.5, 0.5], [x, G, z + j * 5], 0x6a4a30, 'Wood', { collide: 0 });
-    }
-  }
-  for (let k = 0; k < 8; k++) box([24, 1.6, 1.6], [-470, G + Math.floor(k / 4) * 1.6, -296 + (k % 4) * 1.8], BLUE, 'Metal', { yaw: Math.PI / 2, collide: k < 4 ? 1 : 0 });
-
-  // ---- the station: a slab and a steel frame
-  box([22, 1, 50], [-394, G, -190], 0xa8a49c, 'Concrete');
-  for (const z of [-212, -196, -180, -166]) for (const x of [-404, -384]) box([1, 14, 1], [x, G + 1, z], RED, 'Metal');
-  for (const z of [-212, -196, -180]) add([21, 1, 1], [-394, G + 15, z], RED, 'Metal', { collide: 0 });
-  add([1, 1, 46], [-404, G + 15, -189], RED, 'Metal', { collide: 0 });
-
-  // ---- a crawler crane by the camelback, materials, the site office
-  crane(-528, -300, 74, 2.2, 30, 40);
-  box([24, 9, 9], [S.x0 + 22, G + 1, S.z1 - 14], WHITE, 'SmoothPlastic');
-  sign([20, 1.8, 0.2], [S.x0 + 22, G + 8.2, S.z1 - 18.6], WHITE, 'Front', [['BENTON CONSTRUCTION  ·  SITE OFFICE', 0, 0, 1, 1, 0x16223a, 'GothamBold']]);
-  sign([10, 1.2, 0.2], [S.x0 + 22, G + 6.2, S.z1 - 18.6], WHITE, 'Front', [['WOLVERINE PROJECT', 0, 0, 1, 1, 0xc8a010, 'GothamBold']]);
-  for (let k = 0; k < 3; k++) box([3.6, 7.4, 3.6], [S.x0 + 46 + k * 4.2, G, S.z1 - 10], 0x2a6ae0, 'SmoothPlastic');
-  box([20, 8.6, 8], [S.x0 + 18, G, S.z1 - 34], 0x2a5a9a, 'CorrodedMetal');
-  // a flatbed with the first car under a cover
-  box([18, 1.2, 7], [-450, G + 1.4, -200], 0x2a2a2e, 'Metal');
-  box([6, 3, 12], [-450, G + 2.6, -200], 0x3a3e46, 'Fabric', { yaw: Math.PI / 2 });
-  sign([8, 2, 0.2], [-450, G + 3.4, -196.4], YELLOW, 'Back', [['DO NOT UNCOVER', 0, 0, 1, 1, BLACK, 'GothamBold']]);
-  crew('idle', -440, G, -205, -Math.PI / 2);
-  crew('work', -514, G, -240, 0);
-  crew('work', -396, G + 1.1, -190, Math.PI / 2);
-  // fence round the site, lights
-  const fence = (xa, za, xb, zb) => {
-    const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
-    for (let k = 0; k <= Math.round(len / 10); k++) {
-      const t = k / Math.round(len / 10);
-      box([0.5, 9, 0.5], [xa + (xb - xa) * t, G, za + (zb - za) * t], STEEL, 'Metal', { shape: 5 });
-    }
-    add([0.2, 8.6, len], [(xa + xb) / 2, G + 4.4, (za + zb) / 2], 0x8a9096, 'Metal', { yaw, trans: 0.6 });
-    add([0.25, 5, len], [(xa + xb) / 2, G + 3, (za + zb) / 2], 0x1e2a5a, 'Fabric', { yaw, collide: 0 });
+  data.hidden = data.hidden || [];
+  const light = (x, y, z, color) => data.hauntLights.push([x, y, z, color]);
+  const lamp = (x, z, color = 0xfff0c8) => {
+    box([0.5, 12, 0.5], [x, G, z], 0x2e3238, 'Metal');
+    add([1.4, 1.4, 1.4], [x, G + 12.6, z], color, 'Neon', { shape: 3, collide: 0 });
+    data.tags.ParkLamp.push([x, G + 12.6, z, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
   };
-  fence(S.x0, S.z0, S.x0, S.z1);
-  fence(S.x0, S.z0, -377, S.z0);
-  fence(S.x0, S.z1, -377, S.z1);
-  for (const [x, z] of [[-430, -230], [-520, -330], [-470, -170], [-560, -220]]) {
+  // three neon claw slashes across a face whose normal is along x
+  const claws = (x, y, z, len = 10, color = CLAW) => {
+    const a = -0.55, rot = [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)];
+    for (let k = 0; k < 3; k++) add([0.25, 0.5, len], [x, y + (k - 1) * 1.8, z + (k - 1) * 1.1], color, 'Neon', { rot, collide: 0 });
+  };
+
+  // ---- the land: level it, clear its trees, it is part of Backwoods now
+  data.flatZones = [...(data.flatZones || []), { ...LAND, margin: 30 }];
+  data.trees = (data.trees || []).filter((t) => !inRect(t.pos[0], t.pos[2], LAND, 8) && distTo(ROUTE, t.pos[0], t.pos[2]) > 8);
+  const bw = data.config.Lands.find((l) => l.id === 'Backwoods');
+  if (bw) bw.regions = [...bw.regions, [LAND.x0, LAND.z0, LAND.x1, LAND.z1]];
+
+  // ---- clear the props (rocks, part-built pines, a barrel) off the path,
+  // and open the west wall between two pillars for the gate
+  data.static.forEach((p, i) => {
+    if (!p[19] || data.hidden.includes(i)) return;
+    const ex = (Math.abs(p[7]) * p[1] + Math.abs(p[9]) * p[3]) / 2, ez = (Math.abs(p[13]) * p[1] + Math.abs(p[15]) * p[3]) / 2;
+    const top = p[5] + p[2] / 2, mat = data.materials[p[17]];
+    const kind = mat === 'Slate' || mat === 'Grass' || (mat === 'Wood' && p[0] === 2);
+    const onPath = ex < 7 && ez < 7 && top > 0.8 && top < 26 && distTo(ROUTE, p[4], p[6]) < 5.5 + Math.max(ex, ez);
+    const fixture = top < 16 && [[-271, -157], [-304.5, -154.5], [-299.5, -156], [-314.5, -160]].some(([x, z]) => Math.hypot(p[4] - x, p[6] - z) < 1.8);
+    const prop = (kind && onPath) || fixture;
+    const wall = Math.abs(p[4] + 375) < 0.5 && p[3] > 300 && p[6] - p[3] / 2 < GATE.z0 && p[6] + p[3] / 2 > GATE.z1;
+    if (prop || wall) { p[19] = 0; data.hidden.push(i); }
+  });
+  const STONE = 0x96928c, CAP = 0xc4beb4;
+  const wallSeg = (xa, za, xb, zb) => {
+    const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
+    add([2.5, 14, len], [(xa + xb) / 2, 7, (za + zb) / 2], STONE, 'Concrete', { yaw });
+    add([3.4, 1, len + 1], [(xa + xb) / 2, 14.5, (za + zb) / 2], CAP, 'Concrete', { yaw });
+  };
+  wallSeg(-375, -405, -375, GATE.z0);
+  wallSeg(-375, GATE.z1, -375, -81.5); // down to the Overdrive building
+  wallSeg(-375, -405, LAND.x0, -405);
+  wallSeg(LAND.x0, -405, LAND.x0, LAND.z1);
+  wallSeg(LAND.x0, LAND.z1, -560, LAND.z1); // meets Overdrive's land wall
+  const gz = (GATE.z0 + GATE.z1) / 2;
+
+  // ---- the path, with a signpost where it leaves the plaza and lamps
+  for (let i = 0; i < ROUTE.length - 1; i++) {
+    const [xa, za] = ROUTE[i], [xb, zb] = ROUTE[i + 1];
+    const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
+    add([9, 0.4, len + 9], [(xa + xb) / 2, 0.22, (za + zb) / 2], 0x8a7a62, 'Pavement', { yaw, collide: 0 });
+    add([10, 0.36, len + 10], [(xa + xb) / 2, 0.19, (za + zb) / 2], 0x5a4e3e, 'Pavement', { yaw, collide: 0 });
+    LINES.push([new THREE.Vector3(xa, 0, za), new THREE.Vector3(xb, 0, zb)]);
+  }
+  box([0.6, 9, 0.6], [-252, G, -178], 0x3a2a1e, 'Wood');
+  for (const face of ['Right', 'Left']) {
+    sign([0.3, 3.4, 10], [-252 + (face === 'Right' ? 0.4 : -0.4), G + 9.4, -178], 0x14161c, face, [['WOLVERINE', 0, 0, 1, 0.66, YELLOW], ['NOW OPEN  ·  THIS WAY', 0, 0.66, 1, 0.34, WHITE, 'GothamBold']], { glow: true });
+  }
+  for (const [x, z] of [[-276, -146], [-314, -147], [-352, -189]]) lamp(x, z, YELLOW);
+
+  // ---- the gate: an arch in the wall, claw marks across the sign
+  const ax = -376;
+  for (const z of [GATE.z0 + 1.6, GATE.z1 - 1.6]) {
+    box([3.2, 20, 3.2], [ax, G, z], 0x1a1c22, 'Metal');
+    add([0.4, 18, 0.4], [ax + 1.7, G + 10, z], YELLOW, 'Neon', { collide: 0 });
+  }
+  add([4, 6, GATE.z1 - GATE.z0 + 2], [ax, G + 23, gz], 0x1a1c22, 'Metal', { collide: 0 });
+  for (const [dx, face] of [[2.2, 'Right'], [-2.2, 'Left']]) {
+    sign([0.3, 4.2, 30], [ax + dx, G + 23.6, gz], 0x1a1c22, face, [['WOLVERINE', 0, 0, 1, 0.64, YELLOW], ['NOW OPEN', 0, 0.64, 1, 0.36, WHITE, 'GothamBold']], { glow: true });
+    claws(ax + dx * 1.1, G + 23.6, gz + 8, 8);
+  }
+  // hazard stripes across the ground under the arch
+  for (let k = 0; k < 12; k++) add([3, 0.05, 2.9], [ax, FLOOR + 0.02, GATE.z0 + 1.5 + k * 2.95], k % 2 ? YELLOW : BLACK, 'SmoothPlastic', { collide: 0 });
+  // the live wait sign in the park, and a greeter
+  box([0.6, 6, 0.6], [-368, G, GATE.z0 - 6], 0x2e3238, 'Metal');
+  const waitPart = add([0.8, 6, 9.6], [-368, G + 9, GATE.z0 - 6], 0x101624, 'SmoothPlastic', { collide: 0 });
+  data.dynamicSigns.push({ part: waitPart, kind: 'wait', face: 'Right', ride: RIDE_ID });
+  data.staffSpots.push({ role: 'greeter', kind: 'idle', land: 'Backwoods', seed: 23, cf: cf(-370, G, gz + 6, -Math.PI / 2) });
+  for (const z of [GATE.z0 - 2, GATE.z1 + 2]) lamp(-366, z, YELLOW);
+
+  // ---- the forecourt and queue paving
+  const QROWS = [-394, -389.4, -384.8, -380.2];
+  const north = -296, south = -222;
+  add([11, 0.4, BUNKER.z1 - BUNKER.z0], [-380.5, FLOOR - 0.2, (BUNKER.z0 + BUNKER.z1) / 2], 0x3e4046, 'Pavement');
+  add([21, 0.4, BUNKER.z0 - (north - 6)], [-385.5, FLOOR - 0.2, (north - 6 + BUNKER.z0) / 2], 0x3e4046, 'Pavement');
+  add([14, 0.4, GATE.z1 - GATE.z0], [-370, FLOOR - 0.2, gz], 0x3e4046, 'Pavement');
+
+  // ---- the track and its supports
+  const track = makeTrack(CIRCUIT);
+  const sampler = new Sampler(track);
+  const m4 = new THREE.Matrix4();
+  const P = new THREE.Vector3(), U = new THREE.Vector3();
+  const pts = [];
+  for (let i = 0; i < track.cum.length; i++) pts.push([track.pos[i * 3], track.pos[i * 3 + 1], track.pos[i * 3 + 2], track.cum[i]]);
+  for (let s = 8; s < track.length - 6; s += 10) {
+    sampler.matrixAt(s, m4);
+    P.setFromMatrixPosition(m4);
+    U.setFromMatrixColumn(m4, 1);
+    const foot = P.clone().addScaledVector(U, -1.6);
+    if (foot.y < 3) continue;
+    const blocked = pts.some(([x, y, z, c]) => Math.abs(c - s) > 14 && y < foot.y - 1 && Math.hypot(x - foot.x, z - foot.z) < 5);
+    if (blocked) continue;
+    const h = foot.y - G;
+    add([1.4, h, 1.4], [foot.x, G + h / 2, foot.z], BLUE, 'Metal', { shape: 5, collide: 0 });
+    box([3, 0.8, 3], [foot.x, G, foot.z], 0xa8a49c, 'Concrete', { collide: 0 });
+  }
+  // the launch: yellow and grey fins between the rails, blue gantries
+  for (let z = -226, k = 0; z > -290; z -= 4, k++) add([1, 0.3, 2.4], [TRACK_X, 0.9, z], k % 2 ? YELLOW : 0x3a3e46, 'Metal', { collide: 0 });
+  for (let z = -232; z > -290; z -= 16) {
+    for (const dx of [-5.5, 5.5]) box([0.4, 8, 0.4], [TRACK_X + dx, G, z], 0x2e3238, 'Metal', { collide: 0 });
+    add([11.4, 0.5, 0.5], [TRACK_X, G + 8, z], 0x2e3238, 'Metal', { collide: 0 });
+    add([9, 0.3, 0.3], [TRACK_X, G + 7.6, z], LAB, 'Neon', { collide: 0 });
+  }
+  light(TRACK_X, 6, -260, LAB);
+
+  // ---- the bunker: the Weapon X station
+  const B = BUNKER, T = 1.2, bx = (B.x0 + B.x1) / 2, bz = (B.z0 + B.z1) / 2;
+  const doorQ = -394, doorX = -176; // queue door (north wall, at x) and exit door (east wall, at z)
+  box([B.x1 - B.x0, 0.6, B.z1 - B.z0], [bx, G, bz], 0x2a2a2e, 'Concrete', { collide: 0 });
+  box([T, B.h, B.z1 - B.z0], [B.x0 + T / 2, G, bz], CONCRETE, 'Concrete');
+  for (const [za, zb] of [[B.z0, doorX - 3.5], [doorX + 3.5, B.z1]]) box([T, B.h, zb - za], [B.x1 - T / 2, G, (za + zb) / 2], CONCRETE, 'Concrete');
+  box([T, B.h - 8, 7], [B.x1 - T / 2, G + 8, doorX], CONCRETE, 'Concrete');
+  // north wall: open for the track and the queue door; south: for the track
+  const xa = TRACK_X - 4.5, xb = doorQ + 2;
+  box([xa - B.x0, B.h, T], [(B.x0 + xa) / 2, G, B.z0 + T / 2], CONCRETE, 'Concrete');
+  box([B.x1 - xb, B.h, T], [(xb + B.x1) / 2, G, B.z0 + T / 2], CONCRETE, 'Concrete');
+  box([xb - xa, B.h - 8, T], [(xa + xb) / 2, G + 8, B.z0 + T / 2], CONCRETE, 'Concrete');
+  const sa = TRACK_X - 6.5, sb = TRACK_X + 4.5;
+  box([sa - B.x0, B.h, T], [(B.x0 + sa) / 2, G, B.z1 - T / 2], CONCRETE, 'Concrete');
+  box([B.x1 - sb, B.h, T], [(sb + B.x1) / 2, G, B.z1 - T / 2], CONCRETE, 'Concrete');
+  box([sb - sa, B.h - 8, T], [(sa + sb) / 2, G + 8, B.z1 - T / 2], CONCRETE, 'Concrete');
+  add([B.x1 - B.x0 + 2, 1.4, B.z1 - B.z0 + 2], [bx, G + B.h + 0.7, bz], 0x5a5c60, 'Concrete', { collide: 0 });
+  // hazard stripes round the top, and WEAPON X over the track portals
+  for (let z = B.z0 + 1, k = 0; z < B.z1; z += 4, k++) add([0.3, 1.4, 2], [B.x1 + 0.2, G + B.h - 1, z], k % 2 ? YELLOW : BLACK, 'SmoothPlastic', { collide: 0 });
+  for (const [z, face] of [[B.z0 - 0.3, 'Front'], [B.z1 + 0.3, 'Back']]) {
+    const cx = face === 'Front' ? (xa + TRACK_X + 2) / 2 : TRACK_X - 1;
+    add([7, 0.6, 0.3], [cx, G + 7.6, z], YELLOW, 'Neon', { collide: 0 });
+    sign([7, 1.6, 0.3], [cx, G + 10, z], BLACK, face, [['WEAPON X', 0, 0, 1, 1, YELLOW, 'GothamBold']], { glow: true });
+  }
+  // the big sign on the east face, claw slashes through it
+  sign([0.3, 6, 30], [B.x1 + 0.3, G + 11.4, -198], BLACK, 'Right', [['WOLVERINE', 0, 0.04, 1, 0.66, YELLOW], ['WEAPON X FACILITY', 0, 0.7, 1, 0.28, WHITE, 'GothamBold']], { glow: true });
+  claws(B.x1 + 0.5, G + 11.4, -186, 10);
+  add([5, 0.5, 9], [B.x1 + 2.5, G + 8.6, doorX], 0x1a1c22, 'Metal', { collide: 0 });
+  sign([0.2, 1.4, 6], [B.x1 + 5.1, G + 8.6, doorX], 0x1a1c22, 'Right', [['EXIT', 0, 0, 1, 1, 0x5adc6e, 'GothamBold']], { glow: true });
+  sign([6, 1.4, 0.2], [doorQ, G + 9, B.z0 - 0.8], 0x1a1c22, 'Front', [['TO THE CARS', 0, 0, 1, 1, YELLOW, 'GothamBold']], { glow: true });
+  light(-380, 10, -196, YELLOW);
+
+  // ---- inside: the platform beside the track, a lab along the far wall
+  const px0 = TRACK_X + 3.4, px1 = B.x1 - T;
+  box([px1 - px0, PLATFORM - G, B.z1 - B.z0 - 2 * T - 0.2], [(px0 + px1) / 2, G, bz], 0x4a4a4e, 'Concrete');
+  add([0.6, 0.06, B.z1 - B.z0 - 3], [px0 + 0.4, PLATFORM + 0.03, bz], YELLOW, 'SmoothPlastic', { collide: 0 });
+  box([4, PLATFORM - FLOOR, 4], [doorQ, FLOOR, B.z0 - 2], 0x4a4a4e, 'Concrete'); // a step up into the station
+  box([4, PLATFORM - FLOOR, 4], [B.x1 + 2, FLOOR, doorX], 0x4a4a4e, 'Concrete'); // and down at the exit
+  sign([0.3, 3, 20], [B.x0 + T + 0.2, 9, -192], 0x0a1020, 'Right', [['ADAMANTIUM BONDING', 0, 0, 1, 0.6, LAB], ['SUBJECT: LOGAN', 0, 0.6, 1, 0.4, WHITE, 'GothamBold']], { glow: true });
+  for (const z of [-208, -176]) {
+    box([3.4, 7, 3.4], [B.x0 + 3, G, z], 0x3a3e46, 'Metal', { shape: 5, collide: 0 });
+    add([2.6, 5, 2.6], [B.x0 + 3, G + 4, z], LAB, 'Glass', { shape: 5, collide: 0, trans: 0.3 });
+  }
+  for (let z = B.z0 + 6; z < B.z1 - 4; z += 12) add([0.4, 0.4, 6], [bx, B.h - 1, z], 0xcfe4ff, 'Neon', { collide: 0 });
+  light(-398, 12, -190, LAB);
+  light(-398, 12, -172, 0xffecbe);
+  const con = [px1 - 1.6, FRONT - 6];
+  box([1.4, 3, 2.4], [con[0], PLATFORM, con[1]], 0x2e3238, 'Metal', { collide: 0 });
+  for (let k = 0; k < 3; k++) add([0.3, 0.2, 0.3], [con[0], PLATFORM + 3.25, con[1] - 0.6 + k * 0.6], [0x40d060, 0xf0c040, 0xe03030][k], 'Neon', { collide: 0, shape: 3 });
+
+  // ---- the queue: four switchback rows beside the launch
+  const entrance = [QROWS[3], -214];
+  const pathPts = [[px0 + 2.4, FRONT], [px0 + 2.4, B.z0 + 3], [doorQ, B.z0 - 3], [QROWS[0], south]];
+  QROWS.forEach((x, k) => {
+    if (k === 0) { pathPts.push([x, north]); return; }
+    const goingSouth = k % 2 === 1;
+    pathPts.push([x, goingSouth ? north : south]);
+    pathPts.push([x, goingSouth ? south : north]);
+  });
+  pathPts.push(entrance, [-380.2, gz], [-368, gz]);
+  const qpath = queuePath(pathPts, pathPts.length - 3, [1, 0], FLOOR);
+  const RAIL = 0x2e3238, TOP = YELLOW;
+  const railZ = (x, za, zb) => {
+    add([0.22, 0.22, zb - za], [x, FLOOR + 3.2, (za + zb) / 2], TOP, 'SmoothPlastic', { collide: 0 });
+    add([0.16, 0.16, zb - za], [x, FLOOR + 1.9, (za + zb) / 2], RAIL, 'Metal', { collide: 0 });
+    const n = Math.max(1, Math.round((zb - za) / 6));
+    for (let k = 0; k <= n; k++) box([0.32, 3.1, 0.32], [x, FLOOR, za + ((zb - za) * k) / n], RAIL, 'Metal');
+  };
+  const railX = (xa, xb, z) => {
+    add([xb - xa, 0.22, 0.22], [(xa + xb) / 2, FLOOR + 3.2, z], TOP, 'SmoothPlastic', { collide: 0 });
+    const n = Math.max(1, Math.round((xb - xa) / 6));
+    for (let k = 0; k <= n; k++) box([0.32, 3.1, 0.32], [xa + ((xb - xa) * k) / n, FLOOR, z], RAIL, 'Metal');
+  };
+  for (let k = 0; k < QROWS.length - 1; k++) {
+    const x = (QROWS[k] + QROWS[k + 1]) / 2;
+    // the gap is at the end where the line turns between these two rows
+    if (k % 2 === 0) railZ(x, north + 3.4, k === 0 ? B.z0 : south + 3.5); else railZ(x, north - 2, south - 3.4);
+  }
+  railZ(QROWS[0] - 2.75, north - 2, B.z0); // between the line and the launch
+  railZ(QROWS[3] + 2.75, north - 2, -210);
+  railX(QROWS[0] - 2.75, QROWS[3] + 2.75, north - 2);
+  railX(QROWS[0] + 2.3, QROWS[3] - 2.3, south + 3.5);
+  // shade canopies and lamps over the rows
+  for (let z = north + 10, k = 0; z < south; z += 22, k++) {
+    add([18, 0.2, 12], [-387, 12, z], k % 2 ? YELLOW : BLUE, 'Fabric', { collide: 0, rot: [1, 0, 0, 0, 0.99, -0.12, 0, 0.12, 0.99] });
+    lamp(-377.2, z);
+  }
+  // posters on the wall along the line
+  [['SUBJECT: LOGAN', YELLOW], ['WEAPON X', LAB], ['THE CLAWS ARE OUT', YELLOW], ['80 STUDS UP', WHITE]].forEach(([text, c], k) => {
+    sign([0.3, 3, 8], [-376.6, 7, -284 + k * 16], BLACK, 'Left', [[text, 0, 0, 1, 1, c]], { glow: true });
+  });
+  // the entrance sign at the start of the line
+  box([0.4, 7, 0.4], [entrance[0] + 2.4, FLOOR, entrance[1] - 1.2], BLACK, 'Metal');
+  sign([0.2, 2, 9], [entrance[0] + 2.2, FLOOR + 6.4, entrance[1] - 1.2], BLACK, 'Right', [['ENTRANCE', 0, 0, 1, 1, YELLOW]], { glow: true });
+
+  // ---- out in the land: claw-slashed boulders, pines, lamps
+  for (const [x, z, r] of [[-470, -300, 9], [-520, -262, 7], [-452, -226, 6], [-500, -344, 8]]) {
+    add([r * 2, r * 1.4, r * 2], [x, r * 0.5, z], 0x4a4640, 'Slate', { shape: 3 });
+    claws(x + r * 0.95, r * 0.9, z, r * 0.9, 0xbfe0ff);
+  }
+  const occupied = (x, z) => pts.some(([px, , pz]) => Math.hypot(px - x, pz - z) < 9) || inRect(x, z, { x0: -420, x1: -375, z0: -302, z1: -150 });
+  for (let k = 0; k < 34; k++) {
+    const x = LAND.x0 + 10 + ((k * 53) % 200), z = LAND.z0 + 10 + ((k * 89) % 250);
+    if (occupied(x, z)) continue;
+    data.trees.push({ leaf: 0x2f5a2a, kind: 'pine', s: 1 + ((k * 13) % 7) / 10, pos: [x, 0, z] });
+  }
+  for (const [x, z] of [[-430, -230], [-520, -330], [-470, -190], [-560, -220]]) {
     box([0.6, 16, 0.6], [x, G, z], 0x5a5e66, 'Metal');
     for (const dx of [-1.2, 1.2]) add([2, 1.4, 0.8], [x + dx, G + 16.4, z], 0xfff6d8, 'Neon', { collide: 0 });
     data.tags.ParkLamp.push([x, G + 16, z, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
   }
+  light(-425, 76, -351, YELLOW);
+  light(-555, 40, -264, LAB);
 
-  // ---- the teaser inside the park: claw-marked banners on the west wall
-  for (const [z, title, sub] of [[-222, 'WOLVERINE', 'COMING SOON'], [-188, 'THE CLAWS ARE OUT', 'BENTON DIESEL WORLD']]) {
-    sign([0.3, 9, 30], [-373.4, G + 8.6, z], 0x14161c, 'Right', [[title, 0, 0.06, 1, 0.56, YELLOW], [sub, 0, 0.64, 1, 0.3, WHITE, 'GothamBold']], { glow: true });
-    for (let k = 0; k < 3; k++) add([0.2, 0.5, 11], [-373.2, G + 8.6 + (k - 1) * 1.6, z + 6 + k * 1.2], 0xe8eef4, 'Neon', { collide: 0, rot: [1, 0, 0, 0, Math.cos(-0.5), -Math.sin(-0.5), 0, Math.sin(-0.5), Math.cos(-0.5)] });
+  // ---- the train: four cars, yellow and blue, claws on the front
+  const thunder = data.rides.find((r) => r.id === 'DieselThunder');
+  const paints = [{ body: YELLOW, stripe: BLUE }, { body: BLUE, stripe: YELLOW }];
+  const pp = (shape, size, pos, color, mat) => [shape, ...size, ...pos, 1, 0, 0, 0, 1, 0, 0, 0, 1, color, mi(mat), 0, 0];
+  const carParts = (k) => {
+    const paint = paints[k % 2];
+    const body = thunder.cars[0].parts.map((p) => {
+      const q = p.slice();
+      if (p[16] === 0xc42828) q[16] = paint.body;
+      else if (p[16] === 0xf0c440) q[16] = paint.stripe;
+      return q;
+    });
+    const extra = [pp(0, [5.4, 0.12, 8], [0, -0.3, -1.4], LAB, 'Neon')];
+    if (k === 0) for (const dx of [-0.8, 0, 0.8]) extra.push(pp(0, [0.2, 0.2, 2.6], [dx, 1.6, -7.2], 0xd8dee6, 'Metal'));
+    return [...body, ...extra];
+  };
+  const cars = [], seats = [];
+  for (let k = 0; k < CARS; k++) {
+    sampler.matrixAt(-k * SPACING, m4);
+    const e = m4.elements;
+    cars.push({ pivot: [e[12], e[13], e[14], e[0], e[4], e[8], e[1], e[5], e[9], e[2], e[6], e[10]], parts: carParts(k) });
+    seats.push(thunder.seats[0].map((s) => s.slice()));
   }
 
-  // and a teaser board beside the Backwoods walkway, where everyone sees it
-  const spot = makeFinder(data)(-252, -200, 9, [[-375, -405, -110, -140]]);
-  if (spot) {
-    const [bx, bz] = spot;
-    for (const dz of [-8, 8]) box([0.8, 16, 0.8], [bx, G, bz + dz], 0x2a2e36, 'Metal', { shape: 5 });
-    add([1, 11, 25], [bx, G + 14, bz], 0x2a2e36, 'Metal', { collide: 0 });
-    sign([0.3, 10, 24], [bx + 0.7, G + 14, bz], 0x14161c, 'Right', [['WOLVERINE', 0, 0.08, 1, 0.5, YELLOW], ['THE CLAWS ARE OUT', 0, 0.58, 1, 0.2, WHITE, 'GothamBold'], ['COMING SOON  ·  LOOK OVER THE WALL', 0, 0.8, 1, 0.14, 0x9ab8ff, 'GothamBold']], { glow: true });
-    sign([0.3, 10, 24], [bx - 0.7, G + 14, bz], 0x14161c, 'Left', [['WOLVERINE', 0, 0.08, 1, 0.5, YELLOW], ['COMING SOON', 0, 0.62, 1, 0.3, WHITE, 'GothamBold']], { glow: true });
-    for (let k = 0; k < 3; k++) add([0.3, 0.5, 10], [bx + 1, G + 16 + (k - 1) * 1.5, bz + 5 + k * 1.1], 0xe8eef4, 'Neon', { collide: 0, rot: [1, 0, 0, 0, Math.cos(-0.5), -Math.sin(-0.5), 0, Math.sin(-0.5), Math.cos(-0.5)] });
+  // ---- the crew: an operator at the console and an attendant on the bars
+  const stops = [], stopCars = [];
+  for (let k = 0; k < CARS; k++) {
+    sampler.matrixAt(-k * SPACING, m4);
+    P.setFromMatrixPosition(m4);
+    stops.push(cf(px0 + 1.2, PLATFORM, P.z, Math.PI / 2));
+    stopCars.push(k + 1);
   }
+  const crew = {
+    stopCars, stops, restraint: 'lapbar', attendants: 1, routes: [[1, 2, 3, 4]],
+    console: cf(con[0], PLATFORM, con[1], Math.PI / 2),
+    operator: cf(con[0] + 1.4, PLATFORM, con[1], Math.PI / 2),
+    homes: [cf(px0 + 2, PLATFORM, -168, Math.PI / 2)],
+    exit: cf(px1 - 2, PLATFORM, doorX, -Math.PI / 2),
+  };
 
-  data.staff.lines.construction = [
-    ...(data.staff.lines.construction || []),
-    'Wolverine is going up!', 'That top hat is eighty studs tall!', 'Watch out, the claws are coming...', 'Hard hats only back here!',
+  // ---- the ride
+  const origin = [-480, 0, -270];
+  const ride = {
+    id: RIDE_ID, kind: 'coaster', track, duration: track.times[track.times.length - 1],
+    origin: [...origin, 1, 0, 0, 0, 1, 0, 0, 0, 1], carCount: CARS, carSpacing: SPACING, cars, seats,
+    capacity: CARS * 4, queue: qpath, trackStyle: { style: 'steel', color: YELLOW }, extras: {}, extrasNames: [], crew,
+  };
+  data.rides.push(ride);
+  const at = (x, z) => {
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < track.cum.length; i++) {
+      const d = (track.pos[i * 3] - x) ** 2 + (track.pos[i * 3 + 2] - z) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    return track.times[best] / ride.duration;
+  };
+  // sparks off the claws at the launch, over the top hat and the camelback
+  const cues = [
+    [at(-400, -250), 'sparks', [-3, -1, 2]], [at(-425, -351), 'sparks', [3, 0, 0]],
+    [at(-555, -264), 'sparks', [-3, 0, 0]], [at(-532, -176), 'explosion', [8, -14, 0]],
   ];
-  return { site: S, gate: spot ? { x: spot[0], z: spot[1] } : { x: -360, z: -205 } };
-
-  // a tower crane: mast, jib, counterweight, and its hook
-  function crane(x, z, h, yaw, hookAt, hookY) {
-    box([10, 2, 10], [x, G, z], 0xa8a49c, 'Concrete');
-    box([3, h, 3], [x, G + 2, z], YELLOW, 'Metal');
-    const top = G + 2 + h;
-    box([3.6, 3, 3.6], [x, top, z], WHITE, 'SmoothPlastic', { collide: 0 });
-    box([1.2, 9, 1.2], [x, top + 3, z], YELLOW, 'Metal', { collide: 0 });
-    const ux = Math.sin(yaw), uz = Math.cos(yaw);
-    add([2.2, 2.2, 74], [x + ux * 25, top + 4, z + uz * 25], YELLOW, 'Metal', { yaw, collide: 0 });
-    add([3, 3.4, 5], [x - ux * 9, top + 3.2, z - uz * 9], 0x8a8a86, 'Concrete', { yaw, collide: 0 });
-    add([1, 1, 1], [x, top + 12.6, z], 0xff2020, 'Neon', { collide: 0, shape: 3 });
-    const hx = x + ux * hookAt, hz = z + uz * hookAt;
-    add([0.15, top + 3 - hookY, 0.15], [hx, (top + 3 + hookY) / 2, hz], 0x2a2a2e, 'Metal', { collide: 0 });
-    add([1.2, 1.6, 1.2], [hx, hookY + 0.8, hz], YELLOW, 'Metal', { collide: 0 });
-  }
+  const rides = data.config.Rides;
+  let insertAt = rides.length;
+  rides.forEach((r, i) => { if (r.land === 'Backwoods') insertAt = i + 1; });
+  rides.splice(insertAt, 0, {
+    id: RIDE_ID, name: 'Wolverine', land: 'Backwoods', category: 'Thrill', thrill: 5, kind: 'coaster', carStyle: 'coaster',
+    description: 'Break out of the Weapon X facility: a launch out of the bunker, straight up and over an 80-stud top hat, an overbanked turn, camelback airtime and a swooping turn home. The claws are out.',
+    baseWait: 80, origin, entrance: [entrance[0], 0, entrance[1]], exit: [-381, 0, doorX], yaw: 0, layout: RIDE_ID,
+    cars: CARS, carSpacing: SPACING, colors: [YELLOW, YELLOW, BLUE], cues,
+  });
+  data.staff.lines.greeter = [...(data.staff.lines.greeter || []), 'Wolverine is open! Snikt!', 'The claws are out - go ride Wolverine!'];
+  return { ride, gate: { x: -368, z: gz }, site: WV_SITE };
 }
 
-// a toast and some construction noise near the wall
+// a toast the first time you walk up to the new ride
 export class WolverineSite {
   constructor(hooks, layout) {
     this.hooks = hooks;
     this.layout = layout;
     this.told = false;
-    this.next = 2;
   }
 
   update(dt, pos, started) {
-    if (!started) return;
-    const near = Math.hypot(pos.x - this.layout.gate.x, pos.z - this.layout.gate.z) < 50;
-    if (near && !this.told) {
+    if (!started || this.told) return;
+    const { gate } = this.layout;
+    if (Math.hypot(pos.x - gate.x, pos.z - gate.z) < 60) {
       this.told = true;
-      this.hooks.toast('Construction has started on WOLVERINE, the next coaster! Look over the wall: the top hat is already up.', 'info');
-    }
-    this.next -= dt;
-    if (this.next <= 0) {
-      this.next = 1 + Math.random() * 3;
-      if (near) this.hooks.sound('clank');
+      this.hooks.toast('WOLVERINE is now open! Through the gate and into the Weapon X bunker: an 80-stud top hat is waiting.', 'reward');
     }
   }
 }

@@ -55,7 +55,7 @@ const CIRCUIT = [
 // Closed centripetal Catmull-Rom spline through the circuit, with the
 // speeds given at each point (launches and all), banking from the speed,
 // and the time to get round.
-function makeTrack(pts) {
+export function makeTrack(pts) {
   const n = pts.length;
   const V = pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]));
   const pos = [], knotSpeed = [];
@@ -118,7 +118,7 @@ function makeTrack(pts) {
 }
 
 // A queue path from the boarding gate (s = 0) back out past the entrance sign.
-function queuePath(points, signIndex, outward, floor) {
+export function queuePath(points, signIndex, outward, floor) {
   const cum = [0];
   for (let i = 1; i < points.length; i++) cum.push(cum[i - 1] + Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]));
   const [gx, gz] = points[0], [nx, nz] = points[1];

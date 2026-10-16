@@ -8,7 +8,7 @@ import { buildModel } from './geom.js';
 import { Figure } from './people/figure.js';
 import { CAR_PARTS, CAR_COLORS } from './entrance.js';
 import { PARKWAY, EAST_LINK, WEST_LINK } from './resort.js';
-import { HAUNT_OVER, CHRISTMAS, XMAS_OVER } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS } from './season.js';
 
 const ROAD = 0.34;
 const DEC = 10; // braking, studs/s²
@@ -155,7 +155,7 @@ function wrapTexture() {
     g.fillText(XMAS_OVER ? 'WOLVERINE' : CHRISTMAS ? 'HAPPY HOLIDAYS!' : HAUNT_OVER ? 'THANKS FOR SCREAMING!' : 'BENTON HAUNT', 24, 50);
     g.fillStyle = '#f2f2ee';
     g.font = '700 28px Arial, sans-serif';
-    g.fillText(XMAS_OVER ? 'THE CLAWS ARE OUT · COMING SOON' : CHRISTMAS ? 'MEET SANTA · BENTON HOLIDAYS THROUGH JAN 1' : HAUNT_OVER ? 'BENTON HAUNT RETURNS NEXT FALL' : '6 HOUSES · 6 SCARE ZONES · THROUGH NOV 2', 26, 104);
+    g.fillText(MARDI_GRAS ? 'THE CLAWS ARE OUT · NOW OPEN' : XMAS_OVER ? 'THE CLAWS ARE OUT · COMING SOON' : CHRISTMAS ? 'MEET SANTA · BENTON HOLIDAYS THROUGH JAN 1' : HAUNT_OVER ? 'BENTON HAUNT RETURNS NEXT FALL' : '6 HOUSES · 6 SCARE ZONES · THROUGH NOV 2', 26, 104);
   });
 }
 

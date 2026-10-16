@@ -49,6 +49,26 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Wolverine is open (browser only):** the new coaster past Backwoods is
+  finished. A path leads from the Backwoods plaza, round the south side of
+  the Rapids, to a new gate in the west wall under a claw-slashed
+  "WOLVERINE · NOW OPEN" arch, with a live wait sign and a greeter. The
+  queue's four switchback rows run right beside the launch track, into the
+  "Weapon X" bunker station (adamantium tanks, lab lights, hazard
+  stripes), where a crew checks the lap bars on a four-car yellow and blue
+  train. The ride: a launch to 38 studs/s, straight up and over the 80-stud
+  top hat, an overbanked turn, camelback airtime and a swooping turn home
+  (about 54 seconds), with sparks off the claws along the way. The
+  construction site, cranes and teaser boards are gone, the last holiday
+  crates are packed away, and the billboards and shuttle wraps say it's
+  open. Express Passes work on it like any ride.
+- **Mardi Gras at the Grand (browser only):** a temporary bar by the
+  Benton Diesel Grand Hotel's drive: a purple, green and gold striped tent,
+  bead strands strung pole to pole, a giant mask with feathers, high-top
+  tables with bowls of beads, and a limited-time, all-ages menu: King Cake
+  slices, Beignets, Shrimp Po'Boys, zero-proof Hurricane Punch (speed
+  boost), Krewe Purple Lemonade (jump boost) and Golden Fizz. Find it in
+  the app's Dining tab and walk up to the counter to order.
 - **Wolverine is going up (browser only):** past Backwoods' west wall, the
   next coaster is under construction. Its whole circuit is staked out with
   footings; blue supports carry yellow track through the launch, an 80-stud

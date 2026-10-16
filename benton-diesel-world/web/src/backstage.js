@@ -6,7 +6,7 @@
 // built in houses.js. A production yard (trailers, a generator, the makeup
 // tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
-import { HAUNT_OVER, CHRISTMAS, XMAS_OVER } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS } from './season.js';
 // the soundstages are clear of the haunt by the holidays
 const STAGES_CLEAR = CHRISTMAS || XMAS_OVER;
 
@@ -108,7 +108,7 @@ export function buildBackstage(data) {
     add([0.2, 2.6, 0.2], [gx, G + 6.8, z + 0.3], 0x8a8e96, 'Metal', { collide: 0 });
     sign('BACKSTAGE CLOSED', [18, 3, 0.2], [gx, G + 10.2, z + 0.4], 0xc8322d, WHITE, 'Back', 'GothamBlack');
     sign('CAST MEMBERS ONLY  ·  NO ENTRY', [18, 1.4, 0.2], [gx, G + 7.9, z + 0.4], WHITE, 0xc8322d, 'Back', 'GothamBold');
-    sign(XMAS_OVER ? 'HAPPY NEW YEAR!  ·  SEE YOU NEXT HOLIDAY SEASON' : 'BENTON HAUNT HAS ENDED  ·  THANKS FOR SCREAMING!', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z + 0.4], BLACK, ORANGE, 'Back', 'GothamBold');
+    sign(MARDI_GRAS ? 'BACKSTAGE CLOSED  ·  CAST MEMBERS ONLY' : XMAS_OVER ? 'HAPPY NEW YEAR!  ·  SEE YOU NEXT HOLIDAY SEASON' : 'BENTON HAUNT HAS ENDED  ·  THANKS FOR SCREAMING!', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z + 0.4], BLACK, ORANGE, 'Back', 'GothamBold');
     sign('TEARDOWN IN PROGRESS  ·  HARD HATS REQUIRED', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z - 0.4], 0xf2c818, BLACK, 'Front', 'GothamBold');
   }
 
@@ -324,7 +324,7 @@ export function buildBackstage(data) {
   for (const x of [tx - 15, tx + 15]) box([0.3, 7, 6], [x, G, tz + (x < tx ? -5 : 5)], WHITE, 'Fabric');
   add([30.4, 4, 8.2], [tx, G + 9, tz - 4.1], WHITE, 'Fabric', { shape: 1, collide: 0, yaw: Math.PI });
   add([30.4, 4, 8.2], [tx, G + 9, tz + 4.1], WHITE, 'Fabric', { shape: 1, collide: 0 });
-  sign(CHRISTMAS ? "SANTA'S MAILROOM" : XMAS_OVER ? 'HOLIDAY DECOR STORAGE' : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
+  sign(CHRISTMAS ? "SANTA'S MAILROOM" : MARDI_GRAS ? 'PARADE FLOAT STORAGE' : XMAS_OVER ? 'HOLIDAY DECOR STORAGE' : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
   for (let k = 0; k < 4; k++) {
     box([4, 2.6, 1.4], [tx - 9 + k * 6, G, tz + 5], 0xf4f0e8, 'SmoothPlastic', { collide: 0 });
     add([3, 2, 0.1], [tx - 9 + k * 6, G + 4.2, tz + 5.8], 0xfff2d8, 'Neon', { collide: 0 });

@@ -5,7 +5,10 @@ export const HAUNT_OVER = true;
 // Benton Holidays: Christmas decorations, lights on the rides, Santa in the
 // park and Santa's Workshop backstage, through January 1.
 export const CHRISTMAS = false;
-// ...and the holidays are over: the decorations are coming down, the
-// backstage is locked again, and Wolverine is going up past Backwoods.
+// ...and the holidays are over: the backstage is locked again.
 export const XMAS_OVER = true;
-export const WOLVERINE_BUILDING = true;
+// The holiday decorations are all packed away now, and Wolverine, built
+// past Backwoods over the winter, is finished and open.
+export const WOLVERINE_OPEN = true;
+// Mardi Gras: a temporary bar at the Benton Diesel Grand Hotel.
+export const MARDI_GRAS = true;

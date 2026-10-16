@@ -26,7 +26,8 @@ import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas } from './christmas.js';
-import { CHRISTMAS, XMAS_OVER, WOLVERINE_BUILDING } from './season.js';
+import { CHRISTMAS, XMAS_OVER, WOLVERINE_OPEN, MARDI_GRAS } from './season.js';
+import { buildMardiGras } from './mardigras.js';
 import { buildWolverine, WolverineSite } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -101,9 +102,11 @@ async function main() {
   const ffLayout = buildFastFurious(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
-  if (XMAS_OVER) buildXmasTeardown(data);
-  // Wolverine, going up past Backwoods
-  const wvLayout = WOLVERINE_BUILDING ? buildWolverine(data) : null;
+  if (XMAS_OVER && !WOLVERINE_OPEN) buildXmasTeardown(data);
+  // Wolverine, open past Backwoods
+  const wvLayout = WOLVERINE_OPEN ? buildWolverine(data) : null;
+  // Mardi Gras: a temporary bar at the Grand
+  if (MARDI_GRAS) buildMardiGras(data);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
