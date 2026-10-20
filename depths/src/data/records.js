@@ -1,0 +1,43 @@
+/**
+ * The thirty-six collectible records, six per chapter, with their exact
+ * on-screen text. Rook recordings are audio; their transcript is the same text.
+ */
+export const RECORDS = {
+  '01': { ch: 1, title: 'Evacuation notice', text: 'All personnel accounted for. Lower service access is suspended pending review. Do not contact the missing employee\'s family through company channels.' },
+  '02': { ch: 1, title: 'Clock check', text: 'Watch the second hand. Three honest seconds are worth more than a lit doorway. Leave the clock where it is.' },
+  '03': { ch: 1, title: 'Copy request', text: 'It keeps printing the same room. We unplugged it. The pages came out warm anyway.' },
+  '04': { ch: 1, title: 'Personnel correction', text: 'Ortiz, Lena. Status changed from evacuated to unconfirmed. This correction was requested twice and never entered into the main report.' },
+  '05': { ch: 1, title: 'Wall complaint', text: 'The footsteps stop when I stop. Today they took one more step. I have asked to move desks.' },
+  '06': { ch: 1, title: 'Local service', text: 'Maintenance tones reach the switchboard without opening the voice recorder. Use the test sequence. Keep names off the channel.' },
+  '07': { ch: 2, title: 'Security handover', text: 'All shoppers have left. If the food court counter shows another customer, check whether the number changes when you turn away.' },
+  '08': { ch: 2, title: 'Closing display', text: 'Return all window figures to their marks before lowering shutters. Count the figures from the back. The faces make counting harder.' },
+  '09': { ch: 2, title: 'Photo complaint', text: 'My daughter is in this photograph. I came shopping alone. The kiosk operator says the machine has never printed children.' },
+  '10': { ch: 2, title: 'Lena\'s note', text: 'Evan, if this reaches you, I got past the yellow rooms. I am leaving the badge where an employee would look.' },
+  '11': { ch: 2, title: 'Announcement policy', text: 'A display follows the last store channel it hears. Keep the service exit silent during closing rotation.' },
+  '12': { ch: 2, title: 'Rook recording one', audio: true, text: 'The network routes more than voices. A signal can carry a room\'s shape. We have not established what else it can carry.' },
+  '13': { ch: 3, title: 'Pool hours', text: 'Opening time has been removed. Closing time has been removed. Lifeguards must remain at their posts until a replacement arrives.' },
+  '14': { ch: 3, title: 'Drain inspection', text: 'Something passed the inspection window against the current. There was no blockage when we opened the housing.' },
+  '15': { ch: 3, title: 'Dry route', text: 'It follows the disturbance. The grating does not disturb the water. I have stopped taking shortcuts.' },
+  '16': { ch: 3, title: 'Rook recording two', audio: true, text: 'Power is not permission. Restore the circuit. Decide what it serves. I left the maintenance key where the relay cannot energize its latch.' },
+  '17': { ch: 3, title: 'Reflection ticket', text: 'Replace the reflected tiles, not the visible ones. If that sentence still makes sense tomorrow, do not send another crew.' },
+  '18': { ch: 3, title: 'Reference label', text: 'HUMAN REFERENCE remains active. Identity transfer remains incomplete. Outside endpoint awaits authenticated return.' },
+  '19': { ch: 4, title: 'Returned mail', text: 'The postman knows our names. He cannot remember which side of the door he is supposed to stand on.' },
+  '20': { ch: 4, title: 'Superintendent rule', text: 'A refuge is a room that has finished becoming a room. The clock is the easiest way to tell.' },
+  '21': { ch: 4, title: 'June\'s tally', text: 'I stopped counting days. I count people who knock twice and then ask whether they are knocking correctly. Those are usually people.' },
+  '22': { ch: 4, title: 'Family picture', text: 'Someone moved my chair into a photograph. I am leaving this note on the floor in case the rest of the room follows.' },
+  '23': { ch: 4, title: 'Repair receipt', text: 'Yellow ceramic mug. Handle missing on arrival. Adhesive repair declined. Return to staff kitchen before the October inspection.' },
+  '24': { ch: 4, title: 'Rook recording three', audio: true, text: 'Its copies can repeat a memory after hearing it. A private fact must stay on an isolated line until both people answer.' },
+  '25': { ch: 5, title: 'Tool inventory', text: 'One spanner missing. We can hear it being used. No member of the remaining crew has requested a replacement.' },
+  '26': { ch: 5, title: 'Machine cover', text: 'It stops listening to a noise that does not change. Start the press before moving. Do not stop it while someone is crossing.' },
+  '27': { ch: 5, title: 'Platform placard', text: 'Fixed payload 110. Balanced load 200. Personnel walkway excluded from measurement. Brake release requires a stable indication.' },
+  '28': { ch: 5, title: 'Rook recording four', audio: true, text: 'We gave it emergency instructions. It learned the sound of reassurance before it learned what reassurance was for.' },
+  '29': { ch: 5, title: 'Local sensor', text: 'This channel receives the chamber directly. The other receives the archive. The archive always breathes in the same place.' },
+  '30': { ch: 5, title: 'Rook recording five', audio: true, text: 'A living reference is not the same as a captive reference. Separate the support circuit from the transmission. There is still a maintenance door.' },
+  '31': { ch: 6, title: 'Return freight', text: 'Public routes are unstable. Cleared service landings remain anchored while local power is maintained. Return loads have priority.' },
+  '32': { ch: 6, title: 'June\'s second note', text: 'If I reach outside, I will sit somewhere with a window and refuse to explain why that matters for at least an hour.' },
+  '33': { ch: 6, title: 'Copy report', text: 'Visual likeness acceptable. Motor delay decreasing. Identity remains unsupported. Await the original\'s return statement.' },
+  '34': { ch: 6, title: 'Bypass warning', text: 'A successful voice match proves that the sound matches. It does not prove who is making the sound.' },
+  '35': { ch: 6, title: 'Lena\'s marks', text: 'Seventeen lines. One for each time I slept. Evan\'s badge on the monitor says eleven years. One of us needs a new clock.' },
+  '36': { ch: 6, title: 'Final dispatch', text: 'Return gate ready. Personnel confirmation required. Please state your name. Please state your name. Please state your name.' },
+};
+export const RECORD_IDS = Object.keys(RECORDS);

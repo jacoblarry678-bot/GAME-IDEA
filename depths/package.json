@@ -1,0 +1,27 @@
+{
+  "name": "depths-of-the-unseen",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Depths of the Unseen: first-person Backrooms survival horror for one to four players (browser, three.js).",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node tools/test.mjs",
+    "playthrough": "node tools/playthrough.mjs",
+    "levels": "node tools/levelcheck.mjs",
+    "e2e": "node tools/e2e.mjs",
+    "server": "node server/server.mjs"
+  },
+  "dependencies": {
+    "three": "0.169.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
