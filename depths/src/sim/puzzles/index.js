@@ -2,8 +2,9 @@ import { SequencePuzzle } from './base.js';
 import { RoutingPuzzle } from './routing.js';
 import { ValvePuzzle, LatchPuzzle, TilePuzzle } from './pool.js';
 import { MailPuzzle, FramesPuzzle } from './residents.js';
+import { WeightsPuzzle, TelemetryPuzzle } from './service.js';
 
-const TYPES = { sequence: SequencePuzzle, routing: RoutingPuzzle, valves: ValvePuzzle, latch: LatchPuzzle, tiles: TilePuzzle, mail: MailPuzzle, frames: FramesPuzzle };
+const TYPES = { weights: WeightsPuzzle, telemetry: TelemetryPuzzle, sequence: SequencePuzzle, routing: RoutingPuzzle, valves: ValvePuzzle, latch: LatchPuzzle, tiles: TilePuzzle, mail: MailPuzzle, frames: FramesPuzzle };
 
 export function registerPuzzleType(name, cls) { TYPES[name] = cls; }
 

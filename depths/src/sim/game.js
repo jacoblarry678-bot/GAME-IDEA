@@ -20,6 +20,7 @@ import * as act from './interact.js';
 import * as eq from './equipment.js';
 import { updateRefuges } from './refuge.js';
 import { updateCycles } from './shutters.js';
+import { updateMachines } from './machines.js';
 
 export const SAVE_VERSION = 1;
 
@@ -185,7 +186,7 @@ export class Game {
   emitSound(ev) {
     if (!this.level) return;
     this.soundQueue.push({ ...ev, t: this.time });
-    if (ev.kind !== 'step' && ev.kind !== 'ambient') this.fx('noise', { x: ev.x, z: ev.z, r: ev.r, kind: ev.kind, player: ev.player || null });
+    if (ev.kind !== 'step' && ev.kind !== 'ambient' && ev.kind !== 'machineLoop') this.fx('noise', { x: ev.x, z: ev.z, r: ev.r, kind: ev.kind, player: ev.player || null });
   }
 
   // ================================================================ tick
@@ -219,6 +220,7 @@ export class Game {
     }
     updateRefuges(this, dt);
     if (this.story.vars.cycles) updateCycles(this, dt);
+    if (this.story.vars.machines) updateMachines(this, dt);
     // decoys
     for (const d of this.decoys) {
       if (d.until > this.time) {
@@ -363,6 +365,7 @@ export class Game {
   // ================================================================ doors
   isDoorLocked(d) {
     if (d.lock && !this.story.has(d.lock)) return true;
+    if (d.lockAfter && this.story.has(d.lockAfter)) return true;
     if (d.unlockFrom && !this.story.has(`door.${d.id}.unlocked`)) return true;
     return false;
   }
@@ -388,6 +391,12 @@ export class Game {
       if (b.until && this.story.has(b.until)) active = false;
       if (b.after && !this.story.has(b.after)) active = false;
       b.box.active = active;
+    }
+    for (const f of this.level.flagFloors || []) {
+      let active = true;
+      if (f.until && this.story.has(f.until)) active = false;
+      if (f.after && !this.story.has(f.after)) active = false;
+      f.box.active = active;
     }
     for (const pr of this.level.props) {
       if (!pr.box) continue;
@@ -582,7 +591,7 @@ export class Game {
     this.marks = (snap.marks || []).map((m) => ({ ...m }));
     for (const [id, s] of Object.entries(snap.puzzles || {})) { const pz = this.puzzles.get(id); if (pz) pz.restore(s); }
     for (const e of snap.enemies || []) {
-      const c = createCreature(this, e.type, { id: e.id, x: e.x, z: e.z, yaw: e.yaw, anchors: e.anchors, home: e.home, withdrawTo: e.withdrawTo, state: e.state, despawnOnWithdraw: e.despawnOnWithdraw, encounter: e.encounter });
+      const c = createCreature(this, e.type, { id: e.id, x: e.x, z: e.z, yaw: e.yaw, anchors: e.anchors, home: e.home, withdrawTo: e.withdrawTo, state: e.state, despawnOnWithdraw: e.despawnOnWithdraw, encounter: e.encounter, region: e.region || null });
       c.cooldownUntil = this.time + (e.cooldownLeft || 0);
       c.gone = !!e.gone;
       c.loadData(e.data || {});

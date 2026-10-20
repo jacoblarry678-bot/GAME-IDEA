@@ -67,7 +67,7 @@ export class NavGrid {
         for (const bx of list) {
           if (!bx.solid || !(bx.mask & 2)) continue;
           if (bx.tag === 'door' || bx.tag === 'floor') continue;
-          if (bx.prop && (bx.prop.until || bx.prop.after)) continue; // flag-driven props move away later
+          if (bx.prop && bx.prop.until) continue; // flag-driven props that move away later
           if (bx.maxY <= fy + 0.35 || bx.minY >= fy + 1.6) continue;
           blocked = true; break;
         }

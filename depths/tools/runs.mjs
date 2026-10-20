@@ -1,4 +1,5 @@
 /** Per-chapter bot routines used by tools/playthrough.mjs. */
+import { maskedAt } from '../src/sim/machines.js';
 
 export const RUNS = {};
 
@@ -223,4 +224,86 @@ RUNS[4] = (b) => {
   b.wait(2);
   b.walkTo(11, 63);
   b.use('lift4');
+};
+
+RUNS[5] = (b) => {
+  const g = b.g;
+  const hits0 = b.count('hit');
+  const M = (id) => (g.story.vars.machines || {})[id];
+  const running = (id) => { const m = M(id); return !!(m && m.enabled && m.running); };
+  const masked = () => maskedAt(g, b.p.x, b.p.z);
+  /** Catwalk: move only while some machine covers the footsteps; freeze in place while they rest. */
+  const cross = (x, z) => b.walkTo(x, z, { when: () => masked() || b.p.z > 140.1 });
+  b.wait(2);
+  b.walkTo(3, 6.4);
+  b.walkTo(1.5, 14);
+  b.wait(9);
+  b.expect(g.story.has('ch5.demo') && g.enemyById('Cdemo'), 'the Caretaker demonstration behind the mesh');
+  b.expect(b.has('creatureHeard', (e) => e.id === 'Cdemo'), 'it reacts to the dropped spanner');
+  b.use('rec:25'); b.use('c5bat');
+  if (b.cfg.evidence === 'all') {
+    b.walkTo(-4.5, 14.5);
+    b.watchClock('5.03');
+    b.expect(!!g.persist.refuges['5.03'], 'R1 verified');
+    b.use('rec:26');
+  }
+  b.walkTo(1.5, 24.5);
+  b.use('rec:27'); b.use('c5film');
+  b.use('panel:P9');
+  b.puzzle('P9', ['w:40', 'w:15', 'release', 'w:40', 'w:15', 'w:25', 'w:65', 'release']);
+  b.expect(g.story.has('P9.done'), 'P9 balanced at 110 + 25 + 65');
+  b.wait(2);
+  b.walkTo(1.5, 27.6);
+  b.walkTo(1.5, 38.5);
+  b.walkTo(1.5, 41.2);
+  b.waitUntil(() => running('press1') && M('press1').t < 0.3, 20);
+  b.walkTo(1.5, 43.4);
+  b.expect(!!g.enemyById('Clane'), 'the Caretaker walks the service lane');
+  b.walkTo(0.8, 70.9, { when: masked, quietDoors: true });
+  b.walkTo(0.8, 73.6, { when: () => masked() || b.p.z > 72.4, quietDoors: true });
+  b.expect(!b.has('warning', (e) => e.id === 'Clane'), 'crossed the press corridor unheard');
+  b.use('o5film1'); b.use('rec:28');
+  b.use('station:S5', 12.3);
+  b.expect(!!g.story.clues['clue.P10'], 'survey station shows the maintenance order');
+  b.walkTo(1, 81.4);
+  b.closeDoor('r2a');
+  b.walkTo(2.5, 83);
+  b.look(-3.2, 1.2, 83); b.wait(1);
+  b.expect(g.story.has('ch5.lenaSeen'), 'Lena seen through the glass');
+  b.watchClock('5.08'); b.wait(6);
+  b.expect(g.refugeSecured['5.08'], 'R2 secured');
+  if (b.cfg.evidence === 'all') {
+    b.walkTo(4.5, 79.3);
+    b.walkTo(5.5, 77.6);
+    b.use('rec:29');
+    b.use('panel:E4');
+    b.puzzle('E4', ['print', 'channel', 'test', 'print']);
+    b.expect(g.persist.evidence.E4, 'E4 living pulse recorded');
+    b.walkTo(4.5, 81.2);
+  }
+  b.walkTo(3, 87.5);
+  b.use('c5aid');
+  b.use('panel:P10');
+  b.puzzle('P10', ['B', 'A', 'B', 'C', 'B']);
+  b.expect(g.story.has('P10.done'), 'P10 lock isolated in the order A, C, B');
+  b.wait(1);
+  b.use('wheel', 2.5);
+  b.expect(g.story.has('ch5.wheel'), 'wheel turned');
+  b.wait(1.6);
+  b.walkTo(3, 99.6);
+  b.walkTo(3, 103.4);
+  b.expect(running('turbine'), 'the turbine starts as the party reaches it');
+  cross(3, 115.4);
+  cross(3, 129.4);
+  cross(3, 141.6);
+  b.wait(0.5);
+  b.expect(g.story.has('ch5.isolated'), 'isolation door shut behind the party');
+  b.expect(b.count('hit') === hits0, 'no Caretaker contact in chapter five');
+  b.walkTo(3, 151.6);
+  b.use('rec:30');
+  b.use('t5switch');
+  b.expect(g.story.has('T5'), 'T5 restored');
+  b.wait(3);
+  b.walkTo(16.5, 148);
+  b.use('freight5');
 };

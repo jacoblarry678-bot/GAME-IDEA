@@ -85,6 +85,17 @@ export const PROP_KINDS = {
   aptDoor: { w: 1.1, d: 0.1, h: 2.1, solid: false, sight: false },
   frameMount: { w: 0.7, d: 0.05, h: 0.9, solid: false, sight: false },
   radioBank: { w: 4, d: 0.8, h: 1.8, cover: true },
+  // lower plant
+  hatch: { w: 1.0, d: 1.0, h: 0.05, solid: false, sight: false },
+  slab: { w: 2.0, d: 0.3, h: 2.0, solid: false, sight: false },
+  platform: { w: 3.0, d: 6.0, h: 0.3, solid: false, sight: false },
+  counterweight: { w: 0.8, d: 0.5, h: 1.1, solid: false, sight: false },
+  testLamp: { w: 0.3, d: 0.3, h: 0.3, solid: false, sight: false },
+  wheelValve: { w: 0.7, d: 0.15, h: 0.7, solid: false, sight: false },
+  doorFrame: { w: 2.6, d: 0.3, h: 2.6, solid: false, sight: false },
+  duct: { w: 2.5, d: 2.0, h: 1.65, solid: false, sight: false },
+  shaftCable: { w: 0.3, d: 0.3, h: 14, solid: false, sight: false },
+  beacon: { w: 0.25, d: 0.12, h: 0.25, solid: false, sight: false },
   // decoration (no collision)
   sign: { w: 1.2, d: 0.05, h: 1.2, solid: false, sight: false },
   seam: { w: 1.0, d: 0.1, h: 0.01, solid: false, sight: false },

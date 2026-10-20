@@ -70,6 +70,19 @@ export const ART = {
     ctx.strokeStyle = SILVER; ctx.lineWidth = 5;
     for (let i = 0; i < 9; i++) { const y = 40 + i * (h - 80) / 9, inset = i * 14; ctx.strokeRect(40 + inset, y, w - 80 - inset * 2, (h - 80) / 9); }
   },
+  ceilingCaretaker: (ctx, w, h) => {
+    // a tall wrapped figure walking upside down: feet at the top edge, tools hanging toward the floor
+    ctx.strokeStyle = SILVER; ctx.fillStyle = SILVER; ctx.lineWidth = 9; ctx.lineCap = 'round';
+    const cx = w * 0.5;
+    const line = (pts) => { ctx.beginPath(); ctx.moveTo(pts[0][0] * w, pts[0][1] * h); for (const p of pts.slice(1)) ctx.lineTo(p[0] * w, p[1] * h); ctx.stroke(); };
+    line([[0.42, 0.03], [0.44, 0.2], [0.47, 0.36]]); line([[0.6, 0.06], [0.56, 0.22], [0.53, 0.36]]);
+    ctx.beginPath(); ctx.ellipse(cx, h * 0.5, w * 0.13, h * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(cx - w * 0.13, h * (0.42 + i * 0.05)); ctx.lineTo(cx + w * 0.13, h * (0.42 + i * 0.05)); ctx.stroke(); }
+    line([[0.38, 0.4], [0.3, 0.55], [0.28, 0.7]]); line([[0.62, 0.4], [0.7, 0.56], [0.74, 0.68]]);
+    ctx.strokeRect(cx - w * 0.12, h * 0.67, w * 0.24, h * 0.1);
+    ctx.lineWidth = 5;
+    for (let i = 0; i < 5; i++) { const x = cx - w * 0.1 + i * w * 0.05; line([[x / w, 0.77], [x / w, 0.84 + (i % 2) * 0.05]]); }
+  },
   // generic text/diagram art used by later chapters
   text: (lines) => (ctx, w, h) => {
     ctx.fillStyle = SILVER; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

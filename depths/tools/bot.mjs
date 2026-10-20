@@ -51,9 +51,17 @@ export class Bot {
     const g = this.g, nav = g.level.nav, p = this.p;
     const tol = opts.tol ?? 0.45;
     const timeout = opts.timeout ?? 90;
-    let t = 0, path = null, ix = 0, repath = 0;
+    let t = 0, path = null, ix = 0, repath = 0, held = 0;
     while (t < timeout) {
       if (Math.hypot(x - p.x, z - p.z) < tol) { this.stop(); return true; }
+      // `when`: only move while the condition holds (e.g. a machine covers footsteps); stand still otherwise
+      if (opts.when && !opts.when()) {
+        this.stop();
+        if (!this.tick(1)) return false;
+        held += DT;
+        if (held > (opts.holdMax ?? 120)) throw new Error(`bot: walkTo ${x},${z} held too long`);
+        continue;
+      }
       if (!path || repath <= 0) {
         path = nav.path(p.x, p.z, x, z, null, (di) => this.doorCost(di));
         ix = 0; repath = 2;
@@ -159,6 +167,14 @@ export class Bot {
     this.g.beginInteract(this.pid, `door:${id}`, { fast });
     this.g.endInteract(this.pid);
     this.wait(fast ? 0.8 : 1.8);
+  }
+
+  /** Tick until cond() holds (or timeout seconds pass). */
+  waitUntil(cond, timeout = 60) {
+    let t = 0;
+    this.stop();
+    while (!cond()) { if (!this.tick(1)) return false; t += DT; if (t > timeout) throw new Error('bot: waitUntil timed out'); }
+    return true;
   }
 
   count(type) { return this.events.filter((e) => e.e === type).length; }

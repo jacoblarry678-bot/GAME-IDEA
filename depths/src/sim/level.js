@@ -45,6 +45,7 @@ export class Level {
     this.walls = [];
     this.lintels = [];
     this.floors = [];
+    this.flagFloors = [];
     this.props = [];
     this.propById = new Map();
     this.blocks = [];
@@ -67,7 +68,11 @@ export class Level {
     this._buildRefuges();
     this._buildInteractables();
     this.bounds = this._bounds();
+    // props that appear later (`after: flag`) and stay are part of the walkable layout; plan around them now
+    const later = this.props.filter((p) => p.box && p.after);
+    for (const p of later) p.box.active = true;
     this.nav = new NavGrid(this);
+    for (const p of later) p.box.active = false;
     this.sound = new SoundGraph(this);
   }
 
@@ -86,9 +91,12 @@ export class Level {
         this.world.add({ minX: f.x0, minZ: f.z0, maxX: f.x1, maxZ: f.z1, minY: f.y - 0.3, maxY: f.y, sight: true, tag: 'floor' });
       }
       for (const f of r.floors || []) {
-        const fl = { room: room.id, x0: f[0], z0: f[1], x1: f[2], z1: f[3], y: f[4] || 0, grate: !!f[5] };
+        const opt = f[6] || {};
+        const fl = { room: room.id, x0: f[0], z0: f[1], x1: f[2], z1: f[3], y: f[4] || 0, grate: !!f[5], until: opt.until || null, after: opt.after || null };
         this.floors.push(fl);
-        this.world.add({ minX: fl.x0, minZ: fl.z0, maxX: fl.x1, maxZ: fl.z1, minY: fl.y - 0.3, maxY: fl.y, sight: false, tag: 'floor' });
+        // flag-driven floors (a bridge that appears) start active so the nav grid includes them; the game syncs them to flags
+        fl.box = this.world.add({ minX: fl.x0, minZ: fl.z0, maxX: fl.x1, maxZ: fl.z1, minY: fl.y - 0.3, maxY: fl.y, sight: false, tag: 'floor' });
+        if (fl.until || fl.after) this.flagFloors.push(fl);
       }
     }
     for (let i = 0; i < this.rooms.length; i++) {

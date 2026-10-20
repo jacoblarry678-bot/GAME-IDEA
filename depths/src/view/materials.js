@@ -67,6 +67,7 @@ reg('rust', 'rust', { rough: 0.8, metal: 0.4 });
 reg('orangePaint', 'orangePaint', { rough: 0.75, metal: 0.2 });
 reg('grating', 'grating', { rough: 0.6, metal: 0.6, alphaTest: 0.5, side: THREE.DoubleSide });
 reg('hazard', 'hazard', { rough: 0.7 });
+reg('insulation', 'fabric', { color: 0xc9b27a, rough: 1 });
 // plain
 DEFS.trim = () => new THREE.MeshStandardMaterial({ color: 0x8d7e52, roughness: 0.7 });
 DEFS.trimDark = () => new THREE.MeshStandardMaterial({ color: 0x3c3a34, roughness: 0.7 });
@@ -78,9 +79,10 @@ DEFS.black = () => new THREE.MeshStandardMaterial({ color: 0x0e0e10, roughness: 
 DEFS.darkMetal = () => new THREE.MeshStandardMaterial({ color: 0x2e3236, roughness: 0.55, metalness: 0.6 });
 DEFS.chrome = () => new THREE.MeshStandardMaterial({ color: 0xcfd4da, roughness: 0.18, metalness: 0.95 });
 DEFS.glass = () => new THREE.MeshStandardMaterial({ color: 0x9ab8c0, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.22, depthWrite: false });
-DEFS.meshWire = () => new THREE.MeshStandardMaterial({ color: 0x777b7e, roughness: 0.5, metalness: 0.7, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
+DEFS.meshWire = () => new THREE.MeshStandardMaterial({ color: 0x5a5e62, roughness: 0.6, metalness: 0.6, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide });
 DEFS.lamp = () => new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2c8, emissiveIntensity: 2.2, roughness: 0.4 });
 DEFS.lampDim = () => new THREE.MeshStandardMaterial({ color: 0xbbbbbb, emissive: 0xfff2c8, emissiveIntensity: 0.5, roughness: 0.4 });
+DEFS.beaconRed = () => new THREE.MeshStandardMaterial({ color: 0x400000, emissive: 0xff2a10, emissiveIntensity: 2.4, roughness: 0.5 });
 DEFS.lampOff = () => new THREE.MeshStandardMaterial({ color: 0x8a8a84, roughness: 0.5 });
 DEFS.lampWarm = () => new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffc890, emissiveIntensity: 2.0, roughness: 0.4 });
 DEFS.lampCool = () => new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xd8f0ff, emissiveIntensity: 2.0, roughness: 0.4 });

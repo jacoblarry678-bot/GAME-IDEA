@@ -309,6 +309,8 @@ export class App {
     const ref = room && room.refugeData;
     this.audio.loop('clock', 'clock', !!(ref && ref.genuine), ref ? { x: ref.clock.x, y: ref.clock.y, z: ref.clock.z } : {});
     this.audio.loop('charger', 'chargerHum', !!(ref && ref.genuine), ref ? { x: ref.items[2].x, y: 1, z: ref.items[2].z } : {});
+    // running machines (chapter five)
+    for (const m of Object.values(g.story.vars.machines || {})) this.audio.loop(`machine:${m.id}`, 'machine', !!(m.enabled && m.running), { x: m.x, y: 1.2, z: m.z });
   }
 
   // ================================================================ events
@@ -400,6 +402,14 @@ export class App {
         case 'tileCrack': this.audio.play('crack', { x: ev.x, z: ev.z }); break;
         case 'tileLit': this.audio.play('tone'); break;
         case 'npcArrived': break;
+        case 'machine': {
+          if (ev.running) this.audio.play('pressHit', { x: ev.x, z: ev.z });
+          const pp = g.players.get(me);
+          if (A.envCaptions && pp && Math.hypot(ev.x - pp.x, ev.z - pp.z) < 16) this.hud.envCaption(ev.running ? `[${ev.label} running: footsteps covered]` : `[${ev.label} at rest]`, { dur: 2 });
+          break;
+        }
+        case 'caretakerNegotiates': if (A.envCaptions) this.hud.envCaption(`[Behind you, it stops at the ${ev.what}. Tools scrape]`, { dur: 3 }); break;
+        case 'testLight': if (this.lights) this.lights.flash({ x: -1.2, y: 2.2, z: 81.2 }, 30, 1.2); this.audio.play('tone'); break;
         default: if (this.extraEvent) this.extraEvent(ev); break;
       }
     }

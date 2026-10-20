@@ -73,7 +73,7 @@ export class LevelView {
     const floorMat = r.floorMat || SURFACE_FLOOR[r.surface] || 'carpet';
     const fy = r.floorY || 0;
     if (!r.noFloor) B.add(key, floorMat, boxGeo(r.x0, fy - 0.02, r.z0, r.x1, fy, r.z1, texScale(floorMat), 4));
-    for (const f of r.floors || []) { const y = f[4] || 0; const m = f[5] ? 'grating' : floorMat; B.add(key, m, boxGeo(f[0], Math.min(0, y) - 0.06, f[1], f[2], y, f[3], texScale(m), f[5] ? 4 | 8 : (y > 0.05 ? 4 | 1 | 2 | 16 | 32 : 4))); }
+    for (const f of r.floors || []) { if (f[6]) continue; const y = f[4] || 0; const m = f[5] ? 'grating' : floorMat; B.add(key, m, boxGeo(f[0], Math.min(0, y) - 0.06, f[1], f[2], y, f[3], texScale(m), f[5] ? 4 | 8 : (y > 0.05 ? 4 | 1 | 2 | 16 | 32 : 4))); }
     if (!r.noCeiling) B.add(key, r.ceiling || kit.ceiling, boxGeo(r.x0, fy + r.h, r.z0, r.x1, fy + r.h + 0.05, r.z1, texScale(r.ceiling || kit.ceiling), 8));
     const t = WALL_T;
     for (const w of this.level.walls) {

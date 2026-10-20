@@ -393,7 +393,7 @@ export class Creature {
   forceWithdraw() { if (this.state !== 'withdraw' && !this.gone && this.state !== 'dormant') this.beginWithdraw(); }
 
   serialize() {
-    return { type: this.type, id: this.id, x: this.x, z: this.z, yaw: this.yaw, state: ['pursue', 'warn', 'search', 'investigate'].includes(this.state) ? 'patrol' : this.state, anchors: this.anchors, home: this.home, withdrawTo: this.withdrawTo, cooldownLeft: Math.max(0, this.cooldownUntil - this.game.time), data: this.saveData(), gone: this.gone, despawnOnWithdraw: this.despawnOnWithdraw, encounter: this.encounter };
+    return { type: this.type, id: this.id, x: this.x, z: this.z, yaw: this.yaw, state: ['pursue', 'warn', 'search', 'investigate'].includes(this.state) ? 'patrol' : this.state, anchors: this.anchors, home: this.home, withdrawTo: this.withdrawTo, cooldownLeft: Math.max(0, this.cooldownUntil - this.game.time), data: this.saveData(), gone: this.gone, despawnOnWithdraw: this.despawnOnWithdraw, encounter: this.encounter, region: this.region };
   }
   saveData() { return {}; }
   loadData() {}

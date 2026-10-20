@@ -228,7 +228,54 @@ function animHuman(u, c, dt, moved, game) {
   void game;
 }
 
-const BUILDERS = { listener: buildListener, cutout: buildCutout, drowned: buildDrowned, tenant: buildTenant };
+/** The Caretaker: tall, wrapped in yellowed insulation, a carrier of hanging tools where the face should be. */
+function buildCaretaker() {
+  const ins = mat('insulation'), metal = mat('darkMetal'), tool = mat('chrome');
+  const root = new THREE.Group();
+  const hips = joint(root, 0, 1.25, 0);
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 0.95, 8), ins); torso.position.y = 0.48; torso.castShadow = true; hips.add(torso);
+  for (let i = 0; i < 5; i++) { const band = new THREE.Mesh(new THREE.TorusGeometry(0.235 + i * 0.006, 0.025, 4, 10), ins); band.rotation.x = Math.PI / 2; band.position.y = 0.12 + i * 0.18; hips.add(band); }
+  const chest = joint(hips, 0, 0.95, 0);
+  // the tool carrier: an open frame with spanners and wrenches hanging from it
+  const head = joint(chest, 0, 0.12, 0.02);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.34, 0.26), metal); frame.position.y = 0.2; head.add(frame);
+  const hanging = [];
+  for (let i = 0; i < 6; i++) {
+    const t = new THREE.Group(); t.position.set(-0.17 + i * 0.068, 0.04, 0.14); head.add(t);
+    const len = 0.18 + (i % 3) * 0.07;
+    const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.025, len, 0.012), tool); shaft.position.y = -len / 2; t.add(shaft);
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 0.014), tool); jaw.position.y = -len; t.add(jaw);
+    hanging.push(t);
+  }
+  const arms = [], legs = [];
+  for (const s of [-1, 1]) {
+    const sh = joint(chest, s * 0.3, -0.02, 0);
+    const up = limb(0.62, 0.075, ins, 0.065); sh.add(up);
+    const el = joint(up, 0, -0.62, 0);
+    const lo = limb(0.62, 0.06, ins, 0.05); el.add(lo);
+    if (s > 0) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.32, 0.02), tool); sp.position.y = -0.75; lo.add(sp); }
+    arms.push({ sh, el });
+    const hp = joint(hips, s * 0.13, 0, 0);
+    const th = limb(0.64, 0.09, ins, 0.075); hp.add(th);
+    const kn = joint(th, 0, -0.64, 0);
+    const sn = limb(0.62, 0.07, ins, 0.06); kn.add(sn);
+    legs.push({ hp, kn });
+  }
+  root.userData = { hips, chest, head, arms, legs, hanging, human: true };
+  root.userData.custom = (o, c, dt, game, moved) => {
+    const u = o.userData;
+    animHuman(u, c, dt, moved * 0.75, game);
+    const tap = (game.time * (c.state === 'pursue' || c.state === 'warn' ? 0.85 : 0.29)) % 1;
+    u.arms[1].sh.rotation.x = tap < 0.12 ? -1.2 + tap * 6 : -0.5;
+    u.arms[1].sh.rotation.z = -0.25;
+    u.head.rotation.z = c.state === 'warn' || c.state === 'investigate' || c.state === 'search' ? Math.sin(game.time * 1.7) * 0.3 : 0;
+    u.chest.rotation.x = c.state === 'pursue' ? 0.3 : 0.12;
+    u.hanging.forEach((t, i) => { t.rotation.z = Math.sin(game.time * 3 + i) * 0.12 * (moved > 0.001 ? 1.6 : 0.4); });
+  };
+  return root;
+}
+
+const BUILDERS = { listener: buildListener, cutout: buildCutout, drowned: buildDrowned, tenant: buildTenant, caretaker: buildCaretaker };
 export function registerCreatureModel(type, fn) { BUILDERS[type] = fn; }
 
 const NPC_LOOK = {
@@ -316,7 +363,7 @@ export class CreatureView {
       m.obj.position.set(n.x, n.y || 0, n.z); m.obj.rotation.y = n.yaw || 0;
       m.obj.visible = !n.hidden;
       animHuman(m.obj.userData, n, dt, moved, game);
-      if (n.seated && m.obj.userData.hips) { m.obj.userData.hips.position.y = 0.55; m.obj.userData.legs.forEach((L) => { L.hp.rotation.x = -1.4; L.kn.rotation.x = 1.4; }); }
+      if (n.seated && m.obj.userData.hips) { m.obj.userData.hips.position.y = 0.5; m.obj.userData.legs.forEach((L) => { L.hp.rotation.x = 1.45; L.kn.rotation.x = -1.45; }); m.obj.userData.arms.forEach((A) => { A.sh.rotation.x = 0.5; A.el.rotation.x = 0.9; }); }
     }
     for (const [id, m] of this.npcModels) if (!seen.has(id)) { this.root.remove(m.obj); this.npcModels.delete(id); }
   }

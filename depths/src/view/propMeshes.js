@@ -5,6 +5,7 @@
  * position and 90-degree rotation. Unrotated sizes come from PROP_KINDS or
  * the prop's own `s` override.
  */
+import * as THREE from 'three';
 import { PROP_KINDS } from '../data/props.js';
 
 const TINT_FABRIC = { red: 'fabricRed', blue: 'fabricBlue', green: 'fabricGreen' };
@@ -203,6 +204,37 @@ export const BUILD = {
   aptDoor(b, w, d, h) { b.box(0, 0, 0, w + 0.14, h + 0.08, 0.06, 'veneer'); b.box(0, 0.02, 0.04, w - 0.06, h - 0.04, 0.04, 'doorWood'); b.box(w * 0.36, h * 0.48, 0.08, 0.1, 0.03, 0.06, 'chrome'); b.box(0, h * 0.8, 0.07, 0.24, 0.12, 0.01, 'chrome'); },
   frameMount(b, w, d, h) { b.box(0, h * 0.5, 0, 0.04, 0.04, 0.05, 'chrome'); b.box(0, 0, 0, w, 0.02, 0.01, 'trimDark'); },
   radioBank(b, w, d, h) { b.box(0, 0, 0, w, h, d, 'veneer'); for (let i = 0; i < 6; i++) { b.box(-w / 2 + 0.35 + i * (w - 0.7) / 5, h * 0.55, d / 2, 0.5, 0.35, 0.02, 'fabric'); b.cylZ(-w / 2 + 0.35 + i * (w - 0.7) / 5, h * 0.35, d / 2 + 0.02, 0.05, 0.03, 'chrome', 10); } },
+  hatch(b, w, d) { b.box(0, 0, 0, w, 0.04, d, 'diamondPlate'); b.box(0, 0.04, -d / 2 + 0.08, w * 0.3, 0.03, 0.05, 'darkMetal'); b.box(0, 0.005, 0, w + 0.08, 0.03, d + 0.08, 'hazard'); },
+  slab(b, w, d, h) { b.box(0, 0, 0, w, h, d, 'concrete'); },
+  platform(b, w, d, h) {
+    b.box(0, 0, 0, w, h * 0.5, d, 'grating');
+    for (const sx of [-1, 1]) b.box(sx * (w / 2 - 0.06), -0.25, 0, 0.12, 0.3, d, 'orangePaint');
+    for (const sz of [-1, 0, 1]) b.box(0, -0.25, sz * (d / 2 - 0.1), w, 0.2, 0.12, 'orangePaint');
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cyl(sx * (w / 2 - 0.15), -6, sz * (d / 2 - 0.2), 0.05, 6, 'darkMetal', 6);
+  },
+  counterweight(b, w, d, h) {
+    b.box(0, 0, 0, w, h, d, 'darkMetal'); b.box(0, h * 0.35, d / 2 + 0.005, w * 0.8, h * 0.3, 0.01, 'hazard');
+    b.box(0, h, 0, 0.06, 4, 0.06, 'chrome'); b.box(0, -0.6, 0, 0.12, 0.6, 0.12, 'darkMetal');
+  },
+  testLamp(b, w, d, h, p) { b.box(0, 0, 0, w, 0.06, d, 'darkMetal'); b.sphere(0, -0.06, 0, w * 0.35, p.lit ? 'lampWarm' : 'lampOff', 10); },
+  wheelValve(b, w) {
+    b.cylZ(0, 0, 0, 0.05, 0.25, 'darkMetal', 8);
+    const r = w / 2;
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; b.box(Math.cos(a) * r, Math.sin(a) * r, 0.13, 0.12, 0.12, 0.05, 'redPaint'); }
+    for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI; const g = new THREE.BoxGeometry(w, 0.04, 0.03); g.rotateZ(a); g.translate(0, 0, 0.13); b.geo(g, 'redPaint'); }
+  },
+  doorFrame(b, w, d, h) {
+    for (const sx of [-1, 1]) b.box(sx * (w / 2 - 0.15), 0, 0, 0.3, h, d, 'doorMetal');
+    b.box(0, h - 0.3, 0, w, 0.3, d, 'doorMetal'); b.box(-w / 2 + 0.25, 0, d / 2 + 0.05, 0.5, h - 0.3, 0.06, 'hazard');
+  },
+  duct(b, w, d, h) {
+    b.box(0, h, 0, w, 0.08, d + 0.4, 'metal');
+    for (const sz of [-1, 1]) b.box(0, 0, sz * (d / 2 + 0.1), w, h + 0.08, 0.2, 'metal');
+    b.box(w / 2 + 0.1, 0, 0, 0.2, h + 0.08, d + 0.4, 'metal');
+    b.box(-w / 2, h - 0.1, 0, 0.06, 0.18, d + 0.4, 'hazard');
+  },
+  beacon(b, w, d, h) { b.box(0, 0, 0, w, h, d * 0.5, 'darkMetal'); b.box(0, h * 0.2, d * 0.25, w * 0.6, h * 0.6, d * 0.5, 'beaconRed'); },
+  shaftCable(b, w, d, h) { b.cyl(0, -h, 0, w / 2, h * 2, 'rubber', 6); },
   decal() {},
   block() {},
 };
