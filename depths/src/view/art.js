@@ -55,6 +55,21 @@ export const ART = {
     rows.forEach((r, i) => ctx.fillText(r, 30, 110 + i * 44));
     ctx.strokeStyle = SILVER; ctx.lineWidth = 4; ctx.strokeRect(22, 250, w - 44, 50);
   },
+  reflectionPath: (ctx, w, h) => {
+    ctx.strokeStyle = SILVER; ctx.lineWidth = 3;
+    for (let i = 0; i <= 4; i++) { ctx.beginPath(); ctx.moveTo(40 + i * (w - 80) / 4, 40); ctx.lineTo(40 + i * (w - 80) / 4, h - 40); ctx.stroke(); ctx.beginPath(); ctx.moveTo(40, 40 + i * (h - 80) / 4); ctx.lineTo(w - 40, 40 + i * (h - 80) / 4); ctx.stroke(); }
+    ctx.fillStyle = SILVER; ctx.font = '700 26px Arial'; ctx.textAlign = 'center';
+    // seen from below: columns A-D left to right from the entrance, rows 1-4 away from it
+    for (let i = 0; i < 4; i++) { ctx.fillText('ABCD'[i], 40 + (i + 0.5) * (w - 80) / 4, 32); ctx.fillText(String(i + 1), 22, h - 40 - (i + 0.5) * (h - 80) / 4 + 9); }
+    const cell = (c) => [40 + ('ABCD'.indexOf(c[0]) + 0.5) * (w - 80) / 4, h - 40 - (+c[1] - 0.5) * (h - 80) / 4];
+    const path = ['B1', 'B2', 'C2', 'C3', 'B3', 'B4', 'C4'].map(cell);
+    ctx.lineWidth = 16; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(path[0][0], h - 10); for (const pt of path) ctx.lineTo(pt[0], pt[1]); ctx.lineTo(path[path.length - 1][0], 10); ctx.stroke();
+  },
+  stairsBelow: (ctx, w, h) => {
+    ctx.strokeStyle = SILVER; ctx.lineWidth = 5;
+    for (let i = 0; i < 9; i++) { const y = 40 + i * (h - 80) / 9, inset = i * 14; ctx.strokeRect(40 + inset, y, w - 80 - inset * 2, (h - 80) / 9); }
+  },
   // generic text/diagram art used by later chapters
   text: (lines) => (ctx, w, h) => {
     ctx.fillStyle = SILVER; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

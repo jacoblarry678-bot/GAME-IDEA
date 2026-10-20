@@ -41,7 +41,7 @@ export function updateRefuges(game, dt) {
 
     // securing
     if (ref && ref.genuine && game.inRefugeVolume(p) && game.persist.refuges[room.id]) {
-      const closed = room.doors.every((d) => d.T.open ? false : d.open < 0.05);
+      const closed = room.doors.every((d) => !d.T.hinged || d.open < 0.05);
       if (closed) {
         p.refugeT += dt;
         if (p.refugeT >= 5 && !game.refugeSecured[room.id]) secure(game, room, p);

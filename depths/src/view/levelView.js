@@ -73,7 +73,7 @@ export class LevelView {
     const floorMat = r.floorMat || SURFACE_FLOOR[r.surface] || 'carpet';
     const fy = r.floorY || 0;
     if (!r.noFloor) B.add(key, floorMat, boxGeo(r.x0, fy - 0.02, r.z0, r.x1, fy, r.z1, texScale(floorMat), 4));
-    for (const f of r.floors || []) B.add(key, f[5] ? 'grating' : floorMat, boxGeo(f[0], (f[4] || 0) - 0.06, f[1], f[2], f[4] || 0, f[3], texScale(f[5] ? 'grating' : floorMat), f[5] ? 4 | 8 : 4));
+    for (const f of r.floors || []) { const y = f[4] || 0; const m = f[5] ? 'grating' : floorMat; B.add(key, m, boxGeo(f[0], Math.min(0, y) - 0.06, f[1], f[2], y, f[3], texScale(m), f[5] ? 4 | 8 : (y > 0.05 ? 4 | 1 | 2 | 16 | 32 : 4))); }
     if (!r.noCeiling) B.add(key, r.ceiling || kit.ceiling, boxGeo(r.x0, fy + r.h, r.z0, r.x1, fy + r.h + 0.05, r.z1, texScale(r.ceiling || kit.ceiling), 8));
     const t = WALL_T;
     for (const w of this.level.walls) {
@@ -123,8 +123,7 @@ export class LevelView {
   _buildProp(B, p) {
     const fn = BUILD[p.k];
     if (!fn || p.hidden) return;
-    if (p.k === 'sign' || p.k === 'directory' && false) return;
-    if (p.id && p.dynamic) { this._dynamicProp(p); return; }
+    if (p.dynamic) { this._dynamicProp(p); return; }
     const [w, d, h] = propDims(p);
     const m = placement(p.x, p.y || 0, p.z, p.rot || 0);
     const key = `room:${p.room || 'none'}`;
@@ -139,7 +138,7 @@ export class LevelView {
     grp.position.set(p.x, p.y || 0, p.z);
     grp.rotation.y = -(p.rot || 0) * Math.PI / 180;
     for (const c of grp.children) { c.matrixAutoUpdate = true; }
-    this.dyn.set(p.id, { grp, prop: p, base: { x: p.x, y: p.y || 0, z: p.z } });
+    this.dyn.set(p.id || `${p.k}@${p.x},${p.z}`, { grp, prop: p, base: { x: p.x, y: p.y || 0, z: p.z } });
   }
 
   // ---------------------------------------------------------------- doors
@@ -225,6 +224,12 @@ export class LevelView {
       list.forEach((l, i) => { M.makeTranslation(l.x, l.y - 0.02, l.z); inst.setMatrixAt(i, M); });
       inst.instanceMatrix.needsUpdate = true;
       this.root.add(inst);
+      // pendant cables for fixtures hung below the ceiling
+      for (const l of list) {
+        const r = L.room(l.room);
+        const top = (r.floorY || 0) + r.h;
+        if (top - l.y > 0.3) { const c = new THREE.Mesh(new THREE.BoxGeometry(0.015, top - l.y, 0.015), mat('darkMetal')); c.position.set(l.x, (top + l.y) / 2, l.z); this.root.add(c); }
+      }
     }
   }
 
@@ -314,9 +319,35 @@ export class LevelView {
         const m = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.14, h - 0.75), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5, emissive: 0x111111 }));
         m.position.set(p.x, 0.6 + (h - 0.75) / 2, p.z - d / 2 - 0.012);
         m.rotation.y = Math.PI;
+        if (p.tilt) m.rotation.z = p.tilt;
         this.root.add(m);
       }
     }
+    for (const p of L.props) {
+      if (p.k === 'storefront' && p.name) {
+        const [w, , h] = propDims(p);
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, 0.4), new THREE.MeshStandardMaterial({ map: textTexture([p.name], { w: 512, h: 96, size: 46, bg: '#e6d8d8', fg: '#3a2a30', spacing: 6 }), roughness: 0.6, emissive: 0x222222 }));
+        const r = (p.rot || 0) * Math.PI / 180;
+        m.rotation.y = -r;
+        m.position.set(p.x - Math.sin(r) * 0.14, h - 0.28, p.z + Math.cos(r) * 0.14);
+        this.root.add(m);
+      }
+      if (p.k === 'labelPlate' && p.text) {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.16), new THREE.MeshStandardMaterial({ map: textTexture([p.text], { w: 512, h: 90, size: 38, bg: '#f2ead8', fg: '#2a2620', spacing: 2 }), roughness: 0.7 }));
+        m.position.set(p.x, p.y || 1.5, p.z); m.rotation.y = Math.PI;
+        this.root.add(m);
+      }
+      if (p.k === 'toyShelf' && p.toys) {
+        const [w] = propDims(p);
+        p.toys.forEach(([n], i) => {
+          const x = p.x - w / 2 + 0.45 + i * (w - 0.9) / 2;
+          const m = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.1), new THREE.MeshStandardMaterial({ map: textTexture([String(n)], { w: 128, h: 96, size: 70, bg: '#ffffff', fg: '#111' }) }));
+          m.position.set(x, 0.6, p.z - 0.26); m.rotation.y = Math.PI;
+          this.root.add(m);
+        });
+      }
+    }
+    this._buildSilhouettes();
     // room plates beside each door: the name of the room on the other side
     const plates = new Map();
     const plate = (name) => { if (!plates.has(name)) plates.set(name, textTexture([name.toUpperCase()], { w: 512, h: 96, size: 34, bg: '#20262a', fg: '#e8e2cc', spacing: 3 })); return plates.get(name); };
@@ -335,20 +366,50 @@ export class LevelView {
     }
   }
 
+  _buildSilhouettes() {
+    const sil = this.level.props.filter((p) => p.k === 'silhouette');
+    if (!sil.length) return;
+    const bodyM = new THREE.MeshStandardMaterial({ color: 0x15130f, roughness: 0.95 });
+    const bodies = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.2, 0.95, 4, 8), bodyM, sil.length);
+    const heads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 10, 8).scale(1, 1.15, 1.1).translate(0, 0, 0.03), bodyM, sil.length);
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), V = new THREE.Vector3(), S1 = new THREE.Vector3(1, 1, 1);
+    this.silData = sil.map((p, i) => {
+      const yaw = Math.atan2(-(p.faceX - p.x), -(p.faceZ - p.z)) + Math.PI;
+      M.compose(V.set(p.x, 0.78, p.z), Q.setFromEuler(E.set(0, yaw, 0)), S1); bodies.setMatrixAt(i, M);
+      return { p, yaw, head: 0, target: 0 };
+    });
+    this.silHeads = heads; this.silBodies = bodies;
+    this._updateSil(0);
+    this.root.add(bodies, heads);
+  }
+  _updateSil(dt) {
+    if (!this.silData) return;
+    const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), V = new THREE.Vector3(), S1 = new THREE.Vector3(1, 1, 1);
+    this.silData.forEach((s, i) => {
+      s.head += (s.target - s.head) * Math.min(1, dt * 6);
+      M.compose(V.set(s.p.x, 1.62, s.p.z), Q.setFromEuler(E.set(0, s.yaw + s.head, 0)), S1);
+      this.silHeads.setMatrixAt(i, M);
+    });
+    this.silHeads.instanceMatrix.needsUpdate = true;
+  }
+  turnSilhouettes() { if (this.silData) for (const s of this.silData) s.target = 1.2; setTimeout(() => { if (this.silData) for (const s of this.silData) s.target = 0; }, 1600); }
+
   _buildWater() {
+    this.waterMeshes = [];
     for (const w of this.level.water) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(w.x1 - w.x0, w.z1 - w.z0), mat('water'));
       m.rotation.x = -Math.PI / 2;
       m.position.set((w.x0 + w.x1) / 2, (w.y || 0) + w.depth, (w.z0 + w.z1) / 2);
       m.renderOrder = 2;
       this.root.add(m);
+      this.waterMeshes.push({ m, w });
     }
   }
 
   _buildWallDoor(wd) {
     const r = this.level.room(wd.room);
     const g = new THREE.Group();
-    const leaf = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.1, 0.06), mat('doorMetal'));
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(wd.lift ? 1.6 : 1.0, 2.1, 0.06), mat(wd.lift ? 'chrome' : 'doorMetal'));
     leaf.position.y = 1.05;
     const frame = new THREE.Mesh(new THREE.BoxGeometry(1.16, 2.2, 0.04), mat('trimDark'));
     frame.position.y = 1.1; frame.position.z = -0.012;
@@ -413,10 +474,14 @@ export class LevelView {
     }
     // dynamic props driven by the simulation
     for (const [id, o] of this.dyn) {
+      const pr = o.prop;
+      if (pr.showIf || pr.hideIf) o.grp.visible = (!pr.showIf || S.has(pr.showIf)) && (!pr.hideIf || !S.has(pr.hideIf));
       const st = g.propState && g.propState[id];
       if (st) { o.grp.position.set(st.x ?? o.base.x, st.y ?? o.base.y, st.z ?? o.base.z); if (st.rot !== undefined) o.grp.rotation.y = -st.rot * Math.PI / 180; o.grp.visible = st.visible !== false; }
     }
-    void dt; void force;
+    this._updateSil(dt);
+    for (const o of this.waterMeshes || []) o.m.visible = !(o.w.until && S.has(o.w.until)) && !(o.w.after && !S.has(o.w.after));
+    void force;
   }
 
   dispose() {

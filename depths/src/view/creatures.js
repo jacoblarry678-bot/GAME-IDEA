@@ -84,8 +84,158 @@ export function buildHuman(color = 0x4a6b8a, accent = 0xd8b04a, opts = {}) {
   return root;
 }
 
-const BUILDERS = { listener: buildListener };
+/** Flat display figure: printed smiling front, blank back, hands folded over impossible creases. */
+let _cutTex = null;
+function cutoutTextures() {
+  if (_cutTex) return _cutTex;
+  const W = 256, H = 768;
+  const outline = (ctx) => {
+    ctx.beginPath();
+    ctx.arc(W / 2, 92, 62, 0, Math.PI * 2);
+    ctx.moveTo(W / 2 - 92, 190); ctx.lineTo(W / 2 + 92, 190); ctx.lineTo(W / 2 + 104, 470); ctx.lineTo(W / 2 + 70, 480);
+    ctx.lineTo(W / 2 + 64, 760); ctx.lineTo(W / 2 + 8, 760); ctx.lineTo(W / 2, 500); ctx.lineTo(W / 2 - 8, 760); ctx.lineTo(W / 2 - 64, 760); ctx.lineTo(W / 2 - 70, 480); ctx.lineTo(W / 2 - 104, 470); ctx.closePath();
+  };
+  const mk = (front) => {
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+    outline(c); c.save(); c.clip();
+    if (front) {
+      c.fillStyle = '#d9b9a0'; c.fillRect(0, 0, W, 190);
+      c.fillStyle = '#6a8ab0'; c.fillRect(0, 160, W, 340);
+      c.fillStyle = '#3a3a48'; c.fillRect(0, 480, W, 300);
+      // printed face: too-wide smile, painted eyes
+      c.fillStyle = '#1a1410'; c.beginPath(); c.arc(W / 2 - 22, 82, 7, 0, 7); c.arc(W / 2 + 22, 82, 7, 0, 7); c.fill();
+      c.strokeStyle = '#7a2020'; c.lineWidth = 6; c.beginPath(); c.arc(W / 2, 98, 38, 0.15, Math.PI - 0.15); c.stroke();
+      c.fillStyle = '#4a2a1a'; c.fillRect(W / 2 - 62, 26, 124, 26);
+      // folded hands with a crease that does not fold anything
+      c.fillStyle = '#d9b9a0'; c.fillRect(W / 2 - 46, 330, 92, 40);
+      c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 3; c.beginPath(); c.moveTo(W / 2 - 60, 300); c.lineTo(W / 2 + 70, 390); c.moveTo(W / 2 + 40, 170); c.lineTo(W / 2 - 30, 520); c.stroke();
+    } else { c.fillStyle = '#c9c4b8'; c.fillRect(0, 0, W, H); c.fillStyle = 'rgba(0,0,0,0.08)'; for (let y = 0; y < H; y += 40) c.fillRect(0, y, W, 2); }
+    c.restore();
+    const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+  };
+  _cutTex = { front: mk(true), back: mk(false) };
+  return _cutTex;
+}
+function buildCutout() {
+  const T = cutoutTextures();
+  const root = new THREE.Group();
+  const body = new THREE.Group(); root.add(body);
+  const geo = new THREE.PlaneGeometry(0.62, 1.86); geo.translate(0, 0.93, 0);
+  const front = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: T.front, alphaTest: 0.5, roughness: 0.6, side: THREE.FrontSide }));
+  const back = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: T.back, alphaTest: 0.5, roughness: 0.8 }));
+  back.rotation.y = Math.PI;
+  const edge = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.7, 1).translate(0, 0.85, 0), new THREE.MeshStandardMaterial({ color: 0x8a8478, roughness: 0.9 }));
+  front.castShadow = back.castShadow = true;
+  body.add(front, back, edge);
+  root.userData = { custom: animateCutout, front, back, edge, body };
+  return root;
+}
+function animateCutout(o, c) {
+  const u = o.userData;
+  const t = 0.012 + (c.awake || 0) * 0.22;
+  u.front.position.z = t / 2; u.back.position.z = -t / 2;
+  u.edge.scale.z = t * 0.85; u.edge.visible = t > 0.03;
+  u.body.rotation.x = 0;
+  u.body.rotation.z = c.moving ? Math.sin(c.game.time * 9) * 0.03 : 0;
+}
+
+/** The Drowned Shape has no surface body: a wake of rings and droplets that hang in the air a moment after it passes. */
+function buildDrowned() {
+  const root = new THREE.Group();
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xcfe8ee, transparent: true, opacity: 0.35, depthWrite: false });
+  const rings = [];
+  for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.36, 24), ringMat.clone()); r.rotation.x = -Math.PI / 2; root.add(r); rings.push(r); }
+  const vee = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.6), new THREE.MeshBasicMaterial({ color: 0xdff0f4, transparent: true, opacity: 0.18, depthWrite: false }));
+  vee.rotation.x = -Math.PI / 2; vee.position.z = 0.6; root.add(vee);
+  const drops = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(30 * 3), 3)), new THREE.PointsMaterial({ color: 0xdff4ff, size: 0.05, transparent: true, opacity: 0.8 }));
+  root.add(drops);
+  root.userData = { custom: animateDrowned, rings, vee, drops, t: 0, trail: [] };
+  return root;
+}
+function animateDrowned(o, c, dt, game) {
+  const u = o.userData;
+  const L = game.level;
+  const w = L.waterAt(c.x, c.z);
+  const surf = (w ? (w.y || 0) + w.depth : 0.2) + 0.01;
+  o.position.y = surf;
+  u.t += dt;
+  const show = !c.inDrain && (c.moving || c.state === 'warn' || c.state === 'pursue') ? 1 : 0.25;
+  u.rings.forEach((r, i) => { const k = ((u.t * 0.8 + i / 4) % 1); r.scale.setScalar(0.5 + k * 2.2); r.material.opacity = (1 - k) * 0.4 * show; });
+  u.vee.material.opacity = c.moving ? 0.22 : 0;
+  o.visible = !c.inDrain;
+  // droplets hang in place for a moment after it passes
+  if (c.moving && Math.random() < dt * 20) u.trail.push({ x: c.x + (Math.random() - 0.5) * 0.6, y: surf + 0.1 + Math.random() * 0.3, z: c.z + (Math.random() - 0.5) * 0.6, t: 0 });
+  u.trail = u.trail.filter((d) => (d.t += dt) < 1.4).slice(-30);
+  const arr = u.drops.geometry.attributes.position.array;
+  arr.fill(0);
+  u.trail.forEach((d, i) => { arr[i * 3] = d.x - c.x; arr[i * 3 + 1] = d.y - surf + (d.t > 0.8 ? -(d.t - 0.8) * 0.8 : 0); arr[i * 3 + 2] = d.z - c.z; });
+  u.drops.geometry.attributes.position.needsUpdate = true;
+  u.drops.rotation.y = -c.yaw; u.drops.rotation.y = 0;
+  o.rotation.y = 0; u.vee.rotation.z = c.yaw;
+}
+/** Seen only in photographs: a body folded beneath the water. */
+export function drownedPhotoBody(x, z) {
+  const M = new THREE.MeshStandardMaterial({ color: 0xbfc8c4, roughness: 0.6, emissive: 0x404848 });
+  const g = new THREE.Group();
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.6, 4, 8), M); torso.rotation.z = Math.PI / 2; torso.position.y = 0.12; g.add(torso);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), M); head.position.set(0.55, 0.18, 0.1); g.add(head);
+  const legs = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.7, 4, 6), M); legs.position.set(-0.2, 0.1, 0.32); legs.rotation.set(0, 0.4, Math.PI / 2); g.add(legs);
+  const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.5, 4, 6), M); arm.position.set(0.25, 0.22, -0.25); arm.rotation.set(0, -0.8, Math.PI / 2); g.add(arm);
+  g.position.set(x, 0, z);
+  return g;
+}
+
+/** The Tenant: a figure behind layered curtains; its face is a flat, warmly lit window. */
+let _tenantFace = null;
+function buildTenant() {
+  if (!_tenantFace) {
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 160;
+    const c = cv.getContext('2d');
+    c.fillStyle = '#3a2416'; c.fillRect(0, 0, 128, 160);
+    c.fillStyle = '#ffcf8a'; c.fillRect(10, 10, 108, 140);
+    c.fillStyle = '#c87a3a'; c.fillRect(10, 10, 108, 8); c.fillRect(60, 10, 8, 140); c.fillRect(10, 76, 108, 8);
+    c.fillStyle = 'rgba(120,60,20,0.5)'; c.fillRect(14, 20, 40, 50);
+    _tenantFace = new THREE.CanvasTexture(cv); _tenantFace.colorSpace = THREE.SRGBColorSpace;
+  }
+  const root = new THREE.Group();
+  const body = buildHuman(0x3a2a22, 0x3a2a22, { hair: false, skin: 0x2a1c14 });
+  body.scale.set(1.0, 1.12, 1.0);
+  root.add(body);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.32), new THREE.MeshStandardMaterial({ map: _tenantFace, emissive: 0xffb060, emissiveIntensity: 0.7, emissiveMap: _tenantFace }));
+  face.position.set(0, 1.98, 0.14);
+  root.add(face);
+  const curtains = [];
+  for (let i = 0; i < 4; i++) {
+    const cu = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 2.1), new THREE.MeshStandardMaterial({ color: 0xd8c098, transparent: true, opacity: 0.35, side: THREE.DoubleSide, roughness: 1 }));
+    cu.position.set((i - 1.5) * 0.12, 1.05, 0.25 + i * 0.05);
+    root.add(cu); curtains.push(cu);
+  }
+  root.userData = { ...body.userData, curtains, tenant: true };
+  const base = body.userData;
+  root.userData.custom = (o, c, dt, game, moved) => {
+    // reuse the human gait on the inner body
+    animHuman(base, c, dt, moved, game);
+    curtains.forEach((cu, i) => { cu.rotation.y = Math.sin(game.time * 1.3 + i) * 0.12; cu.position.x = (i - 1.5) * 0.12 + Math.sin(game.time * 0.9 + i * 2) * 0.03; });
+  };
+  return root;
+}
+function animHuman(u, c, dt, moved, game) {
+  u.phase = (u.phase || 0) + moved * 2.6;
+  const sw = Math.min(1, moved / Math.max(dt, 1e-4) / 2.5);
+  if (u.legs) u.legs.forEach((L, i) => { const ph = u.phase + i * Math.PI; L.hp.rotation.x = Math.sin(ph) * 0.5 * sw; L.kn.rotation.x = Math.max(0, -Math.cos(ph)) * 0.8 * sw; });
+  if (u.arms) u.arms.forEach((A, i) => { A.sh.rotation.x = -Math.sin(u.phase + i * Math.PI) * 0.35 * sw; A.el.rotation.x = -0.15; });
+  void game;
+}
+
+const BUILDERS = { listener: buildListener, cutout: buildCutout, drowned: buildDrowned, tenant: buildTenant };
 export function registerCreatureModel(type, fn) { BUILDERS[type] = fn; }
+
+const NPC_LOOK = {
+  june: { color: 0x6a5a7a, accent: 0x8a7a9a, hair: 0x9a9a98, skin: 0xc8a080 },
+  lena: { color: 0x4a6a5a, accent: 0xd8b04a, hair: 0x2a1a12, skin: 0xb88a68 },
+  copy: { color: 0x4a6b8a, accent: 0xd8b04a, hair: 0x2a2018, skin: 0xc8a080 },
+};
 
 export class CreatureView {
   constructor(engine) {
@@ -148,15 +298,41 @@ export class CreatureView {
     if (u.hips && c.type === 'listener') { u.hips.position.y = 1.15 + Math.abs(Math.sin(m.phase)) * 0.04 * sw; u.chest && (u.chest.rotation.x = c.state === 'pursue' ? 0.35 : 0.12); }
   }
 
+  /** Escorted characters (June, Lena). */
+  syncNpcs(game, dt) {
+    this.npcModels = this.npcModels || new Map();
+    const seen = new Set();
+    for (const n of game.npcs || []) {
+      seen.add(n.id);
+      let m = this.npcModels.get(n.id);
+      if (!m) {
+        const look = NPC_LOOK[n.model] || NPC_LOOK.june;
+        const obj = buildHuman(look.color, look.accent, { hairColor: look.hair, skin: look.skin });
+        this.root.add(obj);
+        m = { obj, lx: n.x, lz: n.z };
+        this.npcModels.set(n.id, m);
+      }
+      const moved = Math.hypot(n.x - m.lx, n.z - m.lz); m.lx = n.x; m.lz = n.z;
+      m.obj.position.set(n.x, n.y || 0, n.z); m.obj.rotation.y = n.yaw || 0;
+      m.obj.visible = !n.hidden;
+      animHuman(m.obj.userData, n, dt, moved, game);
+      if (n.seated && m.obj.userData.hips) { m.obj.userData.hips.position.y = 0.55; m.obj.userData.legs.forEach((L) => { L.hp.rotation.x = -1.4; L.kn.rotation.x = 1.4; }); }
+    }
+    for (const [id, m] of this.npcModels) if (!seen.has(id)) { this.root.remove(m.obj); this.npcModels.delete(id); }
+  }
+
   /** Revealed bodies for photographs: add hidden-layer stand-ins at the exposure instant. */
   photoStandIns(photo, game) {
     const out = [];
     for (const cr of photo.creatures || []) {
       const c = game.enemyById(cr.id);
-      if (c && c.photoModel) { const o = c.photoModel(); o.traverse((x) => x.layers.set(HIDDEN_LAYER)); out.push(o); }
+      let o = null;
+      if (cr.type === 'drowned') o = drownedPhotoBody(cr.x, cr.z);
+      else if (c && c.photoModel) o = c.photoModel();
+      if (o) { o.traverse((x) => x.layers.set(HIDDEN_LAYER)); out.push(o); }
     }
     return out;
   }
 
-  clear() { for (const m of this.models.values()) this.root.remove(m.obj); this.models.clear(); }
+  clear() { for (const m of this.models.values()) this.root.remove(m.obj); this.models.clear(); if (this.npcModels) { for (const m of this.npcModels.values()) this.root.remove(m.obj); this.npcModels.clear(); } }
 }

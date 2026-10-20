@@ -19,6 +19,7 @@ import { Rng } from '../core/rng.js';
 import * as act from './interact.js';
 import * as eq from './equipment.js';
 import { updateRefuges } from './refuge.js';
+import { updateCycles } from './shutters.js';
 
 export const SAVE_VERSION = 1;
 
@@ -92,8 +93,10 @@ export class Game {
     this.chapterDef = levelDef;
     this.script = def.script || {};
     this.level = new Level(levelDef);
+    this.level.flagFn = (f) => this.story.has(f);
     if (this.level.errors.length) this.fx('levelErrors', { errors: this.level.errors });
     this.enemies = [];
+    this.npcs = [];
     this.puzzles = new Map();
     for (const pd of levelDef.puzzles || []) this.puzzles.set(pd.id, createPuzzle(this, pd));
     this.pickups = {};
@@ -215,11 +218,12 @@ export class Game {
       if (p.downed) this._updateDowned(p, dt);
     }
     updateRefuges(this, dt);
+    if (this.story.vars.cycles) updateCycles(this, dt);
     // decoys
     for (const d of this.decoys) {
       if (d.until > this.time) {
         d.acc = (d.acc || 0) + dt;
-        if (d.acc >= 1) { d.acc = 0; this.emitSound({ x: d.x, z: d.z, r: ITEMS.decoy.decoy.r, kind: 'decoy', source: d.id }); }
+        if (d.acc >= 1) { d.acc = 0; this.emitSound({ x: d.x, z: d.z, r: d.kind === 'stream' ? 30 : ITEMS.decoy.decoy.r, kind: d.kind || 'decoy', source: d.id }); }
       }
     }
     this.decoys = this.decoys.filter((d) => d.until > this.time - 1);
@@ -240,6 +244,7 @@ export class Game {
     }
     this.enemies = this.enemies.filter((c) => !c.gone || c.keep);
     for (const pz of this.puzzles.values()) pz.update(dt);
+    for (const n of this.npcs) updateNpc(this, n, dt);
     this.story.update(dt);
     this.director.update(dt);
     if (this.script.update) this.script.update(this, dt);
@@ -254,7 +259,7 @@ export class Game {
   }
 
   _footstep(p, step) {
-    this.emitSound({ x: p.x, z: p.z, r: step.r, kind: 'step', player: p.id, surface: step.surface });
+    this.emitSound({ x: p.x, z: p.z, r: step.r, kind: 'step', player: p.id, surface: step.surface, crouch: p.crouched, sprint: p.sprinting });
     this.fx('step', { pid: p.id, x: p.x, z: p.z, surface: step.surface, sprint: p.sprinting, crouch: p.crouched });
   }
 
@@ -484,6 +489,7 @@ export class Game {
     this.fx('record', { id, pid: p ? p.id : null, first, title: R.title, text: R.text, audio: !!R.audio });
     if (R.audio && first) this.story.say('rook', 'recording', R.text);
     if (first) this.fx('profile', { kind: 'record', id, ch: this.chapterId, room: p ? p.room : null });
+    if (this.script.onRecord) this.script.onRecord(this, p, id);
     return first;
   }
 
@@ -532,6 +538,7 @@ export class Game {
       marks: this.marks.map((m) => ({ ...m })),
       puzzles: Object.fromEntries([...this.puzzles.entries()].map(([k, v]) => [k, v.serialize()])),
       enemies: this.enemies.filter((e) => !e.gone && !e.optional).map((e) => e.serialize()),
+      npcs: this.npcs.map((n) => ({ ...n, path: n.path ? n.path.slice() : null })),
       director: this.director.serialize(),
       map: JSON.parse(JSON.stringify(this.map)),
       refuges: { ...this.refugeSecured },
@@ -581,6 +588,7 @@ export class Game {
       c.loadData(e.data || {});
       this.enemies.push(c);
     }
+ this.npcs = (snap.npcs || []).map((n) => ({ ...n }));
     this.director.restore(snap.director || {});
     this.map = JSON.parse(JSON.stringify(snap.map || { rooms: {}, doors: {} }));
     this.refugeSecured = { ...(snap.refuges || {}) };
@@ -618,6 +626,23 @@ export class Game {
   }
 
   attempt(fn) { try { return fn(); } catch (e) { this.fx('error', { message: String(e && e.stack || e) }); return null; } }
+}
+
+/**
+ * Non-player characters (June, Lena). They follow scripted waypoints, cannot
+ * be targeted or harmed, and wait when `waitFor` says so.
+ */
+export function updateNpc(game, n, dt) {
+  if (!n.path || !n.path.length) { n.moving = false; return; }
+  if (game.script.npcWait && game.script.npcWait(game, n)) { n.moving = false; return; }
+  const wp = n.path[0];
+  const dx = wp.x - n.x, dz = wp.z - n.z, d = Math.hypot(dx, dz);
+  if (d < 0.1) { n.path.shift(); if (!n.path.length) { n.moving = false; game.fx('npcArrived', { id: n.id }); if (game.script.onNpcArrived) game.script.onNpcArrived(game, n); } return; }
+  // doors along the way open for escorted characters
+  const di = game.level.nav.door[game.level.nav.indexAt(n.x + dx / d * 0.8, n.z + dz / d * 0.8)];
+  if (di >= 0) { const door = game.level.doors[di]; if (door.T.hinged && door.target < 0.5 && !game.isDoorLocked(door)) game.setDoor(door.id, true); if (door.open < 0.6) { n.moving = false; return; } }
+  const s = Math.min(d, (n.speed || 1.3) * dt);
+  n.x += dx / d * s; n.z += dz / d * s; n.yaw = Math.atan2(-dx, -dz); n.moving = true;
 }
 
 function faceOff(face) {

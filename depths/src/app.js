@@ -262,6 +262,7 @@ export class App {
     // view
     if (this.levelView) this.levelView.update(dt);
     this.creatures.sync(g, dt);
+    this.creatures.syncNpcs(g, dt);
     const cam = this.engine.camera;
     this.fp.update(dt, g, p, cam, { inspect: this.controller.inspect });
     if (this.lights) this.lights.update(dt, g, cam, p);
@@ -387,6 +388,18 @@ export class App {
         case 'restored': this.hud.toast('Checkpoint loaded.'); break;
         case 'error': console.error('[sim]', ev.message); break;
         case 'levelErrors': console.warn('[level]', ev.errors); break;
+        case 'silhouettesTurn': if (this.levelView) setTimeout(() => this.levelView && this.levelView.turnSilhouettes(), 2500); if (A.envCaptions) setTimeout(() => this.hud.envCaption('[Every figure in the food court turns its head at once]', { dur: 3 }), 2600); break;
+        case 'cutoutPinned': if (A.envCaptions) this.hud.envCaption('[Flash: the figure is pinned for four seconds]', { dur: 2.5 }); break;
+        case 'zoneTest': this.audio.play('tone'); break;
+        case 'announcement': this.audio.voice('operator', 'speaker', 'Attention shoppers. The mall is now closed. Please make your way to the nearest exit.', 12); this.hud.line({ sp: 'operator', src: 'speaker', text: 'Attention shoppers. The mall is now closed. Please make your way to the nearest exit.', dur: 6 }); break;
+        case 'cycleClosed': this.audio.play('doorSlam'); break;
+        case 'caption': this.hud.envCaption(ev.text, { dur: 4 }); break;
+        case 'curtains': this.audio.play('paperRub', {}); break;
+        case 'creatureKnock': if (A.envCaptions) this.hud.envCaption('[Three knocks]', { dur: 2.5 }); break;
+        case 'stream': this.audio.play('splash', { x: ev.x, z: ev.z }); break;
+        case 'tileCrack': this.audio.play('crack', { x: ev.x, z: ev.z }); break;
+        case 'tileLit': this.audio.play('tone'); break;
+        case 'npcArrived': break;
         default: if (this.extraEvent) this.extraEvent(ev); break;
       }
     }

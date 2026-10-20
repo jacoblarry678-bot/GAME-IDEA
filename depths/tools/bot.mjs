@@ -13,6 +13,13 @@ export class Bot {
     this.keepEvents = opts.keepEvents !== false;
   }
   get p() { return this.g.players.get(this.pid); }
+  /** Door passability for planning: locked doors and closed auto doors (shutters, gates) are walls. */
+  doorCost(di) {
+    const d = this.g.level.doors[di];
+    if (this.g.isDoorLocked(d)) return Infinity;
+    if (!d.T.hinged && !d.T.open && d.open < 0.6) return Infinity;
+    return 0;
+  }
 
   tick(n = 1) {
     for (let i = 0; i < n; i++) {
@@ -48,7 +55,7 @@ export class Bot {
     while (t < timeout) {
       if (Math.hypot(x - p.x, z - p.z) < tol) { this.stop(); return true; }
       if (!path || repath <= 0) {
-        path = nav.path(p.x, p.z, x, z, null, (di) => (g.isDoorLocked(g.level.doors[di]) ? Infinity : 0));
+        path = nav.path(p.x, p.z, x, z, null, (di) => this.doorCost(di));
         ix = 0; repath = 2;
         if (!path) { this.stop(); throw new Error(`bot: no path to ${x},${z} from ${p.x.toFixed(1)},${p.z.toFixed(1)}`); }
         path.push({ x, z });
@@ -81,15 +88,31 @@ export class Bot {
     throw new Error(`bot: walkTo ${x},${z} timed out at ${p.x.toFixed(1)},${p.z.toFixed(1)}`);
   }
 
+  /** Walk in a straight line (no path finding) — for physical puzzles where the route matters. */
+  walkStraight(x, z, opts = {}) {
+    const p = this.p;
+    let t = 0;
+    while (Math.hypot(x - p.x, z - p.z) > (opts.tol ?? 0.25) && t < (opts.timeout ?? 20)) {
+      this.face(x, z);
+      this.g.setInput(this.pid, { mz: Math.hypot(x - p.x, z - p.z) < 0.6 ? 0.5 : 1, mx: 0, sprint: false, crouch: !!opts.crouch });
+      if (!this.tick(1)) return false;
+      t += 1 / 60;
+    }
+    this.stop();
+    return t < (opts.timeout ?? 20);
+  }
+
   /** Interact with interactable `id`, holding for `hold` seconds when needed. */
   use(id, hold = 0) {
     const g = this.g;
     const it = g.level.interById.get(id);
     if (it) {
-      if (Math.hypot(it.x - this.p.x, it.z - this.p.z) > 1.4) {
-        const nav = g.level.nav;
-        const W = g.level.world;
-        const i = nav.nearest(it.x, it.z, (k) => { const c = nav.center(k); return Math.hypot(c.x - it.x, c.z - it.z) > 0.55 && !W.overlaps(c.x - 0.37, nav.floorY[k] + 0.1, c.z - 0.37, c.x + 0.37, nav.floorY[k] + 1.7, c.z + 0.37, 1); }, 6);
+      const reach = (it.reach || 1.8) - 0.3;
+      if (Math.hypot(it.x - this.p.x, it.z - this.p.z) > Math.min(1.4, reach)) {
+        const nav = g.level.nav, W = g.level.world;
+        const seen = nav.reachable(this.p.x, this.p.z, null, (di) => this.doorCost(di));
+        const i = nav.nearest(it.x, it.z, (k) => { if (!seen[k]) return false; const c = nav.center(k); const d = Math.hypot(c.x - it.x, c.z - it.z); return d > 0.55 && d <= reach && !W.overlaps(c.x - 0.37, nav.floorY[k] + 0.1, c.z - 0.37, c.x + 0.37, nav.floorY[k] + 1.7, c.z + 0.37, 1); }, 8);
+        if (i < 0) throw new Error(`bot: cannot reach ${id}`);
         const c = nav.center(i);
         this.walkTo(c.x, c.z, { tol: 0.3 });
       }

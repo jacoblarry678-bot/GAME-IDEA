@@ -97,6 +97,10 @@ DEFS.greenPaint = () => new THREE.MeshStandardMaterial({ color: 0x3a7a42, roughn
 DEFS.white = () => new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.6 });
 DEFS.water = () => new THREE.MeshStandardMaterial({ color: 0x4a8a8c, roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.55, depthWrite: false });
 DEFS.plant = () => new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 0.9 });
+DEFS.daylight = () => new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xe8f2f4, emissiveIntensity: 1.6, roughness: 0.4 });
+DEFS.glassTile = () => new THREE.MeshStandardMaterial({ color: 0xbfe0e8, roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.55 });
+DEFS.lampWarmDim = () => new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffb070, emissiveIntensity: 0.9, roughness: 0.4 });
+DEFS.curtain = () => new THREE.MeshStandardMaterial({ color: 0xc8a878, roughness: 0.95, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
 DEFS.creature = () => new THREE.MeshStandardMaterial({ color: 0x14130f, roughness: 0.85 });
 
 /** Material set for a kit. */

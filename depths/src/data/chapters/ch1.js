@@ -64,7 +64,7 @@ const props = [
   { k: 'copier', x: -7.5, z: 45.3 }, { k: 'boxes', x: 8.5, z: 45.3 },
   // 1.05 copy room (mesh wall hides a service cavity on the east side)
   { k: 'mesh', x: 17.6, z: 40, rot: 90, s: [7.6, 0.06, 2.8] },
-  { k: 'copier', x: 13, z: 43.3 }, { k: 'copier', x: 15.8, z: 43.3 }, { k: 'table', x: 13.4, z: 37.1, s: [2.2, 0.7, 0.75] },
+  { k: 'copier', x: 13, z: 43.3 }, { k: 'copier', x: 16.6, z: 43.3 }, { k: 'table', x: 13.4, z: 37.1, s: [2.2, 0.7, 0.75] },
   { k: 'shelf', x: 11.45, z: 42.7, rot: 90, s: [2.0, 0.4, 1.6] },
   // 1.06 survey corridor
   { k: 'boxes', x: -8.0, z: 58 }, { k: 'cabinet', x: -10.45, z: 61.5 }, { k: 'cableTray', x: -7.5, z: 50.75, y: 2.6, solid: false, s: [0.5, 3.0, 0.3] },

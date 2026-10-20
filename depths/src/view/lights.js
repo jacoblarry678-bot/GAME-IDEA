@@ -76,7 +76,7 @@ export class LightRig {
       const kit = KITS[room.kit || L.def.kit] || KITS.office;
       l.color.setHex(kit.light);
       l.position.set(a.x, a.y - 0.35, a.z);
-      l.distance = Math.max(8, Math.min(16, room.h * 3.2));
+      l.distance = Math.max(9, Math.min(18, (a.y - room.floorY) * 3.4));
     }
     for (const l of this.pool) {
       const a = l.userData.anchor;

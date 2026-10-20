@@ -1,6 +1,9 @@
 import { Listener } from './listener.js';
+import { Cutout } from './cutout.js';
+import { Drowned } from './drowned.js';
+import { Tenant } from './tenant.js';
 
-const TYPES = { listener: Listener };
+const TYPES = { listener: Listener, cutout: Cutout, drowned: Drowned, tenant: Tenant };
 export function registerCreature(type, cls) { TYPES[type] = cls; }
 export function createCreature(game, type, opts = {}) {
   const C = TYPES[type];

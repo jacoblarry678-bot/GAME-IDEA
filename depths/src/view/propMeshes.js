@@ -131,6 +131,78 @@ export const BUILD = {
   sign() { /* drawn by the view with a canvas texture */ },
   grating(b, w, d) { b.box(0, 0, 0, w, 0.04, d, 'grating'); },
   lane(b, w, d) { b.box(0, 0.25, 0, w, 0.06, 0.06, 'redPaint'); },
+  storefront(b, w, d, h) {
+    b.box(0, 0, -0.02, w, h, 0.04, 'black');
+    b.box(-w / 2 + 0.06, 0, 0.04, 0.12, h, 0.12, 'chrome'); b.box(w / 2 - 0.06, 0, 0.04, 0.12, h, 0.12, 'chrome');
+    b.box(0, h - 0.55, 0.06, w, 0.55, 0.14, 'pastel');
+    b.box(0, 0, 0.05, w - 0.24, 0.3, 0.1, 'chrome');
+    b.box(0, 0.3, 0.07, w - 0.24, h - 0.85, 0.02, 'glass');
+    b.box(0, 0.3 + (h - 0.85) * 0.55, 0.0, w - 0.24, (h - 0.85) * 0.45, 0.05, 'metal');
+  },
+  moon(b, w) {
+    b.sphere(0, 0, 0, w / 2, 'plaster', 18);
+    for (let i = 0; i < 3; i++) b.cyl(Math.cos(i * 2.1) * w * 0.3, w * 0.3, Math.sin(i * 2.1) * w * 0.3, 0.012, 4.5, 'darkMetal', 4);
+  },
+  toyShelf(b, w, d, h, p) {
+    b.box(0, 0, -d / 2 + 0.02, w, h, 0.04, 'veneer');
+    for (let i = 0; i < 3; i++) b.box(0, 0.05 + i * (h - 0.1) / 2.6, 0, w, 0.03, d, 'veneer');
+    b.box(-w / 2 + 0.02, 0, 0, 0.04, h, d, 'veneer'); b.box(w / 2 - 0.02, 0, 0, 0.04, h, d, 'veneer');
+    if (p.toys) {
+      p.toys.forEach(([, sz], i) => { const x = -w / 2 + 0.45 + i * (w - 0.9) / 2; b.box(x, 0.65, 0, sz * 0.8, sz, sz * 0.7, ['redPaint', 'bluePaint', 'greenPaint'][i % 3]); });
+    } else {
+      for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) {
+        const x = -w / 2 + 0.25 + k * (w - 0.5) / 5, y = 0.08 + r * (h - 0.1) / 2.6;
+        const m = ['redPaint', 'bluePaint', 'greenPaint', 'white', 'cardboard'][(r * 3 + k) % 5];
+        if ((r + k) % 2) b.box(x, y, 0, 0.18, 0.22, 0.16, m); else b.sphere(x, y + 0.1, 0, 0.1, m, 8);
+      }
+    }
+  },
+  labelPlate() {},
+  escalator(b, w, d, h) {
+    const n = Math.round(d / 0.4);
+    for (let i = 0; i < n; i++) b.box(0, -i * 0.3, -d / 2 + i * 0.4 + 0.2, w - 0.2, 0.06, 0.4, 'darkMetal');
+    b.box(-w / 2 + 0.05, -n * 0.3, 0, 0.1, n * 0.3 + 1.0, d, 'chrome');
+    b.box(w / 2 - 0.05, -n * 0.3, 0, 0.1, n * 0.3 + 1.0, d, 'chrome');
+    b.box(0, 0, -d / 2 - 0.6, w + 0.4, 0.02, 1.2, 'diamondPlate');
+  },
+  foodTable(b) { b.cyl(0, 0, 0, 0.06, 0.72, 'chrome', 8); b.cyl(0, 0.72, 0, 0.6, 0.04, 'white', 18); for (let i = 0; i < 3; i++) { const a = i * 2.1; b.box(Math.cos(a) * 0.95, 0.42, Math.sin(a) * 0.95, 0.4, 0.04, 0.4, 'pastelMint'); b.cyl(Math.cos(a) * 0.95, 0, Math.sin(a) * 0.95, 0.03, 0.42, 'chrome', 6); } },
+  silhouette() {},
+  mannequin(b) { b.cyl(0, 0, 0, 0.18, 0.04, 'chrome', 12); b.cyl(0, 0.04, 0, 0.02, 0.8, 'chrome', 6); b.box(0, 0.85, 0, 0.36, 0.55, 0.2, 'white'); b.sphere(0, 1.55, 0, 0.11, 'white', 10); b.box(0, 1.38, 0, 0.08, 0.1, 0.08, 'white'); b.box(-0.22, 0.95, 0, 0.07, 0.48, 0.08, 'white'); b.box(0.22, 0.95, 0, 0.07, 0.48, 0.08, 'white'); },
+  mirror(b, w, d, h) { b.box(0, 0, 0, w, h, d, 'trimDark'); b.box(0, 0.06, d / 2, w - 0.12, h - 0.12, 0.01, 'chrome'); },
+  shutterPanel(b, w, d, h) { const n = Math.round(h / 0.12); for (let i = 0; i < n; i++) b.box(0, i * 0.12, 0, w, 0.11, d, 'metal'); b.box(0, h, 0, w + 0.1, 0.18, d + 0.1, 'darkMetal'); },
+  lever(b) { b.box(0, -0.15, 0, 0.22, 0.3, 0.06, 'darkMetal'); b.box(0, 0, 0.08, 0.04, 0.32, 0.04, 'redPaint'); },
+  speaker(b, w, d, h) { b.box(0, 0, 0, w, h, d, 'black'); b.box(0, 0.05, d / 2, w - 0.06, h - 0.1, 0.01, 'meshWire'); },
+  lifeguardChair(b, w, d, h) { for (const sx of [-1, 1]) { b.box(sx * w * 0.4, 0, -d * 0.3, 0.06, h, 0.06, 'white'); b.box(sx * w * 0.4, 0, d * 0.3, 0.06, h * 0.7, 0.06, 'white'); } b.box(0, h * 0.7, 0, w, 0.06, d * 0.5, 'white'); b.box(0, h * 0.7, -d * 0.25, w, 0.6, 0.05, 'white'); for (let i = 1; i < 5; i++) b.box(0, i * h * 0.14, d * 0.3, w * 0.8, 0.04, 0.06, 'white'); },
+  floatCup(b) { b.cyl(0, 0, 0, 0.045, 0.09, 'redPaint', 10, 0.055); },
+  windowArch(b, w, d, h) {
+    b.box(0, 0, 0, w + 0.4, 0.2, 0.3, 'white'); b.box(-w / 2 - 0.1, 0, 0, 0.2, h, 0.3, 'white'); b.box(w / 2 + 0.1, 0, 0, 0.2, h, 0.3, 'white');
+    b.box(0, 0.2, -0.05, w, h - 0.2, 0.04, 'daylight');
+    for (let i = 1; i < 5; i++) b.box(-w / 2 + i * w / 5, 0.2, 0, 0.08, h - 0.2, 0.08, 'white');
+    for (let j = 1; j < 3; j++) b.box(0, j * h / 3, 0, w, 0.08, 0.08, 'white');
+  },
+  divider(b, w, d, h) { b.box(0, 0, 0, w, h, d, 'whiteTile'); b.box(0, h, 0, w + 0.04, 0.04, d + 0.04, 'chrome'); },
+  post(b, w, d, h) { b.cyl(0, 0, 0, w / 2, h, 'chrome', 8); },
+  tileGrid(b, w) { const s = w / 4; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) b.box(-w / 2 + (i + 0.5) * s, 0.02, -w / 2 + (j + 0.5) * s, s - 0.08, 0.03, s - 0.08, 'glassTile'); },
+  bridge(b, w, d, h, p) {
+    const s = w / 4;
+    for (const c of p.path || []) { const i = 'ABCD'.indexOf(c[0]), j = +c[1] - 1; b.box(-w / 2 + (i + 0.5) * s, 0.06, -w / 2 + (j + 0.5) * s, s * 0.5, 0.04, s * 0.5, 'hazard'); }
+  },
+  waveScreen(b, w, d, h) { b.box(0, 0, 0, w, h, d, 'black'); b.box(0, 0.05, -d / 2 - 0.005, w - 0.1, h - 0.1, 0.01, 'screenGreen'); },
+  stairsDown(b, w, d) { const n = 16; for (let i = 0; i < n; i++) b.box(0, -i * 0.25, -d / 2 + (i + 0.5) * d / n, w, 0.25, d / n, 'whiteTile'); b.box(-w / 2, -4, 0, 0.1, 5, d, 'whiteTile'); b.box(w / 2, -4, 0, 0.1, 5, d, 'whiteTile'); },
+  aptWindow(b, w, d, h, p) {
+    b.box(0, 0, 0, w + 0.16, 0.08, 0.14, 'veneer'); b.box(0, h, 0, w + 0.16, 0.08, 0.14, 'veneer');
+    b.box(-w / 2 - 0.04, 0, 0, 0.08, h + 0.08, 0.14, 'veneer'); b.box(w / 2 + 0.04, 0, 0, 0.08, h + 0.08, 0.14, 'veneer');
+    b.box(0, 0.08, -0.02, w, h - 0.08, 0.02, p.lit ? 'lampWarmDim' : 'black');
+    b.box(-w * 0.28, 0.08, 0.03, w * 0.4, h - 0.1, 0.01, 'curtain'); b.box(w * 0.28, 0.08, 0.03, w * 0.4, h - 0.1, 0.01, 'curtain');
+    if (p.marked) { b.box(0, -0.12, 0.08, w + 0.3, 0.06, 0.01, 'hazard'); b.box(0, h + 0.12, 0.08, w + 0.3, 0.06, 0.01, 'hazard'); }
+  },
+  laundryLine(b, w, d, h) {
+    b.box(0, h, 0, w, 0.015, 0.015, 'darkMetal');
+    for (let i = 0; i < 9; i++) { const x = -w / 2 + 1.5 + i * (w - 3) / 8; b.box(x, h - 0.65, 0, 0.6 + (i % 3) * 0.15, 0.65, 0.01, ['white', 'curtain', 'fabricBlue', 'fabricRed'][i % 4]); }
+  },
+  aptDoor(b, w, d, h) { b.box(0, 0, 0, w + 0.14, h + 0.08, 0.06, 'veneer'); b.box(0, 0.02, 0.04, w - 0.06, h - 0.04, 0.04, 'doorWood'); b.box(w * 0.36, h * 0.48, 0.08, 0.1, 0.03, 0.06, 'chrome'); b.box(0, h * 0.8, 0.07, 0.24, 0.12, 0.01, 'chrome'); },
+  frameMount(b, w, d, h) { b.box(0, h * 0.5, 0, 0.04, 0.04, 0.05, 'chrome'); b.box(0, 0, 0, w, 0.02, 0.01, 'trimDark'); },
+  radioBank(b, w, d, h) { b.box(0, 0, 0, w, h, d, 'veneer'); for (let i = 0; i < 6; i++) { b.box(-w / 2 + 0.35 + i * (w - 0.7) / 5, h * 0.55, d / 2, 0.5, 0.35, 0.02, 'fabric'); b.cylZ(-w / 2 + 0.35 + i * (w - 0.7) / 5, h * 0.35, d / 2 + 0.02, 0.05, 0.03, 'chrome', 10); } },
   decal() {},
   block() {},
 };

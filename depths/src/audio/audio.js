@@ -274,6 +274,18 @@ const SFX = {
   voicemail(A, out, t) { A._tone(out, t, 0.2, { f: 1000, gain: 0.05 }); },
   knock3(A, out, t) { for (let i = 0; i < 3; i++) A._noise(out, t + i * 0.32, 0.08, { type: 'lowpass', f: 400, gain: 0.6 }); },
   heal(A, out, t) { A._noise(out, t, 0.6, { type: 'bandpass', f: 1200, q: 1, gain: 0.08, a: 0.2 }); },
+  shutterWarn(A, out, t) { for (let i = 0; i < 3; i++) A._tone(out, t + i * 1.0, 0.45, { f: 740, type: 'square', gain: 0.045 }); A._noise(out, t + 3, 1.2, { type: 'bandpass', f: 600, q: 1, gain: 0.25, a: 0.1 }); },
+  paperRub(A, out, t) { A._noise(out, t, 0.35, { type: 'bandpass', f: 2600, q: 1.5, gain: 0.12, a: 0.05 }); },
+  wake(A, out, t) { A._noise(out, t, 1.4, { type: 'bandpass', f: 700, f2: 350, q: 1, gain: 0.35, a: 0.3 }); },
+  handleTurn(A, out, t) { A._noise(out, t, 0.6, { type: 'bandpass', f: 1500, q: 6, gain: 0.25, a: 0.2 }); A._noise(out, t + 0.6, 0.05, { type: 'bandpass', f: 2500, q: 8, gain: 0.3 }); },
+  scrape(A, out, t) { A._noise(out, t, 2.8, { type: 'bandpass', f: 400, f2: 900, q: 2, gain: 0.35, a: 0.4 }); A._tone(out, t, 2.8, { f: 90, f2: 70, type: 'sawtooth', gain: 0.03, a: 0.4 }); },
+  toolClick(A, out, t) { for (let i = 0; i < 3; i++) { A._tone(out, t + i * 0.25, 0.35, { f: 1750 + i * 40, type: 'triangle', gain: 0.07 }); A._noise(out, t + i * 0.25, 0.03, { type: 'bandpass', f: 4000, q: 8, gain: 0.2 }); } },
+  floorDent(A, out, t) { for (let i = 0; i < 3; i++) { A._tone(out, t + i, 0.4, { f: 60, f2: 35, gain: 0.3 }); A._noise(out, t + i, 0.12, { type: 'lowpass', f: 300, gain: 0.3 }); } },
+  pressHit(A, out, t) { A._noise(out, t, 0.4, { type: 'lowpass', f: 500, gain: 0.8 }); A._tone(out, t, 0.5, { f: 55, gain: 0.4 }); },
+  ventBlast(A, out, t) { A._noise(out, t, 3, { type: 'highpass', f: 800, gain: 0.5, a: 0.1 }); },
+  splash(A, out, t) { A._noise(out, t, 0.5, { type: 'bandpass', f: 1200, f2: 400, q: 1, gain: 0.4 }); },
+  crack(A, out, t) { for (let i = 0; i < 5; i++) A._noise(out, t + i * 0.3 + Math.random() * 0.1, 0.05, { type: 'highpass', f: 3000, gain: 0.4 }); },
+  pump(A, out, t) { A._tone(out, t, 8, { f: 50, type: 'sawtooth', gain: 0.06, a: 1 }); A._noise(out, t + 1, 7, { type: 'lowpass', f: 400, gain: 0.15, a: 1 }); },
   death(A, out, t) { A._tone(out, t, 3, { f: 65, f2: 40, type: 'sawtooth', gain: 0.12, a: 0.05 }); A._noise(out, t, 2.5, { type: 'lowpass', f: 300, gain: 0.3, a: 0.05 }); },
 };
 

@@ -329,9 +329,14 @@ export class Level {
 
   // ---------------------------------------------------------------- queries
   waterAt(x, z) {
-    for (const w of this.water) if (x >= w.x0 && x <= w.x1 && z >= w.z0 && z <= w.z1) return w;
+    for (const w of this.water) {
+      if (x < w.x0 || x > w.x1 || z < w.z0 || z > w.z1) continue;
+      if (this.flagFn && ((w.until && this.flagFn(w.until)) || (w.after && !this.flagFn(w.after)))) continue;
+      return w;
+    }
     return null;
   }
+  waterAtIdx(i) { const c = this.nav.center(i); return this.waterAt(c.x, c.z); }
   surfaceAt(x, z) {
     if (this.waterAt(x, z)) return 'water';
     for (const s of this.surfaces) if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) return s.s;
