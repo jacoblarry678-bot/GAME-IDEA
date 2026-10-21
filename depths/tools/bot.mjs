@@ -110,6 +110,23 @@ export class Bot {
     return t < (opts.timeout ?? 20);
   }
 
+  /** Walk straight to (x,z) while keeping the view on a point (backing away from a Cutout, for instance). */
+  moveFacing(x, z, look, opts = {}) {
+    const p = this.p;
+    let t = 0;
+    while (Math.hypot(x - p.x, z - p.z) > (opts.tol ?? 0.35) && t < (opts.timeout ?? 20)) {
+      this.look(look[0], look[1], look[2]);
+      const dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz);
+      const s = Math.sin(p.yaw), c = Math.cos(p.yaw);
+      const mz = (dx * -s + dz * -c) / d, mx = (dx * c + dz * -s) / d;
+      this.g.setInput(this.pid, { mx, mz, sprint: false, crouch: !!opts.crouch });
+      if (!this.tick(1)) return false;
+      t += DT;
+    }
+    this.stop();
+    return true;
+  }
+
   /** Interact with interactable `id`, holding for `hold` seconds when needed. */
   use(id, hold = 0) {
     const g = this.g;

@@ -31,6 +31,34 @@ import { CREATURES } from './data/creatures.js';
 
 const WARN_SFX = { listener: ['extraStep', 'wallTap'], cutout: ['shutterWarn', 'paperRub'], drowned: ['wake'], tenant: ['knock3', 'handleTurn'], caretaker: ['toolClick'], unseen: ['floorDent'] };
 
+/** Ending cards: epilogue text (June-dependent staging) and the last developed photograph. */
+const ENDING_TEXT = {
+  familiar: {
+    title: 'A Familiar Voice',
+    text: ['Evan and the crew come out into the Annex parking garage at dawn. The gate closes normally. For the first time, the radio is silent.', 'A voicemail asks why he came back to work so early. Across the garage, under a fluorescent tube, another Evan raises a hand half a second before he does. The emergency speaker repeats his words: "Evan Ward. I\'m here."', 'The Operator has crossed through a copied identity. Lena remains attached to the network.'],
+    june: 'June is with the crew. She is the one who notices the other Evan first.',
+    noJune: 'On the radio, a last hiss carries three knocks that nobody answers.',
+    photo: 'The last photograph: the ordinary building in the morning. Nothing in it looks wrong.',
+    cam: { x: 8, y: 1.7, z: 211, yaw: Math.PI, pitch: 0.04 },
+  },
+  door: {
+    title: 'The Door We Open',
+    text: ['Evan and Lena come out through an ordinary maintenance hatch. She checks the sunflower sticker on her sleeve. "Then you can buy the coffee."', '"You came back. That doesn\'t fix everything. It means we can start." Behind the wall, the last isolated machinery powers down.', 'The Operator\'s transfer ability is severed, and Lena\'s life support held long enough for her release.'],
+    june: 'June walks out beside Lena, squinting at a sky she has not seen in a long time.',
+    noJune: 'Evan marks the service hatch for a future search. June Ellis is still alive. She has not yet been recovered.',
+    photo: 'The last photograph: the same exterior threshold, empty. No hidden person stands in it.',
+    cam: { x: 57.5, y: 1.6, z: 159, yaw: -Math.PI / 2, pitch: 0.02 },
+  },
+  cut: {
+    title: 'Cut the Line',
+    text: ['The crew climbs out of an exterior utility shaft while the Annex\'s lower lights shut off, floor by floor. Lena\'s local life support ended during the purge. Her last words came through a fading speaker: "Make sure it stays shut."', 'Evan stays beside the sealed hatch until dawn. He takes off his maintenance badge and leaves it on the cover.', 'The network\'s crossing is destroyed. The Operator cannot follow.'],
+    june: 'June sits nearby. When Evan sets the badge down, she picks it up and holds it.',
+    noJune: 'June\'s region of the network is isolated. Her fate is unknown.',
+    photo: 'The last photograph: the hatch, and an unbroken wall behind it.',
+    cam: { x: -45.5, y: 1.6, z: 159, yaw: Math.PI / 2, pitch: 0.1 },
+  },
+};
+
 export class App {
   constructor() {
     this.canvas = document.getElementById('scene');
@@ -263,6 +291,7 @@ export class App {
     if (this.levelView) this.levelView.update(dt);
     this.creatures.sync(g, dt);
     this.creatures.syncNpcs(g, dt);
+    this.creatures.updateDecals(dt);
     const cam = this.engine.camera;
     this.fp.update(dt, g, p, cam, { inspect: this.controller.inspect });
     if (this.lights) this.lights.update(dt, g, cam, p);
@@ -309,6 +338,9 @@ export class App {
     const ref = room && room.refugeData;
     this.audio.loop('clock', 'clock', !!(ref && ref.genuine), ref ? { x: ref.clock.x, y: ref.clock.y, z: ref.clock.z } : {});
     this.audio.loop('charger', 'chargerHum', !!(ref && ref.genuine), ref ? { x: ref.items[2].x, y: 1, z: ref.items[2].z } : {});
+    // ordinary outdoor sound growing toward the exterior thresholds (chapter six)
+    const outside = { '6.11F': { x: 8, z: 226 }, '6.12F': { x: 8, z: 226 }, '6.12R': { x: 66, z: 159 }, '6.12X': { x: -51, z: 159 } }[p.room];
+    this.audio.loop('outdoor', 'outdoor', !!outside, outside ? { x: outside.x, y: 2, z: outside.z } : {});
     // running machines (chapter five)
     for (const m of Object.values(g.story.vars.machines || {})) this.audio.loop(`machine:${m.id}`, 'machine', !!(m.enabled && m.running), { x: m.x, y: 1.2, z: m.z });
   }
@@ -402,6 +434,12 @@ export class App {
         case 'tileCrack': this.audio.play('crack', { x: ev.x, z: ev.z }); break;
         case 'tileLit': this.audio.play('tone'); break;
         case 'npcArrived': break;
+        case 'footprint': if (this.creatures) this.creatures.addDecal('footprint', ev.x, ev.z, this._floorAt(ev.x, ev.z), ev.yaw || 0, { wet: ev.wet, delay: ev.delay }); break;
+        case 'floorDent': if (this.creatures) this.creatures.addDecal('dent', ev.x, ev.z, this._floorAt(ev.x, ev.z)); if (A.envCaptions) this.hud.envCaption(`[Floor dent ${ev.n} of 3]`, { warn: true, dur: 1.2 }); this.input.rumble(0.2, 0.3, 120); break;
+        case 'countdown': this.hud.countdown(ev.left); if (ev.left <= 10) this.audio.play('tone'); break;
+        case 'committed': this.hud.toast(`Route committed · ${{ familiar: 'Full transmission', door: 'Maintenance bypass', cut: 'Emergency isolation' }[ev.route]}`); break;
+        case 'endingStart': this.hud.cinematic(true); this.hud.countdown(null); this.audio.music(null); break;
+        case 'endingDone': this._ending(ev); break;
         case 'machine': {
           if (ev.running) this.audio.play('pressHit', { x: ev.x, z: ev.z });
           const pp = g.players.get(me);
@@ -444,8 +482,29 @@ export class App {
     if (res) this.hud.polaroidDevelop(res.url, `${ph.roomName || ''}${ev.station ? ' · survey station' : ''}`, ev.develop || 0.6);
   }
 
+  _floorAt(x, z) { const nav = this.game.level.nav, i = nav.indexAt(x, z); const y = i >= 0 ? nav.floorY[i] : 0; return Number.isFinite(y) ? y : 0; }
+
+  /** The ending scene has played: develop the last photograph, show the card, credits, post-credits. */
+  _ending(ev) {
+    const g = this.game, june = ev.june;
+    const E = ENDING_TEXT[ev.ending];
+    let photo = null;
+    try { photo = this.photos.capture({ id: 'ending', cam: E.cam, flash: false }).url; } catch (e) { console.error('ending photo failed', e); }
+    let finale = null;
+    if (this.slot && !this.replay) {
+      finale = this.saves.finale(this.slot);
+      if (finale) this.saves.write(this.slot, finale, this.photos.exportThumbs((finale.photos || []).map((p) => p.id)));
+    }
+    this.input.exitLock();
+    this.hud.cinematic(false);
+    const info = { ending: ev.ending, slot: this.slot, finale: !!finale };
+    this.overlays.ending({ title: E.title, epilogue: [...E.text, june ? E.june : E.noJune], photo, photoText: E.photo }, () => { this.quitToMenu(); this.menus.credits(() => this.menus.postCredits(info)); });
+    void g;
+  }
+
   _checkpoint(ev) {
     const g = this.game;
+    if (ev.reason === 'finale' && this.slot && !this.replay) this.saves.writeFinale(this.slot, g.checkpoint);
     if (this.replay || !this.slot) { this.hud.saved('Checkpoint'); return; }
     const ok = this.saves.write(this.slot, g.checkpoint, this.photos.exportThumbs(g.checkpoint.photos.map((p) => p.id)));
     if (ok) { this.hud.saved('Saved'); this.audio.play('save'); }

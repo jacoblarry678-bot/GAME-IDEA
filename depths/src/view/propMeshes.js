@@ -234,6 +234,26 @@ export const BUILD = {
     b.box(-w / 2, h - 0.1, 0, 0.06, 0.18, d + 0.4, 'hazard');
   },
   beacon(b, w, d, h) { b.box(0, 0, 0, w, h, d * 0.5, 'darkMetal'); b.box(0, h * 0.2, d * 0.25, w * 0.6, h * 0.6, d * 0.5, 'beaconRed'); },
+  patchBoard(b, w, d, h) {
+    b.box(0, 0, 0, w, h, d, 'darkMetal');
+    for (let i = 0; i < 6; i++) { const x = -w / 2 + 0.3 + i * (w - 0.6) / 5; b.cylZ(x, h * 0.45, d / 2, 0.06, 0.03, i === 5 ? 'redPaint' : 'chrome', 10); b.box(x, h * 0.72, d / 2 + 0.005, 0.24, 0.08, 0.01, 'paper'); b.sphere(x, h * 0.2, d / 2 + 0.02, 0.03, 'lampOff', 8); }
+  },
+  anchorRig(b, w, d, h) {
+    b.cyl(0, 0, 0, w / 2, 0.25, 'darkMetal', 24); b.cyl(0, 0.25, 0, w / 2 - 0.2, 0.05, 'diamondPlate', 24);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const g = new THREE.CylinderGeometry(0.035, 0.05, h, 6); g.rotateZ(Math.cos(a) * 0.18); g.rotateX(Math.sin(a) * 0.18); g.translate(Math.cos(a) * (w / 2 - 0.4), h / 2 + 0.3, Math.sin(a) * (w / 2 - 0.4)); b.geo(g, 'rubber'); }
+    b.cyl(0, h - 0.3, 0, w / 2 - 0.1, 0.3, 'darkMetal', 20); b.cyl(0, h - 0.38, 0, w / 2 - 0.3, 0.08, 'lampCool', 20);
+  },
+  voiceGate(b, w, d, h, p) {
+    for (const sx of [-1, 1]) b.box(sx * (w / 2 - 0.06), 0, 0, 0.12, h, d, 'doorMetal');
+    b.box(0, h - 0.2, 0, w, 0.2, d, 'doorMetal'); b.box(0, 1.3, d / 2 + 0.01, 0.5, 0.35, 0.02, 'screenGreen'); b.box(0, 1.85, d / 2 + 0.01, 0.12, 0.12, 0.03, 'black');
+    void p;
+  },
+  car(b, w, d, h) {
+    b.box(0, 0.25, 0, w, h * 0.42, d, 'bluePaint'); b.box(0, 0.25 + h * 0.42, -0.2, w * 0.86, h * 0.36, d * 0.5, 'glass'); b.box(0, 0.25 + h * 0.78, -0.2, w * 0.86, 0.05, d * 0.5, 'bluePaint');
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) b.cylX(sx * (w / 2 - 0.12), 0.32, sz * (d / 2 - 0.75), 0.32, 0.24, 'rubber', 12);
+    b.box(0, 0.45, d / 2, w * 0.7, 0.12, 0.02, 'lampWarmDim');
+  },
+  ladder(b, w, d, h) { for (const sx of [-1, 1]) b.box(sx * w / 2, 0, 0, 0.05, h, 0.05, 'chrome'); for (let y = 0.3; y < h; y += 0.3) b.box(0, y, 0, w, 0.04, 0.04, 'chrome'); },
   shaftCable(b, w, d, h) { b.cyl(0, -h, 0, w / 2, h * 2, 'rubber', 6); },
   decal() {},
   block() {},

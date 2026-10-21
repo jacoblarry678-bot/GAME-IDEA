@@ -67,6 +67,7 @@ export class Game {
     this.hostId = opts.hostId || 'p1';
     this.replay = !!opts.replay; // chapter select instance
     this.profile = opts.profile || null;
+    this.parked = null;
   }
 
   // ================================================================ setup
@@ -112,8 +113,14 @@ export class Game {
     this.alcoves = this._alcoveCells();
     this.map = { rooms: {}, doors: {} };
     this.refugeSecured = {};
+    // coming back from a side trip (or the final refuge lift): the chapter resumes where it was parked
+    const parked = !snapshot && this.parked && this.parked.chapter === id && levelDef.entries && levelDef.entries[entry] ? this.parked : null;
     if (snapshot) this._restoreChapterState(snapshot);
-    else {
+    else if (parked) {
+      this.parked = null;
+      this._restoreChapterState(parked);
+      for (const p of this.players.values()) this.placePlayer(p, entry);
+    } else {
       for (const p of this.players.values()) this.placePlayer(p, entry);
       // apply puzzle completion carried in the story (return trips, replays)
       for (const pz of this.puzzles.values()) if (this.story.has(`${pz.id}.done`)) pz.done = true;
@@ -127,7 +134,7 @@ export class Game {
 
   placePlayer(p, entry = 'start') {
     const def = this.chapterDef;
-    const st = (entry === 'return' && def.returnStart) || def.start;
+    const st = (def.entries && def.entries[entry]) || (entry === 'return' && def.returnStart) || def.start;
     const idx = [...this.players.keys()].indexOf(p.id);
     const offs = [[0, 0], [0.9, 0.6], [-0.9, 0.6], [0, 1.2]][idx % 4];
     const s = Math.sin(st.yaw), c = Math.cos(st.yaw);
@@ -209,7 +216,7 @@ export class Game {
     // players
     for (const p of this.players.values()) {
       if (!p.active) continue;
-      if (!p.remote) {
+      if (!p.remote && !this.over) {
         const step = stepMovement(this, p, dt);
         if (step) this._footstep(p, step);
       }
@@ -250,6 +257,9 @@ export class Game {
     this.story.update(dt);
     this.director.update(dt);
     if (this.script.update) this.script.update(this, dt);
+    // an ending scene finishes once its lines have played out
+    const ov = this.over;
+    if (ov && ov.kind === 'endingPlay' && !ov.done && !this.story.busy && this.time - ov.t > 4) { ov.done = true; this.fx('endingDone', { ending: ov.ending, june: ov.june }); }
     // a waiting checkpoint commits once nothing is half-done
     if (this.pendingCheckpoint && this._safeToSave()) { const r = this.pendingCheckpoint; this.pendingCheckpoint = null; this.makeCheckpoint(r); }
   }
@@ -553,7 +563,14 @@ export class Game {
       refuges: { ...this.refugeSecured },
       stats: JSON.parse(JSON.stringify(this.stats)),
       timers: this.timers.map((t) => ({ in: t.at - this.time, key: t.key, data: t.data })),
+      parked: this.parked || null,
     };
+  }
+
+  /** Park the current chapter's state (doors, pickups, puzzles, creatures ...) before a side trip. */
+  parkChapter() {
+    const s = this.serialize();
+    this.parked = { chapter: this.chapterId, doors: s.doors, pickups: s.pickups, dropped: s.dropped, marks: s.marks, puzzles: s.puzzles, enemies: s.enemies, npcs: s.npcs, director: s.director, map: s.map, refuges: s.refuges, timers: s.timers };
   }
 
   /** Restore a full snapshot (retry, continue, load). */
@@ -576,6 +593,7 @@ export class Game {
       p.restore(ps);
     }
     this.stats = JSON.parse(JSON.stringify(snap.stats || this.stats));
+    this.parked = snap.parked || null;
     this.over = null;
     this.paused = false;
     this.loadChapter(snap.chapter, { entry: snap.returnTrip ? 'return' : 'restore', snapshot: snap, returnTo: snap.returnTrip });
@@ -632,6 +650,27 @@ export class Game {
     if (!this.returnTrip && tr.entry === 'start' && typeof tr.to === 'number' && tr.to > fromCh) this.fx('chapterComplete', { chapter: fromCh });
     this.loadChapter(tr.to, { entry: tr.entry, returnTo: tr.returnTo });
     this.makeCheckpoint('chapter');
+  }
+
+  /**
+   * A branch reached its exterior threshold. Ending selection uses explicit
+   * branch state only; JUNE_SAFE changes the staging. Every completed ending
+   * is stored in the profile independently of the campaign slot.
+   */
+  beginEnding(kind) {
+    if (this.over) return;
+    const S = this.story;
+    const june = S.has('JUNE_SAFE');
+    S.flags.ending = kind;
+    S.set(`ending.${kind}`);
+    this.persist.endings[kind] = true;
+    for (const p of this.players.values()) { act.cancelAction(this, p); p.vx = p.vz = 0; }
+    this.over = { kind: 'endingPlay', ending: kind, june, t: this.time };
+    this.fx('profile', { kind: 'ending', id: kind });
+    this.fx('endingStart', { ending: kind, june });
+    const scene = { familiar: 'endingFamiliar', door: 'endingDoor', cut: 'endingCut' }[kind];
+    S.play(scene, { force: true });
+    if (kind === 'familiar') S.play(june ? 'endingFamiliarJune' : 'endingFamiliarNoJune', { force: true });
   }
 
   attempt(fn) { try { return fn(); } catch (e) { this.fx('error', { message: String(e && e.stack || e) }); return null; } }

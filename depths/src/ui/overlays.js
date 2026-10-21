@@ -97,6 +97,20 @@ export class Overlays {
     this.push('death', node, { pauses: true });
   }
 
+  // ---------------------------------------------------------------- ending
+  /** Ending card: title, epilogue, the last developed photograph. */
+  ending(info, onDone) {
+    const node = el('div', { class: 'ending' },
+      el('div', { class: 'card' },
+        el('div', { class: 'et' }, 'Ending'),
+        el('div', { class: 'en' }, info.title),
+        el('div', { class: 'cols' },
+          el('div', { class: 'txt' }, ...info.epilogue.map((t) => el('p', { class: 'ep' }, t))),
+          info.photo ? el('div', { class: 'endphoto' }, el('img', { src: info.photo, alt: info.photoText }), el('div', { class: 'cap' }, info.photoText)) : el('p', { class: 'ep dim' }, info.photoText)),
+        el('div', { class: 'row', style: { justifyContent: 'center' } }, btn('Continue', () => { this.close('ending'); onDone(); }, { class: 'btn primary', 'data-autofocus': '' }))));
+    this.push('ending', node);
+  }
+
   // ---------------------------------------------------------------- pause
   pause() {
     const app = this.app, g = app.game, p = g.players.get(app.pid);

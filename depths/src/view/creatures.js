@@ -275,7 +275,35 @@ function buildCaretaker() {
   return root;
 }
 
-const BUILDERS = { listener: buildListener, cutout: buildCutout, drowned: buildDrowned, tenant: buildTenant, caretaker: buildCaretaker };
+/** The Unseen: a shadow that does not meet a body, and the faintest disturbance of the air above it. */
+function buildUnseen() {
+  const root = new THREE.Group();
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.42, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.set(0.18, 0.02, 0.32); shadow.scale.set(0.8, 1.6, 1);
+  root.add(shadow);
+  const ghost = buildHuman(0x101014, 0x101014, { hair: false, skin: 0x101014 });
+  ghost.traverse((o) => { if (o.isMesh) { o.material = new THREE.MeshBasicMaterial({ color: 0x0a0a0e, transparent: true, opacity: 0.07, depthWrite: false }); o.castShadow = false; } });
+  root.add(ghost);
+  root.userData = { ...ghost.userData, shadow, ghost };
+  const base = ghost.userData;
+  root.userData.custom = (o, c, dt, game, moved) => {
+    animHuman(base, c, dt, moved, game);
+    const k = c.state === 'pursue' || c.state === 'warn' ? 0.13 : 0.06;
+    ghost.traverse((m) => { if (m.isMesh) m.material.opacity = k + Math.sin(game.time * 7 + m.id) * 0.02; });
+    shadow.material.opacity = 0.45 + Math.sin(game.time * 1.3) * 0.08;
+  };
+  return root;
+}
+/** On film the Unseen is an almost correct Evan with no eyes. */
+export function unseenPhotoBody(cr) {
+  const g = buildHuman(0x4a6b8a, 0xd8b04a, { hairColor: 0x2a2018, skin: 0xc8a080 });
+  const hollow = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), hollow); e.position.set(sx * 0.045, 0.1, -0.105); g.userData.head.add(e); }
+  g.position.set(cr.x, 0, cr.z); g.rotation.y = cr.yaw;
+  return g;
+}
+
+const BUILDERS = { listener: buildListener, cutout: buildCutout, drowned: buildDrowned, tenant: buildTenant, caretaker: buildCaretaker, unseen: buildUnseen };
 export function registerCreatureModel(type, fn) { BUILDERS[type] = fn; }
 
 const NPC_LOOK = {
@@ -316,7 +344,7 @@ export class CreatureView {
     m.lx = c.x; m.lz = c.z;
     o.position.set(c.x, c.y || 0, c.z);
     o.rotation.y = c.yaw;
-    o.visible = c.state !== 'dormant' || c.encounter === 'demo';
+    o.visible = c.state !== 'dormant' || c.encounter === 'demo' || c.type === 'cutout'; // a dormant Cutout is still a flat display figure
     if (c.render) { c.render(o, dt, game); return; }
     if (u.custom) { u.custom(o, c, dt, game, moved); return; }
     const speed = moved / Math.max(dt, 1e-4);
@@ -375,11 +403,39 @@ export class CreatureView {
       const c = game.enemyById(cr.id);
       let o = null;
       if (cr.type === 'drowned') o = drownedPhotoBody(cr.x, cr.z);
+      else if (cr.type === 'unseen') o = unseenPhotoBody(cr);
       else if (c && c.photoModel) o = c.photoModel();
       if (o) { o.traverse((x) => x.layers.set(HIDDEN_LAYER)); out.push(o); }
     }
     return out;
   }
 
-  clear() { for (const m of this.models.values()) this.root.remove(m.obj); this.models.clear(); if (this.npcModels) { for (const m of this.npcModels.values()) this.root.remove(m.obj); this.npcModels.clear(); } }
+  /** Footprints and floor dents: short-lived decals on the floor. */
+  addDecal(kind, x, z, y = 0, yaw = 0, opts = {}) {
+    this.decals = this.decals || [];
+    let mesh;
+    if (kind === 'footprint') {
+      mesh = new THREE.Mesh(new THREE.CircleGeometry(0.1, 10), new THREE.MeshBasicMaterial({ color: opts.wet ? 0x1a2a30 : 0x050505, transparent: true, opacity: 0, depthWrite: false }));
+      mesh.scale.set(1, 2.6, 1);
+    } else {
+      mesh = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.45, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+    }
+    mesh.rotation.set(-Math.PI / 2, 0, -yaw);
+    mesh.position.set(x, y + 0.015, z);
+    this.root.add(mesh);
+    this.decals.push({ mesh, t: -(opts.delay || 0), life: kind === 'footprint' ? 22 : 6, peak: kind === 'footprint' ? 0.55 : 0.7 });
+  }
+  updateDecals(dt) {
+    if (!this.decals) return;
+    for (const d of this.decals) {
+      d.t += dt;
+      const a = d.t < 0 ? 0 : d.t < 0.3 ? d.t / 0.3 : Math.max(0, 1 - (d.t - 0.3) / (d.life - 0.3));
+      d.mesh.material.opacity = a * d.peak;
+    }
+    const dead = this.decals.filter((d) => d.t > d.life);
+    for (const d of dead) { this.root.remove(d.mesh); d.mesh.geometry.dispose(); d.mesh.material.dispose(); }
+    if (dead.length) this.decals = this.decals.filter((d) => d.t <= d.life);
+  }
+
+  clear() { if (this.decals) { for (const d of this.decals) this.root.remove(d.mesh); this.decals = []; } for (const m of this.models.values()) this.root.remove(m.obj); this.models.clear(); if (this.npcModels) { for (const m of this.npcModels.values()) this.root.remove(m.obj); this.npcModels.clear(); } }
 }

@@ -228,6 +228,26 @@ export class Menus {
     this._screen(node);
   }
 
+  // ---------------------------------------------------------------- post-credits
+  postCredits(info) {
+    const app = this.app, P = app.profile.data;
+    const nRec = Object.keys(P.records).length, nSec = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'].filter((k) => P.secrets[k]).length;
+    const got = Object.keys(ENDINGS).filter((k) => P.endings[k]);
+    const node = el('div', { class: 'ending' }, el('div', { class: 'card' },
+      el('div', { class: 'et' }, 'Ending unlocked'),
+      el('div', { class: 'en' }, ENDINGS[info.ending].name),
+      el('div', { class: 'stats' },
+        el('div', {}, el('b', {}, `${nRec} / ${RECORD_IDS.length}`), 'records found'),
+        el('div', {}, el('b', {}, `${nSec} / 6`), 'secret photographs'),
+        el('div', {}, el('b', {}, `${got.length} / 3`), 'endings: ', got.map((k) => ENDINGS[k].name).join(', '))),
+      info.slot && info.finale ? el('p', { class: 'small dim' }, 'Continue loads the pre-finale checkpoint in Broadcast control, before the final choice. The rest of the campaign does not have to be replayed.') : null,
+      el('div', { class: 'col', style: { maxWidth: '420px', margin: '0 auto' } },
+        info.slot && info.finale ? btn('Continue · before the final choice', () => app.continueSlot(info.slot), { class: 'btn primary', 'data-autofocus': '' }) : null,
+        btn('Chapter select', () => this.chapterSelect()),
+        btn('Main menu', () => this.main(), info.slot && info.finale ? {} : { 'data-autofocus': '' }))));
+    this._screen(node, () => this.main());
+  }
+
   // ---------------------------------------------------------------- credits
   credits(after) {
     const app = this.app;

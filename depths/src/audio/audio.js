@@ -337,6 +337,25 @@ const LOOPS = {
     o.connect(f); f.connect(g); g.connect(out); o.start(); lfo.start();
     return { stop: () => { g.gain.setTargetAtTime(0, A.ctx.currentTime, 0.2); o.stop(A.ctx.currentTime + 1); lfo.stop(A.ctx.currentTime + 1); } };
   },
+  /** Ordinary outdoor sound through a doorway: wind, distant traffic, birds. */
+  outdoor(A, out) {
+    const c = A.ctx;
+    const len = c.sampleRate * 2, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 650;
+    const g = c.createGain(); g.gain.value = 0.06;
+    src.connect(f); f.connect(g); g.connect(out); src.start();
+    let alive = true;
+    const chirp = () => {
+      if (!alive) return;
+      const t = c.currentTime;
+      for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) A._tone(out, t + i * 0.12, 0.09, { f: 2600 + Math.random() * 1400, f2: 3400 + Math.random() * 900, type: 'sine', gain: 0.025 });
+      setTimeout(chirp, 1500 + Math.random() * 3500);
+    };
+    setTimeout(chirp, 800);
+    return { stop: () => { alive = false; g.gain.setTargetAtTime(0, c.currentTime, 0.3); src.stop(c.currentTime + 1.5); } };
+  },
 };
 
 // ------------------------------------------------------------------ ambience

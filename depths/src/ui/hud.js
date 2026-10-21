@@ -34,8 +34,10 @@ export class Hud {
     this.fps = el('div', { class: 'fps', style: { display: 'none' } });
     this.hintBox = el('div', { class: 'hint', style: { display: 'none' } });
     this.radial = el('div', { class: 'radial', style: { display: 'none' } });
+    this.countdownEl = el('div', { class: 'countdown', style: { display: 'none' } });
+    this.letterbox = el('div', { class: 'letterbox', style: { display: 'none' } }, el('div', { class: 'lbt' }), el('div', { class: 'lbb' }));
     this.polaroid = null;
-    this.root.append(this.markers, this.dot, this.ring, this.prompt, this.objective, this.meters, this.tool, this.captions, this.toasts, this.saveind, this.clockind, this.dirring, this.hintBox, this.radial, this.fps);
+    this.root.append(this.markers, this.dot, this.ring, this.prompt, this.objective, this.meters, this.tool, this.captions, this.toasts, this.saveind, this.clockind, this.dirring, this.hintBox, this.radial, this.fps, this.countdownEl, this.letterbox);
     this._buildMeters();
     this.caps = [];
     this.metersShownAt = -99;
@@ -73,6 +75,15 @@ export class Hud {
     setTimeout(() => { t.style.transition = 'opacity 0.6s'; t.style.opacity = 0; setTimeout(() => t.remove(), 700); }, kind === 'tip' ? 7000 : 4500);
   }
 
+  /** Evacuation countdown (null hides it). */
+  countdown(left) {
+    if (left == null) { this.countdownEl.style.display = 'none'; return; }
+    this.countdownEl.style.display = '';
+    const m = Math.floor(left / 60), sec = Math.max(0, left % 60);
+    this.countdownEl.textContent = `PURGE · EVACUATE ${m}:${String(sec).padStart(2, '0')}`;
+    this.countdownEl.classList.toggle('urgent', left <= 20);
+  }
+  cinematic(on) { this.letterbox.style.display = on ? '' : 'none'; }
   saved(text = 'Saved') { this.saveind.textContent = text; this.saveind.style.opacity = 1; clearTimeout(this._sv); this._sv = setTimeout(() => { this.saveind.style.opacity = 0; }, 2600); }
 
   /** Dialogue line caption. */

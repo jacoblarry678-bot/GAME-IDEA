@@ -83,6 +83,24 @@ export const ART = {
     ctx.lineWidth = 5;
     for (let i = 0; i < 5; i++) { const x = cx - w * 0.1 + i * w * 0.05; line([[x / w, 0.77], [x / w, 0.84 + (i % 2) * 0.05]]); }
   },
+  dryPrints: (ctx, w, h) => {
+    // a column of boot prints walking the grating from one deck to the other
+    ctx.fillStyle = SILVER;
+    for (let i = 0; i < 14; i++) {
+      const x = w * (i % 2 ? 0.62 : 0.38), y = h * (0.04 + i * 0.068);
+      ctx.beginPath(); ctx.ellipse(x, y, w * 0.11, h * 0.022, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x, y + h * 0.032, w * 0.08, h * 0.01, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  },
+  exteriorDoorway: (ctx, w, h) => {
+    // a doorway seen from outside, at dawn: frame, empty interior, a long shadow, no one in it
+    ctx.strokeStyle = SILVER; ctx.lineWidth = 8;
+    ctx.strokeRect(w * 0.25, h * 0.15, w * 0.5, h * 0.78);
+    ctx.fillStyle = 'rgba(235,238,242,0.18)'; ctx.fillRect(w * 0.25, h * 0.15, w * 0.5, h * 0.78);
+    ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, h * 0.93); ctx.lineTo(w, h * 0.93); ctx.stroke();
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(w * 0.08, h * (0.08 + i * 0.03)); ctx.lineTo(w * 0.2, h * (0.08 + i * 0.03)); ctx.stroke(); }
+    ctx.fillStyle = SILVER; ctx.font = '600 26px Arial'; ctx.textAlign = 'center'; ctx.fillText('EXIT', w * 0.5, h * 0.11);
+  },
   // generic text/diagram art used by later chapters
   text: (lines) => (ctx, w, h) => {
     ctx.fillStyle = SILVER; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

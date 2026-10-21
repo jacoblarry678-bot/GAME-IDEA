@@ -96,6 +96,12 @@ export const PROP_KINDS = {
   duct: { w: 2.5, d: 2.0, h: 1.65, solid: false, sight: false },
   shaftCable: { w: 0.3, d: 0.3, h: 14, solid: false, sight: false },
   beacon: { w: 0.25, d: 0.12, h: 0.25, solid: false, sight: false },
+  // the core
+  patchBoard: { w: 2.4, d: 0.15, h: 1.4, solid: false, sight: false },
+  anchorRig: { w: 3.2, d: 3.2, h: 6, solid: false, sight: false },
+  voiceGate: { w: 1.2, d: 0.3, h: 2.3, solid: false, sight: false },
+  car: { w: 1.8, d: 4.2, h: 1.4, cover: true },
+  ladder: { w: 0.6, d: 0.1, h: 6, solid: false, sight: false },
   // decoration (no collision)
   sign: { w: 1.2, d: 0.05, h: 1.2, solid: false, sight: false },
   seam: { w: 1.0, d: 0.1, h: 0.01, solid: false, sight: false },

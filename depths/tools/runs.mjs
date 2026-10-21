@@ -307,3 +307,152 @@ RUNS[5] = (b) => {
   b.walkTo(16.5, 148);
   b.use('freight5');
 };
+
+/** From the chapter six freight nexus: ride to a landing, recover its proof, ride back. */
+function sideTrip(b, ch, ev) {
+  const g = b.g;
+  b.use('panel:NEXUS');
+  b.puzzle('NEXUS', [`go:${ch}`]);
+  b.waitUntil(() => g.chapterId === ch && !g.transition, 20);
+  b.wait(1);
+  if (ch === 2) { b.use('sizeLabel'); b.use('rec:10'); b.use('panel:E1'); b.puzzle('E1', ['t4', 't2', 't7']); }
+  if (ch === 3) { b.use('rec:16'); b.use('panel:E2'); b.puzzle('E2', ['release', 'breaker']); b.wait(3.4); b.puzzle('E2', ['release']); }
+  if (ch === 4) { b.use('mug'); b.use('rec:23'); b.wait(10); }
+  if (ch === 5) { b.use('rec:29'); b.use('panel:E4'); b.puzzle('E4', ['channel', 'test', 'print']); }
+  b.expect(g.persist.evidence[ev], `${ev} recovered on a return trip to chapter ${ch}`);
+  b.use('returnLift');
+  b.waitUntil(() => g.chapterId === 6 && !g.transition, 20);
+  b.wait(1);
+}
+
+RUNS[6] = (b) => {
+  const g = b.g;
+  const hits0 = b.count('hit');
+  b.wait(2);
+  b.use('rec:31'); b.use('c6film'); b.use('o6aid1');
+  if (b.cfg.evidence === 'late') {
+    const before = JSON.stringify(g.pickups);
+    g.story.set('ch6.markBeforeTrips');
+    for (const [ev, ch] of [['E1', 2], ['E2', 3], ['E3', 4], ['E4', 5]]) if (!g.story.has(ev)) sideTrip(b, ch, ev);
+    b.expect(JSON.stringify(g.pickups) === before && g.story.has('ch6.markBeforeTrips'), 'the nexus resumes exactly as it was left before the side trips');
+  }
+  // R1
+  b.walkTo(8, 21.5);
+  b.watchClock('6.02');
+  b.expect(!!g.persist.refuges['6.02'], 'R1 verified');
+  b.use('rec:32'); b.use('c6bat'); b.use('c6tea');
+  // office fragment: the Listener hunts noise, so crouch along the east aisle
+  b.walkTo(8, 27.6);
+  b.walkTo(13.2, 29, { crouch: true });
+  b.walkTo(13.2, 44.6, { crouch: true });
+  b.walkTo(8, 45.2, { crouch: true });
+  b.expect(!b.has('warning', (e) => e.id === 'Lfrag'), 'crossed the office fragment unheard');
+  // display fragment: close the shutters, then back out through the gate watching the figure
+  b.walkTo(8, 47.6);
+  b.walkTo(11, 60.4);
+  b.use('fragLever');
+  b.wait(3.3);
+  b.moveFacing(8, 63, [8, 1.2, 54]);
+  b.waitUntil(() => g.level.door('frag').open > 0.9, 6);
+  b.moveFacing(8, 65.8, [8, 1.2, 54]);
+  b.expect(g.story.has('ch6.fragDone'), 'through the display fragment with the figure in view');
+  // pool fragment: the dry route along the east grating
+  b.walkTo(14.4, 66);
+  b.walkTo(14.4, 82);
+  b.walkTo(8, 82.6);
+  b.expect(b.count('hit') === hits0, 'no contact in the fragments');
+  // observation gallery: the first live Unseen
+  b.walkTo(8, 86.8);
+  b.walkTo(8, 88.2);
+  b.walkTo(5.9, 90.0, { crouch: true });
+  b.g.setInput(b.pid, { crouch: true });
+  b.waitUntil(() => g.story.has('ch6.unseenLive') && !g.enemies.some((c) => c.id === 'Ugal' && !c.gone), 45);
+  b.expect(!b.has('warning', (e) => e.id === 'Ugal'), 'the Unseen walked past the crouched player');
+  b.g.setInput(b.pid, { crouch: false });
+  b.wait(0.5);
+  b.use('rec:33');
+  b.walkTo(8, 107.2);
+  // switching room: P11 via the Survey Station
+  b.walkTo(8, 109.5);
+  b.use('o6wedge2');
+  b.use('station:S6', 12.3);
+  b.expect(!!g.story.clues['clue.P11'], 'survey station shows the service route');
+  b.use('rec:34'); b.use('o6film1');
+  b.use('panel:P11');
+  b.puzzle('P11', ['plug:T1', 'plug:T3', 'plug:T3', 'plug:T2', 'plug:T5', 'plug:T4', 'plug:RETURN']);
+  b.expect(g.story.has('P11.done'), 'P11 return circuit rebuilt');
+  b.wait(2);
+  // R2
+  b.walkTo(8, 124.4);
+  b.closeDoor('r2a');
+  b.walkTo(8, 125.5);
+  b.watchClock('6.08'); b.wait(6);
+  b.expect(g.refugeSecured['6.08'], 'R2 secured');
+  b.use('planBoard');
+  // anchor chamber
+  b.walkTo(8, 133);
+  b.use('rec:35'); b.use('o6aid2');
+  b.use('lenaTalk'); b.wait(9);
+  b.walkTo(8, 152);
+  b.use('rec:36');
+  const ending = b.cfg.ending;
+  b.use('panel:P12');
+  b.puzzle('P12', [`sel:${ending}`]);
+  b.use('commit', 3.3);
+  b.expect(g.story.has(`route.${ending}`), `committed to ${ending}`);
+  if (ending === 'familiar') {
+    b.use('vgB', 2.3);
+    b.expect(!g.story.has('fam.B'), 'gate B waits for gate A');
+    b.use('vgA', 2.3); b.use('vgB', 2.3); b.use('vgC', 2.3);
+    b.expect(g.story.has('fam.open'), 'voice gates accepted');
+    b.wait(2.5);
+    b.walkTo(8, 170.5);
+    b.walkTo(9.5, 205);
+    b.expect(!!g.enemyById('Uwatch'), 'the Unseen keeps pace behind the glass');
+    b.walkTo(8, 211);
+  }
+  if (ending === 'door') {
+    b.use('panel:BYPASS');
+    b.puzzle('BYPASS', ['badge', 'key', 'badge', 'pulse', 'handset']);
+    b.wait(6);
+    b.puzzle('BYPASS', ['answer:blue', 'answer:yellow']);
+    b.wait(6);
+    b.puzzle('BYPASS', ['life', 'identity', 'release']);
+    b.expect(g.story.has('res.free'), 'anchor released');
+    b.wait(1.5);
+    b.walkTo(17.6, 159, { sprint: true });
+    b.walkTo(22.5, 162.6, { sprint: true });
+    b.use('lever1', 1.2);
+    b.walkTo(30.6, 159.5, { sprint: true });
+    b.closeDoor('bar1');
+    b.walkTo(35.5, 156.4, { sprint: true });
+    b.use('lever2', 1.2);
+    b.walkTo(43.6, 159.5, { sprint: true });
+    b.closeDoor('bar2');
+    b.walkTo(48.5, 162.6);
+    b.use('lever3', 1.2);
+    b.expect(g.story.has('res.lever3'), 'third release lever pulled');
+    b.wait(1.5);
+    b.walkTo(57.5, 159);
+  }
+  if (ending === 'cut') {
+    b.use('panel:PURGE');
+    b.puzzle('PURGE', ['purge', 'cover', 'sw1', 'sw2', 'sw3', 'purge']);
+    b.expect(g.story.has('cut.purge'), 'PURGE pulled');
+    b.wait(1.5);
+    b.walkTo(-1.6, 159);
+    b.use('hw1', 3.2);
+    b.wait(1.2);
+    b.walkTo(-17.8, 158);
+    b.use('hw2', 3.2);
+    b.wait(1.2);
+    b.walkTo(-28.5, 158);
+    b.use('hw3', 3.2);
+    b.wait(1.2);
+    b.walkTo(-41.6, 158);
+    b.expect(g.story.vars.purgeLeft > 0, `evacuated with ${Math.round(g.story.vars.purgeLeft)} s left`);
+  }
+  b.waitUntil(() => g.over && g.over.kind === 'endingPlay' && g.over.done, 90);
+  b.expect(g.persist.endings[ending], `ending ${ending} reached`);
+  b.expect(b.count('hit') === hits0, 'no damage in chapter six');
+};

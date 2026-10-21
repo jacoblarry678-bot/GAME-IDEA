@@ -310,7 +310,7 @@ export const script = {
       game.beginTransition('lift', 5, { dur: 7 });
       return { ok: true };
     }
-    if (it.id === 'returnLift' && phase === 'begin') { game.beginTransition('lift', 6, { entry: 'return', returnTo: 'nexus', dur: 4 }); return { ok: true }; }
+    if (it.id === 'returnLift' && phase === 'begin') { game.beginTransition('lift', 6, { entry: 'nexus', dur: 4 }); return { ok: true }; }
     return null;
   },
 
