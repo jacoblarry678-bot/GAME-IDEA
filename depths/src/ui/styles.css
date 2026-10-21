@@ -213,7 +213,7 @@ input[type=text] { background: #111; color: var(--text); border: 1px solid var(-
 .ending .endphoto { display: inline-block; background: #f2efe6; padding: 12px 12px 34px; margin: 6px 0 18px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); transform: rotate(-1.5deg); }
 .ending .endphoto img { display: block; width: min(360px, 70vw); filter: sepia(0.15) contrast(1.05); }
 .ending .endphoto .cap { color: #333; font-size: 12px; margin-top: 8px; }
-.ending .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 18px 0; }
+.ending .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 18px 0; }
 .ending .stats div { border: 1px solid rgba(255, 255, 255, 0.14); padding: 10px; font-size: 14px; }
 .ending .stats b { display: block; font-size: 22px; margin-bottom: 4px; }
 .credits .roll { pointer-events: none; }
@@ -225,3 +225,8 @@ input[type=text] { background: #111; color: var(--text); border: 1px solid var(-
 @media (max-width: 760px) { .ending .cols { flex-direction: column; align-items: center; } }
 .ending .endphoto { max-width: 326px; }
 .ending .endphoto .cap { background: none; color: #333; position: static; white-space: normal; padding: 0; }
+
+/* expedition */
+.seedin { flex: 1; font: 600 20px/1 var(--mono, monospace); letter-spacing: 0.3em; text-transform: uppercase; background: rgba(255, 255, 255, 0.06); color: inherit; border: 1px solid rgba(255, 255, 255, 0.25); padding: 10px 12px; }
+.xruns { display: grid; gap: 4px; font-size: 14px; }
+.xrun b { letter-spacing: 0.15em; }

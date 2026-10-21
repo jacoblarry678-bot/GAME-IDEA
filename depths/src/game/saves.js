@@ -74,6 +74,11 @@ export class Saves {
   writeFinale(n, snap) { return saveRaw(this.key(n, 'finale'), pack(snap)); }
   finale(n) { return unpack(loadRaw(this.key(n, 'finale'))); }
 
+  /** Expedition suspend snapshot: written on quit (and at refuges), consumed when resumed. */
+  writeSuspend(snap) { return saveRaw('expedition.suspend', pack(snap)); }
+  suspend() { return unpack(loadRaw('expedition.suspend')); }
+  clearSuspend() { remove('expedition.suspend'); }
+
   erase(n) { for (const p of ['active', 'backup', 'tmp', 'meta', 'photos', 'manual0', 'manual1', 'manual2', 'manualIdx', 'finale']) remove(this.key(n, p)); }
 
   lastSlot() { const v = loadRaw('lastSlot'); return v ? +v : null; }

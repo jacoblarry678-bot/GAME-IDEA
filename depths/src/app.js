@@ -26,8 +26,11 @@ import { Saves } from './game/saves.js';
 import { Controller } from './game/controller.js';
 import { Game } from './sim/game.js';
 import { addToPouch } from './sim/equipment.js';
+import { startExpedition } from './sim/expedition.js';
+import { seedToText } from './core/rng.js';
 import { CHAPTERS } from './data/chapters/index.js';
 import { CREATURES } from './data/creatures.js';
+import { FINISHES } from './data/achievements.js';
 
 const WARN_SFX = { listener: ['extraStep', 'wallTap'], cutout: ['shutterWarn', 'paperRub'], drowned: ['wake'], tenant: ['knock3', 'handleTurn'], caretaker: ['toolClick'], unseen: ['floorDent'] };
 
@@ -112,6 +115,7 @@ export class App {
     this.hud.show(false);
     this.overlays = new Overlays(this.uiRoot, this);
     this.menus = new Menus(this.uiRoot, this);
+    this.expeditionMenu = () => this.menus.expedition();
     this.controller = new Controller(this);
     this.fadeEl = el('div', { class: 'fade' });
     this.cardEl = el('div', { class: 'card-title' });
@@ -182,6 +186,42 @@ export class App {
     if (r.from === 'backup') this.hud.toast('The newest save was damaged. Loaded the previous valid checkpoint.');
   }
 
+  /** Expedition: a seeded twelve-room run. No campaign slot; a quit leaves a suspend snapshot. */
+  startExpedition(seed) {
+    this.slot = null; this.replay = true; this.expedition = true;
+    this.saves.clearSuspend();
+    const g = this._newGame({ replay: true });
+    g.mode = 'expedition';
+    this._enterGame(g);
+    try { startExpedition(g, seed, addToPouch); } catch (e) { console.error(e); this.quitToMenu(); this.hud.toast('That seed could not be generated.'); return; }
+    this.hud.toast(`Expedition ${g.expedition.seedText} · ${g.expedition.theme}`);
+  }
+  resumeExpedition() {
+    const snap = this.saves.suspend();
+    if (!snap) return;
+    this.saves.clearSuspend(); // a suspend is consumed when resumed
+    this.slot = null; this.replay = true; this.expedition = true;
+    const g = this._newGame({ replay: true });
+    this._enterGame(g);
+    g.restore(snap);
+    g.checkpoint = snap;
+  }
+  _expeditionResult(ev) {
+    const g = this.game;
+    const run = { seed: g.expedition.seed, seedText: g.expedition.seedText, theme: g.expedition.theme, success: !!ev.success, time: Math.round(g.elapsed), photos: g.stats.photos, downs: g.stats.downs, at: Date.now() };
+    const X = this.profile.data.expedition;
+    X.runs = [run, ...(X.runs || [])].slice(0, 20);
+    if (run.success) { X.completed = (X.completed || 0) + 1; this.profile.unlock('A17'); }
+    this.profile.persist();
+    this.saves.clearSuspend();
+    this.input.exitLock();
+    this.overlays.expeditionResult(run, {
+      retry: () => { const seed = run.seed; this.quitToMenu(); this.startExpedition(seed); },
+      fresh: () => { this.quitToMenu(); this.startExpedition((Math.random() * 32 ** 6) >>> 0); },
+      menu: () => { this.quitToMenu(); this.menus.expedition(); },
+    });
+  }
+
   startReplay(ch) {
     this.slot = null; this.replay = true;
     const g = this._newGame({ replay: true });
@@ -209,6 +249,7 @@ export class App {
     this.input.enabled = true;
     this.input.requestLock();
     this.fp.setCharacter(g.players.get(this.pid).slot);
+    this.fp.setFinish((FINISHES.find((f) => f.id === this.profile.data.finish) || FINISHES[0]).color);
     this.audio.init();
   }
 
@@ -238,7 +279,13 @@ export class App {
     this.game.retry();
     this.input.requestLock();
   }
-  quitToMenu() { this.game = null; this._clearLevel(); this.toMenu(); }
+  quitToMenu() { this.game = null; this.expedition = false; this._clearLevel(); this.toMenu(); }
+  /** Quitting an Expedition keeps a suspend snapshot (consumed when resumed). */
+  suspendExpedition() {
+    const g = this.game;
+    if (g && g.mode === 'expedition' && !g.over) this.saves.writeSuspend(g.serialize());
+    this.quitToMenu();
+  }
   saveAndQuit() {
     const g = this.game;
     if (this.slot && g.checkpoint) this.saves.write(this.slot, g.checkpoint, this.photos.exportThumbs(g.checkpoint.photos.map((p) => p.id)));
@@ -381,8 +428,9 @@ export class App {
             if (ev.dir !== undefined) this.hud.blip(ev.dir - p.yaw, true);
           }
           break;
-        case 'death': this.audio.play('death'); this.input.exitLock(); this.overlays.death({ ...ev, kind: 'death' }); break;
-        case 'wipe': this.audio.play('death'); this.input.exitLock(); this.overlays.death({ ...ev, kind: 'wipe', creature: 'The party', hint: 'Revive downed crew before their timer runs out, and regroup at refuges.' }); break;
+        case 'death': this.audio.play('death'); this.input.exitLock(); if (g.mode === 'expedition') this._expeditionResult({ success: false, cause: ev.creature }); else this.overlays.death({ ...ev, kind: 'death' }); break;
+        case 'expeditionDone': this.audio.play('success'); this._expeditionResult(ev); break;
+        case 'wipe': this.audio.play('death'); this.input.exitLock(); if (g.mode === 'expedition') { this._expeditionResult({ success: false }); break; } this.overlays.death({ ...ev, kind: 'wipe', creature: 'The party', hint: 'Revive downed crew before their timer runs out, and regroup at refuges.' }); break;
         case 'photoTaken': this._photo(ev); break;
         case 'record': if (mine) { this.overlays.reader(ev.title, ev.text, { audio: ev.audio, collectedCopy: !ev.first }); if (ev.first) this.hud.toast(`Record ${ev.id} collected · ${ev.title}`); } break;
         case 'note': if (mine) this.overlays.reader(ev.title, ev.text, { kind: 'Note' }); break;
@@ -505,6 +553,7 @@ export class App {
   _checkpoint(ev) {
     const g = this.game;
     if (ev.reason === 'finale' && this.slot && !this.replay) this.saves.writeFinale(this.slot, g.checkpoint);
+    if (g.mode === 'expedition' && ev.reason !== 'expedition start') this.saves.writeSuspend(g.checkpoint); // a crash keeps the last refuge snapshot
     if (this.replay || !this.slot) { this.hud.saved('Checkpoint'); return; }
     const ok = this.saves.write(this.slot, g.checkpoint, this.photos.exportThumbs(g.checkpoint.photos.map((p) => p.id)));
     if (ok) { this.hud.saved('Saved'); this.audio.play('save'); }
@@ -523,7 +572,8 @@ export class App {
   titleCard(ch, kicker) {
     const n = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'][ch] || ch;
     this.cardEl.innerHTML = '';
-    this.cardEl.append(el('div', { class: 'k' }, kicker || `Chapter ${n}`), el('div', { class: 'n' }, CHAPTER_NAMES[ch] || ''));
+    const X = ch === 'X' && this.game && this.game.expedition;
+    this.cardEl.append(el('div', { class: 'k' }, X ? `Expedition · ${X.seedText}` : kicker || `Chapter ${n}`), el('div', { class: 'n' }, X ? `${{ office: 'The Office', mall: 'The Mall', pool: 'The Pool', apartments: 'The Residences', industrial: 'The Lower Plant' }[X.theme] || ''}` : CHAPTER_NAMES[ch] || ''));
     this.cardEl.style.transition = 'none'; this.cardEl.style.opacity = 1;
     setTimeout(() => { this.cardEl.style.transition = 'opacity 2s'; this.cardEl.style.opacity = 0; }, 3500);
     this._musicSting();

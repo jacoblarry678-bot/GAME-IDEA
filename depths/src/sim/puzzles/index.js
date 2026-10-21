@@ -4,8 +4,9 @@ import { ValvePuzzle, LatchPuzzle, TilePuzzle } from './pool.js';
 import { MailPuzzle, FramesPuzzle } from './residents.js';
 import { WeightsPuzzle, TelemetryPuzzle } from './service.js';
 import { NexusPanel, PatchPuzzle, PurposePuzzle, BypassPuzzle, EmergencyPuzzle } from './core.js';
+import { ValveStatePuzzle, ZoneRoutingPuzzle } from './expedition.js';
 
-const TYPES = { weights: WeightsPuzzle, telemetry: TelemetryPuzzle, nexus: NexusPanel, patch: PatchPuzzle, purpose: PurposePuzzle, bypass: BypassPuzzle, emergency: EmergencyPuzzle, sequence: SequencePuzzle, routing: RoutingPuzzle, valves: ValvePuzzle, latch: LatchPuzzle, tiles: TilePuzzle, mail: MailPuzzle, frames: FramesPuzzle };
+const TYPES = { valvestate: ValveStatePuzzle, zonerouting: ZoneRoutingPuzzle, weights: WeightsPuzzle, telemetry: TelemetryPuzzle, nexus: NexusPanel, patch: PatchPuzzle, purpose: PurposePuzzle, bypass: BypassPuzzle, emergency: EmergencyPuzzle, sequence: SequencePuzzle, routing: RoutingPuzzle, valves: ValvePuzzle, latch: LatchPuzzle, tiles: TilePuzzle, mail: MailPuzzle, frames: FramesPuzzle };
 
 export function registerPuzzleType(name, cls) { TYPES[name] = cls; }
 

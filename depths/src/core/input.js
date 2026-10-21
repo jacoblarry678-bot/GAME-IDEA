@@ -13,6 +13,8 @@ export const PAD_ACTIONS = {
   inspect: PAD.LT, use: PAD.RT, journal: PAD.VIEW, pause: PAD.MENU, sprint: PAD.L3, cameraFlash: PAD.R3,
   flashlight: PAD.UP, callout: PAD.DOWN,
 };
+/** One-hand controller layout (left hand): actions on the shoulder, trigger, D-pad and stick button. */
+export const PAD_ONEHAND = { interact: PAD.LB, mantle: PAD.LB, use: PAD.LT, crouch: PAD.DOWN, flashlight: PAD.UP, journal: PAD.VIEW, sprint: PAD.L3, pause: PAD.MENU };
 const PAD_LABELS = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L3', 'R3', 'D-PAD ↑', 'D-PAD ↓', 'D-PAD ←', 'D-PAD →'];
 
 export class Input {
@@ -108,6 +110,12 @@ export class Input {
 
   _padDown(action) {
     const p = this.padNow;
+    if (this.settings.data.controls.oneHand) {
+      if (action === 'toolPrev') return !!p[PAD.LEFT];
+      if (action === 'toolNext') return !!p[PAD.RIGHT];
+      if (action === 'leanLeft' || action === 'leanRight' || action === 'radial' || action === 'callout' || action === 'inspect') return false;
+      if (PAD_ONEHAND[action] !== undefined) return !!p[PAD_ONEHAND[action]];
+    }
     if (action === 'leanLeft') return !!(p[PAD.LT] && p[PAD.LEFT]);
     if (action === 'leanRight') return !!(p[PAD.LT] && p[PAD.RIGHT]);
     if (action === 'toolPrev') return !!(p[PAD.LEFT] && !p[PAD.LT]);
@@ -117,6 +125,12 @@ export class Input {
   }
   _padWas(action) {
     const p = this.padPrev;
+    if (this.settings.data.controls.oneHand) {
+      if (action === 'toolPrev') return !!p[PAD.LEFT];
+      if (action === 'toolNext') return !!p[PAD.RIGHT];
+      if (action === 'leanLeft' || action === 'leanRight' || action === 'radial' || action === 'callout' || action === 'inspect') return false;
+      if (PAD_ONEHAND[action] !== undefined) return !!p[PAD_ONEHAND[action]];
+    }
     if (action === 'leanLeft') return !!(p[PAD.LT] && p[PAD.LEFT]);
     if (action === 'leanRight') return !!(p[PAD.LT] && p[PAD.RIGHT]);
     if (action === 'toolPrev') return !!(p[PAD.LEFT] && !p[PAD.LT]);

@@ -13,6 +13,8 @@ import { ACHIEVEMENTS, FINISHES, ENDINGS } from '../data/achievements.js';
 import { CHAPTERS } from '../data/chapters/index.js';
 import { CHARACTERS } from '../data/characters.js';
 import { SLOTS } from '../game/saves.js';
+import { seedToText, textToSeed } from '../core/rng.js';
+import { X_THEMES } from '../sim/expedition.js';
 
 const CHAPTER_NAMES = { 1: 'The Yellow Silence', 2: 'After Closing', 3: 'Stillwater', 4: 'The Residents', 5: 'Service Below', 6: 'The Unseen Depth' };
 
@@ -225,6 +227,28 @@ export class Menus {
       node.append(el('div', { class: 'row', style: { marginTop: '18px' } }, btn('Back', () => this.main())));
     };
     render();
+    this._screen(node);
+  }
+
+  // ---------------------------------------------------------------- expedition
+  expedition() {
+    const app = this.app, X = app.profile.data.expedition || { runs: [] };
+    const suspended = app.saves.suspend();
+    const input = el('input', { class: 'seedin', maxlength: 6, placeholder: 'SEED', 'aria-label': 'Seed (six characters)', 'data-nav': '', spellcheck: 'false' });
+    const err = el('div', { class: 'small dim' }, 'Six characters, letters and digits. Share a seed and everyone gets the same rooms, puzzles and patrols.');
+    const runs = (X.runs || []).slice(0, 8);
+    const node = el('div', { class: 'sheet', style: { width: 'min(640px, 94vw)' } },
+      el('h2', {}, 'Expedition'),
+      el('p', { class: 'small' }, 'Twelve connected rooms from one environment and its creature: three objectives, a relay control, two genuine refuges and an extraction lift. Full health, sixty flashlight charge, four exposures, one bandage and one decoy. A death ends the run.'),
+      el('div', { class: 'col' },
+        suspended ? btn(el('span', {}, 'Resume suspended run', el('span', { class: 'why' }, `${suspended.expedition ? suspended.expedition.seedText : ''} · the suspend is used up when you resume`)), () => app.resumeExpedition(), { 'data-autofocus': '' }) : null,
+        btn('New run · random seed', () => app.startExpedition((Math.random() * 32 ** 6) >>> 0), suspended ? {} : { 'data-autofocus': '' }),
+        el('div', { class: 'row' }, input, btn('Play this seed', () => { const v = textToSeed(input.value); if (v === null) { err.textContent = 'That is not a valid seed: use six letters and digits (no I, O, 0 or 1).'; return; } app.startExpedition(v); })),
+        err),
+      el('h3', { style: { marginTop: '18px' } }, 'Personal records'),
+      runs.length ? el('div', { class: 'xruns' }, ...runs.map((r) => el('div', { class: 'xrun' }, el('b', {}, r.seedText), ` ${X_THEMES[r.theme] ? X_THEMES[r.theme].name : r.theme} · ${r.success ? 'extracted' : 'lost'} · ${fmtTime(r.time)} · ${r.photos} photos · ${r.downs} downs`))) : el('p', { class: 'small dim' }, 'No runs yet.'),
+      el('div', { class: 'small dim' }, `Completed runs: ${X.completed || 0}`),
+      el('div', { class: 'row', style: { marginTop: '14px' } }, btn('Back', () => this.main())));
     this._screen(node);
   }
 

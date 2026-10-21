@@ -53,7 +53,8 @@ export class FirstPerson {
       flashlight: (() => { const g = new THREE.Group(); g.add(mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.2, 12).rotateX(Math.PI / 2), 'darkMetal', 0, 0, -0.05)); g.add(mesh(new THREE.CylinderGeometry(0.034, 0.024, 0.06, 12).rotateX(Math.PI / 2), 'darkMetal', 0, 0, -0.17)); this.lens = mesh(new THREE.CircleGeometry(0.03, 12), new THREE.MeshBasicMaterial({ color: 0xfff6dc }), 0, 0, -0.201); this.lens.rotation.y = Math.PI; g.add(this.lens); return g; })(),
       camera: (() => {
         const g = new THREE.Group();
-        g.add(mesh(new THREE.BoxGeometry(0.2, 0.13, 0.11), 'plastic', 0, 0, 0));
+        this.shell = new THREE.MeshStandardMaterial({ color: 0xd8d2c0, roughness: 0.55 }); // the cosmetic camera finish
+        g.add(mesh(new THREE.BoxGeometry(0.2, 0.13, 0.11), this.shell, 0, 0, 0));
         g.add(mesh(new THREE.BoxGeometry(0.2, 0.03, 0.11), 'darkMetal', 0, 0.075, 0));
         g.add(mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.05, 16).rotateX(Math.PI / 2), 'black', 0.02, -0.005, -0.075));
         g.add(mesh(new THREE.BoxGeometry(0.035, 0.025, 0.02), 'glass', -0.06, 0.04, -0.06));
@@ -69,6 +70,9 @@ export class FirstPerson {
     for (const t of Object.values(this.tools)) { t.visible = false; this.root.add(t); }
     this.supply = new THREE.Group(); this.root.add(this.supply); this.supplyItem = null;
   }
+
+  /** Cosmetic camera finish (shell colour only; never affects visibility to creatures). */
+  setFinish(color) { if (this.shell) this.shell.color.setHex(color); }
 
   setCharacter(slot) {
     if (slot === this.slot) return;

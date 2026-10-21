@@ -111,6 +111,24 @@ export class Overlays {
     this.push('ending', node);
   }
 
+  // ---------------------------------------------------------------- expedition result
+  expeditionResult(run, actions) {
+    const node = el('div', { class: 'ending' }, el('div', { class: 'card', style: { width: 'min(620px, 94vw)' } },
+      el('div', { class: 'et' }, 'Expedition'),
+      el('div', { class: 'en' }, run.success ? 'Extracted' : 'Run lost'),
+      el('div', { class: 'stats' },
+        el('div', {}, el('b', {}, run.seedText), 'seed'),
+        el('div', {}, el('b', {}, fmtTime(run.time)), 'time'),
+        el('div', {}, el('b', {}, String(run.photos)), 'photographs'),
+        el('div', {}, el('b', {}, String(run.downs)), 'downs')),
+      el('p', { class: 'small dim' }, 'Share the seed to play the same rooms, puzzles and patrols.'),
+      el('div', { class: 'col', style: { maxWidth: '380px', margin: '0 auto' } },
+        btn('Retry this seed', () => { this.close('xresult'); actions.retry(); }, { class: 'btn primary', 'data-autofocus': '' }),
+        btn('New seed', () => { this.close('xresult'); actions.fresh(); }),
+        btn('Expedition menu', () => { this.close('xresult'); actions.menu(); }))));
+    this.push('xresult', node, { pauses: true });
+  }
+
   // ---------------------------------------------------------------- pause
   pause() {
     const app = this.app, g = app.game, p = g.players.get(app.pid);
@@ -124,7 +142,7 @@ export class Overlays {
         btn('Settings', () => app.menus.settings(() => {})),
         btn('Request hint', () => { this.close('pause'); app.requestHint(); }),
         btn('Return to last safe position', () => { this.close('pause'); g.returnToSafe(app.pid); }),
-        inRefuge ? btn('Save and quit', () => { this.close('pause'); app.saveAndQuit(); }) : el('button', { class: 'btn', disabled: true, 'data-nav': '' }, 'Save and quit', el('span', { class: 'why' }, 'Available in a secured refuge. Your last checkpoint is kept.')),
+        g.mode === 'expedition' ? btn('Suspend run and quit', () => { this.close('pause'); app.suspendExpedition(); }) : inRefuge ? btn('Save and quit', () => { this.close('pause'); app.saveAndQuit(); }) : el('button', { class: 'btn', disabled: true, 'data-nav': '' }, 'Save and quit', el('span', { class: 'why' }, 'Available in a secured refuge. Your last checkpoint is kept.')),
         btn('Quit to menu', () => { this.close('pause'); app.confirm('Quit to the menu? Progress since the last checkpoint is lost.', () => app.quitToMenu()); }, { class: 'btn danger' })),
       el('div', { class: 'small dim', style: { marginTop: '14px' } }, `Chapter ${g.chapterId} · ${g.D.label} · ${fmtTime(g.elapsed)}${g.checkpointReason ? ` · last checkpoint: ${g.checkpointReason}` : ''}`));
     this.push('pause', node, { pauses: !app.coop });

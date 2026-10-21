@@ -21,6 +21,7 @@ import * as eq from './equipment.js';
 import { updateRefuges } from './refuge.js';
 import { updateCycles } from './shutters.js';
 import { updateMachines } from './machines.js';
+import { buildExpeditionDef } from './expedition.js';
 
 export const SAVE_VERSION = 1;
 
@@ -87,7 +88,7 @@ export class Game {
 
   /** Load a chapter (or a return trip). entry: 'start' | 'restore' | 'return' | 'replay' */
   loadChapter(id, { entry = 'start', snapshot = null, returnTo = null } = {}) {
-    const def = CHAPTERS[id];
+    const def = CHAPTERS[id] || (this.customDefs && this.customDefs[id]);
     if (!def) throw new Error(`no chapter ${id}`);
     this.chapterId = id;
     this.returnTrip = entry === 'return' ? (returnTo || true) : null;
@@ -564,6 +565,7 @@ export class Game {
       stats: JSON.parse(JSON.stringify(this.stats)),
       timers: this.timers.map((t) => ({ in: t.at - this.time, key: t.key, data: t.data })),
       parked: this.parked || null,
+      expedition: this.expedition || null,
     };
   }
 
@@ -594,6 +596,7 @@ export class Game {
     }
     this.stats = JSON.parse(JSON.stringify(snap.stats || this.stats));
     this.parked = snap.parked || null;
+    if (snap.expedition) { this.expedition = snap.expedition; this.customDefs = { X: buildExpeditionDef(snap.expedition) }; }
     this.over = null;
     this.paused = false;
     this.loadChapter(snap.chapter, { entry: snap.returnTrip ? 'return' : 'restore', snapshot: snap, returnTo: snap.returnTrip });

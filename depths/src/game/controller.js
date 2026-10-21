@@ -51,7 +51,11 @@ export class Controller {
     if (I.isDown('back')) mz -= 1;
     if (I.isDown('left')) mx -= 1;
     if (I.isDown('right')) mx += 1;
-    if (I.pad) { mx += I.padAxes[0]; mz -= I.padAxes[1]; }
+    if (I.pad) {
+      if (C.oneHand) yaw -= I.padAxes[0] * C.padLookX * dt; // one-hand layout: the left stick turns instead of strafing
+      else mx += I.padAxes[0];
+      mz -= I.padAxes[1];
+    }
     // sprint
     if (C.sprintMode === 'toggle') { if (I.pressed('sprint')) this.sprintLatch = !this.sprintLatch; }
     else if (I.padPressed(PAD.L3)) this.sprintLatch = !this.sprintLatch;

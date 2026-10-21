@@ -28,7 +28,7 @@ export function updateRefuges(game, dt) {
             const first = !game.persist.refuges[room.id];
             game.persist.refuges[room.id] = true;
             game.fx('verified', { pid: p.id, room: room.id, first, label: ref.label });
-            if (first) game.fx('profile', { kind: 'refuge', id: `${game.chapterId}:${room.id}` });
+            if (first && game.mode !== 'expedition') game.fx('profile', { kind: 'refuge', id: `${game.chapterId}:${room.id}` });
             if (game.script.onVerified) game.script.onVerified(game, p, room);
           } else {
             game.fx('clockStopped', { pid: p.id, room: room.id });

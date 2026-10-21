@@ -34,6 +34,9 @@ export class Director {
   onPursuitEnd(c) {
     this.pursuers.delete(c.id);
     this.lastPursuitEnd = this.game.time;
+    // A14 Quiet Shift: a Listener pursuit that ends with its target alive and untouched
+    const t = c.target ? this.game.players.get(c.target) : null;
+    if (c.type === 'listener' && !c.pursuitDamaged && (!t || (t.alive && !t.downed))) this.game.fx('profile', { kind: 'achievement', id: 'A14' });
     if (this.damagedThisPursuit) this.add(-20, 'damaging encounter');
   }
 

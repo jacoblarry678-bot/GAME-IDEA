@@ -63,7 +63,7 @@ export class Bot {
         continue;
       }
       if (!path || repath <= 0) {
-        path = nav.path(p.x, p.z, x, z, null, (di) => this.doorCost(di));
+        path = nav.path(p.x, p.z, x, z, this.okCell || null, (di) => this.doorCost(di));
         ix = 0; repath = 2;
         if (!path) { this.stop(); throw new Error(`bot: no path to ${x},${z} from ${p.x.toFixed(1)},${p.z.toFixed(1)}`); }
         path.push({ x, z });
@@ -85,6 +85,19 @@ export class Bot {
           this.wait(0.7);
         }
         break;
+      }
+      // snagged on a corner: back off sideways for a moment, then plan again
+      this._prog = this._prog || { x: p.x, z: p.z, t: 0 };
+      this._prog.t += DT;
+      if (this._prog.t > 1.5) {
+        const moved = Math.hypot(p.x - this._prog.x, p.z - this._prog.z);
+        this._prog = { x: p.x, z: p.z, t: 0 };
+        if (moved < 0.25) {
+          const side = (this._unstick = -(this._unstick || 1));
+          for (let k = 0; k < 24; k++) { this.g.setInput(this.pid, { mz: -0.6, mx: side, sprint: false, crouch: !!opts.crouch }); if (!this.tick(1)) return false; }
+          path = null; repath = 0;
+          continue;
+        }
       }
       this.face(wp.x, wp.z);
       this.g.setInput(this.pid, { mz: 1, mx: 0, sprint: !!opts.sprint, crouch: !!opts.crouch });

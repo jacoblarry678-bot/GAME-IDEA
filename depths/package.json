@@ -12,7 +12,8 @@
     "playthrough": "node tools/playthrough.mjs",
     "levels": "node tools/levelcheck.mjs",
     "e2e": "node tools/e2e.mjs",
-    "server": "node server/server.mjs"
+    "server": "node server/server.mjs",
+    "expedition": "node tools/xrun.mjs 12"
   },
   "dependencies": {
     "three": "0.169.0",
