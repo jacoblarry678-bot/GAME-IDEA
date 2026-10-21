@@ -531,6 +531,7 @@ function commit(game, p) {
   const away = [...game.players.values()].filter((q) => q.alive && q.room !== '6.10');
   if (away.length) return { ok: false, msg: `Everyone must be in broadcast control first (${away.map((q) => q.name).join(', ')}).` };
   if (sel === 'door' && missingEvidence(game).length) return { ok: false, msg: 'MAINTENANCE BYPASS needs E1, E2, E3 and E4.' };
+  if (S.vars.holdUntil && game.time < S.vars.holdUntil) return { ok: false, msg: `A crew member asked for more time. The gate is held for ${Math.ceil(S.vars.holdUntil - game.time)} more seconds.` };
   S.set('P12.committed');
   S.set(`route.${sel}`);
   game.fx('committed', { route: sel });

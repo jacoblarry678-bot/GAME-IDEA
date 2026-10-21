@@ -23,6 +23,7 @@ export class Menus {
 
   _screen(node, onBack) {
     this.close();
+    this.at = null;
     this.layer = el('div', { class: 'screen' }, node);
     this.root.appendChild(this.layer);
     this.app.nav.push(this.layer, onBack || (() => this.main()));
@@ -48,6 +49,7 @@ export class Menus {
       el('div', { class: 'menu-list' }, ...items),
       el('div', { class: 'menu-foot' }, 'First-person survival horror for one to four players.', el('br'), 'Everything here is generated in code: rooms, sounds, voices and music.'));
     this._screen(node, () => {});
+    this.at = 'main';
     app.menuBackdrop(true);
   }
 
@@ -225,6 +227,33 @@ export class Menus {
         }
       }
       node.append(el('div', { class: 'row', style: { marginTop: '18px' } }, btn('Back', () => this.main())));
+    };
+    render();
+    this._screen(node);
+  }
+
+  // ---------------------------------------------------------------- join
+  join() {
+    const app = this.app;
+    const st = { slot: 'mara' };
+    const code = el('input', { class: 'seedin', maxlength: 6, placeholder: 'CODE', 'aria-label': 'Invite code', 'data-nav': '', spellcheck: 'false' });
+    const name = el('input', { class: 'seedin', maxlength: 16, placeholder: 'NAME', 'aria-label': 'Your name', 'data-nav': '', value: app.profile.data.name || '', style: { letterSpacing: '0.1em', textTransform: 'none' } });
+    const err = el('div', { class: 'small dim' }, 'The host shares a six-character code. The host keeps the save and has final campaign control.');
+    const node = el('div', { class: 'sheet', style: { width: 'min(600px, 94vw)' } });
+    const render = () => {
+      clear(node);
+      node.append(el('h2', {}, 'Join game'), el('div', { class: 'col' }, code, name,
+        el('div', { class: 'small dim' }, 'Character'),
+        seg(Object.entries(CHARACTERS).map(([k, c]) => [k, c.short]), st.slot, (v) => { st.slot = v; render(); }),
+        el('div', { class: 'small dim' }, `${CHARACTERS[st.slot].name} · ${CHARACTERS[st.slot].role}. If someone already plays this character, the host assigns a free one.`),
+        err),
+        el('div', { class: 'row', style: { marginTop: '16px' } }, btn('Back', () => this.main()), el('div', { class: 'spacer' }), btn('Join', () => {
+          const c = String(code.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (c.length !== 6) { err.textContent = 'Enter the six-character invite code.'; return; }
+          app.profile.data.name = String(name.value || '').trim().slice(0, 16) || CHARACTERS[st.slot].short; app.profile.persist();
+          this.close();
+          app.joinGame(c, app.profile.data.name, st.slot);
+        }, { class: 'btn primary' })));
     };
     render();
     this._screen(node);

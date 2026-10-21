@@ -14,6 +14,7 @@ import { validateLevel } from '../src/sim/validate.js';
 import { generateSpec, validateSpec, startExpedition } from '../src/sim/expedition.js';
 import { defineMachine, startMachine, maskedAt } from '../src/sim/machines.js';
 import { addToPouch } from '../src/sim/equipment.js';
+import { Relay } from '../server/relay.mjs';
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -276,6 +277,29 @@ test('an ending records itself once and plays its scene', () => {
   run(g, 40);
   ok(g.over && g.over.done, 'ending scene finishes');
   ok(g.drainEvents().some((e) => e.e === 'endingDone' && e.june), 'June staging reported');
+});
+
+// ------------------------------------------------------------------ co-op relay
+test('relay: invite codes, routing, a full session and the host leaving', () => {
+  const R = new Relay();
+  const box = () => { const b = { got: [] }; b.cl = R.connect({ send: (s) => b.got.push(JSON.parse(s)), close: () => {} }); return b; };
+  const h = box();
+  R.onMessage(h.cl, JSON.stringify({ t: 'host', name: 'Evan' }));
+  const code = h.got[0].code;
+  ok(/^[A-Z0-9]{6}$/.test(code), 'invite code issued');
+  const gs = [box(), box(), box(), box()];
+  for (const g of gs) R.onMessage(g.cl, JSON.stringify({ t: 'join', code: code.toLowerCase(), name: 'G', slot: 'mara' }));
+  eq(gs.slice(0, 3).map((g) => g.got[0].t), ['joined', 'joined', 'joined']);
+  eq(gs[3].got[0].t, 'error', 'a fourth guest is refused');
+  R.onMessage(gs[0].cl, JSON.stringify({ t: 'to', id: 'host', d: { k: 'input' } }));
+  ok(h.got.some((m) => m.t === 'from' && m.d.k === 'input'), 'guest → host routed');
+  R.onMessage(h.cl, JSON.stringify({ t: 'all', d: { k: 'snap' } }));
+  ok(gs.slice(0, 3).every((g) => g.got.some((m) => m.t === 'from' && m.d.k === 'snap')), 'host → all routed');
+  R.disconnect(gs[1].cl);
+  ok(h.got.some((m) => m.t === 'left'), 'host told when a guest leaves');
+  R.disconnect(h.cl);
+  ok(gs[0].got.some((m) => m.t === 'hostLeft'), 'guests told when the host leaves');
+  eq(R.sessions.size, 0, 'session closed');
 });
 
 // ------------------------------------------------------------------ expedition

@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { mat } from './materials.js';
 import { HIDDEN_LAYER } from './levelView.js';
+import { CHARACTERS } from '../data/characters.js';
 
 function limb(len, r, m, r2) {
   const g = new THREE.Group();
@@ -408,6 +409,33 @@ export class CreatureView {
       if (o) { o.traverse((x) => x.layers.set(HIDDEN_LAYER)); out.push(o); }
     }
     return out;
+  }
+
+  /** Co-op teammates: a body per connected, non-spectating player other than the local one. */
+  syncMates(game, localPid, dt) {
+    this.mateModels = this.mateModels || new Map();
+    const seen = new Set();
+    for (const q of game.players.values()) {
+      if (q.id === localPid || !q.connected || q.spectating) continue;
+      seen.add(q.id);
+      let m = this.mateModels.get(q.id);
+      if (!m) {
+        const C = CHARACTERS[q.slot] || CHARACTERS.evan;
+        const obj = buildHuman(C.color, C.accent, { hiVis: true });
+        this.root.add(obj);
+        m = { obj, lx: q.x, lz: q.z };
+        this.mateModels.set(q.id, m);
+      }
+      const moved = Math.hypot(q.x - m.lx, q.z - m.lz); m.lx = q.x; m.lz = q.z;
+      const o = m.obj, u = o.userData;
+      o.visible = !q.hidden;
+      o.position.set(q.x, q.y || 0, q.z);
+      o.rotation.y = q.yaw;
+      animHuman(u, q, dt, moved, game);
+      u.hips.position.y = q.downed ? 0.25 : q.crouched ? 0.62 : 0.95;
+      o.rotation.x = q.downed ? -1.2 : 0;
+    }
+    for (const [id, m] of this.mateModels) if (!seen.has(id)) { this.root.remove(m.obj); this.mateModels.delete(id); }
   }
 
   /** Footprints and floor dents: short-lived decals on the floor. */

@@ -127,6 +127,8 @@ export class Game {
       for (const pz of this.puzzles.values()) if (this.story.has(`${pz.id}.done`)) pz.done = true;
     }
     this._syncDoorsToFlags(true);
+    this.chapterLoadedAt = this.time;
+    if (entry === 'start' || entry === 'replay') this.story.vars.sharedShift = this.activeCount() >= 2; // A16 needs two active players from entry to exit
     if (this.script.init) this.script.init(this, entry);
     this.fx('chapterLoaded', { id, entry, title: def.title });
     this.lastProgressAt = this.time;
@@ -227,6 +229,7 @@ export class Game {
       if (p.downed) this._updateDowned(p, dt);
     }
     updateRefuges(this, dt);
+    if (this.story.vars.sharedShift && this.activeCount() < 2) this.story.vars.sharedShift = false;
     if (this.story.vars.cycles) updateCycles(this, dt);
     if (this.story.vars.machines) updateMachines(this, dt);
     // decoys
@@ -650,9 +653,41 @@ export class Game {
     this.scripted = false;
     if (tr.to === 'ending') { this.fx('endingStart', { ending: this.story.flags.ending }); return; }
     const fromCh = this.chapterId;
-    if (!this.returnTrip && tr.entry === 'start' && typeof tr.to === 'number' && tr.to > fromCh) this.fx('chapterComplete', { chapter: fromCh });
+    if (!this.returnTrip && tr.entry === 'start' && typeof tr.to === 'number' && tr.to > fromCh) {
+      this.fx('chapterComplete', { chapter: fromCh });
+      if (this.story.vars.sharedShift && this.activeCount() >= 2) this.fx('profile', { kind: 'achievement', id: 'A16' });
+    }
     this.loadChapter(tr.to, { entry: tr.entry, returnTo: tr.returnTo });
     this.makeCheckpoint('chapter');
+  }
+
+  /** Co-op pause: the shared game pauses only once every connected player has voted. */
+  pauseVote(pid) {
+    this.pauseVotes = this.pauseVotes || new Set();
+    this.pauseVotes.add(pid);
+    const connected = [...this.players.values()].filter((p) => p.connected);
+    const p = this.players.get(pid);
+    this.fx('pauseVote', { pid, name: p ? p.name : '', votes: this.pauseVotes.size, of: connected.length });
+    if (connected.every((q) => this.pauseVotes.has(q.id))) { this.sharedPause = true; this.resumeAt = 0; this.fx('sharedPause', { on: true }); }
+    return { ok: true };
+  }
+  /** Any player can resume a shared pause; it lifts after a visible three second countdown. */
+  resumeShared(pid) {
+    if (!this.sharedPause || this.resumeAt) return { ok: false };
+    this.resumeAt = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 3000;
+    const p = this.players.get(pid);
+    this.fx('resumeCountdown', { pid, name: p ? p.name : '' });
+    return { ok: true };
+  }
+
+  /** Co-op: a guest asks the host to hold the final choice for thirty seconds. */
+  requestMoreTime(pid) {
+    const S = this.story;
+    if (S.has('P12.committed') || this.chapterId !== 6) return { ok: false };
+    S.vars.holdUntil = this.time + 30;
+    const p = this.players.get(pid);
+    this.fx('moreTime', { pid, name: p ? p.name : '' });
+    return { ok: true, msg: 'The final gate is held for thirty seconds.' };
   }
 
   /**

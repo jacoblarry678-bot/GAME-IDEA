@@ -93,7 +93,9 @@ export class Overlays {
       el('div', { class: 't' }, info.kind === 'wipe' ? 'The crew is lost' : 'You did not make it'),
       el('div', { class: 'c' }, info.creature),
       el('div', { class: 'h' }, info.hint),
-      el('div', { class: 'row', style: { justifyContent: 'center', marginTop: '28px' } }, btn('Retry from checkpoint', () => { this.close('death'); app.retry(); }, { class: 'btn primary', 'data-autofocus': '' }), btn('Quit to menu', () => { this.close('death'); app.quitToMenu(); })));
+      app.netRole === 'guest'
+        ? el('div', {}, el('p', { class: 'small dim', style: { textAlign: 'center', marginTop: '22px' } }, 'The host retries from the checkpoint; you will rejoin with the crew.'), el('div', { class: 'row', style: { justifyContent: 'center' } }, btn('Leave session', () => { this.close('death'); app.quitToMenu(); }, { 'data-autofocus': '' })))
+        : el('div', { class: 'row', style: { justifyContent: 'center', marginTop: '28px' } }, btn('Retry from checkpoint', () => { this.close('death'); app.retry(); }, { class: 'btn primary', 'data-autofocus': '' }), btn('Quit to menu', () => { this.close('death'); app.quitToMenu(); })));
     this.push('death', node, { pauses: true });
   }
 
@@ -136,6 +138,10 @@ export class Overlays {
     const node = el('div', { class: 'sheet', style: { width: 'min(520px, 92vw)' } },
       el('h2', {}, app.coop ? 'Session running' : 'Paused'),
       app.coop ? el('p', { class: 'small dim' }, 'Online play keeps running while this menu is open.') : null,
+      app.coop ? el('div', { class: 'jentry' }, app.netRole === 'host' ? `Invite code ${app.net && app.net.code ? app.net.code : '…'} · you have final campaign control` : `Session ${app.net && app.net.code ? app.net.code : ''} · the host has final campaign control`, el('br'), [...g.players.values()].map((q) => `${q.name}${q.id === app.pid ? ' (you)' : ''}${q.connected ? (q.spectating ? ' · waiting' : q.downed ? ' · down' : '') : ' · disconnected'}`).join(' · ')) : null,
+      !app.coop && app.netAvailable && !app.replay && app.slot ? btn('Open to guests (host online)', () => { this.close('pause'); app.startHosting(); }) : null,
+      app.coop ? (g.sharedPause ? btn('Resume (three second countdown)', () => { g.resumeShared(app.pid); this.close('pause'); }) : btn('Vote to pause the shared game', () => { g.pauseVote(app.pid); this.close('pause'); })) : null,
+      app.coop && app.netRole === 'guest' && g.chapterId === 6 && !g.story.has('P12.committed') ? btn('Ask the host for more time', () => { g.requestMoreTime(app.pid); this.close('pause'); }) : null,
       el('div', { class: 'col' },
         btn('Resume', () => this.close('pause'), { 'data-autofocus': '' }),
         btn('Journal', () => { this.close('pause'); this.journal(); }),
@@ -323,6 +329,11 @@ export class Overlays {
     const lines = Object.keys(g.story.scenes).length;
     node.append(el('p', { class: 'small dim' }, `Collected recordings replay here. ${lines} story scenes are in your journal.`), btn('Close', () => this.close('deck'), { 'data-autofocus': '' }));
     this.push('deck', node);
+  }
+
+  notice(text) {
+    const node = el('div', { class: 'sheet', style: { width: 'min(520px, 92vw)' } }, el('p', {}, text), el('div', { class: 'row' }, btn('OK', () => this.close('notice'), { 'data-autofocus': '' })));
+    this.push('notice', node);
   }
 
   confirm(text, yes) {

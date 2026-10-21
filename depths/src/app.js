@@ -28,6 +28,8 @@ import { Game } from './sim/game.js';
 import { addToPouch } from './sim/equipment.js';
 import { startExpedition } from './sim/expedition.js';
 import { seedToText } from './core/rng.js';
+import { HostSession, GuestSession } from './net/session.js';
+import { connectRelay } from './net/transport.js';
 import { CHAPTERS } from './data/chapters/index.js';
 import { CREATURES } from './data/creatures.js';
 import { FINISHES } from './data/achievements.js';
@@ -78,6 +80,7 @@ export class App {
     this.pid = 'p1';
     this.slot = null;
     this.coop = false;
+    this.net = null; this.netRole = null;
     this.netAvailable = false;
     this.inGame = false;
     this.state = 'boot';
@@ -116,6 +119,7 @@ export class App {
     this.overlays = new Overlays(this.uiRoot, this);
     this.menus = new Menus(this.uiRoot, this);
     this.expeditionMenu = () => this.menus.expedition();
+    this.joinMenu = () => this.menus.join();
     this.controller = new Controller(this);
     this.fadeEl = el('div', { class: 'fade' });
     this.cardEl = el('div', { class: 'card-title' });
@@ -127,7 +131,7 @@ export class App {
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.inGame && !this.coop && !this.overlays.open) this.overlays.pause(); });
     window.addEventListener('keydown', (e) => { if (e.code === 'Escape' && this.state === 'game' && !this.overlays.open && !this.input.captureCb) this.overlays.pause(); });
     // net availability (served by the relay server)
-    if (window.__DEPTHS_SERVER__) fetch('./api/status').then((r) => (r.ok ? r.json() : null)).then((j) => { this.netAvailable = !!(j && j.relay); }).catch(() => {});
+    if (window.__DEPTHS_SERVER__) fetch('./api/status').then((r) => (r.ok ? r.json() : null)).then((j) => { this.netAvailable = !!(j && j.relay); if (this.netAvailable && this.state === 'menu' && this.menus.at === 'main') this.menus.main(); }).catch(() => {});
     setP(1, 'Ready');
     document.getElementById('boot').classList.add('gone');
     this.toMenu();
@@ -171,6 +175,49 @@ export class App {
     this._enterGame(g);
     g.loadChapter(1);
     g.makeCheckpoint('chapter start');
+    if (st.mode === 'host') this.startHosting();
+  }
+
+  // ================================================================ co-op
+  /** Open the current campaign to guests through the relay. */
+  startHosting() {
+    const g = this.game;
+    if (!g || this.net) return;
+    this.coop = true; this.netRole = 'host';
+    const tr = connectRelay({ onClose: () => { if (this.netRole === 'host') this.hud.toast('Lost the relay connection. The campaign continues solo; your save is unaffected.'); } });
+    this.net = new HostSession(g, tr, { name: this.profile.data.name || 'Host', onChange: (why) => {
+      if (why === 'hosted') this.hud.toast(`Hosting · invite code ${this.net.code}`, 'tip');
+    } });
+  }
+
+  /** Join a session with an invite code. */
+  joinGame(code, name, slot) {
+    const ident = this._ident();
+    this.netRole = 'guest';
+    const tr = connectRelay({ onClose: () => { if (this.netRole === 'guest' && this.game) this._netEnded('Connection to the session was lost.'); } });
+    this.hud.toast('Connecting…');
+    this.net = new GuestSession(tr, {
+      code, name, slot, ident,
+      onReady: (g, pid) => {
+        this.pid = pid; this.slot = null; this.replay = true; this.coop = true;
+        this._enterGame(g);
+        this.hud.toast(`Joined ${this.net.code}. Waiting for a safe spawn at a refuge or chapter entry.`, 'tip');
+      },
+      onEnd: (msg) => this._netEnded(msg),
+      onResult: (r) => { if (r && r.msg) this.onInteractResult(r); },
+    });
+  }
+  _netEnded(msg) {
+    const was = this.netRole;
+    this.netRole = null;
+    if (this.net) { try { this.net.close(); } catch { /* closed */ } this.net = null; }
+    if (was === 'guest') { this.pid = 'p1'; this.coop = false; this.quitToMenu(); this.overlays.notice(msg || 'The session ended.'); }
+  }
+  _ident() {
+    let id = null;
+    try { id = localStorage.getItem('depths.ident'); } catch { /* blocked */ }
+    if (!id) { id = `id${Math.random().toString(36).slice(2, 10)}`; try { localStorage.setItem('depths.ident', id); } catch { /* blocked */ } }
+    return id;
   }
 
   continueSlot(n) {
@@ -279,7 +326,11 @@ export class App {
     this.game.retry();
     this.input.requestLock();
   }
-  quitToMenu() { this.game = null; this.expedition = false; this._clearLevel(); this.toMenu(); }
+  quitToMenu() {
+    if (this.net) { const n = this.net; this.net = null; this.netRole = null; try { n.close(); } catch { /* closed */ } }
+    this.pid = 'p1'; this.coop = false;
+    this.game = null; this.expedition = false; this._clearLevel(); this.toMenu();
+  }
   /** Quitting an Expedition keeps a suspend snapshot (consumed when resumed). */
   suspendExpedition() {
     const g = this.game;
@@ -328,16 +379,19 @@ export class App {
     const g = this.game;
     const blocked = this.overlays.open;
     if (this.input.pressed('pause') && !this.overlays.open) this.overlays.pause();
-    g.paused = !this.coop && this.overlays.pausing;
+    g.paused = (!this.coop && this.overlays.pausing) || !!g.sharedPause;
     this.controller.update(dt, g, this.pid, blocked);
     if (!g.paused) g.tick(dt);
-    this._handleEvents(g.drainEvents());
+    const evs = g.drainEvents();
+    if (this.netRole === 'host' && this.net) this.net.update(dt, evs);
+    this._handleEvents(evs);
     if (this.state !== 'game' || this.game !== g) return;
     const p = g.players.get(this.pid);
     // view
     if (this.levelView) this.levelView.update(dt);
     this.creatures.sync(g, dt);
     this.creatures.syncNpcs(g, dt);
+    this.creatures.syncMates(g, this.pid, dt);
     this.creatures.updateDecals(dt);
     const cam = this.engine.camera;
     this.fp.update(dt, g, p, cam, { inspect: this.controller.inspect });
@@ -428,6 +482,13 @@ export class App {
             if (ev.dir !== undefined) this.hud.blip(ev.dir - p.yaw, true);
           }
           break;
+        case 'coopJoin': this.hud.toast(`${ev.name} joined the crew.`); break;
+        case 'coopLeave': this.hud.toast(`${ev.name} ${ev.why === 'stalled' ? 'lost connection' : 'left'}. Their supplies are in a bag at the next refuge.`); break;
+        case 'coopSpawn': this.hud.toast(ev.pid === me ? 'You are with the crew.' : `${ev.name} is with the crew.`); break;
+        case 'pauseVote': this.hud.toast(`${ev.name} asked to pause (${ev.votes} of ${ev.of}). Everyone must agree.`); break;
+        case 'sharedPause': this.hud.toast(ev.on ? 'Paused by vote. Any player can resume.' : 'Resumed.', 'tip'); this.hud.cinematic(false); break;
+        case 'resumeCountdown': this.hud.toast(`${ev.name} is resuming: 3 · 2 · 1`); break;
+        case 'moreTime': this.hud.toast(`${ev.name || 'A crew member'} asked for more time. The final gate is held for thirty seconds.`, 'tip'); break;
         case 'death': this.audio.play('death'); this.input.exitLock(); if (g.mode === 'expedition') this._expeditionResult({ success: false, cause: ev.creature }); else this.overlays.death({ ...ev, kind: 'death' }); break;
         case 'expeditionDone': this.audio.play('success'); this._expeditionResult(ev); break;
         case 'wipe': this.audio.play('death'); this.input.exitLock(); if (g.mode === 'expedition') { this._expeditionResult({ success: false }); break; } this.overlays.death({ ...ev, kind: 'wipe', creature: 'The party', hint: 'Revive downed crew before their timer runs out, and regroup at refuges.' }); break;
@@ -446,7 +507,7 @@ export class App {
         case 'refugeSecured': this.hud.toast('Refuge secured. Pursuit cleared.'); break;
         case 'profile': this.profile.apply(ev); break;
         case 'achievementHint': if (ev.id === 'A15') this.profile.unlock('A15'); break;
-        case 'chapterComplete': this.profile.apply({ kind: 'chapter', id: ev.chapter }); if (this.coop && g.activeCount() >= 2) this.profile.unlock('A16'); break;
+        case 'chapterComplete': this.profile.apply({ kind: 'chapter', id: ev.chapter }); break;
         case 'transition': this._fadeHold = ev.dur; this.audio.play(ev.kind === 'lift' ? 'liftHum' : 'gateWheel'); break;
         case 'decoy': this.audio.play('decoyWind', { x: ev.x, z: ev.z }); this.audio.loop(`decoy:${ev.id}`, 'decoy', true, { x: ev.x, y: 0.5, z: ev.z, bus: 'threat' }); setTimeout(() => this.audio.loop(`decoy:${ev.id}`, null, false), ev.dur * 1000); if (A.envCaptions) this.hud.envCaption('[Windup decoy ringing]', { dur: 3 }); break;
         case 'hint': if (mine) { this.hud.hint(ev.text, ev.stage, ev.of); this.audio.play('hint'); if (ev.nav && A.navAssist) { const d = g.level.door(ev.nav); if (d) this.hud.navTo(d, 'Next doorway'); } } break;
