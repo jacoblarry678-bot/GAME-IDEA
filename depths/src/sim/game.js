@@ -661,6 +661,15 @@ export class Game {
     this.makeCheckpoint('chapter');
   }
 
+  /** Co-op text chat. Text is shown to the crew only; it never drives creatures or scares. */
+  chat(pid, text) {
+    const p = this.players.get(pid);
+    const t = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+    if (!p || !t) return { ok: false };
+    this.fx('chat', { pid, name: p.name, slot: p.slot, text: t });
+    return { ok: true };
+  }
+
   /** Co-op pause: the shared game pauses only once every connected player has voted. */
   pauseVote(pid) {
     this.pauseVotes = this.pauseVotes || new Set();

@@ -141,5 +141,6 @@ export class Controller {
     }
     if (I.pressed('inventory')) app.overlays.inventory();
     if (I.pressed('journal')) app.overlays.journal();
+    if (I.pressed('chat') && app.coop) app.overlays.chat();
   }
 }

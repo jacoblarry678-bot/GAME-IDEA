@@ -2,6 +2,8 @@
 
 > **Also in this repo:** [`ashline/`](ashline/) — **Operation Ashline**, an original browser 3D military FPS (six modes across three maps, offline vs bots or online on a self-hosted server). See [ashline/README.md](ashline/README.md).
 
+> **Also in this repo:** [`depths/`](depths/) — **Depths of the Unseen**, a first-person Backrooms survival horror game for one to four players (six-chapter campaign with three endings, seeded Expedition runs, online co-op on a self-hosted server). See [depths/README.md](depths/README.md).
+
 A browser-based, asymmetrical multiplayer horror prototype. Four survivors are
 trapped in **The Labyrinth** performing a rite that will open the Gate. One
 player is **The Hell Priest**, and is trying to make sure nobody finishes it.

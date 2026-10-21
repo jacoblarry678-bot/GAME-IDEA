@@ -484,6 +484,7 @@ export class App {
           break;
         case 'coopJoin': this.hud.toast(`${ev.name} joined the crew.`); break;
         case 'coopLeave': this.hud.toast(`${ev.name} ${ev.why === 'stalled' ? 'lost connection' : 'left'}. Their supplies are in a bag at the next refuge.`); break;
+        case 'chat': this.hud.envCaption(`${ev.name}: ${ev.text}`, { dur: 6 }); this.audio.play('radioClick'); break;
         case 'coopSpawn': this.hud.toast(ev.pid === me ? 'You are with the crew.' : `${ev.name} is with the crew.`); break;
         case 'pauseVote': this.hud.toast(`${ev.name} asked to pause (${ev.votes} of ${ev.of}). Everyone must agree.`); break;
         case 'sharedPause': this.hud.toast(ev.on ? 'Paused by vote. Any player can resume.' : 'Resumed.', 'tip'); this.hud.cinematic(false); break;

@@ -331,6 +331,17 @@ export class Overlays {
     this.push('deck', node);
   }
 
+  /** Co-op text chat line entry. */
+  chat() {
+    const app = this.app;
+    const input = el('input', { class: 'seedin', maxlength: 140, placeholder: 'Message the crew', 'aria-label': 'Message the crew', style: { letterSpacing: '0.04em', textTransform: 'none', width: '100%' }, 'data-autofocus': '' });
+    const send = () => { const t = input.value.trim(); this.close('chat'); if (t) app.game.chat(app.pid, t); };
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } if (e.key === 'Escape') { e.preventDefault(); this.close('chat'); } });
+    const node = el('div', { class: 'sheet', style: { width: 'min(560px, 92vw)', position: 'absolute', bottom: '18vh', left: '50%', transform: 'translateX(-50%)' } }, input, el('div', { class: 'small dim', style: { marginTop: '6px' } }, 'Enter sends · Esc cancels. Chat is for the crew only.'));
+    this.push('chat', node);
+    setTimeout(() => input.focus(), 0);
+  }
+
   notice(text) {
     const node = el('div', { class: 'sheet', style: { width: 'min(520px, 92vw)' } }, el('p', {}, text), el('div', { class: 'row' }, btn('OK', () => this.close('notice'), { 'data-autofocus': '' })));
     this.push('notice', node);

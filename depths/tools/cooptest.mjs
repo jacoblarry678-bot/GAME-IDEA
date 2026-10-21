@@ -22,7 +22,8 @@ const host = new Game({ seed: 5 });
 host.addPlayer('p1', 'evan', 'Evan');
 host.loadChapter(1);
 const hs = new HostSession(host, connectRelay({ url, WS: WebSocket }), { name: 'Evan' });
-const hostFrame = (dt = 1 / 30) => { host.tick(dt); hs.update(dt, host.drainEvents()); };
+const chats = { host: [], guest: [] };
+const hostFrame = (dt = 1 / 30) => { host.tick(dt); const evs = host.drainEvents(); chats.host.push(...evs.filter((e) => e.e === 'chat')); hs.update(dt, evs); };
 for (let i = 0; i < 20 && !hs.code; i++) { hostFrame(); await sleep(20); }
 ok(/^[A-Z0-9]{6}$/.test(hs.code || ''), `host received invite code ${hs.code}`);
 
@@ -30,7 +31,7 @@ ok(/^[A-Z0-9]{6}$/.test(hs.code || ''), `host received invite code ${hs.code}`);
 let ready = null, ended = null, results = [];
 const mkGuest = (ident) => new GuestSession(connectRelay({ url, WS: WebSocket }), { code: hs.code, name: 'Mara', slot: 'mara', ident, onReady: (g, pid) => { ready = { g, pid }; }, onEnd: (m) => { ended = m; }, onResult: (r) => results.push(r) });
 let gs = mkGuest('mara-1');
-const both = async (n, fn) => { for (let i = 0; i < n; i++) { hostFrame(); if (gs && gs.g) { gs.g.tick(1 / 30); gs.g.drainEvents(); } if (fn) fn(i); await sleep(8); } };
+const both = async (n, fn) => { for (let i = 0; i < n; i++) { hostFrame(); if (gs && gs.g) { gs.g.tick(1 / 30); chats.guest.push(...gs.g.drainEvents().filter((e) => e.e === 'chat')); } if (fn) fn(i); await sleep(8); } };
 await both(40);
 ok(ready && ready.pid, `guest welcomed as ${ready && ready.pid}`);
 const gpid = ready.pid;
@@ -99,6 +100,11 @@ ok(!hp().spectating && hp().pouch.some((s) => s && s.item === 'bandage'), 'rejoi
 host.loadChapter(2, { entry: 'replay' });
 await both(20);
 ok(gs.g.chapterId === 2 && gs.g.level.rooms.length === host.level.rooms.length, 'chapter change rebuilds the guest mirror');
+
+// text chat reaches every crew member
+gs.g.chat(gpid, 'Found a clue by the copier');
+await both(12);
+ok(chats.host.some((e) => e.text === 'Found a clue by the copier') && chats.guest.some((e) => e.pid === gpid), 'chat reaches the host and comes back to the guest');
 
 // shared pause: every connected player must vote; any player resumes after three seconds
 gs.g.pauseVote(gpid);

@@ -20,7 +20,7 @@ import { SNAP_HZ, INPUT_HZ } from './protocol.js';
 import { SLOT_ORDER } from '../data/characters.js';
 
 /** Game methods a guest may ask the host to run on its behalf (first argument is always the guest's pid). */
-export const ACTIONS = ['pauseVote', 'resumeShared', 'beginInteract', 'endInteract', 'cancelAction', 'useTool', 'reload', 'equip', 'toggleFlashlight', 'toggleCameraFlash', 'puzzleAction', 'pouchAction', 'breathe', 'callout', 'ping', 'requestHint', 'returnToSafe', 'mantle', 'requestMoreTime'];
+export const ACTIONS = ['chat', 'pauseVote', 'resumeShared', 'beginInteract', 'endInteract', 'cancelAction', 'useTool', 'reload', 'equip', 'toggleFlashlight', 'toggleCameraFlash', 'puzzleAction', 'pouchAction', 'breathe', 'callout', 'ping', 'requestHint', 'returnToSafe', 'mantle', 'requestMoreTime'];
 const MAX_SPEED = 6.5; // m/s with tolerance (sprint is 4.4)
 
 const r2 = (v) => Math.round(v * 100) / 100;
