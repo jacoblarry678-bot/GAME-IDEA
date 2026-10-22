@@ -23,6 +23,7 @@ globalThis.document = { createElement: (t) => new FakeNode(t), createTextNode: (
 
 const { Hud } = await import('../../src/ui/hud.js');
 const { Settings } = await import('../../src/core/settings.js');
+const { remove } = await import('../../src/core/storage.js');
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -51,6 +52,33 @@ test('warnings are not pushed off screen by dialogue either', () => {
   for (let i = 0; i < 4; i++) h.line({ sp: 'lena', src: 'radio', text: `Line ${i}`, dur: 3 });
   ok(caps(h).includes('The tile sinks and cracks. Step back.'), 'warning was pushed off screen');
   eq(caps(h).filter((t) => t.includes('Line')).length, 3, 'dialogue keeps its own limit of three');
+});
+
+// ------------------------------------------------------------------ 2. subtitle settings survive a restart
+// a restart is a new Settings read from the same storage
+test('subtitle size and background survive a restart', () => {
+  remove('settings');
+  const s = new Settings();
+  s.set('accessibility.subtitleSize', 1.6);
+  s.set('accessibility.subtitleBg', 0.3);
+  const r = new Settings();
+  eq(r.data.accessibility.subtitleSize, 1.6, 'subtitle size');
+  eq(r.data.accessibility.subtitleBg, 0.3, 'subtitle background');
+  eq(r.data.preset, 'custom', 'a changed comfort value marks the preset custom');
+});
+test('a preset\'s subtitle size survives a restart, and other tabs\' resets leave it alone', () => {
+  remove('settings');
+  new Settings().applyPreset('lowVision');
+  const r = new Settings();
+  eq(r.data.accessibility.subtitleSize, 1.4, 'low vision subtitle size');
+  eq(r.data.preset, 'lowVision');
+  r.set('accessibility.subtitleSize', 1.8);
+  r.resetTab('Visual comfort');
+  r.resetTab('Audio');
+  eq(new Settings().data.accessibility.subtitleSize, 1.8, 'after resetting other tabs');
+  r.resetTab('Subtitles');
+  eq(new Settings().data.accessibility.subtitleSize, 1.0, 'resetting the Subtitles tab restores the default');
+  remove('settings');
 });
 
 console.log(`${pass} passed, ${fail} failed`);
