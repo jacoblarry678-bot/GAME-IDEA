@@ -558,7 +558,7 @@ export class App {
           break;
         }
         case 'caretakerNegotiates': if (A.envCaptions) this.hud.envCaption(`[Behind you, it stops at the ${ev.what}. Tools scrape]`, { dur: 3 }); break;
-        case 'testLight': if (this.lights) this.lights.flash({ x: -1.2, y: 2.2, z: 81.2 }, 30, 1.2); this.audio.play('tone'); break;
+        case 'testLight': if (this.lights) this.lights.flash({ x: -1.2, y: 2.2, z: 81.2 }, 30 * Math.max(0.3, A.flashIntensity), 1.2); this.audio.play('tone'); break;
         default: if (this.extraEvent) this.extraEvent(ev); break;
       }
     }
