@@ -522,6 +522,7 @@ export class App {
         case 'pickup': if (mine) this.hud.toast(`${ev.n > 1 ? ev.n + ' × ' : ''}${ITEM_NAMES[ev.item] || ev.item}${ev.left ? ` (${ev.left} left, pouch full)` : ''}`); break;
         case 'ambientEvent': this.audio.play(ev.kind, { x: ev.x, z: ev.z }); if (A.envCaptions && ev.kind === 'wallTap') this.hud.envCaption('[Distant tapping]', { dur: 2.5 }); break;
         case 'radioInterference': this.audio.play('radioClick'); break;
+        case 'radioReplay': if (mine) { this.hud.setObjective(ev.objective, ev.radio); if (ev.last) this.hud.line({ ...ev.last, dur: 4 }); } break;
         case 'puzzleDone': this.audio.play('success'); this._musicSting(); break;
         case 'downed': if (ev.pid === me) this.hud.toast('You are down. Crawl toward your crew; they can revive you.'); else this.hud.toast(`${g.players.get(ev.pid)?.name} is down.`); break;
         case 'revived': this.hud.toast(`${g.players.get(ev.pid)?.name} revived.`); break;
