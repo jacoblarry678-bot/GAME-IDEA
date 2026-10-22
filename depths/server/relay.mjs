@@ -3,7 +3,8 @@
  * Routes envelopes; never inspects game state. Pure logic, transport-agnostic
  * so it can be unit-tested without sockets.
  */
-import { makeCode, normCode, MAX_GUESTS, PROTOCOL } from '../src/net/protocol.js';
+import { makeCode, normCode, normVersion, versionMismatch, MAX_GUESTS, PROTOCOL } from '../src/net/protocol.js';
+import { VERSION } from '../src/version.js';
 
 export class Relay {
   constructor(opts = {}) {
@@ -21,7 +22,7 @@ export class Relay {
     if (m.t === 'host') {
       if (cl.session) return;
       let code; do code = makeCode(); while (this.sessions.has(code));
-      const s = { code, host: cl, guests: new Map(), created: Date.now() };
+      const s = { code, host: cl, guests: new Map(), created: Date.now(), version: normVersion(m.version) };
       this.sessions.set(code, s);
       cl.session = s; cl.role = 'host'; cl.name = String(m.name || 'Host').slice(0, 24);
       cl.send({ t: 'hosted', code, protocol: PROTOCOL });
@@ -32,10 +33,11 @@ export class Relay {
       const s = this.sessions.get(normCode(m.code));
       if (!s) { cl.send({ t: 'error', msg: 'No session with that invite code.' }); return; }
       if (s.guests.size >= MAX_GUESTS) { cl.send({ t: 'error', msg: 'That session is full (four players).' }); return; }
+      if (normVersion(m.version) !== s.version) { cl.send({ t: 'error', msg: versionMismatch(s.version, m.version) }); return; }
       cl.session = s; cl.role = 'guest'; cl.name = String(m.name || 'Guest').slice(0, 24);
       s.guests.set(cl.id, cl);
       cl.send({ t: 'joined', id: cl.id, code: s.code, host: s.host.name });
-      s.host.send({ t: 'peer', id: cl.id, name: cl.name, slot: String(m.slot || ''), ident: String(m.ident || cl.id).slice(0, 40) });
+      s.host.send({ t: 'peer', id: cl.id, name: cl.name, slot: String(m.slot || ''), ident: String(m.ident || cl.id).slice(0, 40), version: normVersion(m.version) });
       this.log(`${cl.name} joined ${s.code}`);
       return;
     }
@@ -64,5 +66,5 @@ export class Relay {
     }
   }
 
-  status() { return { relay: true, protocol: PROTOCOL, sessions: this.sessions.size, players: [...this.sessions.values()].reduce((n, s) => n + 1 + s.guests.size, 0) }; }
+  status() { return { relay: true, protocol: PROTOCOL, version: VERSION, sessions: this.sessions.size, players: [...this.sessions.values()].reduce((n, s) => n + 1 + s.guests.size, 0) }; }
 }

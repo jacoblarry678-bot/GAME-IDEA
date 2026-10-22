@@ -22,8 +22,11 @@ import { updateRefuges } from './refuge.js';
 import { updateCycles } from './shutters.js';
 import { updateMachines } from './machines.js';
 import { buildExpeditionDef } from './expedition.js';
+import { VERSION } from '../version.js';
 
 export const SAVE_VERSION = 1;
+/** What each proof's source leaves in the story; re-checked on load (saves from 1.0.0 included). */
+const EVIDENCE_SOURCES = { E1: ['E1.done'], E2: ['E2.done'], E3: ['ch4.mugSeen', 'ch4.receiptSeen'], E4: ['E4.done'] };
 
 export class Game {
   constructor(opts = {}) {
@@ -516,6 +519,20 @@ export class Game {
     return first;
   }
 
+  /** Register any proof whose source is already satisfied but whose evidence is missing. Returns the ids added. */
+  recheckEvidence() {
+    const added = [];
+    for (const [e, need] of Object.entries(EVIDENCE_SOURCES)) {
+      if (this.persist.evidence[e] && this.story.has(e)) continue;
+      if (!this.persist.evidence[e] && !this.story.has(e) && !need.every((f) => this.story.has(f))) continue;
+      if (!this.persist.evidence[e]) this.fx('profile', { kind: 'evidence', id: e });
+      this.persist.evidence[e] = true;
+      this.story.flags[e] = true;
+      added.push(e);
+    }
+    return added;
+  }
+
   collectEvidence(id, p) {
     const first = !this.persist.evidence[id];
     this.persist.evidence[id] = true;
@@ -547,7 +564,7 @@ export class Game {
   serialize() {
     const L = this.level;
     return {
-      v: SAVE_VERSION,
+      v: SAVE_VERSION, game: VERSION,
       mode: this.mode, difficulty: this.difficulty, assists: { ...this.assists }, seed: this.seed, rng: this.rng.state,
       time: this.time, elapsed: this.elapsed, chapter: this.chapterId, returnTrip: this.returnTrip || null,
       players: [...this.players.values()].map((p) => p.serialize()),
@@ -590,6 +607,7 @@ export class Game {
     this.persist = JSON.parse(JSON.stringify(snap.persist));
     for (const k of ['evidence', 'records', 'secrets', 'refuges', 'endings']) Object.assign(this.persist[k], keep[k] || {});
     for (const e of Object.keys(this.persist.evidence)) this.story.flags[e] = true;
+    this.recheckEvidence();
     this.photos = (snap.photos || []).map((p) => ({ ...p }));
     this.photoSeq = snap.photoSeq || this.photos.length + 1;
     for (const ps of snap.players) {

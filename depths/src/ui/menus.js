@@ -15,6 +15,8 @@ import { CHARACTERS } from '../data/characters.js';
 import { SLOTS } from '../game/saves.js';
 import { seedToText, textToSeed } from '../core/rng.js';
 import { X_THEMES } from '../sim/expedition.js';
+import { patchNotesView, unreadLabel } from './patchnotes.js';
+import { VERSION } from '../version.js';
 
 const CHAPTER_NAMES = { 1: 'The Yellow Silence', 2: 'After Closing', 3: 'Stillwater', 4: 'The Residents', 5: 'Service Below', 6: 'The Unseen Depth' };
 
@@ -42,6 +44,8 @@ export class Menus {
     items.push(btn(el('span', {}, 'Expedition', el('span', { class: 'why' }, P.expeditionUnlocked ? 'A seeded run through twelve connected rooms.' : 'Unlocks after you complete any campaign ending.')), () => app.expeditionMenu && app.expeditionMenu(), { disabled: !P.expeditionUnlocked || !app.expeditionMenu ? true : null }));
     items.push(btn(el('span', {}, 'Chapter Select', el('span', { class: 'why' }, P.chapterSelectUnlocked ? 'Replay a completed chapter. Never overwrites a campaign checkpoint.' : 'Unlocks after you complete chapter one.')), () => this.chapterSelect(), { disabled: !P.chapterSelectUnlocked ? true : null }));
     items.push(btn('Collection', () => this.collection()));
+    const unread = unreadLabel(P);
+    items.push(btn(el('span', {}, 'Patch Notes', el('span', { class: `why${unread ? ' unread' : ''}` }, unread || `Version history · installed ${VERSION}`)), () => this.patchNotes()));
     items.push(btn('Settings', () => this.settings(() => this.main())));
     items.push(btn('Credits', () => this.credits()));
     const node = el('div', { class: 'menu-side' },
@@ -49,8 +53,18 @@ export class Menus {
       el('div', { class: 'menu-list' }, ...items),
       el('div', { class: 'menu-foot' }, 'First-person survival horror for one to four players.', el('br'), 'Everything here is generated in code: rooms, sounds, voices and music.'));
     this._screen(node, () => {});
+    this.layer.append(el('div', { class: 'version-tag' }, `Version ${VERSION}`));
     this.at = 'main';
     app.menuBackdrop(true);
+  }
+
+  // ---------------------------------------------------------------- patch notes
+  patchNotes() {
+    const node = el('div', { class: 'sheet pn' },
+      el('div', { class: 'row' }, el('h2', {}, 'Patch notes'), el('div', { class: 'spacer' }), btn('Back', () => this.main())),
+      patchNotesView(this.app.profile));
+    this._screen(node, () => this.main());
+    this.at = 'patchnotes';
   }
 
   // ---------------------------------------------------------------- new campaign

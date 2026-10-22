@@ -16,7 +16,8 @@
 import { Game } from '../sim/game.js';
 import { stepMovement } from '../sim/player.js';
 import * as act from '../sim/interact.js';
-import { SNAP_HZ, INPUT_HZ } from './protocol.js';
+import { SNAP_HZ, INPUT_HZ, normVersion, versionMismatch } from './protocol.js';
+import { VERSION } from '../version.js';
 import { SLOT_ORDER } from '../data/characters.js';
 
 /** Game methods a guest may ask the host to run on its behalf (first argument is always the guest's pid). */
@@ -43,7 +44,7 @@ export class HostSession {
     this.onChange = opts.onChange || (() => {});
     this.hostName = opts.name || 'Host';
     transport.onMessage = (m) => this.onMessage(m);
-    transport.send({ t: 'host', name: this.hostName });
+    transport.send({ t: 'host', name: this.hostName, version: VERSION });
     game.coopHost = this;
   }
 
@@ -60,6 +61,8 @@ export class HostSession {
 
   /** A guest connects: reuse their identity's player if they were here before, otherwise create one. */
   admit(m) {
+    // the relay already refuses mismatched versions; an older relay may not
+    if (normVersion(m.version) !== VERSION) { this.send(m.id, { k: 'denied', msg: versionMismatch(VERSION, m.version) }); return; }
     const g = this.g, S = g.story;
     S.vars.coopIdents = S.vars.coopIdents || {};
     let pid = S.vars.coopIdents[m.ident];
@@ -240,7 +243,7 @@ export class GuestSession {
     this.rid = 1;
     this.targets = new Map();
     transport.onMessage = (m) => this.onMessage(m);
-    transport.send({ t: 'join', code: opts.code, name: opts.name, slot: opts.slot, ident: opts.ident });
+    transport.send({ t: 'join', code: opts.code, name: opts.name, slot: opts.slot, ident: opts.ident, version: VERSION });
   }
 
   onMessage(m) {
@@ -249,6 +252,7 @@ export class GuestSession {
     if (m.t === 'joined') { this.code = m.code; return; }
     if (m.t !== 'from' || !m.d) return;
     const d = m.d;
+    if (d.k === 'denied') { this.onEnd(d.msg); return; }
     if (d.k === 'welcome') { this.pid = d.pid; this.build(d.snap); this.onReady(this.g, this.pid); return; }
     if (!this.g) return;
     if (d.k === 'chapter') { this.build(d.snap); return; }

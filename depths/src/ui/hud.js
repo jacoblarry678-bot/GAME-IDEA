@@ -84,7 +84,12 @@ export class Hud {
     this.countdownEl.classList.toggle('urgent', left <= 20);
   }
   cinematic(on) { this.letterbox.style.display = on ? '' : 'none'; }
-  saved(text = 'Saved') { this.saveind.textContent = text; this.saveind.style.opacity = 1; clearTimeout(this._sv); this._sv = setTimeout(() => { this.saveind.style.opacity = 0; }, 2600); }
+  /** Shown once the checkpoint write has finished (or failed, as a toast instead). */
+  saved(text = 'Saved', sub = '') {
+    this.saveind.replaceChildren(el('span', { class: 'si-t' }, text), sub ? el('span', { class: 'si-s' }, sub) : '');
+    this.saveind.style.opacity = 1;
+    clearTimeout(this._sv); this._sv = setTimeout(() => { this.saveind.style.opacity = 0; }, 4000);
+  }
 
   /** Dialogue line caption. */
   line(ev) {

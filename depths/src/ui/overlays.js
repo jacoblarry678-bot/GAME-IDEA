@@ -9,6 +9,7 @@ import { el, clear, btn, fmtTime } from './dom.js';
 import { RECORDS } from '../data/records.js';
 import { ITEMS } from '../data/items.js';
 import { EQUIP } from '../data/items.js';
+import { patchNotesView, unreadLabel } from './patchnotes.js';
 
 export class Overlays {
   constructor(root, app) {
@@ -145,6 +146,7 @@ export class Overlays {
       el('div', { class: 'col' },
         btn('Resume', () => this.close('pause'), { 'data-autofocus': '' }),
         btn('Journal', () => { this.close('pause'); this.journal(); }),
+        btn(el('span', {}, 'Patch notes', unreadLabel(app.profile) ? el('span', { class: 'why unread' }, unreadLabel(app.profile)) : null), () => { this.close('pause'); this.patchNotes(); }),
         btn('Settings', () => app.menus.settings(() => {})),
         btn('Request hint', () => { this.close('pause'); app.requestHint(); }),
         btn('Return to last safe position', () => { this.close('pause'); g.returnToSafe(app.pid); }),
@@ -152,6 +154,24 @@ export class Overlays {
         btn('Quit to menu', () => { this.close('pause'); app.confirm('Quit to the menu? Progress since the last checkpoint is lost.', () => app.quitToMenu()); }, { class: 'btn danger' })),
       el('div', { class: 'small dim', style: { marginTop: '14px' } }, `Chapter ${g.chapterId} · ${g.D.label} · ${fmtTime(g.elapsed)}${g.checkpointReason ? ` · last checkpoint: ${g.checkpointReason}` : ''}`));
     this.push('pause', node, { pauses: !app.coop });
+  }
+
+  // ---------------------------------------------------------------- patch notes
+  /** Solo play pauses while the notes are open; online play keeps running, so a notice comes first. */
+  patchNotes() {
+    const app = this.app;
+    const open = () => {
+      const node = el('div', { class: 'sheet pn' },
+        el('div', { class: 'row' }, el('h2', {}, 'Patch notes'), el('div', { class: 'spacer' }), btn('Close', () => this.close('patchnotes'))),
+        patchNotesView(app.profile),
+        el('div', { class: 'small dim', style: { marginTop: '10px' } }, app.coop ? 'Session running: the world continues while this is open.' : 'Paused while you read.'));
+      this.push('patchnotes', node, { pauses: !app.coop });
+    };
+    if (!app.coop) { open(); return; }
+    const node = el('div', { class: 'sheet', style: { width: 'min(520px, 92vw)' } },
+      el('p', {}, 'The online session keeps running while you read the patch notes. Your character stays where it is, and creatures can still find it.'),
+      el('div', { class: 'row' }, btn('Read patch notes', () => { this.close('pnnotice'); open(); }), btn('Cancel', () => this.close('pnnotice'), { 'data-autofocus': '' })));
+    this.push('pnnotice', node);
   }
 
   // ---------------------------------------------------------------- journal

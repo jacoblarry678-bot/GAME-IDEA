@@ -615,12 +615,20 @@ export class App {
   _checkpoint(ev) {
     const g = this.game;
     if (ev.reason === 'finale' && this.slot && !this.replay) this.saves.writeFinale(this.slot, g.checkpoint);
-    if (g.mode === 'expedition' && ev.reason !== 'expedition start') this.saves.writeSuspend(g.checkpoint); // a crash keeps the last refuge snapshot
-    if (this.replay || !this.slot) { this.hud.saved('Checkpoint'); return; }
+    const room = ev.room && g.level.room(ev.room);
+    const where = room ? `${room.id} ${room.name}` : `Chapter ${ev.chapter}`;
+    if (g.mode === 'expedition') {
+      if (ev.reason === 'expedition start') { this.hud.saved('Checkpoint reached', where); return; }
+      // a crash keeps the last refuge snapshot
+      if (this.saves.writeSuspend(g.checkpoint)) this.hud.saved('Checkpoint saved', `${where} · resume point for this run`);
+      else this.hud.toast('Could not save. Your previous checkpoint is intact.');
+      return;
+    }
+    if (this.netRole === 'guest') { this.hud.saved('Checkpoint saved by the host', where); return; }
+    if (this.replay || !this.slot) { this.hud.saved('Checkpoint reached', `${where} · replays do not write to a save slot`); return; }
     const ok = this.saves.write(this.slot, g.checkpoint, this.photos.exportThumbs(g.checkpoint.photos.map((p) => p.id)));
-    if (ok) { this.hud.saved('Saved'); this.audio.play('save'); }
+    if (ok) { this.hud.saved('Checkpoint saved', `Slot ${this.slot} · ${where}`); this.audio.play('save'); }
     else this.hud.toast('Could not save. Your previous checkpoint is intact.');
-    void ev;
   }
 
   _musicSting() {

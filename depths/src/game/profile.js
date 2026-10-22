@@ -8,7 +8,7 @@ import { RECORD_IDS } from '../data/records.js';
 
 const DEFAULT = {
   v: 1, records: {}, secrets: {}, evidence: {}, achievements: {}, endings: {}, refuges: {}, finishes: { default: true }, finish: 'default',
-  chapters: {}, expedition: { runs: [], completed: 0 }, stats: { photos: 0, deaths: 0 }, seenContentNote: false, introDone: false,
+  chapters: {}, expedition: { runs: [], completed: 0 }, stats: { photos: 0, deaths: 0 }, seenContentNote: false, introDone: false, patchNotesRead: {},
 };
 
 export class Profile {

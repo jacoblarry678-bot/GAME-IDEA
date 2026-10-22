@@ -38,7 +38,7 @@ export class Saves {
   }
 
   metaFrom(snap) {
-    return { chapter: snap.chapter, difficulty: snap.difficulty, elapsed: snap.elapsed, updated: Date.now(), room: (snap.players[0] || {}).room || null, mode: snap.mode };
+    return { chapter: snap.chapter, difficulty: snap.difficulty, elapsed: snap.elapsed, updated: Date.now(), room: (snap.players[0] || {}).room || null, mode: snap.mode, game: snap.game || '1.0.0' };
   }
 
   /** Read the newest valid snapshot: active, else backup. */
