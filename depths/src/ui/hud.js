@@ -114,7 +114,10 @@ export class Hud {
     this.captions.style.setProperty('--capbg', A.subtitleBg);
     this.captions.style.setProperty('--capsize', A.subtitleSize);
     this.captions.appendChild(node);
-    while (this.captions.children.length > 3) this.captions.removeChild(this.captions.firstChild);
+    // dialogue and environmental captions are trimmed separately, so a burst of warnings never pushes a line that is still being spoken off screen
+    const env = node.classList.contains('env');
+    const same = [...this.captions.children].filter((c) => c.classList.contains('env') === env);
+    while (same.length > 3) this.captions.removeChild(same.shift());
     setTimeout(() => { node.style.transition = 'opacity 0.4s'; node.style.opacity = 0; setTimeout(() => node.remove(), 450); }, dur * 1000);
   }
 
