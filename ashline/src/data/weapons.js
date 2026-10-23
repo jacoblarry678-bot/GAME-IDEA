@@ -84,7 +84,7 @@ export const WEAPONS = {
   ar_tarn: {
     id: 'ar_tarn', name: 'TARN-556', class: 'assault', classLabel: 'Assault Rifle', slot: 'primary', unlockLevel: 2,
     blurb: 'Bullpup rifle with a quick cyclic rate and very little kick. Lower damage per round.',
-    damage: { near: 25, far: 19, start: 26, end: 46 },
+    damage: { near: 26, far: 20, start: 26, end: 46 }, // 0.9.0 buff: 25→26 near (5 shots → 4 up close)
     mult: { head: 1.45, torso: 1.0, limb: 0.9 },
     rpm: 800, auto: true, pellets: 1,
     mag: 30, reserve: 120, reload: 2.3, reloadEmpty: 2.8,
@@ -101,8 +101,8 @@ export const WEAPONS = {
     rpm: 560, auto: true, pellets: 1,
     mag: 25, reserve: 100, reload: 2.4, reloadEmpty: 2.9,
     spread: { hip: 3.4, ads: 0.12, move: 1.8, air: 5, crouch: 0.8, bloom: 0.45, bloomMax: 3.0, recover: 5 },
-    recoil: { v: 0.7, h: 0.32, ads: 0.75, kick: 1.3, recover: 6 },
-    handling: { adsTime: 0.28, zoom: 1.35, move: 0.93, adsMove: 0.5, sprintOut: 0.24, swap: 0.5 },
+    recoil: { v: 0.6, h: 0.28, ads: 0.72, kick: 1.2, recover: 7 }, // 0.9.0 buff: tamer recoil
+    handling: { adsTime: 0.27, zoom: 1.35, move: 0.93, adsMove: 0.5, sprintOut: 0.23, swap: 0.5 },
     tracerEvery: 2, range: 320, audio: { kind: 'rifle', pitch: 0.86 }, model: 'battle',
   },
   ar_meridian: {
@@ -132,9 +132,9 @@ export const WEAPONS = {
   smg_hollow: {
     id: 'smg_hollow', name: 'HOLLOW-X', class: 'smg', classLabel: 'Submachine Gun (suppressed)', slot: 'primary', unlockLevel: 8,
     blurb: 'Integrally suppressed SMG. Firing does not reveal you on the enemy minimap.',
-    damage: { near: 28, far: 18, start: 14, end: 30 },
+    damage: { near: 29, far: 20, start: 15, end: 34 }, // 0.9.0 buff: more damage at range
     mult: { head: 1.3, torso: 1.0, limb: 0.9 },
-    rpm: 760, auto: true, pellets: 1, suppressed: true,
+    rpm: 780, auto: true, pellets: 1, suppressed: true,
     mag: 30, reserve: 150, reload: 2.0, reloadEmpty: 2.4,
     spread: { hip: 2.2, ads: 0.2, move: 0.8, air: 3.5, crouch: 0.85, bloom: 0.22, bloomMax: 2.0, recover: 8 },
     recoil: { v: 0.32, h: 0.2, ads: 0.75, kick: 0.7, recover: 9 },
@@ -144,10 +144,10 @@ export const WEAPONS = {
   sg_rook: {
     id: 'sg_rook', name: 'ROOK AUTO-12', class: 'shotgun', classLabel: 'Shotgun (semi-auto)', slot: 'primary', unlockLevel: 4,
     blurb: 'Magazine-fed semi-auto shotgun. Less per shot than the Brakk, but no pump to wait on.',
-    damage: { near: 13, far: 3, start: 5, end: 13 },
+    damage: { near: 15, far: 4, start: 6, end: 15 }, // 0.9.0 buff: 13→15 per pellet, longer falloff
     mult: { head: 1.1, torso: 1.0, limb: 0.9 },
-    rpm: 220, auto: false, pellets: 8, pelletSpread: 4.6,
-    mag: 8, reserve: 32, reload: 2.6, reloadEmpty: 3.1,
+    rpm: 220, auto: false, pellets: 8, pelletSpread: 4.3,
+    mag: 10, reserve: 40, reload: 2.4, reloadEmpty: 2.9,
     spread: { hip: 0.8, ads: 0.0, move: 0.5, air: 2, crouch: 1.0, bloom: 0, bloomMax: 0, recover: 6 },
     recoil: { v: 2.2, h: 0.7, ads: 0.85, kick: 2.2, recover: 7 },
     handling: { adsTime: 0.24, zoom: 1.2, move: 0.93, adsMove: 0.6, sprintOut: 0.22, swap: 0.5 },
@@ -171,10 +171,10 @@ export const WEAPONS = {
     damage: { near: 32, far: 26, start: 30, end: 60 },
     mult: { head: 1.3, torso: 1.0, limb: 0.9 },
     rpm: 600, auto: true, pellets: 1,
-    mag: 100, reserve: 200, reload: 5.4, reloadEmpty: 5.9,
-    spread: { hip: 4.0, ads: 0.14, move: 2.4, air: 6, crouch: 0.75, bloom: 0.25, bloomMax: 3.2, recover: 5 },
-    recoil: { v: 0.42, h: 0.3, ads: 0.62, kick: 1.1, recover: 6 },
-    handling: { adsTime: 0.42, zoom: 1.4, move: 0.86, adsMove: 0.38, sprintOut: 0.35, swap: 0.65 },
+    mag: 100, reserve: 200, reload: 4.6, reloadEmpty: 5.1, // 0.9.0 buff: faster reload and ADS
+    spread: { hip: 3.6, ads: 0.14, move: 2.4, air: 6, crouch: 0.75, bloom: 0.25, bloomMax: 3.0, recover: 5 },
+    recoil: { v: 0.38, h: 0.27, ads: 0.62, kick: 1.1, recover: 6 },
+    handling: { adsTime: 0.36, zoom: 1.4, move: 0.88, adsMove: 0.4, sprintOut: 0.3, swap: 0.6 },
     tracerEvery: 2, range: 350, audio: { kind: 'lmg', pitch: 0.92 }, model: 'lmg',
   },
   lmg_drover: {
@@ -194,12 +194,49 @@ export const WEAPONS = {
     blurb: 'Six-shot hand cannon. Two hits up close; make them count.',
     damage: { near: 55, far: 34, start: 12, end: 28 },
     mult: { head: 1.5, torso: 1.0, limb: 0.9 },
-    rpm: 170, auto: false, pellets: 1,
-    mag: 6, reserve: 30, reload: 2.4, reloadEmpty: 2.4,
+    rpm: 190, auto: false, pellets: 1, // 0.9.0 buff: 170→190 rpm, faster reload
+    mag: 6, reserve: 30, reload: 2.1, reloadEmpty: 2.1,
     spread: { hip: 2.2, ads: 0.1, move: 0.9, air: 3.5, crouch: 0.85, bloom: 0.8, bloomMax: 2.0, recover: 5 },
     recoil: { v: 3.0, h: 0.8, ads: 0.8, kick: 2.6, recover: 6 },
     handling: { adsTime: 0.18, zoom: 1.2, move: 1.03, adsMove: 0.75, sprintOut: 0.12, swap: 0.35 },
     tracerEvery: 1, range: 200, audio: { kind: 'magnum', pitch: 1.0 }, model: 'revolver',
+  },
+  // ---------------- 0.9.0 additions ----------------
+  smg_hornet: {
+    id: 'smg_hornet', name: 'HORNET PDW', class: 'smg', classLabel: 'Personal Defence Weapon', slot: 'primary', unlockLevel: 20,
+    blurb: 'Compact PDW with a 50-round top magazine. Steady recoil and enough range to hold a hallway.',
+    damage: { near: 24, far: 17, start: 14, end: 32 },
+    mult: { head: 1.3, torso: 1.0, limb: 0.9 },
+    rpm: 860, auto: true, pellets: 1,
+    mag: 50, reserve: 200, reload: 2.3, reloadEmpty: 2.7,
+    spread: { hip: 2.0, ads: 0.18, move: 0.7, air: 3.5, crouch: 0.85, bloom: 0.2, bloomMax: 1.9, recover: 9 },
+    recoil: { v: 0.26, h: 0.18, ads: 0.72, kick: 0.65, recover: 10 },
+    handling: { adsTime: 0.19, zoom: 1.25, move: 1.0, adsMove: 0.7, sprintOut: 0.14, swap: 0.4 },
+    tracerEvery: 3, range: 260, audio: { kind: 'smg', pitch: 1.2 }, model: 'pdw',
+  },
+  dmr_talon: {
+    id: 'dmr_talon', name: 'TALON LEVER', class: 'sniper', classLabel: 'Lever-Action Rifle', slot: 'primary', unlockLevel: 22,
+    blurb: 'Lever-action with iron sights. A headshot is a one-shot elimination; two to the body at any range. Reloads a round at a time.',
+    damage: { near: 72, far: 62, start: 30, end: 70 },
+    mult: { head: 1.45, torso: 1.0, limb: 0.85 },
+    rpm: 105, auto: false, pellets: 1,
+    mag: 8, reserve: 32, reload: 0.5, reloadEmpty: 0.5, tube: { start: 0.3, perShell: 0.42, end: 0.35 },
+    spread: { hip: 3.2, ads: 0.0, move: 1.6, air: 5, crouch: 0.85, bloom: 0, bloomMax: 0, recover: 6 },
+    recoil: { v: 2.0, h: 0.4, ads: 0.75, kick: 2.2, recover: 6 },
+    handling: { adsTime: 0.24, zoom: 1.6, move: 0.94, adsMove: 0.55, sprintOut: 0.2, swap: 0.5 },
+    tracerEvery: 1, range: 400, audio: { kind: 'dmr', pitch: 0.88 }, model: 'lever', bolt: true,
+  },
+  pistol_stinger: {
+    id: 'pistol_stinger', name: 'STINGER-9', class: 'pistol', classLabel: 'Machine Pistol', slot: 'secondary', unlockLevel: 7,
+    blurb: 'Full-auto machine pistol. Empties its 20 rounds in a second and a half; deadly up close, wild past 15 m.',
+    damage: { near: 21, far: 12, start: 8, end: 18 },
+    mult: { head: 1.3, torso: 1.0, limb: 0.9 },
+    rpm: 900, auto: true, pellets: 1,
+    mag: 20, reserve: 100, reload: 1.6, reloadEmpty: 1.9,
+    spread: { hip: 1.8, ads: 0.35, move: 0.6, air: 3, crouch: 0.85, bloom: 0.28, bloomMax: 2.6, recover: 9 },
+    recoil: { v: 0.36, h: 0.36, ads: 0.82, kick: 0.6, recover: 10 },
+    handling: { adsTime: 0.13, zoom: 1.15, move: 1.05, adsMove: 0.82, sprintOut: 0.09, swap: 0.28 },
+    tracerEvery: 2, range: 160, audio: { kind: 'pistol', pitch: 1.35 }, model: 'machpistol',
   },
   melee_axe: {
     id: 'melee_axe', name: 'BREACHING AXE', class: 'melee', classLabel: 'Melee Weapon', slot: 'secondary', unlockLevel: 18,
@@ -241,9 +278,9 @@ export const EQUIPMENT = {
   },
 };
 
-export const PRIMARY_IDS = ['ar_kv7', 'ar_tarn', 'ar_meridian', 'ar_bastion', 'smg_vesper', 'smg_wasp', 'smg_hollow', 'sg_brakk', 'sg_rook', 'sr_longreach', 'dmr_sentinel', 'lmg_drover', 'lmg_anvil'];
-export const SECONDARY_IDS = ['pistol_warden', 'pistol_grizzly', 'melee_axe'];
-export const GUN_LADDER = ['smg_wasp', 'smg_vesper', 'ar_tarn', 'ar_kv7', 'ar_meridian', 'smg_hollow', 'sg_brakk', 'sg_rook', 'lmg_drover', 'lmg_anvil', 'ar_bastion', 'dmr_sentinel', 'sr_longreach', 'pistol_grizzly', 'pistol_warden', 'melee'];
+export const PRIMARY_IDS = ['ar_kv7', 'ar_tarn', 'ar_meridian', 'ar_bastion', 'smg_vesper', 'smg_wasp', 'smg_hollow', 'smg_hornet', 'sg_brakk', 'sg_rook', 'sr_longreach', 'dmr_sentinel', 'dmr_talon', 'lmg_drover', 'lmg_anvil'];
+export const SECONDARY_IDS = ['pistol_warden', 'pistol_grizzly', 'pistol_stinger', 'melee_axe'];
+export const GUN_LADDER = ['smg_wasp', 'smg_hornet', 'smg_vesper', 'ar_tarn', 'ar_kv7', 'ar_meridian', 'smg_hollow', 'sg_brakk', 'sg_rook', 'lmg_drover', 'lmg_anvil', 'ar_bastion', 'dmr_sentinel', 'dmr_talon', 'sr_longreach', 'pistol_grizzly', 'pistol_stinger', 'pistol_warden', 'melee'];
 export const LETHAL_IDS = ['frag'];
 export const TACTICAL_IDS = ['smoke', 'flash', 'shield'];
 

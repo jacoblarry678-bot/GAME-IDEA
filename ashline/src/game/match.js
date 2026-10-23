@@ -431,11 +431,11 @@ export class Match {
 function randomBotLoadout(rng) {
   // weighted toward the mainstays so lobbies feel like real loadout choices
   const pool = [['ar_kv7', 14], ['ar_tarn', 9], ['ar_meridian', 7], ['ar_bastion', 7], ['smg_vesper', 11], ['smg_wasp', 8], ['smg_hollow', 7],
-    ['sg_brakk', 6], ['sg_rook', 5], ['sr_longreach', 6], ['dmr_sentinel', 6], ['lmg_drover', 5], ['lmg_anvil', 4]];
+    ['sg_brakk', 6], ['sg_rook', 6], ['sr_longreach', 6], ['dmr_sentinel', 6], ['lmg_drover', 5], ['lmg_anvil', 5], ['smg_hornet', 7], ['dmr_talon', 5]];
   const total = pool.reduce((a, [, w]) => a + w, 0);
   let r = rng() * total, primary = pool[0][0];
   for (const [id, w] of pool) { r -= w; if (r <= 0) { primary = id; break; } }
-  const secondary = rng() < 0.75 ? 'pistol_warden' : 'pistol_grizzly';
+  const sr = rng(), secondary = sr < 0.62 ? 'pistol_warden' : sr < 0.84 ? 'pistol_grizzly' : 'pistol_stinger';
   const tr = rng();
   const tactical = tr < 0.5 ? 'smoke' : tr < 0.85 ? 'flash' : 'shield';
   const perks = PERK_SLOTS.map((s) => { const l = perksForSlot(s); return l[Math.floor(rng() * l.length)].id; });

@@ -64,6 +64,8 @@ function detailHtml(app, it, ctx = {}) {
 
 function showPreview(app, it, weaponId) {
   const pv = app.preview;
+  if (it.type === 'emote') { const look = app.profile.look; pv.showOperator(look.operator, look.outfit); pv.emote(it.emote.anim, it.emote.dur); return; }
+  pv.emote?.(null);
   if (it.type === 'operator') pv.showOperator(it, COSMETICS[app.profile.data.equipped.outfits[it.id]] || COSMETICS[it.op.outfit]);
   else if (it.type === 'outfit') pv.showOperator(COSMETICS[it.operator], it);
   else if (it.type === 'finish') pv.show(weaponId, { finish: it.id, charm: app.profile.data.equipped.weapons[weaponId].charm });
@@ -93,6 +95,10 @@ export const SCREENS2 = {
       let actions = '';
       if (prof.owns(it.id)) {
         const eq = prof.isEquipped(it.id, isWeaponItem ? weaponId : undefined);
+        if (tab === 'emote') {
+          const slots = prof.data.equipped.emotes;
+          actions = `<div class="small muted" style="margin-top:12px">Emote wheel slot (press <b>B</b> in a match, or the ☺ button on touch):</div><div class="row" style="margin-top:6px;flex-wrap:wrap">${slots.map((sid, i) => `<button class="btn ${sid === it.id ? 'primary' : ''}" data-slot="${i}">${i + 1}: ${sid ? esc(COSMETICS[sid].name) : 'empty'}</button>`).join('')}</div>`;
+        } else
         actions = `<div class="row" style="margin-top:12px;flex-wrap:wrap">
           <button class="btn primary" data-a="equip" ${eq ? 'disabled' : ''}>${eq ? 'Equipped' : isWeaponItem ? `Equip on ${esc(WEAPONS[weaponId].name)}` : 'Equip'}</button>
           ${tab === 'finish' ? '<button class="btn" data-a="equipAll">Equip on all weapons</button>' : ''}
@@ -127,6 +133,7 @@ export const SCREENS2 = {
       const A = (k, f) => { const b = node.querySelector(`[data-a=${k}]`); if (b) b.onclick = f; };
       A('back', () => app.screens.back());
       A('equip', () => { prof.equip(it.id, weaponId); app.screens.toast(`${it.name} equipped`); render(); });
+      node.querySelectorAll('[data-slot]').forEach((b) => { b.onclick = () => { prof.equip(it.id, Number(b.dataset.slot)); app.screens.toast(`${it.name} → emote slot ${Number(b.dataset.slot) + 1}`); render(); }; });
       A('equipAll', () => { for (const w of WEAPON_ORDER) prof.equip(it.id, w); app.screens.toast(`${it.name} equipped on all weapons`); render(); });
       A('equipOp', () => { prof.equip(it.operator); prof.equip(it.id); app.screens.toast(`Playing as ${COSMETICS[it.operator].name}`); render(); });
       A('store', () => app.screens.push('store', { focus: it.id }));

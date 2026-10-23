@@ -379,7 +379,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
 
 // ---------------- M4 weapons ----------------
 {
-  t('16 weapons: 4 AR, 3 SMG, 2 SG, 2 sniper/DMR, 2 LMG, 2 pistols, 1 melee', (() => { const c = {}; for (const w of Object.values(WEAPONS)) c[w.class] = (c[w.class] || 0) + 1; return Object.keys(WEAPONS).length === 16 && c.assault === 4 && c.smg === 3 && c.shotgun === 2 && c.sniper === 2 && c.lmg === 2 && c.pistol === 2 && c.melee === 1; })());
+  t('19 weapons: 4 AR, 4 SMG, 2 SG, 3 sniper/DMR/lever, 2 LMG, 3 pistols, 1 melee', (() => { const c = {}; for (const w of Object.values(WEAPONS)) c[w.class] = (c[w.class] || 0) + 1; return Object.keys(WEAPONS).length === 19 && c.assault === 4 && c.smg === 4 && c.shotgun === 2 && c.sniper === 3 && c.lmg === 2 && c.pistol === 3 && c.melee === 1; })());
   // burst: one trigger pull fires exactly three rounds
   const m = mkMatch({ playerLoadout: { ...LO, primary: 'ar_meridian' } }); const p = m.player;
   place(p, 12, 0, -1.5, -Math.PI / 2);
@@ -480,7 +480,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
 // ---------------- M4 maps ----------------
 {
   const { MAPS } = await import('../src/world/maps/index.js');
-  t('three maps registered (Cinder Yard, Old Quarter, Signal Station)', Object.keys(MAPS).join() === 'cinder_yard,old_quarter,signal_station');
+  t('four maps registered (Cinder Yard, Old Quarter, Signal Station, Ashfield Valley)', Object.keys(MAPS).join() === 'cinder_yard,old_quarter,signal_station,ashfield');
   for (const def of Object.values(MAPS)) {
     const mb = new MapBuilder({ headless: true });
     def.build(mb);
@@ -585,6 +585,58 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   } else console.log('SKIP  drop_002 release-code tests (set VAULT_TEST_CODE_2 to run them)');
 }
 
+// ---------------- 0.9.0 weapons, buffs, emotes, Ashfield ----------------
+{
+  const { WEAPONS: W, damageAt: dmgAt, PRIMARY_IDS: PI, SECONDARY_IDS: SI } = await import('../src/data/weapons.js');
+  const stk = (id, d, zone = 'torso') => Math.ceil(100 / (dmgAt(W[id], d) * W[id].mult[zone] * (W[id].pellets || 1)));
+  t('new weapons are in the loadout lists', PI.includes('smg_hornet') && PI.includes('dmr_talon') && SI.includes('pistol_stinger'));
+  t('Talon Lever: one-shot headshot inside ~40 m, two to the body anywhere', stk('dmr_talon', 10, 'head') === 1 && stk('dmr_talon', 40, 'head') === 1 && stk('dmr_talon', 60, 'head') === 2 && stk('dmr_talon', 100) === 2);
+  t('Hornet PDW: 5 body shots up close, 50-round magazine', stk('smg_hornet', 5) === 5 && W.smg_hornet.mag === 50);
+  t('Stinger-9: full-auto machine pistol, 5 body shots up close', W.pistol_stinger.auto && stk('pistol_stinger', 5) === 5);
+  t('Tarn buff: 4-shot kill up close (was 5)', stk('ar_tarn', 10) === 4);
+  t('Rook buff: full-pellet close shot kills (8 × 15)', W.sg_rook.damage.near * W.sg_rook.pellets >= 100 && W.sg_rook.mag === 10);
+  t('Anvil buff: faster reload and ADS', W.lmg_anvil.reload <= 4.6 && W.lmg_anvil.handling.adsTime <= 0.36);
+  t('Hollow-X buff: more damage at range', W.smg_hollow.damage.far === 20 && W.smg_hollow.damage.end === 34);
+  // emotes
+  const { COSMETICS: CC, EMOTE_IDS } = await import('../src/data/cosmetics.js');
+  const { EMOTE_ANIMS } = await import('../src/entities/emotes.js');
+  t('10 emotes, each with an animation; Wave and Salute are free', EMOTE_IDS.length === 10 && EMOTE_IDS.every((id) => EMOTE_ANIMS[CC[id].emote.anim]) && CC.ex_wave.unlock.type === 'default' && CC.ex_salute.unlock.type === 'default');
+  const m = mkMatch(); const p = m.player; place(p, 12, 0, -1.5);
+  p.cmd.emote = 'ex_wave'; m.tick(1 / 60);
+  t('an emote starts when standing still', p.emoteState?.id === 'ex_wave' && p.events.some((e) => e.type === 'emote'));
+  p.cmd.moveZ = 1; m.tick(1 / 60); p.cmd.moveZ = 0;
+  t('moving cancels the emote', !p.emoteState);
+  p.cmd.emote = 'ex_wave'; m.tick(1 / 60); p.cmd.fire = true; m.tick(1 / 60); p.cmd.fire = false;
+  t('firing cancels the emote (emotes never block combat)', !p.emoteState && p.stats.shots >= 1);
+  p.cmd.emote = 'ex_salute'; m.tick(1 / 60); run(m, 2.5);
+  t('the emote ends on its own after its duration', !p.emoteState);
+  p.cmd.emote = 'not_an_emote'; m.tick(1 / 60);
+  t('unknown emote ids are ignored', !p.emoteState);
+  const { packCmd, unpackCmd } = await import('../src/net/protocol.js');
+  const { newCommand } = await import('../src/entities/combatant.js');
+  const rt = unpackCmd(packCmd(1, 1 / 60, { ...newCommand(), emote: 'ex_spin' }, 0));
+  t('emotes travel in input commands (protocol v3)', rt.cmd.emote === 'ex_spin' && unpackCmd(packCmd(2, 1 / 60, newCommand(), 0)).cmd.emote === null);
+  const { Profile } = await import('../src/core/profile.js');
+  globalThis.window.localStorage.removeItem('ashline.profile');
+  const pr = new Profile();
+  t('new profiles own Wave + Salute and have them on the wheel', pr.owns('ex_wave') && pr.owns('ex_salute') && pr.data.equipped.emotes.join() === 'ex_wave,ex_salute,,');
+  pr.addTestCredits(5000); pr.buyItem('ex_shuffle'); pr.equip('ex_shuffle', 3); pr.equip('ex_wave', 2); pr.save();
+  const pr2 = new Profile();
+  t('emotes equip into chosen wheel slots without duplicates, and persist', pr2.data.equipped.emotes.join() === ',ex_salute,ex_wave,ex_shuffle');
+  pr2.data.equipped.emotes = ['ex_spin', 'bogus', 'ex_salute', 'ex_salute']; pr2.save();
+  t('unowned, unknown or duplicate wheel entries are cleared on load', new Profile().data.equipped.emotes.join() === ',,ex_salute,');
+  // Ashfield BR
+  const { MAPS: MM } = await import('../src/world/maps/index.js');
+  const def = MM.ashfield; const bb = new MapBuilder({ headless: true }); def.build(bb);
+  const mp = { world: bb.world, nav: new NavGrid(bb.world, def.bounds, 1), spawns: bb.spawns, hotspots: bb.hotspots, def };
+  const br = new Match(mp, { mode: 'br', timeLimit: 8, botsEnemies: 9, botsAllies: 0, difficulty: 'regular', includePlayer: false, countdown: 0 });
+  br.start(); br.state = 'live';
+  t('Ashfield BR: about twice the loot of the small maps', br.loot.length >= 70, `${br.loot.length} items`);
+  let n = 0; while (br.state !== 'ended' && n++ < 60 * 60 * 9) br.tick(1 / 60);
+  t('Ashfield BR: bots play a full match to a winner', br.state === 'ended' && [...br.br.place.values()].sort((a, b) => a - b).join() === '1,2,3,4,5,6,7,8,9' && br.time > 60, `${br.endReason} in ${br.time.toFixed(0)} s`);
+  t('Ashfield runs the other modes too (dom/hp objectives present)', def.objectives.dom.length === 3 && def.objectives.hp.length === 6);
+}
+
 // ---------------- 0.7.0 Hollow Night event ----------------
 {
   const { Profile } = await import('../src/core/profile.js');
@@ -595,7 +647,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('event dates: 16 Oct – 6 Nov 2026 (device clock)', !eventActive(HOLLOW_NIGHT, at(2026, 9, 15)) && eventActive(HOLLOW_NIGHT, at(2026, 9, 16, 0)) && eventActive(HOLLOW_NIGHT, at(2026, 10, 6, 23)) && !eventActive(HOLLOW_NIGHT, at(2026, 10, 7, 0)));
   t('every event-track reward exists, is an event item and matches its Candy price', HOLLOW_NIGHT.track.every((tr) => COSMETICS[tr.item]?.unlock.type === 'event' && COSMETICS[tr.item].unlock.candy === tr.candy));
   t('event store items exist, are event-only and stay out of the daily rotation', EVENT_SHOPS[0].items.every((id) => COSMETICS[id]?.unlock.event === 'hollow_night' && !SHOP_ITEMS.includes(id)) && !currentRotation().bundles.some((b) => b.event));
-  t('15 new Halloween cosmetics across 6 types', new Set([...HOLLOW_NIGHT.track.map((x) => x.item), ...EVENT_SHOPS[0].items].map((id) => COSMETICS[id].type)).size === 6 && HOLLOW_NIGHT.track.length + EVENT_SHOPS[0].items.length === 15);
+  t('16 Halloween cosmetics across 7 types (incl. the Boo! emote)', new Set([...HOLLOW_NIGHT.track.map((x) => x.item), ...EVENT_SHOPS[0].items].map((id) => COSMETICS[id].type)).size === 7 && HOLLOW_NIGHT.track.length + EVENT_SHOPS[0].items.length === 16);
   globalThis.window.localStorage.removeItem('ashline.profile');
   const pr = new Profile();
   pr.now = () => at(2026, 9, 23);

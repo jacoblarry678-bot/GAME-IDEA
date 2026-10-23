@@ -282,6 +282,7 @@ export function itemThumb(it) {
     case 'finish': { const u = finishSwatch(it.id); return u ? `<img class="thumb-sq" src="${u}" alt="">` : '<div class="thumb-sq thumb-factory"></div>'; }
     case 'outfit': { const p = it.outfit.palette; return `<div class="thumb-sq" style="background:conic-gradient(rgb(${p[0]}) 0 25%,rgb(${p[1]}) 0 50%,rgb(${p[2]}) 0 75%,rgb(${p[3]}) 0)"></div>`; }
     case 'operator': return `<div class="thumb-sq thumb-op">${it.name[0]}</div>`;
+    case 'emote': return `<div class="thumb-sq thumb-op" style="font-size:22px">${({ wave: '👋', salute: '🫡', thumbs: '👍', cheer: '🙌', laugh: '😆', flex: '💪', facepalm: '🤦', shuffle: '🕺', spin: '🌀', scare: '👻' })[it.emote.anim] || '☺'}</div>`;
     case 'charm': return `<div class="thumb-sq thumb-charm" style="--c:#${(it.charm.color || 0x444444).toString(16).padStart(6, '0')}"></div>`;
     default: return '<div class="thumb-sq"></div>';
   }

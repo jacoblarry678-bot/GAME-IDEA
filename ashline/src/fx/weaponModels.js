@@ -563,6 +563,70 @@ Object.assign(BUILDERS, {
     b.marker('magWell', 0, 0.055, -0.04);
     b.marker('charm', -0.016, 0.02, 0.05);
   },
+  // ---- 0.9.0
+  pdw(b) {
+    // compact bullpup-style PDW with a translucent top magazine
+    b.add(rbox(0.05, 0.075, 0.42, 0.014), 'polymer', 0, 0.06, -0.05);
+    b.add(rbox(0.046, 0.03, 0.2, 0.008), 'olive', 0, 0.015, -0.16);
+    const mag = b.sub('mag', 0, 0.105, -0.04);
+    b.add(rbox(0.034, 0.018, 0.3, 0.006), 'glass', 0, 0, 0, 0, 0, 0, mag);
+    b.add(rbox(0.036, 0.006, 0.3, 0.003), 'polymer', 0, -0.01, 0, 0, 0, 0, mag);
+    b.add(cyl(0.012, 0.1), 'metal', 0, 0.065, -0.3);
+    b.add(cyl(0.017, 0.04, 8), 'metal', 0, 0.065, -0.36);
+    b.add(rbox(0.03, 0.09, 0.04, 0.008), 'polymer', 0, -0.03, -0.02, 0.2, 0, 0);
+    b.add(rbox(0.026, 0.06, 0.036, 0.008), 'polymer', 0, -0.01, -0.2, -0.25, 0, 0);
+    b.add(rbox(0.048, 0.08, 0.024, 0.008), 'polymer', 0, 0.055, 0.17);
+    reflexSight(b, 0.124, -0.1);
+    b.marker('muzzle', 0, 0.065, -0.385);
+    b.marker('leftHand', 0, 0.0, -0.2);
+    b.marker('eject', 0.03, 0.05, -0.0);
+    b.marker('magWell', 0, 0.105, -0.04);
+    b.marker('charm', -0.027, 0.04, 0.08);
+  },
+  lever(b) {
+    // lever-action rifle: wood stock and forend, octagonal-ish barrel, tube magazine, loop lever, iron sights
+    b.add(rbox(0.04, 0.06, 0.18, 0.006), 'metal', 0, 0.065, -0.03);
+    b.add(cyl(0.012, 0.62, 8), 'metal', 0, 0.085, -0.43);
+    b.add(cyl(0.01, 0.5, 10), 'metal', 0, 0.06, -0.38);
+    b.add(rbox(0.044, 0.04, 0.26, 0.012), 'wood', 0, 0.06, -0.26);
+    b.add(rbox(0.034, 0.085, 0.05, 0.012), 'wood', 0, 0.02, 0.08, 0.35, 0, 0);
+    b.add(rbox(0.04, 0.07, 0.26, 0.014), 'wood', 0, 0.035, 0.22, -0.1, 0, 0);
+    b.add(rbox(0.044, 0.095, 0.02, 0.008), 'polymer', 0, 0.025, 0.35, -0.1, 0, 0);
+    const lever = b.sub('bolt', 0, 0.02, 0.0);
+    const loop = new THREE.TorusGeometry(0.03, 0.005, 6, 14, Math.PI * 1.3);
+    b.add(loop, 'metal', 0, -0.03, 0.02, 0, Math.PI / 2, 0, lever);
+    b.add(rbox(0.006, 0.004, 0.08), 'metal', 0, 0.0, -0.01, 0, 0, 0, lever);
+    b.add(rbox(0.004, 0.014, 0.008), 'metal', 0, 0.1, -0.72);
+    b.add(rbox(0.016, 0.012, 0.01), 'metal', 0, 0.1, -0.02);
+    if (!opticOverride(b, 0.098, -0.06, 'iron')) b.marker('sight', 0, 0.112, 0.03);
+    const mag = b.sub('mag', 0, 0.06, -0.1);
+    b.add(rbox(0.01, 0.01, 0.01), 'brass', 0.022, 0, 0, 0, 0, 0, mag);
+    b.marker('muzzle', 0, 0.085, -0.74);
+    b.marker('leftHand', 0, 0.035, -0.28);
+    b.marker('eject', 0.026, 0.09, -0.03);
+    b.marker('magWell', 0, 0.06, -0.1);
+    b.marker('charm', -0.024, 0.045, 0.05);
+  },
+  machpistol(b) {
+    // full-auto pistol: long slide, extended magazine, folding brace and front grip
+    const slide = b.sub('slide', 0, 0.075, -0.07);
+    b.add(rbox(0.032, 0.034, 0.22, 0.006), 'metal', 0, 0, 0, 0, 0, 0, slide);
+    for (let z = 0.06; z < 0.1; z += 0.008) b.add(rbox(0.034, 0.026, 0.003, 0.001), 'polymer', 0, 0, z, 0, 0, 0, slide);
+    b.add(rbox(0.03, 0.028, 0.2, 0.006), 'polymer', 0, 0.046, -0.08);
+    b.add(rbox(0.03, 0.11, 0.05, 0.01), 'polymer', 0, -0.01, 0.015, 0.22, 0, 0);
+    b.add(cyl(0.008, 0.03), 'metal', 0, 0.075, -0.19);
+    b.add(rbox(0.022, 0.05, 0.026, 0.006), 'polymer', 0, 0.01, -0.13);
+    const mag = b.sub('mag', 0, -0.02, 0.022);
+    b.add(rbox(0.022, 0.15, 0.034, 0.004), 'metal', 0, -0.07, 0, 0.22, 0, 0, mag);
+    b.add(rbox(0.006, 0.006, 0.12), 'metal', 0.016, 0.03, 0.1);
+    b.add(rbox(0.006, 0.006, 0.12), 'metal', -0.016, 0.03, 0.1);
+    b.marker('sight', 0, 0.104, 0.025);
+    b.marker('muzzle', 0, 0.075, -0.2);
+    b.marker('leftHand', -0.012, -0.015, 0.0);
+    b.marker('eject', 0.02, 0.085, -0.04);
+    b.marker('magWell', 0, -0.02, 0.022);
+    b.marker('charm', -0.016, 0.035, 0.0);
+  },
   axe(b) {
     // haft rises up and forward from the grip; the head sits at the top
     const tilt = 0.55, L = 0.46;

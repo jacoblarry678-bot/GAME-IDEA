@@ -70,6 +70,7 @@ export class Game {
     const wantsNight = (net ? app.profile.data.matchSetup.halloween : setup.halloween) !== false;
     this.hwView = !this.isRange && wantsNight && eventActive(HOLLOW_NIGHT, app.profile.now()) ? new HalloweenView(app, m) : null;
     this.wxView = this.isRange ? null : new WeatherView(app, m);
+    this.buildEmoteWheel();
     this.hud.setTeams(0);
     this.hud.setFfa(this.ffa && !this.isRange);
     this.vm = app.viewmodel;
@@ -103,6 +104,34 @@ export class Game {
     const onSet = () => { this.hud.applySettings(); this.updateTeamColors(); this.objView?.setColors(app.settings.teamColors()); this.depView?.setColors(app.settings.teamColors()); };
     app.settings.onChange(onSet);
     this.unsubSettings = () => { const i = app.settings.listeners.indexOf(onSet); if (i >= 0) app.settings.listeners.splice(i, 1); };
+  }
+
+  /** Emote wheel: 4 equipped emotes (B / touch ☺). Mouse or stick direction, 1–4, click or tap picks. */
+  buildEmoteWheel() {
+    const w = this.wheel = { open: false, sel: -1, vx: 0, vy: 0, el: document.createElement('div') };
+    w.el.className = 'emote-wheel';
+    this.hud.root.appendChild(w.el);
+    const pos = [[150, 40], [260, 150], [150, 262], [40, 150]];
+    const render = () => {
+      const em = this.app.profile.look.emotes;
+      w.el.innerHTML = em.map((it, i) => `<div class="ew-slot ${it ? '' : 'empty'} ${w.sel === i ? 'sel' : ''}" data-s="${i}" style="left:${pos[i][0]}px;top:${pos[i][1]}px">${it ? this.app.input.device === 'touch' ? '' : `<small>${i + 1}</small>` : ''}${it ? it.name.toUpperCase() : 'EMPTY'}</div>`).join('') + '<div class="ew-c">EMOTE</div>';
+      w.el.querySelectorAll('.ew-slot').forEach((d) => d.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); this.pickEmote(Number(d.dataset.s)); }));
+    };
+    w.render = render;
+  }
+
+  toggleWheel(open = !this.wheel.open) {
+    const w = this.wheel;
+    w.open = open && this.player.alive && !this.isRange;
+    w.sel = -1; w.vx = w.vy = 0;
+    if (w.open) w.render();
+    w.el.classList.toggle('open', w.open);
+  }
+
+  pickEmote(slot) {
+    const it = this.app.profile.look.emotes[slot];
+    this.toggleWheel(false);
+    if (it) this.player.cmd.emote = it.id;
   }
 
   addView(c) {
@@ -164,7 +193,19 @@ export class Game {
     const zoomEff = 1 + (def.handling.zoom - 1) * p.adsT;
     const adsMul = 1 + (ctl.adsSensitivity / Math.pow(zoomEff, 0.9) - 1) * p.adsT;
     const k = ctl.sensitivity * 0.00042 * adsMul;
-    const dx = inp.mouseDX, dy = inp.mouseDY;
+    let dx = inp.mouseDX, dy = inp.mouseDY;
+    if (inp.pressed('emote')) this.toggleWheel();
+    if (this.wheel.open) {
+      // aim at a slot with the mouse / stick instead of looking around
+      const w = this.wheel;
+      w.vx += dx + (inp.pad ? inp.padAxes[2] * 40 : 0); w.vy += dy + (inp.pad ? inp.padAxes[3] * 40 : 0);
+      const mag = Math.hypot(w.vx, w.vy);
+      if (mag > 60) { w.vx *= 60 / mag; w.vy *= 60 / mag; }
+      if (mag > 25) { const a = Math.atan2(w.vx, -w.vy); const sel = ((Math.round(a / (Math.PI / 2)) % 4) + 4) % 4; if (sel !== w.sel) { w.sel = sel; w.render(); } }
+      for (let i = 0; i < 4; i++) if (inp.keyPressed('Digit' + (i + 1))) this.pickEmote(i);
+      if (inp.pressed('fire') && w.sel >= 0) this.pickEmote(w.sel);
+      dx = 0; dy = 0;
+    }
     this.look.yaw -= dx * k;
     const dPitch = dy * k * (ctl.invertY ? 1 : -1);
     this.look.pitch += dPitch;
@@ -209,13 +250,13 @@ export class Game {
     cmd.sprint = sprint;
     cmd.crouch = crouch;
     cmd.jump = inp.isDown('jump');
-    cmd.fire = inp.isDown('fire');
+    cmd.fire = inp.isDown('fire') && !this.wheel.open;
     if (ctl.adsMode === 'toggle' && !T.active) { if (inp.pressed('ads')) this.adsToggle = !this.adsToggle; if (p.sprinting) this.adsToggle = false; cmd.ads = this.adsToggle; }
     else cmd.ads = T.active ? (p.sprinting ? (this.adsToggle = false) : this.adsToggle) : inp.isDown('ads');
     cmd.reload = inp.isDown('reload');
     cmd.swap = inp.pressed('swap');
-    if (inp.pressed('primary')) cmd.swapTo = 0;
-    if (inp.pressed('secondary')) cmd.swapTo = 1;
+    if (!this.wheel.open && inp.pressed('primary')) cmd.swapTo = 0;
+    if (!this.wheel.open && inp.pressed('secondary')) cmd.swapTo = 1;
     cmd.melee = inp.isDown('melee');
     cmd.lethal = inp.isDown('lethal');
     cmd.tactical = inp.isDown('tactical');
@@ -376,6 +417,8 @@ export class Game {
       case 'melee': pos(0.5, 'whoosh', { rate: 1.4 }); break;
       case 'throw': pos(0.5, 'pin'); break;
       case 'spawn': if (me) this.onPlayerSpawn(); break;
+      case 'emote': { const em = COSMETICS[e.id]?.emote; if (em) this.views.get(c.id)?.playEmote(em.anim, em.dur); break; }
+      case 'emoteEnd': { const v = this.views.get(c.id); if (v?.emote && !v.emote.loop) v.stopEmote(); break; }
       default: break;
     }
   }
@@ -689,6 +732,19 @@ export class Game {
     const sh = this.shake * set.graphics.cameraShake * motion;
     const t = performance.now() / 1000;
     const shx = (Math.sin(t * 61) + Math.sin(t * 37)) * 0.5 * sh * 0.04, shy = (Math.sin(t * 53) + Math.cos(t * 29)) * 0.5 * sh * 0.04;
+    if (p.alive && p.emoteState) {
+      // third-person camera in front of your operator, slowly orbiting, pulled in by walls
+      const es = p.emoteState, a = p.yaw + Math.PI * 0.85 + es.t * 0.35;
+      const hx = p.x, hy = p.y + 1.2, hz = p.z;
+      let dx = -Math.sin(a) * 3, dz = -Math.cos(a) * 3; const dy = 0.35;
+      const L = Math.hypot(dx, dy, dz), hit = this.match.world.raycast(hx, hy, hz, dx / L, dy / L, dz / L, L, 'solid');
+      const d = hit ? Math.max(0.8, hit.t - 0.25) : L;
+      cam.position.set(hx + dx / L * d, hy + dy / L * d, hz + dz / L * d);
+      cam.lookAt(hx, p.y + 1.0, hz);
+      this.app.engine.setZoom(1);
+      cam.updateMatrixWorld();
+      return;
+    }
     if (p.alive || !this.deathCam) {
       this.eyeH += (p.eyeHeight - this.eyeH) * Math.min(1, dt * 12);
       // head bob
@@ -767,7 +823,7 @@ export class Game {
     const p = this.player;
     this.vm.setWeapon(p.weapon.def.id, this.cosm.weapons[p.weapon.def.id], p.weapon.def.attachments);
     const scoped = !!(p.weapon.def.handling.scope && p.adsT > 0.92 && p.alive);
-    this.vm.visible = p.alive && !scoped && !this.ended;
+    this.vm.visible = p.alive && !scoped && !this.ended && !p.emoteState;
     this.scoped = scoped;
     this.vm.update(this.paused ? 0 : dt, {
       adsT: p.adsT, sprinting: p.sprinting, stance: p.stance, speed: p.speed, grounded: p.grounded,
@@ -784,7 +840,7 @@ export class Game {
       const isMe = c === this.player;
       const deadLong = !c.alive && this.match.time - c.deathT > 5;
       const far = Math.hypot(c.x - cam.x, c.z - cam.z) > 160;
-      v.root.visible = (isMe ? !c.alive : true) && !deadLong && !far;
+      v.root.visible = (isMe ? !c.alive || !!c.emoteState : true) && !deadLong && !far;
       if (!v.root.visible) continue;
       v.root.position.set(c.x, c.y, c.z);
       v.root.rotation.y = c.yaw;
@@ -1113,6 +1169,7 @@ export class Game {
 
   setPaused(on) {
     this.paused = on;
+    if (on && this.wheel?.open) this.toggleWheel(false);
     this.app.audio.ambience(!on);
     this.wxView?.setPaused(on && !this.online);
   }
@@ -1126,6 +1183,7 @@ export class Game {
     this.objView?.dispose();
     this.depView?.dispose();
     this.brView?.dispose();
+    this.wheel?.el.remove();
     this.wxView?.dispose();
     this.hwView?.dispose();
     this.unsubSettings();

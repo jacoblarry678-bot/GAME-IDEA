@@ -19,7 +19,7 @@ const BUTTONS = [
   // [action, label, css class]
   ['fire', 'FIRE', 'tb-fire'], ['fire', 'FIRE', 'tb-fire-l'], ['ads', 'AIM', 'tb-ads'], ['jump', 'JUMP', 'tb-jump'], ['crouch', 'CROUCH', 'tb-crouch'],
   ['reload', 'RELOAD', 'tb-reload'], ['swap', 'SWAP', 'tb-swap'], ['melee', 'MELEE', 'tb-melee'], ['lethal', 'FRAG', 'tb-lethal'], ['tactical', 'TAC', 'tb-tac'],
-  ['support1', '3', 'tb-s1'], ['support2', '4', 'tb-s2'], ['support3', '5', 'tb-s3'], ['interact', 'PICK UP', 'tb-interact'], ['scoreboard', 'SCORES', 'tb-score'],
+  ['support1', '3', 'tb-s1'], ['support2', '4', 'tb-s2'], ['support3', '5', 'tb-s3'], ['interact', 'PICK UP', 'tb-interact'], ['scoreboard', 'SCORES', 'tb-score'], ['emote', '☺', 'tb-emote'],
 ];
 
 export class TouchControls {

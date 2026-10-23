@@ -30,6 +30,9 @@ const POSES = {
   lmgdrum: { hip: [0.155, -0.18, -0.42], eye: 0.17, rotY: -0.04 },
   revolver: { hip: [0.13, -0.15, -0.42], eye: 0.36, rotY: -0.05 },
   axe: { hip: [0.2, -0.27, -0.34], eye: 0.4, rotY: 0.1 },
+  pdw: { hip: [0.145, -0.16, -0.38], eye: 0.22, rotY: -0.03 },
+  lever: { hip: [0.15, -0.17, -0.4], eye: 0.28, rotY: -0.03 },
+  machpistol: { hip: [0.13, -0.15, -0.42], eye: 0.34, rotY: -0.05 },
 };
 
 const Z = new THREE.Vector3(0, 0, 1);

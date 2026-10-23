@@ -492,6 +492,7 @@ table.sb tr.me td { background: rgba(255,138,61,0.12); color: #fff; }
 .touch-ui .tb.ready { opacity: 1; border-color: #ffd23a; color: #ffd23a; box-shadow: 0 0 10px rgba(255,210,58,0.5); }
 .touch-ui .tb-interact { left: 50%; bottom: 96px; transform: translateX(-50%); width: auto; height: 44px; border-radius: 22px; padding: 0 18px; font-size: 12px; border-color: #ffd23a; color: #ffd23a; }
 .touch-ui .tb-score { right: max(12px, env(safe-area-inset-right)); top: 16px; width: 42px; height: 42px; font-size: 8px; }
+.touch-ui .tb-emote { right: 258px; top: 16px; width: 42px; height: 42px; font-size: 18px; }
 .touch-ui .tb-pause { right: 62px; top: 16px; width: 42px; height: 42px; font-size: 14px; }
 /* HUD while touch controls are on: buttons replace the ability/equipment readouts; ammo moves bottom-centre */
 body.touch-on #hud .support, body.touch-on #hud .equip { display: none; }
@@ -511,3 +512,12 @@ body.touch-on #hud .captions { bottom: 70px; }
   .menu-nav .menu-btn .sub { display: none; }
 }
 @media (max-height: 520px) and (max-width: 900px) { #ui > .screen, #ui > .modal, #ui > .toast { zoom: 0.52; } }
+
+/* emote wheel */
+.emote-wheel { position: absolute; left: 50%; top: 50%; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,0.25) 28%, rgba(8,12,16,0.72) 30%); border: 1px solid var(--line-2); display: none; pointer-events: auto; z-index: 16; }
+.emote-wheel.open { display: block; }
+.emote-wheel .ew-slot { position: absolute; width: 110px; margin-left: -55px; margin-top: -26px; text-align: center; padding: 8px 4px; border-radius: 10px; font: 600 13px var(--font-head, sans-serif); letter-spacing: 0.06em; color: var(--text); cursor: pointer; }
+.emote-wheel .ew-slot.sel { background: var(--accent); color: #1b0c00; }
+.emote-wheel .ew-slot.empty { color: var(--muted); }
+.emote-wheel .ew-slot small { display: block; font: 500 10px var(--font-body, sans-serif); opacity: 0.7; }
+.emote-wheel .ew-c { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; color: var(--muted); text-align: center; letter-spacing: 0.12em; }

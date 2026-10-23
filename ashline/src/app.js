@@ -505,6 +505,13 @@ class WeaponPreview {
     }
     m.visible = true;
   }
+  /** Loop an emote on the operator currently shown (null stops it). */
+  emote(anim, dur) {
+    const m = this.cur && this.models.get(this.cur)?.userData.model;
+    if (!m) return;
+    if (!anim) { if (m.emote) m.stopEmote(); return; }
+    if (m.emote?.anim !== anim) m.playEmote(anim, dur, true);
+  }
   hide() { this.group.visible = false; this.cur = null; }
   update(dt) {
     if (!this.group.visible) return;

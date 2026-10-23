@@ -3,6 +3,7 @@
  * arrives as a "command" each tick; the same movement, stance, weapon and
  * equipment rules apply to everyone, so bots never get special physics.
  */
+import { COSMETICS } from '../data/cosmetics.js';
 import { moveBody } from '../world/collision.js';
 import { WeaponState } from '../combat/weaponState.js';
 import { WEAPONS, EQUIPMENT, MELEE } from '../data/weapons.js';
@@ -33,7 +34,7 @@ export function newCommand() {
   return {
     moveX: 0, moveZ: 0, sprint: false, crouch: false, jump: false,
     fire: false, firePressed: false, ads: false, reload: false, swap: false,
-    swapTo: -1, melee: false, lethal: false, tactical: false, support: null, interact: false,
+    swapTo: -1, melee: false, lethal: false, tactical: false, support: null, interact: false, emote: null,
     yaw: 0, pitch: 0,
   };
 }
@@ -204,6 +205,18 @@ export class Combatant {
     // interact is edge-triggered: one press, one request (substeps repeat the same command)
     if (cmd.interact && !this._interactHeld) this.interactReq = ctx.time;
     this._interactHeld = !!cmd.interact;
+    // emotes: start on request when standing still; any action or movement cancels (purely cosmetic)
+    if (cmd.emote) {
+      const em = COSMETICS[cmd.emote]?.emote;
+      if (em && !this.emoteState && this.grounded && !this.busy && this.stance !== 'slide') { this.emoteState = { id: cmd.emote, t: 0, dur: em.dur }; this.events.push({ type: 'emote', id: cmd.emote }); }
+      cmd.emote = null;
+    }
+    if (this.emoteState) {
+      const es = this.emoteState;
+      es.t += dt;
+      const acting = Math.abs(cmd.moveX) + Math.abs(cmd.moveZ) > 0.15 || cmd.fire || cmd.ads || cmd.jump || cmd.melee || cmd.lethal || cmd.tactical || cmd.reload || cmd.swap || ctx.time - this.lastDamageT < 0.1;
+      if (acting || es.t >= es.dur) { this.emoteState = null; this.events.push({ type: 'emoteEnd' }); }
+    }
 
     const w = this.weapon;
     const def = w.def;

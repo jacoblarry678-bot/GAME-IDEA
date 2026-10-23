@@ -16,6 +16,7 @@ export const START_LOADOUT = { primary: 'pistol_warden', secondary: 'melee_axe' 
 export const LOOT_WEAPONS = [
   ['smg_vesper', 9, 2], ['smg_wasp', 7, 2], ['smg_hollow', 6, 2], ['ar_kv7', 9, 3], ['ar_tarn', 7, 3], ['ar_meridian', 5, 3], ['ar_bastion', 5, 3],
   ['sg_brakk', 5, 2], ['sg_rook', 4, 2], ['dmr_sentinel', 4, 3], ['sr_longreach', 3, 3], ['lmg_drover', 3, 3], ['lmg_anvil', 2, 3], ['pistol_grizzly', 4, 1],
+  ['smg_hornet', 6, 2.5], ['dmr_talon', 3, 3], ['pistol_stinger', 5, 1.2],
 ];
 const TIER = Object.fromEntries(LOOT_WEAPONS.map(([id, , t]) => [id, t]));
 export const weaponTier = (id) => TIER[id] ?? (WEAPONS[id]?.class === 'pistol' ? 0.5 : 1);
@@ -33,7 +34,7 @@ const PHASES = [
 const GRACE = 30; // drop-in: weapons cold, everyone loots
 const REGEN_CAP = 60; // natural regen stops here; medkits heal to full
 const PICK_R = 1.5;
-const MAX_LOOT = 90;
+const MAX_LOOT = 170;
 
 const rand = (rng, a, b) => a + rng() * (b - a);
 const zoneR = (z) => z.r0 + (z.r1 - z.r0) * zoneK(z);
@@ -92,7 +93,10 @@ function scatterLoot(match) {
     }
     return nav.center(nav.randomCell(rng));
   };
-  const counts = { weapon: 18, ammo: 10, medkit: 6, gear: 4 };
+  // bigger maps get more loot (Ashfield ≈ 2.2× the small maps)
+  const Bd = match.map.def.bounds, area = (Bd.maxX - Bd.minX) * (Bd.maxZ - Bd.minZ);
+  const k = Math.max(1, Math.min(2.2, area / 7600));
+  const counts = { weapon: Math.round(18 * k), ammo: Math.round(10 * k), medkit: Math.round(6 * k), gear: Math.round(4 * k) };
   for (const [kind, n] of Object.entries(counts)) {
     for (let i = 0; i < n; i++) {
       const p = spot();

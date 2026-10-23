@@ -11,6 +11,7 @@ export const BUNDLES = [
   { id: 'bd_tiger', name: 'Tigerstripe Bundle', desc: 'Kestrel in Tigerstripe, Cobalt finish and the Watcher emblem.', items: ['of_kestrel_tiger', 'fn_cobalt', 'em_eye'], discount: 0.3 },
   { id: 'bd_signal', name: 'Signal Bundle', desc: 'Signal Red outfit, Circuit finish and the Signal Lost card.', items: ['of_kestrel_signal', 'fn_circuit', 'cd_signal'], discount: 0.25 },
   { id: 'bd_whiteout', name: 'Whiteout Bundle', desc: 'Sol in Whiteout, Aurora finish and the Royal banner.', items: ['of_sol_snow', 'fn_aurora', 'bn_royal'], discount: 0.25 },
+  { id: 'bd_party', name: 'Party Pack', desc: 'Rail Shuffle, Flex and Facepalm emotes.', items: ['ex_shuffle', 'ex_flex', 'ex_facepalm'], discount: 0.3 },
   { id: 'bd_morale', name: 'Morale Pack', desc: 'Rubber Duck charm, Iron Helm emblem and Prismatic finish.', items: ['ch_duck', 'em_skullcap', 'fn_prism'], discount: 0.3 },
 ];
 
@@ -22,7 +23,7 @@ BUNDLES.push({ id: 'bd_waspinator', name: 'Waspinator Collab Bundle', desc: 'The
 
 /** Event Store sections (listed only while their event runs). */
 export const EVENT_SHOPS = [
-  { event: 'hollow_night', name: 'Hollow Night', bundle: 'bd_hollow', items: ['of_kestrel_wraith', 'fn_bone', 'ch_skull', 'ch_ghost', 'em_bat', 'cd_patch', 'bn_cobweb'], blurb: 'Halloween event items for test credits. Cosmetic only; what you buy stays yours after the event.' },
+  { event: 'hollow_night', name: 'Hollow Night', bundle: 'bd_hollow', items: ['of_kestrel_wraith', 'fn_bone', 'ch_skull', 'ch_ghost', 'em_bat', 'cd_patch', 'bn_cobweb', 'ex_scare'], blurb: 'Halloween event items for test credits. Cosmetic only; what you buy stays yours after the event.' },
 ];
 BUNDLES.push({ id: 'bd_hollow', name: 'Hollow Night Bundle', desc: 'Every Hollow Night Store item: Wraith outfit, Ossuary finish, Rattle Skull and Little Ghost charms, Night Wing emblem, Pumpkin Patch card and Cobweb banner.', items: ['of_kestrel_wraith', 'fn_bone', 'ch_skull', 'ch_ghost', 'em_bat', 'cd_patch', 'bn_cobweb'], discount: 0.25, event: 'hollow_night' });
 

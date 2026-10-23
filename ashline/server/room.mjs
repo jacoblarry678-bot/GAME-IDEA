@@ -26,7 +26,7 @@ import {
   sanitizeName, sanitizeLoadout, sanitizeLook, r2, r3,
 } from '../src/net/protocol.js';
 
-const CE_TYPES = new Set(['step', 'jump', 'land', 'slide', 'mantle', 'reloadStart', 'shellIn', 'swapOut', 'dry', 'melee', 'throw', 'spawn']);
+const CE_TYPES = new Set(['step', 'jump', 'land', 'slide', 'mantle', 'reloadStart', 'shellIn', 'swapOut', 'dry', 'melee', 'throw', 'spawn', 'emote', 'emoteEnd']);
 const RESULTS_PAUSE = 12; // seconds between matches
 const MAX_REWIND = 0.25;
 
@@ -37,7 +37,7 @@ export const DEFAULT_ROTATION = [
   { map: 'old_quarter', mode: 'tdm' },
   { map: 'signal_station', mode: 'dom' },
   { map: 'cinder_yard', mode: 'hp' },
-  { map: 'old_quarter', mode: 'br' },
+  { map: 'ashfield', mode: 'br' },
 ];
 
 export class Room {

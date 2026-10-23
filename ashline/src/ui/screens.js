@@ -311,7 +311,7 @@ const SCREENS = {
             if (k === 'loadout') { app.profile.data.activeLoadout = Number(v); }
             else if (k === 'friendlyFire') setup.friendlyFire = v === 'true';
             else if (k === 'halloween') setup.halloween = v === 'true';
-            else if (k === 'mode') { setup.mode = v; setup.scoreLimit = MODES[v].defaults.scoreLimit; setup.timeLimit = MODES[v].defaults.timeLimit; }
+            else if (k === 'mode') { setup.mode = v; setup.scoreLimit = MODES[v].defaults.scoreLimit; setup.timeLimit = MODES[v].defaults.timeLimit; if (v === 'br' && MAPS.ashfield) setup.map = 'ashfield'; }
             else setup[k] = v;
             app.profile.save();
             render();

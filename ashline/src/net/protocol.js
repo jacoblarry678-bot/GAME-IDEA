@@ -9,11 +9,12 @@
  * buttons). Positions, hits, damage, scores and objectives come from the
  * server simulation. Events that reference combatants are sent with ids.
  */
+import { EMOTE_IDS } from '../data/cosmetics.js';
 import { WEAPONS, EQUIPMENT } from '../data/weapons.js';
 import { sanitizeBuild } from '../data/attachments.js';
 import { PERKS, DEFAULT_PERKS } from '../data/perks.js';
 
-export const PROTOCOL_VERSION = 2; // 2: Battle Royale state, loot, interact bit, weather
+export const PROTOCOL_VERSION = 3; // 3: emotes, new weapons; 2: Battle Royale state, loot, interact bit, weather
 export const DEFAULT_PORT = 4190;
 export const TICK_HZ = 60;
 export const SNAP_HZ = 20;
@@ -26,7 +27,7 @@ const BOOL = new Set(['sprint', 'crouch', 'jump', 'fire', 'ads', 'reload', 'swap
 const SUPPORT_IDS = new Set(['recon', 'supply', 'strike']);
 
 export function packCmd(seq, dt, cmd, vt) {
-  return [seq, r3(dt), r3(cmd.moveX), r3(cmd.moveZ), bits(cmd), cmd.swapTo, cmd.support || 0, r4(cmd.yaw), r4(cmd.pitch), r3(vt)];
+  return [seq, r3(dt), r3(cmd.moveX), r3(cmd.moveZ), bits(cmd), cmd.swapTo, cmd.support || 0, r4(cmd.yaw), r4(cmd.pitch), r3(vt), cmd.emote ? EMOTE_IDS.indexOf(cmd.emote) + 1 : 0];
 }
 function bits(c) {
   return (c.sprint ? 1 : 0) | (c.crouch ? 2 : 0) | (c.jump ? 4 : 0) | (c.fire ? 8 : 0) | (c.ads ? 16 : 0) | (c.reload ? 32 : 0) | (c.swap ? 64 : 0) | (c.melee ? 128 : 0) | (c.lethal ? 256 : 0) | (c.tactical ? 512 : 0) | (c.interact ? 1024 : 0);
@@ -47,6 +48,7 @@ export function unpackCmd(a) {
       swapTo: swapTo === 0 || swapTo === 1 ? swapTo : -1,
       support: SUPPORT_IDS.has(support) ? support : null,
       yaw: wrapAngle(yaw), pitch: clamp(pitch, -1.5, 1.5),
+      emote: EMOTE_IDS[(a[10] | 0) - 1] || null,
     },
   };
 }

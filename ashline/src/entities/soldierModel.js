@@ -10,6 +10,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { buildWeapon } from '../fx/weaponModels.js';
 import { buildKey } from '../data/attachments.js';
 import { WEAPONS } from '../data/weapons.js';
+import { EMOTE_ANIMS } from './emotes.js';
 
 const geo = new Map();
 function rb(w, h, d, r = 0.02) {
@@ -307,7 +308,7 @@ export class SoldierModel {
     const key = WEAPONS[id].model;
     this.gun = buildWeapon(key, wmats, { merge: true, attachments });
     this.gunMount.add(this.gun.group);
-    this.isPistol = key === 'pistol';
+    this.isPistol = key === 'pistol' || key === 'machpistol';
   }
 
   /** Pose the arms so the hands meet the weapon grip and foregrip. */
@@ -349,6 +350,18 @@ export class SoldierModel {
       return;
     }
     if (this.deathT >= 0) { this.deathT = -1; this.root.rotation.set(0, this.root.rotation.y, 0); }
+    // emote: plays until done, or until the soldier moves (loop = preview)
+    if (this.emote) {
+      const e = this.emote;
+      e.t += dt;
+      if ((!e.loop && e.t >= e.dur) || (!e.loop && s.speed > 0.8)) this.stopEmote();
+      else {
+        if (e.loop && e.t >= e.dur + 0.6) e.t = 0;
+        this.neutralPose();
+        EMOTE_ANIMS[e.anim]?.(this, Math.min(e.t, e.dur), e.dur);
+        return;
+      }
+    }
     const crouch = s.stance === 'crouch', slide = s.stance === 'slide';
     const spd = Math.min(s.speed, 8);
     // movement direction relative to facing: turn the hips toward strafes, reverse the cycle when backpedalling
@@ -408,7 +421,30 @@ export class SoldierModel {
     }
   }
 
-  fired() { this.recoil = 1; }
+  fired() { this.recoil = 1; if (this.emote && !this.emote.loop) this.stopEmote(); }
+
+  /** Start an emote animation (weapon hidden while it plays). */
+  playEmote(anim, dur, loop = false) {
+    if (!EMOTE_ANIMS[anim]) return;
+    this.emote = { anim, dur, t: 0, loop };
+    if (this.gun) this.gun.group.visible = false;
+  }
+
+  stopEmote() {
+    this.emote = null;
+    this.neutralPose();
+    this.hips.position.y = 0.95;
+    if (this.gun) this.gun.group.visible = !this._far || this.unarmed;
+  }
+
+  neutralPose() {
+    this.hips.rotation.set(0, 0, 0);
+    this.hips.position.y = 0.95;
+    this.spine.rotation.set(0, 0, 0);
+    this.neck.rotation.set(0, 0, 0);
+    for (const l of this.legs) { l.thigh.rotation.set(0, 0, 0); l.shin.rotation.set(0, 0, 0); }
+    for (const a of this.arms) { a.sh.rotation.set(0, 0, a.side * 0.1); a.elbow.rotation.set(0, 0, 0); }
+  }
 
   /** Upper-body flinch when hit. */
   hit(side) { this.flinch = 1; this.flinchSide = side; }
@@ -418,7 +454,7 @@ export class SoldierModel {
     if (this._far === far) return;
     this._far = far;
     for (const m of this.meshes) m.castShadow = !far;
-    if (this.gun) this.gun.group.visible = !far || this.unarmed;
+    if (this.gun) this.gun.group.visible = (!far || this.unarmed) && !this.emote;
   }
 
   /** World position of the third-person muzzle. */

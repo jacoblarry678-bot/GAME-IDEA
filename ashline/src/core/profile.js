@@ -49,7 +49,7 @@ const DEFAULT_PROFILE = {
   totalXp: 0,
   credits: SEASON.startingCredits,
   owned: {},
-  equipped: { operator: 'op_voss', outfits: {}, weapons: {}, card: 'cd_recruit', emblem: 'em_chevron', banner: 'bn_steel' },
+  equipped: { operator: 'op_voss', outfits: {}, weapons: {}, card: 'cd_recruit', emblem: 'em_chevron', banner: 'bn_steel', emotes: ['ex_wave', 'ex_salute', null, null] },
   weaponProgress: {},
   builds: {},
   pass: { season: SEASON.id, xp: 0, premium: false, claimed: { free: {}, premium: {} } },
@@ -121,6 +121,10 @@ export class Profile {
     // drop unknown item ids (stable ids keep old saves valid; removed items vanish safely)
     for (const id of Object.keys(d.owned)) if (!COSMETICS[id]) delete d.owned[id];
     for (const id of DEFAULT_ITEMS) if (!d.owned[id]) d.owned[id] = { t: Date.now(), src: 'default', seen: true };
+    // emote wheel: 4 slots of owned emotes (or empty)
+    const em = Array.isArray(d.equipped.emotes) ? d.equipped.emotes.slice(0, 4) : [];
+    while (em.length < 4) em.push(null);
+    d.equipped.emotes = em.map((id, i) => (id && COSMETICS[id]?.type === 'emote' && !!d.owned[id] && em.indexOf(id) === i ? id : null));
     // anything unlocked by level/weapon level/operator but missing (e.g. after a catalog update) is granted
     this.grantEarnedUnlocks(true);
     for (const id of WEAPON_IDS) {
@@ -231,6 +235,14 @@ export class Profile {
       case 'card': e.card = id; break;
       case 'emblem': e.emblem = id; break;
       case 'banner': e.banner = id; break;
+      case 'emote': {
+        // weaponId doubles as the wheel slot (0–3); default: first free slot, else slot 1
+        let slot = Number.isInteger(weaponId) ? weaponId : e.emotes.indexOf(null);
+        if (slot < 0 || slot > 3) slot = 0;
+        e.emotes = e.emotes.map((x) => (x === id ? null : x));
+        e.emotes[slot] = id;
+        break;
+      }
       default: return false;
     }
     this.markSeen(id);
@@ -246,6 +258,7 @@ export class Profile {
       case 'outfit': return e.outfits[it.operator] === id;
       case 'finish': return weaponId ? e.weapons[weaponId]?.finish === id : Object.values(e.weapons).some((w) => w.finish === id);
       case 'charm': return weaponId ? e.weapons[weaponId]?.charm === id : Object.values(e.weapons).some((w) => w.charm === id);
+      case 'emote': return Number.isInteger(weaponId) ? e.emotes[weaponId] === id : e.emotes.includes(id);
       default: return e[it.type] === id;
     }
   }
@@ -254,7 +267,7 @@ export class Profile {
   get look() {
     const e = this.data.equipped;
     const op = COSMETICS[e.operator];
-    return { operator: op, outfit: COSMETICS[e.outfits[e.operator]] || COSMETICS[op.op.outfit], weapons: e.weapons, card: COSMETICS[e.card], emblem: COSMETICS[e.emblem], banner: COSMETICS[e.banner] };
+    return { operator: op, outfit: COSMETICS[e.outfits[e.operator]] || COSMETICS[op.op.outfit], weapons: e.weapons, card: COSMETICS[e.card], emblem: COSMETICS[e.emblem], banner: COSMETICS[e.banner], emotes: e.emotes.map((id) => (id && COSMETICS[id] ? COSMETICS[id] : null)) };
   }
 
   unlockText(it) {

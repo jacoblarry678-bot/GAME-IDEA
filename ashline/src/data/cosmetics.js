@@ -24,6 +24,7 @@ export const TYPES = {
   card: { name: 'Calling Cards', single: 'Calling Card' },
   emblem: { name: 'Emblems', single: 'Emblem' },
   banner: { name: 'Banners', single: 'Banner' },
+  emote: { name: 'Emotes', single: 'Emote' },
 };
 
 const items = [];
@@ -149,10 +150,25 @@ banner('bn_hollow', 'Hollow Moon', 'epic', 'Jack-o\'-lanterns under a violet moo
 banner('bn_cobweb', 'Cobweb', 'rare', 'Something has been living here. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, { kind: 'cobweb', a: '#141018', b: '#d8d4e4' });
 banner('bn_royal', 'Royal', 'legendary', 'Deep violet and gold.', { type: 'shop' }, { kind: 'gradient', a: '#1e0f30', b: '#c49a3a' });
 
+// ---------------- emotes (0.9.0): animations played on your operator; equip up to 4 in the emote wheel
+const emote = (id, name, rarity, desc, unlock, anim, dur) => add({ id, type: 'emote', name, rarity, desc, unlock, emote: { anim, dur } });
+emote('ex_wave', 'Wave', 'common', 'A friendly hello across the yard.', { type: 'default' }, 'wave', 2.4);
+emote('ex_salute', 'Salute', 'common', 'Directorate regulation, sharp and correct.', { type: 'default' }, 'salute', 2.2);
+emote('ex_thumbs', 'Thumbs Up', 'common', 'Good work. Carry on.', { type: 'level', level: 3 }, 'thumbs', 2.0);
+emote('ex_cheer', 'Cheer', 'rare', 'Both arms up and a little hop.', { type: 'level', level: 12 }, 'cheer', 2.6);
+emote('ex_laugh', 'Laugh', 'rare', 'Hard to stop once it starts.', { type: 'level', level: 22 }, 'laugh', 2.6);
+emote('ex_flex', 'Flex', 'rare', 'Show off the training.', { type: 'shop' }, 'flex', 2.8);
+emote('ex_facepalm', 'Facepalm', 'rare', 'Who threw that grenade?', { type: 'shop' }, 'facepalm', 2.6);
+emote('ex_shuffle', 'Rail Shuffle', 'epic', 'A dance from the depot break room.', { type: 'shop' }, 'shuffle', 4.0);
+emote('ex_spin', 'Victory Spin', 'legendary', 'One full turn and a fist in the air.', { type: 'shop' }, 'spin', 3.0);
+emote('ex_scare', 'Boo!', 'epic', 'Jump-scare your friends. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'scare', 2.2);
+
 export const COSMETICS = Object.fromEntries(items.map((i) => [i.id, i]));
 export const COSMETIC_LIST = items;
 export const DEFAULT_ITEMS = items.filter((i) => i.unlock.type === 'default').map((i) => i.id);
 export const byType = (t) => items.filter((i) => i.type === t);
+/** Stable emote order for the network protocol (index + 1; 0 = none). */
+export const EMOTE_IDS = items.filter((i) => i.type === 'emote').map((i) => i.id);
 
 /** Add an item at runtime (content opened from the vault). Ids never collide with shipped items. */
 export function registerCosmetic(it) {
