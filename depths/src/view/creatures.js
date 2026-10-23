@@ -172,6 +172,7 @@ function animateDrowned(o, c, dt, game) {
   arr.fill(0);
   u.trail.forEach((d, i) => { arr[i * 3] = d.x - c.x; arr[i * 3 + 1] = d.y - surf + (d.t > 0.8 ? -(d.t - 0.8) * 0.8 : 0); arr[i * 3 + 2] = d.z - c.z; });
   u.drops.geometry.attributes.position.needsUpdate = true;
+  u.drops.geometry.computeBoundingSphere(); // the trail moves every frame; a stale sphere culls it at some viewing angles
   u.drops.rotation.y = -c.yaw; u.drops.rotation.y = 0;
   o.rotation.y = 0; u.vee.rotation.z = c.yaw;
 }
