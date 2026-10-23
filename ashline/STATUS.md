@@ -232,6 +232,25 @@ someone runs the server, and others connect to it.
 
 **Limits**: tested in Chromium's phone emulation only, not on a physical phone; real-device performance (especially with weather/night lights) is unmeasured. iOS Safari has no page fullscreen API. Touch controls aren't remappable yet (layout is fixed); online play on a phone needs the phone to reach the server's address.
 
+## Update 0.9.0: buffs, new weapons, Battle Royale map, emotes
+
+**Added / changed**
+- **Buffs**: Tarn-556 (near damage 25→26, a 4-shot kill up close), Bastion .30 (recoil 0.7→0.6), Hollow-X (28/18→29/20, falloff end 30→34 m, 760→780 rpm), Rook Auto-12 (13→15 per pellet, falloff 13→15 m, mag 8→10, faster reload), Anvil-60 (reload 5.4→4.6 s, ADS 0.42→0.36 s, less hip spread and recoil), Grizzly .50 (170→190 rpm, reload 2.4→2.1 s). These are design buffs for weapons that felt weak; they were not derived from play data.
+- **New weapons** with new 3D models, first-person poses, bot loadouts, Gun Game ladder and BR loot: Hornet PDW, Talon Lever (lever-action, tube-fed, cycles between shots), Stinger-9 (full-auto machine pistol).
+- **Ashfield Valley** (`ashfield`): 180 × 180 m, 8 points of interest, roads, woods, field cover; team spawns and Domination/Hardpoint objectives so every mode runs on it; BR picks it by default and the server rotation's BR stop uses it; BR loot scales with map area (×2.2 cap).
+- **Emotes**: new cosmetic type with 10 items and procedural animations on the existing rig (`src/entities/emotes.js`), Armory tab with 4 wheel slots and a looping preview, in-match wheel (B / touch ☺, choose with 1–4 or aim + click/tap), third-person camera while emoting, cancelled by moving, firing, aiming, jumping, reloading or damage (never blocks combat). Online: protocol v3 carries the emote in the input command; the server emits it as a combatant event to every client. A Party Pack bundle (3 emotes) joins the bundle rotation; Boo! joins the Hollow Night Store.
+- Fixes found while testing: emote slot keys 3/4 no longer also trigger support abilities.
+
+**Verification**
+- `npm test`: 269/269 (new: new-weapon shots-to-kill, every buff, emote start/cancel/timeout/unknown id, protocol round-trip, wheel slots and save sanitising, Ashfield loot and a full bot BR match, four maps registered).
+- `tools/mapcheck.mjs`: Ashfield 600/600 nav paths, no blocked spawns (two blocked spawns were found and fixed).
+- Bot-only BR on Ashfield: 12 runs, 85–263 s each, all to a winner.
+- `tools/u090.mjs`: 13/13 (Armory emote tab, slot equip, looping preview, wheel opens, slot 3 plays in third person, moving cancels, all three new weapons fire in first person, BR → Ashfield with 84 loot items and a 131 m zone). Screenshots reviewed.
+- `nettest`: 30/30 twice (emote broadcast added). One earlier run had a single lag-compensation miss that did not reproduce on two reruns.
+- Browser regression results: see the commit message for this version.
+
+**Limits**: emote animations are simple procedural poses on a rigid rig (no facial animation or props). Ashfield is flat ground (no terrain height) and has no water depth. Weapon balance is by hand, not telemetry.
+
 ## Possible next steps
 - Co-op survival, multiple rooms per server or a simple server list, an axe swing animation, a laser beam visual, and GPU profiling on real hardware.
 - A production online service would need hosted servers, accounts, server-side progression and entitlements, and anti-cheat. That isn't in scope without real infrastructure.

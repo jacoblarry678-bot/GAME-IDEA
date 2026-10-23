@@ -25,6 +25,9 @@
 | Hollow Night (0.7.0): night atmosphere, jack-o'-lantern models; Halloween finishes, charms, cards, emblems, banners, outfits | Generated in code: `src/fx/halloween.js`, `src/world/finishes.js`, `src/fx/weaponModels.js`, `src/ui/art.js`, `src/data/cosmetics.js` | Original |
 | Sealed drop `drop_002` (Slender Man collab operator skin, outfit and banner) | Original procedural model data (suit kit and featureless head in `src/entities/soldierModel.js`, banner art kind in `src/ui/art.js`) modelled after a reference screenshot supplied by the project owner; the screenshot is **not** included. Encrypted in `src/data/vault.js` until released. | **Collab — the project owner described it as a collab. Slender Man is a third-party character: keep the license agreement on file and confirm its scope before any public release.** |
 | Touch controls (0.8.0) | Built in code: `src/ui/touch.js`, `src/ui/styles.css` | Original |
+| 0.9.0: Hornet PDW, Talon Lever and Stinger-9 weapon models | Built in code: `src/fx/weaponModels.js` | Original |
+| Ashfield Valley map | Built in code: `src/world/maps/ashfield.js` with the shared kit | Original |
+| Emote animations and emote icons | Code: `src/entities/emotes.js` (procedural poses); icons are system emoji characters | Original (emoji glyphs come from the player's OS font) |
 | UI fonts | Rajdhani, Inter via Google Fonts (falls back to system fonts offline) | SIL Open Font License 1.1 |
 
 No images, models or audio files are downloaded or bundled. The browser client uses the built-in WebSocket API; `ws` runs only in the Node server. There are no names,

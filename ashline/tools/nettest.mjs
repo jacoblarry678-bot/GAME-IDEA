@@ -165,6 +165,18 @@ t('leaving returns the slot to a bot', A.roster.list.filter((r) => r.human).leng
 const st = await (await fetch(`http://localhost:${srv.port}/status`)).json();
 t('/status reports room, mode and players', st.mode === 'tdm' && st.players.length === 1, JSON.stringify(st));
 
+// ---- 0.9.0: emotes reach other players
+{
+  A.send({ t: 'dbg', op: 'revive' });
+  A.send({ t: 'dbg', op: 'place', x: 10, z: -1.5, yaw: 0 });
+  await sleep(200);
+  const evN = A.msgs.length;
+  A.input(20, 1 / 60, {}); await sleep(400);
+  A.input(1, 1 / 60, { emote: 'ex_wave' }); A.input(10, 1 / 60, {});
+  await until(() => A.msgs.slice(evN).some((m) => m.t === 'snap' && m.ce && Object.entries(m.ce).some(([id, list]) => Number(id) === A.roster.you && list.some((e) => e.type === 'emote' && e.id === 'ex_wave'))), 3000);
+  const seen = A.msgs.slice(evN).some((m) => m.t === 'snap' && m.ce && Object.entries(m.ce).some(([id, list]) => Number(id) === A.roster.you && list.some((e) => e.type === 'emote' && e.id === 'ex_wave')));
+  t("an emote by one player is broadcast to every client in the snapshot stream (checked on A's stream: B has left by now)", seen);
+}
 t('snapshots carry the weather state', Array.isArray(A.snap?.m.wx) && A.snap.m.wx.length === 6, JSON.stringify(A.snap?.m.wx));
 A.ws.close();
 srv.close();

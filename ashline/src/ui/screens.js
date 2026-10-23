@@ -20,7 +20,7 @@ import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
 import { NetClient } from '../net/netClient.js';
 
-export const VERSION = 'Update 0.8.0';
+export const VERSION = 'Update 0.9.0';
 
 export class Screens {
   constructor(app) {
@@ -598,13 +598,15 @@ const SCREENS = {
           <p class="muted small">Sprint + Crouch while moving to slide. Jump into a ledge or low wall to mantle/vault. Controller: standard layout (RT fire, LT aim, A jump, B crouch, X reload, Y swap, RB lethal, LB tactical, L3 sprint, R3 melee, D-pad ←/↑/→ support abilities).</p>
         </div>
         <div class="panel" style="flex:1;min-width:300px">
-          <h3 class="title">In this build (update 0.6.0)</h3>
+          <h3 class="title">In this build (update 0.9.0)</h3>
           <ul class="small" style="line-height:1.7;margin:0;padding-left:18px">
             <li>3 maps: Cinder Yard, Old Quarter, Signal Station · plus a Firing Range</li>
             <li>7 modes vs bots: Team Deathmatch, Free-for-All, Domination, Hardpoint, Elimination, Gun Game, Battle Royale (mini, up to 10 players) · private match settings</li>
             <li>Dynamic weather: clouds, rain, thunderstorms and fog that change during a match (or pick fixed weather)</li>
             <li>Supercharged XP event: a free one-hour 2× XP gift, counted only while you play</li>
-            <li>16 weapons (4 AR, 3 SMG, 2 shotguns, sniper + DMR, 2 LMGs, 2 pistols, breaching axe)</li>
+            <li>19 weapons (4 AR, 4 SMG incl. the Hornet PDW, 2 shotguns, sniper + DMR + Talon Lever, 2 LMGs, 3 pistols incl. the Stinger-9 machine pistol, breaching axe)</li>
+            <li>4 maps including Ashfield Valley, a big countryside built for Battle Royale</li>
+            <li>Emotes: equip up to 4 and press B in a match</li>
             <li>Gunsmith: 16 attachments in 6 slots, each with a drawback, unlocked by weapon level</li>
             <li>9 perks · frag, smoke, flash, Bulwark deployable cover</li>
             <li>Support abilities from kill streaks: Recon Scan (4), Supply Drop (6), Area Strike (8)</li>

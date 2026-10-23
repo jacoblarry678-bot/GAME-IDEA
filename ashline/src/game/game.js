@@ -129,6 +129,7 @@ export class Game {
   }
 
   pickEmote(slot) {
+    this._pickedEmote = true; // the same number key must not also trigger a support ability this frame
     const it = this.app.profile.look.emotes[slot];
     this.toggleWheel(false);
     if (it) this.player.cmd.emote = it.id;
@@ -261,9 +262,10 @@ export class Game {
     cmd.lethal = inp.isDown('lethal');
     cmd.tactical = inp.isDown('tactical');
     cmd.interact = inp.pressed('interact');
-    if (!this.isRange) SUPPORT_IDS.forEach((id, i) => { if (inp.pressed('support' + (i + 1))) { if (p.abilities[id] > 0) cmd.support = id; else this.hud.popup(`${SUPPORT[id].name.toUpperCase()} NOT READY`, 0, 'medal'); } });
+    if (!this.isRange && !this.wheel.open && !this._pickedEmote) SUPPORT_IDS.forEach((id, i) => { if (inp.pressed('support' + (i + 1))) { if (p.abilities[id] > 0) cmd.support = id; else this.hud.popup(`${SUPPORT[id].name.toUpperCase()} NOT READY`, 0, 'medal'); } });
     cmd.yaw = this.look.yaw;
     cmd.pitch = this.look.pitch;
+    this._pickedEmote = false;
     if (this.isRange) this.rangeInput();
   }
 

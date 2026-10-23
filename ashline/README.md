@@ -1,7 +1,7 @@
 # OPERATION ASHLINE
 
 An original 3D military first-person shooter that runs in the browser. Fast
-movement and gunplay against bots across three maps and seven modes, including a
+movement and gunplay against bots across four maps and seven modes, including a
 mini Battle Royale, with dynamic weather. Everything in
 it is made for this project: the maps, weapons, characters, sounds and music are
 generated in code when the game loads.
@@ -83,6 +83,7 @@ as a claude.ai artifact can't reach a server on your machine; open the server's 
 | Lethal (frag) / Tactical (smoke, flash or Bulwark) | G / Q | RB / LB |
 | Support: Recon Scan / Supply Drop / Area Strike | 3 / 4 / 5 | D-pad ← / ↑ / → |
 | Pick up weapon (Battle Royale) | F | D-pad ↓ |
+| Emote wheel (then 1–4, or aim + click) | B | — (touch: ☺ button) |
 
 **Touch (phones and tablets, landscape)**: left thumb anywhere on the left side = floating move stick (push all the way forward to sprint); drag on the right side to look; FIRE (right, and a second one on the left; dragging while firing also aims); AIM and CROUCH toggle; JUMP, RELOAD, SWAP, MELEE, FRAG, TAC; support abilities 3/4/5 light up when ready; PICK UP appears over Battle Royale loot; pause and scoreboard top right. Settings → Controls → Touch Controls (Auto/On/Off) and Touch Look Sensitivity. The first launch on a phone uses the Low preset with dynamic resolution; the menu has a Fullscreen button (Android; iOS Safari has no page fullscreen); portrait shows a rotate prompt.
 | Scoreboard | Tab | View |
@@ -115,6 +116,11 @@ as a claude.ai artifact can't reach a server on your machine; open the server's 
 - **Update 0.7.0: Hollow Night (Halloween event, 16 Oct – 6 Nov 2026 by the device date)**: matches play at night with a violet sky, moonlight, purple fog and glowing jack-o'-lanterns (Play setup can turn it off). Finished matches earn **Candy** (event-only, never sold) that unlocks an 8-reward free event track automatically; 5 event challenges pay extra Candy; the Store has a Hollow Night section (test credits). 15 new cosmetics: Jack-o'-Lantern, Ectoplasm and Ossuary finishes, Lantern Pumpkin, Rattle Skull and Little Ghost charms, Hollow Night and Pumpkin Patch cards, Jack, Grinning Skull and Night Wing emblems, Hollow Moon and Cobweb banners, Gravewalker and Wraith outfits. Event items stay yours after the event.
 - **Sealed collab drop `drop_002`**: an operator skin with its own outfit, banner and Store collab section ships encrypted (see *Staged content drops*). Same height, hitbox and team markings as every operator.
 - **Update 0.8.0: mobile support**: touch controls (see Controls), no mouse capture on touch, compact menus and HUD on short screens, rotate prompt, Fullscreen button, light graphics by default on phones.
+- **Update 0.9.0**:
+  - **Buffs**: Tarn-556 26 near (4-shot kill up close), Bastion .30 tamer recoil, Hollow-X more damage at range, Rook Auto-12 15 per pellet with a 10-round magazine, Anvil-60 faster reload and ADS, Grizzly .50 faster fire and reload.
+  - **New weapons** (19 total): **Hornet PDW** (50-round top-mag SMG, level 20), **Talon Lever** (lever-action rifle: one-shot headshot inside ~40 m, two to the body anywhere; loads a round at a time; level 22), **Stinger-9** (full-auto machine pistol secondary, level 7). Bots carry them and they drop in Battle Royale.
+  - **Ashfield Valley**: a 180 × 180 m countryside map built for Battle Royale (selected automatically when you pick BR; also runs every other mode): Crossroads Mill with grain silos, Hollow Farm and orchard, Pine Village and chapel, a terraced Quarry, Relay Outpost bunkers, a Rail Siding, a Lumber Yard, the Mill Pond, woods and field cover. BR loot scales with map size (about 84 items here). Default server rotation now ends with BR on Ashfield.
+  - **Emotes** (new cosmetic type, 10): Wave and Salute free; Thumbs Up, Cheer, Laugh by level; Flex, Facepalm, Rail Shuffle, Victory Spin in the Store; Boo! in the Hollow Night Store. Equip up to 4 in Armory → Emotes; press **B** in a match for the wheel. The camera goes third-person while you emote; moving, shooting or taking damage ends it. Other players see your emotes online.
 - **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
@@ -152,7 +158,7 @@ The match simulation does not depend on rendering. `tools/sim.mjs` and
 ## Testing
 
 ```bash
-npm test                         # 234 headless tests (+11 with both vault codes): movement, weapons, damage, modes, economy, maps, weather, BR, XP boost, Hollow Night, vault
+npm test                         # 269 headless tests (+11 with both vault codes): movement, weapons, damage, modes, economy, maps, weather, BR, XP boost, Hollow Night, vault
 npm run sim -- 3 regular 5 dom old_quarter   # bots-only match: minutes, difficulty, bots per team, mode, map
 npm run maps                     # validates spawns, nav connectivity and objectives on every map
 npm run nettest                  # dedicated server with real WebSocket clients
@@ -168,6 +174,7 @@ node tools/weather.mjs           # storm/fog/rain visuals, roofs stop rain, ligh
 node tools/br.mjs                # Battle Royale end to end + Supercharged XP claim → badge → ×2 results
 node tools/halloween.mjs         # Hollow Night event + drop_002 (set VAULT_TEST_CODE_2 for the drop checks)
 node tools/mobile.mjs            # phone viewport with touch: stick, look, fire, toggles, pause, rotate prompt
+node tools/u090.mjs              # emotes (Armory, wheel, third person), new weapons, BR on Ashfield
 npm run build && node tools/onlinebr.mjs   # Battle Royale on the dedicated server in a browser
 node tools/range.mjs             # firing range check
 node tools/beauty.mjs high       # review screenshots from fixed viewpoints
