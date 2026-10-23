@@ -537,7 +537,7 @@ export class Game {
         else if (e.owner === p && e.c.team !== p.team) hud.popup('FLASHED', 0, 'medal');
         break;
       case 'shield': a.play3D('bolt', e.s.x, e.s.y + 0.6, e.s.z, { vol: 0.9, rate: 0.6, ref: 4 }); break;
-      case 'shieldGone': if (e.broken) { a.play3D('impact', e.s.x, e.s.y + 0.6, e.s.z, { vol: 1.2, rate: 0.5, ref: 5 }); fx.explosion?.(e.s.x, e.s.y + 0.5, e.s.z, 0.6); } break;
+      case 'shieldGone': if (e.broken) { a.play3D(a.b.impact?.metal || 'land', e.s.x, e.s.y + 0.6, e.s.z, { vol: 1.2, rate: 0.5, ref: 5 }); fx.explosion?.(e.s.x, e.s.y + 0.5, e.s.z, 0.6); } break;
       case 'supportEarned':
         if (e.c === p) {
           const k = app.input.label('support' + (SUPPORT_IDS.indexOf(e.id) + 1));

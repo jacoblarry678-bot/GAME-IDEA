@@ -384,7 +384,8 @@ export class AudioEngine {
     }
   }
 
-  _pick(x) { return Array.isArray(x) ? x[(Math.random() * x.length) | 0] : x; }
+  /** One buffer from a buffer or a list of variants; anything else (e.g. a sound group) plays nothing instead of throwing. */
+  _pick(x) { const b = Array.isArray(x) ? x[(Math.random() * x.length) | 0] : x; return b && typeof b.getChannelData === 'function' ? b : null; }
 
   /** Non-positional sound. */
   play(name, { vol = 1, rate = 1, bus = 'sfx', delay = 0, send = 0 } = {}) {
