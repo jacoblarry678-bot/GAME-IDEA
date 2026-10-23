@@ -109,6 +109,17 @@ test('snapshots record the game version, and a 1.0.0 save still loads', () => {
   eq(h.chapterId, 2);
 });
 
+test('an Expedition suspend keeps its photo thumbnails until it is resumed', () => {
+  const saves = new Saves();
+  const g = game(2);
+  ok(saves.writeSuspend(g.serialize(), { ph1: 'data:image/jpeg;base64,AAAA' }), 'write');
+  ok(saves.suspend(), 'snapshot');
+  eq(saves.suspendPhotos(), { ph1: 'data:image/jpeg;base64,AAAA' }, 'thumbnails');
+  saves.clearSuspend();
+  ok(!saves.suspend(), 'snapshot consumed');
+  eq(saves.suspendPhotos(), {}, 'thumbnails consumed with it');
+});
+
 test('loading re-checks evidence whose source is already satisfied', () => {
   const g = game(4);
   g.story.flags['ch4.mugSeen'] = true;

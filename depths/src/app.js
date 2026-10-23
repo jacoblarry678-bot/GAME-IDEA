@@ -246,6 +246,7 @@ export class App {
   resumeExpedition() {
     const snap = this.saves.suspend();
     if (!snap) return;
+    this.photos.load(this.saves.suspendPhotos());
     this.saves.clearSuspend(); // a suspend is consumed when resumed
     this.slot = null; this.replay = true; this.expedition = true;
     const g = this._newGame({ replay: true });
@@ -334,7 +335,7 @@ export class App {
   /** Quitting an Expedition keeps a suspend snapshot (consumed when resumed). */
   suspendExpedition() {
     const g = this.game;
-    if (g && g.mode === 'expedition' && !g.over) this.saves.writeSuspend(g.serialize());
+    if (g && g.mode === 'expedition' && !g.over) { const snap = g.serialize(); this.saves.writeSuspend(snap, this.photos.exportThumbs(snap.photos.map((p) => p.id))); }
     this.quitToMenu();
   }
   saveAndQuit() {
@@ -620,7 +621,7 @@ export class App {
     if (g.mode === 'expedition') {
       if (ev.reason === 'expedition start') { this.hud.saved('Checkpoint reached', where); return; }
       // a crash keeps the last refuge snapshot
-      if (this.saves.writeSuspend(g.checkpoint)) this.hud.saved('Checkpoint saved', `${where} · resume point for this run`);
+      if (this.saves.writeSuspend(g.checkpoint, this.photos.exportThumbs(g.checkpoint.photos.map((p) => p.id)))) this.hud.saved('Checkpoint saved', `${where} · resume point for this run`);
       else this.hud.toast('Could not save. Your previous checkpoint is intact.');
       return;
     }

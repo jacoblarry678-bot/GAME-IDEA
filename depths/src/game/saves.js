@@ -75,9 +75,14 @@ export class Saves {
   finale(n) { return unpack(loadRaw(this.key(n, 'finale'))); }
 
   /** Expedition suspend snapshot: written on quit (and at refuges), consumed when resumed. */
-  writeSuspend(snap) { return saveRaw('expedition.suspend', pack(snap)); }
+  writeSuspend(snap, photos = null) {
+    if (!saveRaw('expedition.suspend', pack(snap))) return false;
+    if (photos) saveRaw('expedition.suspendPhotos', JSON.stringify(photos));
+    return true;
+  }
   suspend() { return unpack(loadRaw('expedition.suspend')); }
-  clearSuspend() { remove('expedition.suspend'); }
+  suspendPhotos() { try { return JSON.parse(loadRaw('expedition.suspendPhotos') || '{}'); } catch { return {}; } }
+  clearSuspend() { remove('expedition.suspend'); remove('expedition.suspendPhotos'); }
 
   erase(n) { for (const p of ['active', 'backup', 'tmp', 'meta', 'photos', 'manual0', 'manual1', 'manual2', 'manualIdx', 'finale']) remove(this.key(n, p)); }
 
