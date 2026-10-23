@@ -70,6 +70,8 @@ export const DEFAULT_SETTINGS = {
     padDeadzone: 0.12,
     padInvertY: false,
     padVibration: true,
+    touchControls: 'auto',
+    touchSens: 1.0,
   },
   audio: { master: 0.8, music: 0.5, sfx: 0.9, dialogue: 0.8, ui: 0.7 },
   interface: {
@@ -125,6 +127,8 @@ export const SETTINGS_SCHEMA = [
     { key: '_vsync', label: 'V-Sync', type: 'info', text: 'Controlled by the browser (always synced to the display). Use Frame Rate Limit to cap lower.' },
   ] },
   { tab: 'Controls', items: [
+    { key: 'controls.touchControls', label: 'Touch Controls', type: 'select', options: [['auto', 'Auto (on touch screens)'], ['on', 'On'], ['off', 'Off']], note: 'On-screen move stick, look-by-drag and buttons for phones and tablets.' },
+    { key: 'controls.touchSens', label: 'Touch Look Sensitivity', type: 'slider', min: 0.3, max: 3, step: 0.05, fmt: (v) => v.toFixed(2) },
     { key: 'controls.sensitivity', label: 'Mouse Sensitivity', type: 'slider', min: 0.2, max: 10, step: 0.1, fmt: (v) => v.toFixed(1) },
     { key: 'controls.adsSensitivity', label: 'ADS Sensitivity Multiplier', type: 'slider', min: 0.2, max: 1.5, step: 0.05, fmt: (v) => v.toFixed(2) },
     { key: 'controls.invertY', label: 'Invert Vertical Look', type: 'toggle' },
@@ -178,7 +182,9 @@ export const TEAM_COLORS = {
 
 export class Settings {
   constructor() {
-    this.data = mergeDefaults(DEFAULT_SETTINGS, load('settings', null));
+    const saved = load('settings', null);
+    this.loadedFromSave = !!saved;
+    this.data = mergeDefaults(DEFAULT_SETTINGS, saved);
     // fill bindings for any new actions
     for (const k of Object.keys(DEFAULT_BINDINGS)) {
       if (!Array.isArray(this.data.controls.bindings[k])) this.data.controls.bindings[k] = DEFAULT_BINDINGS[k].slice();

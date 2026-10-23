@@ -2,6 +2,7 @@
  * App: boot sequence, shared systems, screen flow and the main loop.
  * launch → menu → setup/loadout → match → results → play again / menu
  */
+import { TouchControls, isTouchDevice } from './ui/touch.js';
 import * as THREE from 'three';
 import { Engine } from './core/engine.js';
 import { Input } from './core/input.js';
@@ -54,6 +55,9 @@ export class App {
     await nextFrame();
     this.engine = new Engine(this.canvas, this.settings);
     this.input = new Input(this.canvas, this.settings);
+    // first launch on a phone/tablet: lighter graphics so it runs smoothly
+    if (isTouchDevice() && !this.settings.loadedFromSave) { this.settings.set('graphics.preset', 'low'); this.settings.set('graphics.dynamicRes', true); }
+    this.touch = new TouchControls(this);
     this.audio = new AudioEngine(this.settings);
     progress(0.18, 'Generating materials');
     await nextFrame();
@@ -251,6 +255,7 @@ export class App {
     this.input.exitLock();
     this.removeLockHint();
     this.screens.show('pause');
+    this.touch?.update(); // hide the on-screen controls right away so the menu is tappable
   }
 
   resumeMatch() {
@@ -350,8 +355,23 @@ export class App {
     this.lastResult = result;
   }
 
+  /** Phones in portrait: ask to rotate (the game is landscape). */
+  updateRotateHint() {
+    const portrait = this.input.touch.active && window.innerHeight > window.innerWidth;
+    let h = document.getElementById('rotate-hint');
+    if (portrait && !h) { h = document.createElement('div'); h.id = 'rotate-hint'; h.innerHTML = '<div class="rot-ic">⟳</div><div>Rotate your device to landscape</div>'; document.getElementById('app').appendChild(h); }
+    else if (!portrait && h) h.remove();
+  }
+
+  /** Fullscreen + landscape lock where the browser allows it (Android Chrome; iOS Safari has no fullscreen API for pages). */
+  async goFullscreen() {
+    try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch { /* not supported */ }
+    try { await screen.orientation?.lock?.('landscape'); } catch { /* not supported */ }
+  }
+
   updateLockHint() {
     this.removeLockHint();
+    if (this.input.touch.active) return;
     if (this.state !== 'match-live' || this.input.locked || !this.input.lockSupported()) return;
     if (performance.now() - this.input.lastLockFail < 60000) return; // fallback mode: mouse works unlocked
     const h = document.createElement('div');
@@ -401,6 +421,8 @@ export class App {
     this.engine.stat(now);
     this.engine.adaptResolution(now);
     this.input.poll();
+    this.touch?.update();
+    this.updateRotateHint?.();
     try {
       if (this.game) {
         // controller pause / resume

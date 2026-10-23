@@ -201,11 +201,13 @@ const SCREENS = {
           <div><span class="pill on">Offline vs bots</span> <span class="pill">Online: self-hosted server (npm run server)</span></div>
           <div style="margin-top:8px">Operator <b style="color:var(--text)">${esc(prof.name)}</b> · progress is saved in this browser only.</div>
           <div class="dim" id="device-hint" style="margin-top:4px"></div>
-          ${matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches ? '<div style="margin-top:8px;color:var(--accent-2)">This game needs a keyboard and mouse or a game controller. Touch controls are not supported.</div>' : ''}
+          ${app.input.touch.active ? '<div style="margin-top:8px"><button class="btn" data-act="fullscreen">Fullscreen</button> <span class="dim">Touch controls on · play in landscape</span></div>' : ''}
         </div>
       </div>`;
     node.querySelectorAll('[data-go]').forEach((b) => { b.onclick = () => app.screens.push(b.dataset.go); });
     node.querySelector('[data-act=range]').onclick = () => app.startRange();
+    const fs = node.querySelector('[data-act=fullscreen]');
+    if (fs) fs.onclick = () => app.goFullscreen();
     const side = document.createElement('div');
     side.className = 'menu-side';
     const renderSide = () => {

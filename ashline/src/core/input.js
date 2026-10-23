@@ -31,6 +31,8 @@ export class Input {
     this.padAxes = [0, 0, 0, 0];
     this.listeners = { lockchange: [], pause: [], device: [] };
     this.lastLockFail = 0;
+    // touch controls feed virtual actions here (see ui/touch.js)
+    this.touch = { active: false, seen: false, down: new Set(), pressed: new Set(), move: { x: 0, y: 0 } };
     this._bind();
   }
 
@@ -101,7 +103,7 @@ export class Input {
   lockSupported() { return 'pointerLockElement' in document && typeof this.target.requestPointerLock === 'function'; }
 
   requestLock() {
-    if (!this.lockSupported()) return;
+    if (!this.lockSupported() || this.touch.active) return; // no mouse capture with touch controls
     try {
       const p = this.target.requestPointerLock({ unadjustedMovement: true });
       if (p && p.catch) p.catch(() => {
@@ -118,6 +120,7 @@ export class Input {
   binding(action) { return this.settings.data.controls.bindings[action] || []; }
 
   isDown(action) {
+    if (this.touch.down.has(action)) return true;
     for (const c of this.binding(action)) if (c && this.down.has(c)) return true;
     const pb = PAD_ACTIONS[action];
     if (pb !== undefined && this.padNow[pb]) return true;
@@ -125,6 +128,7 @@ export class Input {
   }
 
   pressed(action) {
+    if (this.touch.pressed.has(action)) return true;
     for (const c of this.binding(action)) if (c && this.pressedSet.has(c)) return true;
     const pb = PAD_ACTIONS[action];
     if (pb !== undefined && this.padNow[pb] && !this.padPrev[pb]) return true;
@@ -186,16 +190,20 @@ export class Input {
   endFrame() {
     this.pressedSet.clear();
     this.releasedSet.clear();
+    this.touch.pressed.clear();
     this.mouseDX = 0; this.mouseDY = 0;
   }
 
   /** Human-readable label for an action given the active device. */
   label(action) {
+    if (this.device === 'touch') return TOUCH_LABELS[action] || '';
     if (this.device === 'pad' && PAD_ACTIONS[action] !== undefined) return PAD_LABELS[PAD_ACTIONS[action]];
     const b = this.binding(action);
     return codeLabel(b[0] || b[1] || '');
   }
 }
+
+const TOUCH_LABELS = { jump: 'JUMP', fire: 'FIRE', reload: 'RELOAD', interact: 'PICK UP', lethal: 'FRAG', tactical: 'TAC', support1: '3', support2: '4', support3: '5', crouch: 'CROUCH', swap: 'SWAP', melee: 'MELEE' };
 
 export function codeLabel(code) {
   if (!code) return '—';

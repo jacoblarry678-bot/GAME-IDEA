@@ -64,7 +64,9 @@ export class Hud {
   applySettings() {
     const s = this.app.settings.data;
     const r = this.root.style;
-    document.documentElement.style.setProperty('--hud-scale', s.interface.hudScale);
+    // small touch screens get a smaller HUD so the on-screen buttons have room
+    const small = matchMedia('(max-height: 520px)').matches && this.app.input?.touch.active;
+    document.documentElement.style.setProperty('--hud-scale', s.interface.hudScale * (small ? 0.7 : 1));
     r.setProperty('--xh-color', s.interface.crosshairColor);
     r.setProperty('--xh-size', s.interface.crosshairSize);
     const style = s.interface.crosshair;

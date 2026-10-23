@@ -183,6 +183,12 @@ export class Game {
     let mx = (inp.isDown('right') ? 1 : 0) - (inp.isDown('left') ? 1 : 0);
     let mz = (inp.isDown('forward') ? 1 : 0) - (inp.isDown('back') ? 1 : 0);
     if (inp.pad) { mx += inp.padAxes[0]; mz -= inp.padAxes[1]; }
+    const T = inp.touch;
+    if (T.active) {
+      mx += T.move.x; mz += T.move.y;
+      if (T.pressed.has('crouch')) this.crouchToggle = !this.crouchToggle; // touch crouch is always a toggle
+      if (T.pressed.has('ads')) this.adsToggle = !this.adsToggle; // and so is aim
+    }
     cmd.moveX = Math.max(-1, Math.min(1, mx));
     cmd.moveZ = Math.max(-1, Math.min(1, mz));
     // sprint: keyboard follows the hold/toggle setting; controller L3 click always latches
@@ -190,7 +196,7 @@ export class Game {
     if (inp.pad && inp.padPressed(PAD.L3)) this.sprintToggle = true;
     if (ctl.sprintMode === 'toggle' && kbSprintPressed) this.sprintToggle = !this.sprintToggle;
     if (cmd.moveZ < 0.3) this.sprintToggle = false;
-    const sprint = this.sprintToggle || (ctl.sprintMode === 'hold' && inp.bindDown('sprint'));
+    const sprint = this.sprintToggle || (ctl.sprintMode === 'hold' && inp.bindDown('sprint')) || (T.active && T.move.y > 0.93); // touch: full push forward sprints
     // crouch: keyboard hold/toggle; controller B toggles
     const kbCrouchPressed = inp.bindPressed('crouch');
     if ((ctl.crouchMode === 'toggle' && kbCrouchPressed) || (inp.pad && inp.padPressed(PAD.B))) this.crouchToggle = !this.crouchToggle;
@@ -204,8 +210,8 @@ export class Game {
     cmd.crouch = crouch;
     cmd.jump = inp.isDown('jump');
     cmd.fire = inp.isDown('fire');
-    if (ctl.adsMode === 'toggle') { if (inp.pressed('ads')) this.adsToggle = !this.adsToggle; if (p.sprinting) this.adsToggle = false; cmd.ads = this.adsToggle; }
-    else cmd.ads = inp.isDown('ads');
+    if (ctl.adsMode === 'toggle' && !T.active) { if (inp.pressed('ads')) this.adsToggle = !this.adsToggle; if (p.sprinting) this.adsToggle = false; cmd.ads = this.adsToggle; }
+    else cmd.ads = T.active ? (p.sprinting ? (this.adsToggle = false) : this.adsToggle) : inp.isDown('ads');
     cmd.reload = inp.isDown('reload');
     cmd.swap = inp.pressed('swap');
     if (inp.pressed('primary')) cmd.swapTo = 0;
