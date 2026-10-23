@@ -64,7 +64,7 @@ export class Cutout extends Creature {
       // hunt the nearest living player (or drift toward the glass in a demonstration)
       let best = null, bd = Infinity;
       for (const p of g.players.values()) { if (!p.alive || g.inRefugeVolume(p)) continue; const d = Math.hypot(p.x - this.x, p.z - this.z); if (d < bd) { bd = d; best = p; } }
-      if (!best) { this.moving = false; return; }
+      if (!best) { this.moving = false; this.target = null; return; } // everyone is inside a refuge: nobody is being hunted
       this.target = best.id;
       if (this.moveTo(best.x, best.z, this.S.pursue * g.D.pursuit, dt)) this.moving = false;
       if (this.mode === 'hunt' && g.time >= this.recoverUntil) this.tryContact();
