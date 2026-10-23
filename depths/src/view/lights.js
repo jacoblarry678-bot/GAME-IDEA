@@ -95,7 +95,8 @@ export class LightRig {
       this.spot.target.position.copy(cam.position).addScaledVector(fwd, 10);
       if (p.charge > 0) {
         let k = 1;
-        if (p.charge < 10) k = (Math.sin(game.time * 31) > 0.3 || Math.sin(game.time * 7) > 0.9) ? 0.35 : 0.85;
+        // low charge flickers, or holds a steady dim beam with Steady lights on
+        if (p.charge < 10) k = this.settings.data.accessibility.steadyLights ? 0.55 : (Math.sin(game.time * 31) > 0.3 || Math.sin(game.time * 7) > 0.9) ? 0.35 : 0.85;
         this.spot.intensity = 34 * k;
         this.reserve.intensity = 0;
       } else {

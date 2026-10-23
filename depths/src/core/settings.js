@@ -137,7 +137,7 @@ export const SETTINGS_SCHEMA = [
   ] },
   { tab: 'Visual comfort', items: [
     { key: 'accessibility.flashIntensity', label: 'Camera flash intensity', type: 'slider', min: 0.1, max: 1, step: 0.1, fmt: (v) => (v <= 0.3 ? 'Gentle fade' : `${Math.round(v * 100)}%`) },
-    { key: 'accessibility.steadyLights', label: 'Steady lights', type: 'toggle', note: 'Replaces flickering fluorescent tubes with a steady dim state.' },
+    { key: 'accessibility.steadyLights', label: 'Steady lights', type: 'toggle', note: 'Replaces flickering fluorescent tubes and a low flashlight\'s flicker with a steady dim state.' },
     { key: 'accessibility.grain', label: 'Film grain', type: 'toggle' },
     { key: 'accessibility.aberration', label: 'Chromatic aberration', type: 'toggle' },
     { key: 'accessibility.cameraBob', label: 'Camera bob', type: 'slider', min: 0, max: 1, step: 0.1, fmt: (v) => `${Math.round(v * 100)}%` },
