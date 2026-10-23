@@ -75,5 +75,6 @@ function secure(game, room, p) {
   for (const q of game.players.values()) if (q.room === room.id) q.revivedOnce = false;
   game.fx('refugeSecured', { room: room.id, pid: p.id });
   if (game.script.onRefugeSecured) game.script.onRefugeSecured(game, room, p);
-  game.requestCheckpoint('refuge');
+  // save the refuge moment itself: a save deferred for someone's action could land after the crew walked back out
+  if (game.transition) game.requestCheckpoint('refuge'); else game.makeCheckpoint('refuge');
 }
