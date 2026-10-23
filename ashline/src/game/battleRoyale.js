@@ -308,15 +308,17 @@ export const BATTLE_ROYALE = {
   botGoal(match, bot) {
     const c = bot.c;
     let best = null, bs = -Infinity;
-    for (const it of match.loot) {
+    const lateCold = match.ceasefireT > 0 && match.ceasefireT < 10; // spread out before weapons go hot
+    for (const it of lateCold ? [] : match.loot) {
       const d = Math.hypot(it.x - c.x, it.z - c.z);
       if (d > 45) continue;
       let s = -d;
       if (it.kind === 'weapon') { const gain = weaponTier(it.wid) - weaponTier(c.weapons[0].def.id); if (gain <= 0) continue; s += gain * 18; }
       else if (wants(c, it)) s += it.kind === 'medkit' && c.health < 60 ? 25 : 6;
       else continue;
-      // skip loot another bot is already heading for
+      // skip loot another bot is already heading for, and loot where others are standing
       if (match.combatants.some((o) => o !== c && o.brain && o.alive && o.brain.goalName === 'loot ' + it.id)) s -= 30;
+      for (const o of match.combatants) if (o !== c && o.alive && Math.hypot(o.x - it.x, o.z - it.z) < 9) s -= 14;
       if (s > bs) { bs = s; best = it; }
     }
     if (best && !outsidePoint(match, best.x, best.z)) return { x: best.x, z: best.z, name: 'loot ' + best.id, hold: 0.3 };

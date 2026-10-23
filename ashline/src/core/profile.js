@@ -8,7 +8,7 @@
  * local storage. A real release would validate all of this on a server.
  */
 import { WEATHER_OPTIONS } from '../game/weather.js';
-import { XP_EVENT } from '../data/events.js';
+import { XP_EVENT, HOLLOW_NIGHT, eventActive } from '../data/events.js';
 import { load, save, mergeDefaults } from './storage.js';
 import { WEAPONS, EQUIPMENT, PRIMARY_IDS } from '../data/weapons.js';
 import { sanitizeBuild, attachmentsFor, ATTACHMENTS, ATTACH_SLOTS, MAX_ATTACHMENTS } from '../data/attachments.js';
@@ -41,7 +41,7 @@ const DEFAULT_PROFILE = {
     { name: 'OVERWATCH', primary: 'sr_longreach', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
     { name: 'CUSTOM 5', primary: 'ar_kv7', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
   ],
-  matchSetup: { mode: 'tdm', map: 'cinder_yard', botsAllies: 4, botsEnemies: 5, difficulty: 'regular', scoreLimit: 75, timeLimit: 10, friendlyFire: false, weather: 'dynamic' },
+  matchSetup: { mode: 'tdm', map: 'cinder_yard', botsAllies: 4, botsEnemies: 5, difficulty: 'regular', scoreLimit: 75, timeLimit: 10, friendlyFire: false, weather: 'dynamic', halloween: true },
   career: { matches: 0, wins: 0, losses: 0, draws: 0, kills: 0, deaths: 0, assists: 0, headshots: 0, shots: 0, hits: 0, score: 0, bestStreak: 0, timePlayed: 0 },
   lastMatchId: null,
   level: 1,
@@ -57,6 +57,7 @@ const DEFAULT_PROFILE = {
   purchases: [],
   notices: [],
   boosts: { xpSeconds: 0, gifts: {} }, // Supercharged XP: seconds of match time left; claimed event gifts
+  events: {}, // limited-time events: { [id]: { candy, prog: { challengeId: n }, done: { challengeId: true } } }
 };
 
 export class Profile {
@@ -69,6 +70,7 @@ export class Profile {
     this.data.equipped.weapons = isObj(saved?.equipped?.weapons) ? { ...saved.equipped.weapons } : {};
     this.data.pass.claimed = { free: { ...(saved?.pass?.claimed?.free || {}) }, premium: { ...(saved?.pass?.claimed?.premium || {}) } };
     this.data.boosts.gifts = isObj(saved?.boosts?.gifts) ? { ...saved.boosts.gifts } : {};
+    this.data.events = isObj(saved?.events) ? structuredClone(saved.events) : {};
     this.data.purchases = Array.isArray(saved?.purchases) ? saved.purchases.slice(-200) : [];
     this.data.challenges = isObj(saved?.challenges) ? saved.challenges : DEFAULT_PROFILE.challenges;
     this.data.notices = [];
@@ -85,6 +87,12 @@ export class Profile {
     if (!isObj(d.boosts)) d.boosts = { xpSeconds: 0, gifts: {} };
     if (!isObj(d.boosts.gifts)) d.boosts.gifts = {};
     d.boosts.xpSeconds = Math.max(0, Math.min(XP_EVENT.seconds, Number(d.boosts.xpSeconds) || 0));
+    for (const [k, ev] of Object.entries(d.events)) {
+      if (!isObj(ev)) { delete d.events[k]; continue; }
+      ev.candy = Math.max(0, Math.min(100000, Math.floor(Number(ev.candy) || 0)));
+      ev.prog = isObj(ev.prog) ? ev.prog : {};
+      ev.done = isObj(ev.done) ? ev.done : {};
+    }
     d.level = clampInt(d.level, 1, MAX_LEVEL);
     const ok = (id, slot) => WEAPONS[id]?.slot === slot && this.weaponUnlocked(id);
     const eqOk = (id, slot) => EQUIPMENT[id]?.slot === slot && d.level >= (EQUIPMENT[id].unlockLevel || 1);
@@ -201,6 +209,7 @@ export class Profile {
       if (u.type === 'level') ok = this.data.level >= u.level;
       else if (u.type === 'weapon') ok = (this.data.weaponProgress[u.weapon]?.level || 1) >= u.level;
       else if (u.type === 'operator') ok = this.owns(u.operator);
+      else if (u.type === 'event') ok = (this.data.events[u.event]?.candy || 0) >= u.candy;
       if (ok) { this.data.owned[it.id] = { t: Date.now(), src: u.type, seen: silent }; got.push(it); }
     }
     return got;
@@ -255,7 +264,8 @@ export class Profile {
       case 'level': return `Reach player level ${u.level}`;
       case 'weapon': return `Reach ${WEAPONS[u.weapon].name} level ${u.level}`;
       case 'pass': return `Battle Pass tier ${u.tier} (${u.track === 'premium' ? 'Premium' : 'Free'} track)`;
-      case 'shop': return u.collab ? 'Collab item · Store (Collabs section)' : 'Available in the Store';
+      case 'shop': return u.collab ? 'Collab item · Store (Collabs section)' : u.event ? `${HOLLOW_NIGHT.name} event · Store (while the event runs)` : 'Available in the Store';
+      case 'event': return `${HOLLOW_NIGHT.name} event track · ${u.candy} Candy`;
       case 'operator': return `Comes with ${COSMETICS[u.operator].name}`;
       default: return '';
     }
@@ -401,6 +411,7 @@ export class Profile {
   buyItem(id) {
     const it = COSMETICS[id];
     if (!it || it.unlock.type !== 'shop') return { ok: false, reason: 'unavailable' };
+    if (it.unlock.event && !eventActive(HOLLOW_NIGHT, this.now())) return { ok: false, reason: 'unavailable' };
     if (this.owns(id)) return { ok: false, reason: 'owned' };
     const price = itemPrice(id);
     if (this.data.credits < price) return { ok: false, reason: 'funds', need: price - this.data.credits };
@@ -413,7 +424,7 @@ export class Profile {
 
   buyBundle(bundleId) {
     const b = BUNDLES.find((x) => x.id === bundleId);
-    if (!b) return { ok: false, reason: 'unavailable' };
+    if (!b || (b.event && !eventActive(HOLLOW_NIGHT, this.now()))) return { ok: false, reason: 'unavailable' };
     const { price, ownedCount } = bundlePrice(b, this.data.owned);
     if (ownedCount === b.items.length) return { ok: false, reason: 'owned' };
     if (this.data.credits < price) return { ok: false, reason: 'funds', need: price - this.data.credits };
@@ -450,6 +461,46 @@ export class Profile {
     const report = summary ? this.applyRewards(result, stats, seconds, summary) : null;
     this.save();
     return report || { xp: [] };
+  }
+
+  /** Device clock (tests can replace it). */
+  now() { return Date.now(); }
+
+  /** Event state (created on first use). */
+  eventState(id = HOLLOW_NIGHT.id) {
+    const e = this.data.events;
+    if (!isObj(e[id])) e[id] = { candy: 0, prog: {}, done: {} };
+    return e[id];
+  }
+
+  /**
+   * Hollow Night: Candy for a finished match, event challenge progress, and
+   * the free track (items unlock automatically at their Candy totals).
+   * Returns null when the event isn't running.
+   */
+  applyEvent(result, stats, s) {
+    const ev = HOLLOW_NIGHT;
+    if (!eventActive(ev, this.now())) return null;
+    const st = this.eventState(ev.id), C = ev.candy;
+    const top3 = s.brPlace > 0 && s.brPlace <= 3;
+    const lines = [['Match played', C.match]];
+    if (result === 'win') lines.push(['Win', C.win]);
+    if (stats.kills) lines.push([`Eliminations ×${stats.kills}`, stats.kills * C.kill]);
+    if (stats.headshots) lines.push([`Headshots ×${stats.headshots}`, stats.headshots * C.headshot]);
+    if (top3) lines.push(['Battle Royale top 3', C.top3]);
+    const vals = { matches: 1, kills: stats.kills || 0, headshots: stats.headshots || 0, meleeKills: s.meleeKills || 0, brTop3: top3 ? 1 : 0 };
+    const completed = [];
+    for (const ch of ev.challenges) {
+      if (st.done[ch.id]) continue;
+      st.prog[ch.id] = Math.min(ch.goal, (st.prog[ch.id] || 0) + (vals[ch.stat] || 0));
+      if (st.prog[ch.id] >= ch.goal) { st.done[ch.id] = true; completed.push(ch); lines.push([`Event challenge: ${ch.text}`, ch.candy]); }
+    }
+    const gained = lines.reduce((a, [, v]) => a + v, 0);
+    const before = st.candy;
+    st.candy += gained;
+    const unlocked = [];
+    for (const t of ev.track) if (st.candy >= t.candy && !this.owns(t.item)) { const r = this.grant(t.item, 'event'); if (r.ok && !r.duplicate) unlocked.push(r.item); }
+    return { lines, gained, before, candy: st.candy, completed, unlocked, next: ev.track.find((t) => st.candy < t.candy) || null };
   }
 
   /** Seconds of Supercharged XP left (counts down only in matches). */
@@ -511,6 +562,7 @@ export class Profile {
       unlocks: [...lv.unlocks, ...weaponUnlocks], weapons, challenges: completed, newWeapons: this.weaponsUnlockedBetween(levelBefore, this.data.level),
       pass: { from: passBefore, to: pass.to, xp: this.data.pass.xp },
       boost: boosted ? { mult, left: this.data.boosts.xpSeconds } : null,
+      event: this.applyEvent(result, stats, s),
     };
   }
 }

@@ -63,6 +63,7 @@ function validContent(p) {
     if (it.type === 'outfit' && (!it.outfit || !it.operator)) return false;
   }
   if (p.bundle && (!ID_RE.test(p.bundle.id) || !Array.isArray(p.bundle.items))) return false;
+  if (p.collabDef && (!ID_RE.test(p.collabDef.id) || typeof p.collabDef.name !== 'string' || typeof p.collabDef.blurb !== 'string')) return false;
   return true;
 }
 
@@ -70,6 +71,8 @@ function apply(entry, p) {
   if (opened.has(entry.id)) return opened.get(entry.id);
   for (const it of p.cosmetics) if (!COSMETICS[it.id]) registerCosmetic({ ...it, vault: entry.id });
   if (p.bundle && !BUNDLES.some((b) => b.id === p.bundle.id)) BUNDLES.push({ discount: 0, ...p.bundle, vault: entry.id });
+  // a drop can bring a new collaboration (its Store section stays hidden until then)
+  if (p.collabDef && !COLLABS.some((c) => c.id === p.collabDef.id)) COLLABS.push({ id: p.collabDef.id, name: p.collabDef.name, blurb: p.collabDef.blurb, bundle: p.collabDef.bundle || null, items: [], vault: entry.id });
   if (p.collab) {
     const c = COLLABS.find((x) => x.id === p.collab);
     if (c) for (const it of p.cosmetics) if (it.unlock.type === 'shop' && !c.items.includes(it.id)) c.items.push(it.id);

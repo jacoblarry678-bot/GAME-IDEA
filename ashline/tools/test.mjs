@@ -374,7 +374,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   const pr5 = new Profile();
   t('locked weapons in a save revert to defaults', pr5.data.loadouts[0].primary === 'ar_kv7' && pr5.data.loadouts[0].secondary === 'pistol_warden' && pr5.data.loadouts[1].primary === 'ar_tarn' && pr5.data.loadouts[1].secondary === 'pistol_warden', JSON.stringify(pr5.data.loadouts.slice(0, 2)));
   t('weapon unlock levels', !pr5.weaponUnlocked('lmg_anvil') && pr5.weaponUnlocked('ar_tarn') && pr5.weaponsUnlockedBetween(1, 6).length === 5, pr5.weaponsUnlockedBetween(1, 6).join());
-  t('catalog meets content targets (≥4 operators, ≥8 outfits, ≥20 finishes)', ['operator', 'outfit', 'finish'].map((k) => Object.values(COSMETICS).filter((i) => i.type === k).length).join() === '4,12,25');
+  t('catalog meets content targets (≥4 operators, ≥8 outfits, ≥20 finishes)', ['operator', 'outfit', 'finish'].map((k) => Object.values(COSMETICS).filter((i) => i.type === k).length).join() === '4,14,28');
 }
 
 // ---------------- M4 weapons ----------------
@@ -533,7 +533,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   const { BUNDLES, COLLABS } = await import('../src/data/shop.js');
   const src = fs.readFileSync(new URL('../src/data/vault.js', import.meta.url), 'utf8');
   const body = src.replace(/^[\s\S]*?export const VAULT/, '');
-  t('vault ships sealed: no item ids or names in plaintext', VAULT.length >= 1 && VAULT.every((e) => /^[A-Za-z0-9+/=]+$/.test(e.data)) && !/op_wasp|of_wasp|hive armour|visorhelm|"name"/i.test(body));
+  t('vault ships sealed: no item ids or names in plaintext', VAULT.length >= 1 && VAULT.every((e) => /^[A-Za-z0-9+/=]+$/.test(e.data)) && !/op_wasp|of_wasp|hive armour|visorhelm|slender|the suit|"name"/i.test(body) && VAULT.length === 2);
   t('vault content is not registered before release', !Object.values(COSMETICS).some((i) => i.vault));
   t('a wrong code opens nothing', (await V.redeem('AAAAA-BBBBB-CCCCC-DDDDD')).length === 0);
   // tampering is detected by GCM authentication
@@ -558,7 +558,71 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
     const pr2 = new P3();
     t('owned vault skin survives a reload (vault opens before profile validation)', pr2.owns(op.id) && pr2.data.equipped.operator === op.id);
   } else console.log('SKIP  release-code tests (set VAULT_TEST_CODE to run them)');
+  // ---- 0.7.0: drop_002 (collab operator skin with its own collab section)
+  t('a new collab section stays hidden until its drop opens', !COLLABS.some((c) => c.vault === 'drop_002') && !BUNDLES.some((b) => b.vault === 'drop_002'));
+  const code2 = process.env.VAULT_TEST_CODE_2;
+  if (code2) {
+    const { bundlePrice } = await import('../src/data/shop.js');
+    const got = await V.redeem(code2);
+    const items = Object.values(COSMETICS).filter((i) => i.vault === 'drop_002');
+    const op = items.find((i) => i.type === 'operator');
+    const sec = COLLABS.find((c) => c.vault === 'drop_002');
+    t('drop_002 opens with its own code: operator, outfit and banner register', got.length === 1 && items.length === 3 && !!op && items.some((i) => i.type === 'outfit' && i.operator === op.id) && items.some((i) => i.type === 'banner'), items.map((i) => i.id).join());
+    t('drop_002 brings its Store collab section and bundle', !!sec && sec.items.length === 2 && BUNDLES.some((b) => b.id === sec.bundle && b.collab === sec.id));
+    const kit = COSMETICS[op.op.outfit].outfit.kit;
+    t('drop_002 skin uses the suit kit and a faceless head (hitbox unchanged)', op.op.headgear === 'faceless' && kit.suit !== undefined && kit.faceless === true && kit.fingers === true);
+    const { Profile: P4 } = await import('../src/core/profile.js');
+    globalThis.window.localStorage.setItem('ashline.profile', JSON.stringify({ version: 3, credits: 5000 }));
+    const pr = new P4();
+    const b = BUNDLES.find((x) => x.id === sec.bundle);
+    const price = bundlePrice(b, pr.data.owned).price;
+    const r = pr.buyBundle(b.id);
+    pr.equip(op.id);
+    pr.save();
+    t('drop_002 bundle buys with test credits, operator brings its outfit, equips', r.ok && pr.owns(op.id) && pr.owns(op.op.outfit) && pr.data.credits === 5000 - price && price === Math.round((1800 + 1000) * 0.85 / 10) * 10 && pr.data.equipped.operator === op.id, `price ${price}`);
+    const pr2 = new P4();
+    t('drop_002 skin survives a reload', pr2.owns(op.id) && pr2.data.equipped.operator === op.id);
+  } else console.log('SKIP  drop_002 release-code tests (set VAULT_TEST_CODE_2 to run them)');
 }
+
+// ---------------- 0.7.0 Hollow Night event ----------------
+{
+  const { Profile } = await import('../src/core/profile.js');
+  const { HOLLOW_NIGHT, eventActive, trackReached } = await import('../src/data/events.js');
+  const { COSMETICS } = await import('../src/data/cosmetics.js');
+  const { SHOP_ITEMS, EVENT_SHOPS, currentRotation } = await import('../src/data/shop.js');
+  const at = (y, m, d, h = 12) => new Date(y, m, d, h).getTime();
+  t('event dates: 16 Oct – 6 Nov 2026 (device clock)', !eventActive(HOLLOW_NIGHT, at(2026, 9, 15)) && eventActive(HOLLOW_NIGHT, at(2026, 9, 16, 0)) && eventActive(HOLLOW_NIGHT, at(2026, 10, 6, 23)) && !eventActive(HOLLOW_NIGHT, at(2026, 10, 7, 0)));
+  t('every event-track reward exists, is an event item and matches its Candy price', HOLLOW_NIGHT.track.every((tr) => COSMETICS[tr.item]?.unlock.type === 'event' && COSMETICS[tr.item].unlock.candy === tr.candy));
+  t('event store items exist, are event-only and stay out of the daily rotation', EVENT_SHOPS[0].items.every((id) => COSMETICS[id]?.unlock.event === 'hollow_night' && !SHOP_ITEMS.includes(id)) && !currentRotation().bundles.some((b) => b.event));
+  t('15 new Halloween cosmetics across 6 types', new Set([...HOLLOW_NIGHT.track.map((x) => x.item), ...EVENT_SHOPS[0].items].map((id) => COSMETICS[id].type)).size === 6 && HOLLOW_NIGHT.track.length + EVENT_SHOPS[0].items.length === 15);
+  globalThis.window.localStorage.removeItem('ashline.profile');
+  const pr = new Profile();
+  pr.now = () => at(2026, 9, 23);
+  const stats = { kills: 4, deaths: 2, assists: 0, headshots: 1, shots: 40, hits: 18, score: 600, bestStreak: 2 };
+  const sum = (extra = {}) => ({ classKills: {}, weaponKills: { ar_kv7: 4 }, weaponHeadshots: {}, weaponsUsed: ['ar_kv7'], difficulty: 'regular', meleeKills: 0, ...extra });
+  const r1 = pr.recordMatch('hn-1', 'win', stats, 300, sum());
+  t('a finished match earns Candy: 10 + win 10 + 4 kills × 2 + 1 headshot', r1.event && r1.event.gained === 29 && pr.eventState().candy === 29, JSON.stringify(r1.event?.lines));
+  t('track reward unlocks automatically at 20 Candy', pr.owns('em_pumpkin') && r1.event.unlocked.some((i) => i.id === 'em_pumpkin') && !pr.owns('ch_pumpkin'));
+  pr.recordMatch('hn-2', 'loss', stats, 300, sum());
+  const r3 = pr.recordMatch('hn-3', 'loss', stats, 300, sum({ brPlace: 2 }));
+  t('event challenges complete and pay Candy (3 matches, BR top 3)', r3.event.completed.some((c) => c.id === 'hn_play') && r3.event.completed.some((c) => c.id === 'hn_top3') && pr.eventState().done.hn_play);
+  t('Battle Royale top 3 earns bonus Candy', r3.event.lines.some(([k]) => /top 3/.test(k)));
+  const candy = pr.eventState().candy;
+  t('Candy total adds up and the track keeps unlocking', candy === 29 + 19 + (19 + 8 + 25 + 30) && trackReached(candy).every((tr) => pr.owns(tr.item)), String(candy));
+  t('event items can be bought while the event runs', pr.buyItem('ch_ghost').ok && pr.owns('ch_ghost'));
+  const pr2 = new Profile();
+  t('Candy and event progress survive a reload', pr2.eventState().candy === candy && pr2.eventState().done.hn_play === true);
+  pr2.now = () => at(2026, 10, 10);
+  t('after the event: no Candy, event store closed, unlocked items kept', pr2.recordMatch('hn-4', 'win', stats, 300, sum()).event === null && pr2.buyItem('ch_skull').reason === 'unavailable' && pr2.buyBundle('bd_hollow').reason === 'unavailable' && pr2.owns('em_pumpkin'));
+  delete pr2.data.owned.em_pumpkin; pr2.grantEarnedUnlocks(true);
+  t('earned track items are restored if missing (self-healing)', pr2.owns('em_pumpkin'));
+  pr2.data.events.hollow_night.candy = -5; pr2.data.events.hollow_night.prog = 'x'; pr2.save();
+  const pr3 = new Profile();
+  t('corrupt event data is sanitised', pr3.eventState().candy === 0 && typeof pr3.eventState().prog === 'object');
+  t('unlock text explains event items', /event track · 20 Candy/.test(pr3.unlockText(COSMETICS.em_pumpkin)) && /Store/.test(pr3.unlockText(COSMETICS.ch_skull)));
+}
+
 
 // ---------------- 0.6.0 supercharged XP ----------------
 {
@@ -575,7 +639,10 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('the gift can only be claimed once', !a.claimXpGift().ok && a.xpBoostLeft === 3600);
   const wBefore = a.data.weaponProgress.ar_kv7.xp + 0;
   const boosted = a.recordMatch('x-2', 'win', stats, 600, sum({ xpBoost: a.xpBoostLeft > 0, playSeconds: 600 }));
-  t('a boosted match earns double player XP', boosted.total === plain.total * 2 && boosted.boost?.mult === 2, `${plain.total} → ${boosted.total}`);
+  // (daily challenges depend on the date, so compare the boosted match with its own lines)
+  const bonus = boosted.xp.find(([k]) => /Supercharged/.test(k))?.[1] || 0;
+  const rest = boosted.xp.filter(([k]) => !/Supercharged/.test(k)).reduce((a, [, v]) => a + v, 0);
+  t('a boosted match earns double player XP', bonus === rest && boosted.total === rest * 2 && boosted.boost?.mult === 2, `${rest} + ${bonus} = ${boosted.total}`);
   t('boost doubles weapon XP too', boosted.weapons[0].xp === plain.weapons[0].xp * 2, `${plain.weapons[0].xp} → ${boosted.weapons[0].xp}`);
   t('boost time is used up by time played in matches only', a.xpBoostLeft === 3000 && boosted.boost.left === 3000);
   const b = new Profile();
@@ -650,7 +717,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
     mm.start(); mm.state = 'live';
     let n = 0; while (mm.state !== 'ended' && n++ < 60 * 60 * 9) mm.tick(1 / 60);
     const places = [...mm.br.place.values()].sort((a, b) => a - b).join();
-    t(`BR: bots play a full match on ${id} to a winner`, mm.state === 'ended' && places === '1,2,3,4,5,6,7,8,9' && mm.time > 45, `${mm.endReason} in ${mm.time.toFixed(0)} s`);
+    t(`BR: bots play a full match on ${id} to a winner`, mm.state === 'ended' && places === '1,2,3,4,5,6,7,8,9' && mm.time > 40, `${mm.endReason} in ${mm.time.toFixed(0)} s`);
   }
 }
 

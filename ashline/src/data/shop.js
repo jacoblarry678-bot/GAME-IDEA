@@ -20,6 +20,12 @@ export const COLLABS = [
 ];
 BUNDLES.push({ id: 'bd_waspinator', name: 'Waspinator Collab Bundle', desc: 'The Waspinator keychain charm and the Waspinator banner.', items: ['ch_waspinator', 'bn_waspinator'], discount: 0.2, collab: 'waspinator' });
 
+/** Event Store sections (listed only while their event runs). */
+export const EVENT_SHOPS = [
+  { event: 'hollow_night', name: 'Hollow Night', bundle: 'bd_hollow', items: ['of_kestrel_wraith', 'fn_bone', 'ch_skull', 'ch_ghost', 'em_bat', 'cd_patch', 'bn_cobweb'], blurb: 'Halloween event items for test credits. Cosmetic only; what you buy stays yours after the event.' },
+];
+BUNDLES.push({ id: 'bd_hollow', name: 'Hollow Night Bundle', desc: 'Every Hollow Night Store item: Wraith outfit, Ossuary finish, Rattle Skull and Little Ghost charms, Night Wing emblem, Pumpkin Patch card and Cobweb banner.', items: ['of_kestrel_wraith', 'fn_bone', 'ch_skull', 'ch_ghost', 'em_bat', 'cd_patch', 'bn_cobweb'], discount: 0.25, event: 'hollow_night' });
+
 export const SHOP_CONFIG = { featuredSlots: 4, bundleSlots: 2, demoLabel: 'Demo rotation, generated on this device from the date. Not a live service.' };
 
 /** Base price for a single item, by rarity. */
@@ -36,12 +42,12 @@ export function bundlePrice(b, owned) {
   return { full, price: Math.max(0, base), ownedCount: b.items.filter((id) => owned[id]).length };
 }
 
-export const SHOP_ITEMS = COSMETIC_LIST.filter((i) => i.unlock.type === 'shop' && !i.collab).map((i) => i.id);
+export const SHOP_ITEMS = COSMETIC_LIST.filter((i) => i.unlock.type === 'shop' && !i.collab && !i.unlock.event).map((i) => i.id);
 
 /** Current demo rotation: featured items (daily) and bundles (weekly). */
 export function currentRotation(now = Date.now()) {
   const { day, week } = periodKeys(now);
   const featured = pickChallenges(SHOP_ITEMS, SHOP_CONFIG.featuredSlots, day + 101);
-  const bundles = pickChallenges(BUNDLES.filter((b) => !b.collab), SHOP_CONFIG.bundleSlots, week + 707);
+  const bundles = pickChallenges(BUNDLES.filter((b) => !b.collab && !b.event), SHOP_CONFIG.bundleSlots, week + 707);
   return { featured, bundles, day, week };
 }

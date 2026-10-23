@@ -8,7 +8,8 @@ import { COSMETICS, COSMETIC_LIST, RARITY, TYPES } from '../data/cosmetics.js';
 import { WEAPONS } from '../data/weapons.js';
 import { SEASON, PASS_TIERS, CURRENCY, seasonDaysLeft } from '../data/season.js';
 import { nextReset } from '../data/challenges.js';
-import { BUNDLES, SHOP_CONFIG, COLLABS, currentRotation, itemPrice, bundlePrice } from '../data/shop.js';
+import { BUNDLES, SHOP_CONFIG, COLLABS, EVENT_SHOPS, currentRotation, itemPrice, bundlePrice } from '../data/shop.js';
+import { HOLLOW_NIGHT, eventActive, eventTimeLeft } from '../data/events.js';
 import { xpToNext, MAX_LEVEL, weaponXpToNext } from '../core/profile.js';
 import { cardArt, emblemArt, bannerArt, itemThumb } from './art.js';
 
@@ -220,6 +221,45 @@ export const SCREENS2 = {
   },
 
   // ------------------------------------------------------------------ CHALLENGES
+  // ------------------------------------------------------------------ HOLLOW NIGHT EVENT
+  event(app, node, p, entry) {
+    node.classList.add('shade-full', 'hollow-bg');
+    app.preview.hide();
+    const prof = app.profile, ev = HOLLOW_NIGHT;
+    const render = () => {
+      const st = prof.eventState(ev.id), active = eventActive(ev, prof.now());
+      const ms = eventTimeLeft(ev, prof.now()), days = Math.floor(ms / 86400000), hrs = Math.floor((ms % 86400000) / 3600000);
+      const max = ev.track[ev.track.length - 1].candy;
+      const tiles = ev.track.map((t) => {
+        const it = COSMETICS[t.item], own = prof.owns(t.item);
+        return `<button class="hn-tier ${own ? 'got' : st.candy >= t.candy ? 'got' : ''}" data-item="${it.id}" style="--rc:${RARITY[it.rarity].color}">${itemThumb(it)}<div class="inv-name">${esc(it.name)}</div><div class="inv-sub">${TYPES[it.type].single}</div><div class="hn-c">${own ? '✓ UNLOCKED' : `🍬 ${t.candy}`}</div></button>`;
+      }).join('');
+      const chal = ev.challenges.map((c) => {
+        const pr = Math.min(c.goal, st.prog[c.id] || 0), done = !!st.done[c.id];
+        return `<div class="chal ${done ? 'done' : ''}"><div class="chal-main"><div class="chal-t">${esc(c.text)}</div><div class="xpbar"><i style="width:${Math.round((pr / c.goal) * 100)}%"></i></div></div><div class="chal-p">${pr} / ${c.goal}</div><div class="chal-x">${done ? '✓ ' : ''}+${c.candy} Candy</div></div>`;
+      }).join('');
+      const C = ev.candy;
+      node.innerHTML = `<div class="page">
+        <div class="page-head"><div><div class="kicker">Limited event · ${active ? `ends in ${days}d ${hrs}h` : 'event over'}</div><h1 class="title hn-title">${esc(ev.name)}</h1></div><div class="spacer"></div><span class="credits hn-candy">🍬 <b>${fmt(st.candy)}</b> Candy</span></div>
+        <div class="page-body scroll" style="flex-direction:column;gap:16px">
+          <div class="muted">${esc(ev.blurb)}</div>
+          ${active ? '' : '<div class="warn">The event is over on this device\'s clock. Everything you unlocked stays yours; Candy is no longer earned.</div>'}
+          <div><h3 class="title">Event track <span class="muted small" style="letter-spacing:0.05em">· free · unlocks automatically</span></h3>
+            <div class="xpbar hn-bar"><i style="width:${Math.min(100, Math.round((st.candy / max) * 100))}%"></i></div>
+            <div class="hn-track">${tiles}</div></div>
+          <div><h3 class="title">Event challenges</h3>${chal}</div>
+          <div class="muted small">Candy per finished match: ${C.match} for playing, +${C.win} for a win, +${C.kill} per elimination, +${C.headshot} per headshot, +${C.top3} for a Battle Royale top 3. Candy is event-only, can't be bought and doesn't count toward XP boosts. Matches use the Hollow Night night-time look while the event runs (switch it off in Play setup).</div>
+        </div>
+        <div class="page-foot"><button class="btn" data-a="back">Back</button><div class="spacer"></div>${active ? '<button class="btn" data-a="store">Hollow Night Store</button><button class="btn primary" data-a="play">Play</button>' : ''}</div></div>`;
+      node.querySelector('[data-a=back]').onclick = () => app.screens.back();
+      const st2 = node.querySelector('[data-a=store]'); if (st2) st2.onclick = () => app.screens.push('store');
+      const pl = node.querySelector('[data-a=play]'); if (pl) pl.onclick = () => app.screens.push('play');
+      node.querySelectorAll('.hn-tier').forEach((b) => { b.onclick = () => app.screens.push('armory', { tab: COSMETICS[b.dataset.item].type, item: b.dataset.item }); });
+    };
+    render();
+    entry.onBack = () => { app.screens.pop(); app.screens.refreshTop(); };
+  },
+
   challenges(app, node) {
     node.classList.add('shade-full');
     app.preview.hide();
@@ -285,8 +325,10 @@ export const SCREENS2 = {
         <div class="page-body scroll" style="flex-direction:column;gap:14px;max-width:min(760px,56vw)">
           ${view === 'featured' ? `
             <div class="muted small">${esc(SHOP_CONFIG.demoLabel)} Featured items change daily, bundles weekly.</div>
+            ${EVENT_SHOPS.filter((e) => eventActive(HOLLOW_NIGHT, prof.now())).map((e) => `<div class="collab-box event-box"><div class="row"><span class="collab-tag event-tag">EVENT</span><h3 class="title" style="margin:0">${esc(e.name)}</h3><span class="muted small">ends in ${Math.ceil(eventTimeLeft(HOLLOW_NIGHT, prof.now()) / 86400000)} days</span></div><div class="muted small">${esc(e.blurb)}</div>
+              <div class="shop-grid">${bcard(BUNDLES.find((b) => b.id === e.bundle))}${e.items.map(card).join('')}</div></div>`).join('')}
             ${COLLABS.map((c) => `<div class="collab-box"><div class="row"><span class="collab-tag">COLLAB</span><h3 class="title" style="margin:0">${esc(c.name)}</h3></div><div class="muted small">${esc(c.blurb)}</div>
-              <div class="shop-grid">${bcard(BUNDLES.find((b) => b.id === c.bundle))}${c.items.map(card).join('')}</div></div>`).join('')}
+              <div class="shop-grid">${c.bundle && BUNDLES.some((b) => b.id === c.bundle) ? bcard(BUNDLES.find((b) => b.id === c.bundle)) : ''}${c.items.map(card).join('')}</div></div>`).join('')}
             <h3 class="title">Featured today</h3><div class="shop-grid">${featured.map(card).join('')}</div>
             <h3 class="title">Bundles this week</h3><div class="shop-grid">${rot.bundles.map(bcard).join('')}</div>`
           : `<table class="sb"><thead><tr><th>When</th><th>Purchase</th><th class="num">Price</th><th class="num">Balance after</th></tr></thead><tbody>

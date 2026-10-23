@@ -188,7 +188,11 @@ export class BotBrain {
         if (!mem || (!mem.visible && now - mem.t > 1)) o.brain.known.set(best.id, { c: best, x: best.x, y: best.y, z: best.z, t: now, visible: false, seenSince: null, heard: true });
       }
     }
-    if (m.ceasefireT > 0) best = null; // weapons cold: loot, don't fight
+    if (m.ceasefireT > 0) {
+      // weapons cold: loot, don't fight, and don't build up target lock (reaction time starts when it goes hot)
+      best = null;
+      for (const [, mem] of this.known) mem.seenSince = now;
+    }
     if (best !== this.target) {
       this.target = best;
       this.trackT = 0;
@@ -263,6 +267,7 @@ export class BotBrain {
         this.state = 'roam'; this.urgent = true; this.objGoal = false; this.waitT = 0.5;
         recent = null;
       } else if (this.urgent) { this.urgent = false; this.goal = null; }
+      if (m.ceasefireT > 0) { recent = null; if (this.state === 'hunt') { this.state = 'roam'; this.goal = null; } } // weapons cold: nobody to hunt
       if (this.state === 'roam' && this.objGoal && this.goalName && m.mode.goalStale?.(m, this, this.goalName)) this.pickRoamGoal();
       if (urgent) { /* keep running */ } else if (recent && holding && now - recent.t > 1 && !(zone && inZone(recent.c, zone))) recent = null; // stay on the objective unless the threat is fresh or on it
       // objective players only chase unseen threats that are close; slayers hunt everything

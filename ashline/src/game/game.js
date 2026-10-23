@@ -20,6 +20,8 @@ import { SUPPORT, SUPPORT_IDS, supportThreshold } from '../data/support.js';
 import { COSMETICS } from '../data/cosmetics.js';
 import { SunFlare, glintTexture } from '../fx/sunflare.js';
 import { WeatherView } from '../fx/weather.js';
+import { HalloweenView } from '../fx/halloween.js';
+import { HOLLOW_NIGHT, eventActive } from '../data/events.js';
 import { BattleRoyaleView } from '../fx/battleRoyaleView.js';
 import { brZone, nearbyWeapon, LOOT_NAMES } from './battleRoyale.js';
 import { WEATHER_NAMES } from './weather.js';
@@ -64,6 +66,9 @@ export class Game {
     this.hud = new Hud(document.getElementById('ui'), app);
     this.sunflare = new SunFlare(this.hud.root);
     this.glints = new Map();
+    // Halloween night look first, so the weather blends on top of it
+    const wantsNight = (net ? app.profile.data.matchSetup.halloween : setup.halloween) !== false;
+    this.hwView = !this.isRange && wantsNight && eventActive(HOLLOW_NIGHT, app.profile.now()) ? new HalloweenView(app, m) : null;
     this.wxView = this.isRange ? null : new WeatherView(app, m);
     this.hud.setTeams(0);
     this.hud.setFfa(this.ffa && !this.isRange);
@@ -277,6 +282,7 @@ export class Game {
     this.updateGlints();
     this.updateViewmodel(dt);
     this.updateSun(dt);
+    this.hwView?.update(dt);
     this.wxView?.update(this.paused && !this.online ? 0 : dt, this.indoor || 0);
     if (this.wxView) this.hud.weather(WEATHER_NAMES[m.weather.kind] || '');
     if (this.summary.xpBoost && !this.isRange) {
@@ -787,7 +793,7 @@ export class Game {
   updateSun(dt) {
     const g = this.app.settings.data.graphics, acc = this.app.settings.data.accessibility;
     const cloud = this.match.weather?.cur.cloud || 0;
-    const strength = g.sunFlare ? (acc.reducedFlash ? 0.4 : 1) * (this.scoped ? 0.7 : 1) * Math.max(0, 1 - cloud * 1.1) : 0;
+    const strength = g.sunFlare ? (acc.reducedFlash ? 0.4 : 1) * (this.scoped ? 0.7 : 1) * Math.max(0, 1 - cloud * 1.1) * (this.hwView ? this.hwView.flareScale : 1) : 0;
     const w = this.match.world, pj = this.match.projectiles;
     this.sunflare.update(this.paused && !this.online ? 0 : dt, this.app.engine.camera, this.app.engine.sunDir, (ox, oy, oz, dx, dy, dz) => !!w.raycast(ox, oy, oz, dx, dy, dz, 300, 'sight') || pj.smokeBlocks(ox, oy, oz, ox + dx * 60, oy + dy * 60, oz + dz * 60), strength);
   }
@@ -1070,7 +1076,7 @@ export class Game {
     const outcome = m.br ? (brPlace === 1 ? 'win' : 'loss') : m.winner === -1 ? 'draw' : m.winner === p.team ? 'win' : 'loss';
     const groups = m.scoreboard();
     const row = (r) => ({ name: r.c.name, bot: r.c.isBot, me: r.c === p, score: r.score, kills: r.kills, deaths: r.deaths, assists: r.assists, level: r.level, acc: r.shots ? Math.round(r.hits / r.shots * 100) + '%' : '—' });
-    const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed] };
+    const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed], brPlace: m.br ? m.br.place.get(p.team) || 0 : 0 };
     const rewards = this.app.profile.recordMatch(this.id, outcome, p.stats, m.time, summary);
     return {
       online: this.online,
@@ -1115,6 +1121,7 @@ export class Game {
     this.depView?.dispose();
     this.brView?.dispose();
     this.wxView?.dispose();
+    this.hwView?.dispose();
     this.unsubSettings();
     this.app.audio.ambience(false);
     this.vm.visible = false;

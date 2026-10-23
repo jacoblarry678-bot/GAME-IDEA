@@ -6,6 +6,7 @@
  *
  * unlock: { type: 'default' } | { type: 'level', level } | { type: 'weapon', weapon, level }
  *       | { type: 'pass', tier, track } | { type: 'shop' } | { type: 'operator', operator }
+ *       | { type: 'event', event, candy }   (free event track)   | { type: 'shop', event } (event Store section)
  */
 
 export const RARITY = {
@@ -48,6 +49,9 @@ outfit('of_sol_snow', 'op_sol', 'Whiteout', 'rare', 'Arctic overwhites for the n
 outfit('of_sol_reed', 'op_sol', 'Reedline', 'rare', 'Marsh greens and straw.', { type: 'pass', tier: 12, track: 'premium' }, [[96, 104, 64], [128, 132, 82], [70, 74, 46], [168, 160, 104]], [84, 90, 56], 0x6a6e44, 0x2e301e);
 outfit('of_kestrel_std', 'op_kestrel', 'Recon Mesh', 'epic', 'Light mesh rig in dusk blue. Comes with Kestrel.', { type: 'operator', operator: 'op_kestrel' }, [[54, 64, 82], [76, 88, 108], [36, 44, 58], [98, 110, 128]], [40, 48, 62], 0x2c3444, 0x18181c);
 outfit('of_kestrel_tiger', 'op_kestrel', 'Tigerstripe', 'epic', 'Classic jungle tigerstripe.', { type: 'shop' }, [[88, 98, 56], [40, 44, 30], [128, 118, 72], [24, 26, 20]], [60, 66, 40], 0x4a5232, 0x1c1c16, { stripes: true });
+// Hollow Night (Halloween 2026) event outfits
+outfit('of_voss_grave', 'op_voss', 'Gravewalker', 'legendary', 'Graveyard-shift black with a lantern-orange glow. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 260 }, [[28, 24, 30], [44, 36, 46], [18, 16, 20], [60, 48, 58]], [34, 28, 36], 0x221c26, 0x120e14, { glow: 0xff7a1a });
+outfit('of_kestrel_wraith', 'op_kestrel', 'Wraith', 'epic', 'Fog-grey wraps with a ghost-green glow. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, [[150, 154, 160], [120, 126, 132], [96, 100, 106], [182, 186, 190]], [110, 114, 120], 0x8a8e94, 0x3a3e44, { glow: 0x7dffb0 });
 outfit('of_kestrel_signal', 'op_kestrel', 'Signal Red', 'legendary', 'Crimson accents for those who want to be seen leaving.', { type: 'shop' }, [[60, 30, 30], [96, 40, 36], [36, 20, 20], [130, 56, 48]], [120, 30, 26], 0x3a1c1c, 0x1a0e0e, { glow: 0xff3020 });
 
 // ---------------- weapon finishes. kind drives the procedural texture generator.
@@ -76,6 +80,9 @@ finish('fn_marble', 'Marble', 'epic', 'White marble with grey veins.', { type: '
 finish('fn_gold', 'Gold Leaf', 'legendary', 'Gold leaf over black. Reach level 40.', { type: 'level', level: 40 }, { kind: 'gold' });
 finish('fn_obsidian', 'Obsidian Fire', 'legendary', 'Volcanic glass with a burning edge.', { type: 'pass', tier: 45, track: 'premium' }, { kind: 'obsidian' });
 finish('fn_aurora', 'Aurora', 'legendary', 'Shifting northern lights.', { type: 'shop' }, { kind: 'aurora' });
+finish('fn_pumpkin', "Jack-o'-Lantern", 'legendary', 'Carved grins that glow from inside. Hollow Night event track finale.', { type: 'event', event: 'hollow_night', candy: 330 }, { kind: 'pumpkin' });
+finish('fn_ectoplasm', 'Ectoplasm', 'epic', 'Ghost-green ooze that glows in the dark. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 110 }, { kind: 'ecto' });
+finish('fn_bone', 'Ossuary', 'epic', 'Bone-white with hairline cracks. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, { kind: 'bone' });
 finish('fn_prism', 'Prismatic', 'legendary', 'Iridescent oil-slick sheen.', { type: 'shop' }, { kind: 'prism' });
 
 // ---------------- charms
@@ -90,6 +97,9 @@ charm('ch_duck', 'Rubber Duck', 'epic', 'Morale equipment.', { type: 'shop' }, '
 charm('ch_cog', 'Gear Cog', 'rare', 'A cog from the turntable gearbox.', { type: 'pass', tier: 33, track: 'free' }, 'cog', 0x8a8e92);
 // ---- collaboration: Waspinator (licensed collab per the project owner; original procedural art)
 add({ id: 'ch_waspinator', type: 'charm', name: 'Waspinator Keychain', rarity: 'legendary', collab: 'waspinator', desc: 'Collab keychain: a tiny robot wasp with buzzing wings and a glowing visor. Cosmetic only.', unlock: { type: 'shop', collab: 'waspinator' }, charm: { shape: 'waspinator', color: 0x3fa63a } });
+charm('ch_pumpkin', 'Lantern Pumpkin', 'rare', 'A tiny jack-o\'-lantern with a candle inside. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 45 }, 'pumpkin', 0xff7a1a);
+charm('ch_skull', 'Rattle Skull', 'epic', 'Polished bone with hollow eyes. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'skull', 0xe8e2d0);
+charm('ch_ghost', 'Little Ghost', 'rare', 'Boo. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'ghost', 0xf4f6ff);
 charm('ch_compass', 'Field Compass', 'legendary', 'Points toward the nearest objective. Probably.', { type: 'pass', tier: 48, track: 'premium' }, 'compass', 0xc89a40);
 
 // ---------------- calling cards (2D art params)
@@ -105,6 +115,8 @@ card('cd_longhaul', 'Long Haul', 'common', 'Kilometres of track behind you.', { 
 card('cd_ashfall', 'Ashfall', 'legendary', 'Season 1. The yard burns quietly.', { type: 'pass', tier: 50, track: 'free' }, { kind: 'embers', a: '#120c0a', b: '#ff6a20', fg: '#ffe2c8' });
 card('cd_signal', 'Signal Lost', 'epic', 'Static on every channel.', { type: 'shop' }, { kind: 'static', a: '#101418', b: '#7ad0ff', fg: '#e8f6ff' });
 card('cd_tactician', 'Tactician', 'epic', 'Plans drawn in chalk.', { type: 'pass', tier: 38, track: 'premium' }, { kind: 'grid', a: '#16221c', b: '#d8e0d0', fg: '#f0f4ec' });
+card('cd_hollow', 'Hollow Night', 'epic', 'A violet moon over bare trees. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 75 }, { kind: 'hollow', a: '#120a24', b: '#c8b8ff', fg: '#f4ecff' });
+card('cd_patch', 'Pumpkin Patch', 'rare', 'Rows of grinning lanterns. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, { kind: 'patch', a: '#160c1c', b: '#ff8a1a', fg: '#fff0dc' });
 card('cd_veteran', 'Veteran', 'legendary', 'Reach level 50.', { type: 'level', level: 50 }, { kind: 'chevrons', a: '#141414', b: '#ffb84d', fg: '#fff4e0' });
 
 // ---------------- emblems (2D icon params)
@@ -120,6 +132,9 @@ emblem('em_wing', 'Wings', 'epic', 'Recon wings.', { type: 'pass', tier: 31, tra
 emblem('em_rails', 'Crossed Rails', 'rare', 'Cinder Yard veteran.', { type: 'pass', tier: 19, track: 'free' }, 'rails', '#c9a227');
 emblem('em_skullcap', 'Iron Helm', 'epic', 'A helm forged from scrap.', { type: 'shop' }, 'helm', '#8a939b');
 emblem('em_crown', 'Crown', 'legendary', 'Top of the scoreboard.', { type: 'pass', tier: 42, track: 'premium' }, 'crown', '#ffb84d');
+emblem('em_pumpkin', 'Jack', 'rare', 'Carved and lit. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 20 }, 'pumpkin', '#ff8a1a');
+emblem('em_skull', 'Grinning Skull', 'epic', 'Smiles back. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 200 }, 'skull', '#efe8d6');
+emblem('em_bat', 'Night Wing', 'rare', 'Out after dark. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'bat', '#b48cff');
 emblem('em_eye', 'Watcher', 'epic', 'Always watching the long lane.', { type: 'shop' }, 'eye', '#4adf8a');
 
 // ---------------- banners
@@ -130,6 +145,8 @@ banner('bn_dusk', 'Dusk', 'rare', 'Last light over the depot.', { type: 'pass', 
 banner('bn_camo', 'Field', 'common', 'Woodland pattern.', { type: 'pass', tier: 36, track: 'free' }, { kind: 'camo', a: '#2c3424', b: '#5a6640' });
 banner('bn_ember', 'Ember', 'epic', 'Glowing coals.', { type: 'pass', tier: 44, track: 'premium' }, { kind: 'embers', a: '#120a08', b: '#ff5a1a' });
 add({ id: 'bn_waspinator', type: 'banner', name: 'Waspinator', rarity: 'epic', collab: 'waspinator', desc: 'Collab banner: green armour, wasp stripes and translucent wings on a sunset haze.', unlock: { type: 'shop', collab: 'waspinator' }, art: { kind: 'waspinator', a: '#3a1830', b: '#e0743a' } });
+banner('bn_hollow', 'Hollow Moon', 'epic', 'Jack-o\'-lanterns under a violet moon. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 150 }, { kind: 'hollow', a: '#0e0820', b: '#ff8a1a' });
+banner('bn_cobweb', 'Cobweb', 'rare', 'Something has been living here. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, { kind: 'cobweb', a: '#141018', b: '#d8d4e4' });
 banner('bn_royal', 'Royal', 'legendary', 'Deep violet and gold.', { type: 'shop' }, { kind: 'gradient', a: '#1e0f30', b: '#c49a3a' });
 
 export const COSMETICS = Object.fromEntries(items.map((i) => [i.id, i]));

@@ -763,6 +763,37 @@ export function buildCharm(shape, color, mats) {
       p.scale.setScalar(1.35);
       break;
     }
+    case 'pumpkin': {
+      // ribbed lantern pumpkin with a glowing carved face and a green stem
+      const rind = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+      const glow = new THREE.MeshStandardMaterial({ color: 0xffc040, emissive: 0xff9a1a, emissiveIntensity: 2.4 });
+      for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const lobe = add(new THREE.SphereGeometry(0.0065, 10, 8), Math.cos(a) * 0.0042, 0, Math.sin(a) * 0.0042, 0, 0, 0, rind); lobe.scale.set(1, 0.95, 1); }
+      add(new THREE.CylinderGeometry(0.0013, 0.0018, 0.005, 6), 0, 0.0075, 0, 0.2, 0, 0.15, new THREE.MeshStandardMaterial({ color: 0x3e6a24, roughness: 0.8 }));
+      for (const z of [-0.0028, 0.0028]) add(new THREE.ConeGeometry(0.0016, 0.0022, 3), 0.0102, 0.0018, z, 0, 0, -Math.PI / 2, glow);
+      add(new RoundedBoxGeometry(0.0008, 0.0022, 0.0075, 1, 0.0003), 0.0103, -0.0028, 0, 0, 0, 0, glow);
+      break;
+    }
+    case 'skull': {
+      const bone = new THREE.MeshStandardMaterial({ color, roughness: 0.45 });
+      const dark = new THREE.MeshBasicMaterial({ color: 0x0c0a08 });
+      const cr = add(new THREE.SphereGeometry(0.0085, 14, 10), 0, 0.002, 0, 0, 0, 0, bone); cr.scale.set(1, 0.95, 0.9);
+      add(new RoundedBoxGeometry(0.008, 0.006, 0.009, 1, 0.002), 0.002, -0.0065, 0, 0, 0, 0, bone);
+      for (const z of [-0.003, 0.003]) { const e = add(new THREE.SphereGeometry(0.0022, 8, 6), 0.0072, 0.002, z, 0, 0, 0, dark); e.scale.set(0.5, 1, 1); }
+      add(new THREE.ConeGeometry(0.0012, 0.0022, 3), 0.0082, -0.0018, 0, 0, 0, Math.PI, dark);
+      for (let i = -2; i <= 2; i++) add(new THREE.BoxGeometry(0.0006, 0.0018, 0.0006), 0.0062, -0.0085, i * 0.0015, 0, 0, 0, dark);
+      break;
+    }
+    case 'ghost': {
+      const sheet = new THREE.MeshStandardMaterial({ color, emissive: 0x8090c0, emissiveIntensity: 0.35, transparent: true, opacity: 0.88, roughness: 0.4 });
+      const dark = new THREE.MeshBasicMaterial({ color: 0x101018 });
+      const head = add(new THREE.SphereGeometry(0.0078, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0.004, 0, 0, 0, 0, sheet);
+      head.scale.set(1, 1.1, 1);
+      add(new THREE.CylinderGeometry(0.0078, 0.0088, 0.012, 14, 1, true), 0, -0.002, 0, 0, 0, 0, sheet);
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; add(new THREE.SphereGeometry(0.0022, 6, 5), Math.cos(a) * 0.0072, -0.0085, Math.sin(a) * 0.0072, 0, 0, 0, sheet); }
+      for (const z of [-0.0026, 0.0026]) { const e = add(new THREE.SphereGeometry(0.0015, 8, 6), 0.0074, 0.004, z, 0, 0, 0, dark); e.scale.set(0.5, 1.4, 1); }
+      const mo = add(new THREE.SphereGeometry(0.0014, 8, 6), 0.0078, -0.0006, 0, 0, 0, 0, dark); mo.scale.set(0.5, 1.2, 1);
+      break;
+    }
     case 'spike': add(new THREE.BoxGeometry(0.006, 0.034, 0.006)); add(new THREE.BoxGeometry(0.012, 0.004, 0.009), 0, 0.017, 0); break;
     case 'duck': add(new THREE.SphereGeometry(0.009, 10, 8)); add(new THREE.SphereGeometry(0.0062, 10, 8), 0, 0.009, -0.005); add(new THREE.ConeGeometry(0.0025, 0.006, 6), 0, 0.0085, -0.0115, -Math.PI / 2, 0, 0, new THREE.MeshStandardMaterial({ color: 0xff7a1a })); break;
     case 'cog': {

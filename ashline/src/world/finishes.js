@@ -17,7 +17,7 @@ function paint(f, S = 256) {
   const col = canvas(S), ctx = col.getContext('2d');
   const img = ctx.createImageData(S, S);
   let emis = null, eimg = null, ectx = null;
-  const needsEmissive = ['ember', 'circuit', 'obsidian'].includes(f.kind);
+  const needsEmissive = ['ember', 'circuit', 'obsidian', 'pumpkin', 'ecto'].includes(f.kind);
   if (needsEmissive) { emis = canvas(S); ectx = emis.getContext('2d'); eimg = ectx.createImageData(S, S); }
   const r = rand(f.kind.length * 97 + (f.base?.[0] || 7));
   const hex = (x, y) => { // distance to hex grid lines
@@ -117,6 +117,30 @@ function paint(f, S = 256) {
           c = [128 + 120 * Math.sin(w), 128 + 120 * Math.sin(w + 2.1), 128 + 120 * Math.sin(w + 4.2)];
           break;
         }
+        case 'pumpkin': {
+          // ribbed orange rind with carved, candle-lit faces tiled across it
+          const rib = 0.82 + 0.18 * Math.abs(Math.sin(u * Math.PI * 10));
+          c = [200 * rib + n * 30, 92 * rib + n * 18, 18];
+          const cx = (u * 3) % 1, cy = (v * 3) % 1;
+          const eye = (ex) => { const dx = cx - ex, dy = cy - 0.36; return dy > -0.08 && dy < 0.06 && Math.abs(dx) < (0.06 - dy) * 0.8; };
+          const mouth = cy > 0.58 && cy < 0.74 && Math.abs(cx - 0.5) < 0.26 && !((Math.floor(cx * 18) % 3 === 0) && cy < 0.63) && !((Math.floor(cx * 18) % 3 === 1) && cy > 0.7);
+          if (eye(0.33) || eye(0.67) || mouth) { c = [60, 24, 6]; e = [255, 170 + n * 60, 40]; }
+          break;
+        }
+        case 'ecto': {
+          const w = fbm(u, v, 161, 5, 3);
+          const band = Math.abs(Math.sin((v * 5 + w * 3) * Math.PI));
+          c = [10 + n * 12, 22 + n * 16, 16 + n * 10];
+          if (band > 0.9) { const k = (band - 0.9) * 10; c = [60, 200 * k + 40, 90]; e = [40 * k, 255 * k, 120 * k]; }
+          break;
+        }
+        case 'bone': {
+          const crack = Math.abs(fbm(u, v, 171, 5, 4) - 0.5);
+          const k = 214 + n * 26;
+          c = [k, k * 0.95, k * 0.84];
+          if (crack < 0.012) c = [70, 62, 52];
+          break;
+        }
         default: break;
       }
       const i = (y * S + x) * 4;
@@ -150,6 +174,9 @@ const METAL_LOOK = {
   aurora: { metalness: 0.6, roughness: 0.2 },
   carbon: { metalness: 0.25, roughness: 0.35 },
   marble: { metalness: 0.05, roughness: 0.3 },
+  bone: { metalness: 0.02, roughness: 0.55 },
+  pumpkin: { metalness: 0.0, roughness: 0.55 },
+  ecto: { metalness: 0.2, roughness: 0.3 },
 };
 
 /**

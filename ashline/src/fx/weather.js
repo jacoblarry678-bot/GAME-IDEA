@@ -20,6 +20,9 @@ export class WeatherView {
       fogColor: e.scene.fog.color.clone(), fogDensity: e.scene.fog.density,
     };
     this.sky = app.sky;
+    // cloud fog greys toward a tone that suits the scene (dark at night, e.g. Hollow Night)
+    const b = this.base.fogColor, lum = b.r * 0.3 + b.g * 0.59 + b.b * 0.11;
+    this.fogGrey = FOG_GREY.clone().multiplyScalar(Math.max(0.25, Math.min(1, lum * 1.6)));
     this.flash = 0;
     this.flashQ = []; // pending flicker pulses (seconds from now)
     this.boltT = 8;
@@ -98,7 +101,7 @@ export class WeatherView {
     if (e.vmSun) e.vmSun.intensity = this.base.vmSun * (1 - w.cloud * 0.5);
     e.hemi.intensity = this.base.hemi * (1 + w.cloud * 0.08) + this.flash * (reduced ? 0.6 : 2.2);
     const fog = e.scene.fog;
-    fog.color.copy(this.base.fogColor).lerp(FOG_GREY, Math.min(1, w.cloud * 0.6 + w.fog * 0.4));
+    fog.color.copy(this.base.fogColor).lerp(this.fogGrey, Math.min(1, w.cloud * 0.6 + w.fog * 0.4));
     if (this.flash > 0) fog.color.lerp(new THREE.Color(0xc8d2e6), this.flash * (reduced ? 0.15 : 0.45));
     fog.density = this.base.fogDensity * (1 + w.fog * 3.2 + w.rain * 0.8);
     if (this.sky) { const u = this.sky.material.uniforms; u.overcast.value = w.cloud; u.flash.value = fx ? this.flash * (reduced ? 0.3 : 1) : 0; }
