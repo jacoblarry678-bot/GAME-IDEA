@@ -10,7 +10,7 @@ export const ACHIEVEMENTS = [
   { id: 'A08', name: 'Cut the Line', cond: 'Complete Emergency Isolation' },
   { id: 'A09', name: 'Personnel File', cond: 'Collect E1, E2, E3, and E4 in the profile' },
   { id: 'A10', name: 'Second Hand', cond: 'Verify all twelve campaign refuges' },
-  { id: 'A11', name: 'All Accounted For', cond: 'Collect all thirty six records' },
+  { id: 'A11', name: 'All Accounted For', cond: 'Collect all thirty-six records' },
   { id: 'A12', name: 'What the Camera Saw', cond: 'Capture all six chapter secret photographs' },
   { id: 'A13', name: 'Good Neighbor', cond: 'Escort June into chapter four R2' },
   { id: 'A14', name: 'Quiet Shift', cond: 'End one Listener pursuit without taking damage during that pursuit' },

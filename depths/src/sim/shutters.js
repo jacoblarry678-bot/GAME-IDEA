@@ -40,7 +40,7 @@ export function openCycle(game, id) {
   game.story.set(`cyc.${id}`, false);
   for (const d of c.doors) game.setDoor(d, true);
   game.fx('sfx', { name: 'shutterWarn', x: c.x, z: c.z });
-  game.fx('cycleOpen', { id });
+  game.fx('cycleOpen', { id, label: c.label, x: c.x, z: c.z });
 }
 
 export function updateCycles(game, dt) {
@@ -65,7 +65,7 @@ export function updateCycles(game, dt) {
       }
       c.state = 'closed'; c.t = 0;
       game.story.set(`cyc.${id}`, true);
-      game.fx('cycleClosed', { id });
+      game.fx('cycleClosed', { id, label: c.label, x: c.x, z: c.z });
     } else if (c.state === 'closed') {
       const dur = c.hold != null ? c.hold : c.auto ? c.auto.closed : Infinity;
       if (c.t >= dur) openCycle(game, id);

@@ -36,7 +36,7 @@ export function startMachine(game, id, { always = null, until = null } = {}) {
   m.enabled = true; m.running = true; m.t = 0; m.armAt = null;
   if (always !== null) m.always = always;
   if (until !== null) m.until = game.time + until;
-  game.fx('machine', { id, running: true, x: m.x, z: m.z, label: m.label });
+  game.fx('machine', { id, running: true, x: m.x, z: m.z, label: m.label, dur: until !== null ? until : m.always ? null : m.run });
 }
 
 export function stopMachine(game, id, disable = true) {
@@ -74,7 +74,7 @@ export function updateMachines(game, dt) {
     m.t += dt;
     if (m.always) { m.running = true; }
     else if (m.running && m.t >= m.run) { m.running = false; m.t -= m.run; game.fx('machine', { id: m.id, running: false, x: m.x, z: m.z, label: m.label }); }
-    else if (!m.running && m.t >= m.rest) { m.running = true; m.t -= m.rest; game.fx('machine', { id: m.id, running: true, x: m.x, z: m.z, label: m.label }); }
+    else if (!m.running && m.t >= m.rest) { m.running = true; m.t -= m.rest; game.fx('machine', { id: m.id, running: true, x: m.x, z: m.z, label: m.label, dur: m.run }); }
     if (m.running) {
       m.loopT -= dt;
       if (m.loopT <= 0) { m.loopT = 1; game.emitSound({ x: m.x, z: m.z, r: 14, kind: 'machineLoop', source: `machine:${m.id}`, machine: m.id }); }

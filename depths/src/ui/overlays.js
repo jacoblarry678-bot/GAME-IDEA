@@ -184,7 +184,8 @@ export class Overlays {
     const tabbar = el('div', { class: 'tabs' });
     const render = () => {
       clear(tabbar);
-      for (const t of tabs) tabbar.append(el('button', { class: t === this.journalTab ? 'on' : '', 'data-nav': '', onclick: () => { this.journalTab = t; render(); } }, t));
+      // the open tab takes focus, on opening and after a tab change rebuilds the bar
+      for (const t of tabs) tabbar.append(el('button', { class: t === this.journalTab ? 'on' : '', 'data-nav': '', 'data-autofocus': t === this.journalTab ? '' : null, onclick: () => { this.journalTab = t; render(); tabbar.querySelector('.on').focus(); } }, t));
       clear(body);
       this['_j' + this.journalTab](body);
     };
@@ -302,10 +303,11 @@ export class Overlays {
     let sel = p.selected;
     const node = el('div', { class: 'inv' });
     const render = () => {
+      const at = [...node.querySelectorAll('[data-nav]')].indexOf(document.activeElement);
       clear(node);
       node.append(el('div', { class: 'row' }, el('h2', { class: 'caps', style: { letterSpacing: '0.3em' } }, 'Supply pouch'), el('div', { class: 'spacer' }), el('span', { class: 'small dim' }, `Composure ${Math.round(p.composure)} · Health ${Math.round(p.health)}`)));
       const slots = el('div', { class: 'slots' });
-      p.pouch.forEach((s, i) => slots.append(el('button', { class: `slot ${i === sel ? 'sel' : ''}`, 'data-nav': '', onclick: () => { sel = i; render(); } }, el('div', {}, s ? ITEMS[s.item].name : 'Empty'), el('div', { class: 'q' }, s ? `×${s.n}` : ''))));
+      p.pouch.forEach((s, i) => slots.append(el('button', { class: `slot ${i === sel ? 'sel' : ''}`, 'data-nav': '', 'data-autofocus': i === sel ? '' : null, onclick: () => { sel = i; render(); } }, el('div', {}, s ? ITEMS[s.item].name : 'Empty'), el('div', { class: 'q' }, s ? `×${s.n}` : ''))));
       node.append(slots);
       const s = p.pouch[sel];
       if (s) {
@@ -318,7 +320,9 @@ export class Overlays {
           btn('Drop', () => { app.pouch(sel, 'drop'); render(); }),
           ...mates.map((q) => btn(`Give to ${q.name}`, () => { app.pouch(sel, 'give', q.id); render(); }))));
       }
-      node.append(el('div', { class: 'small dim', style: { marginTop: '12px' } }, `Tools: flashlight ${p.hasFlashlight ? Math.round(p.charge) + '%' : '—'} · camera ${p.hasCamera ? p.film + '/8' : '—'} · radio · journal. Tools and key evidence never use pouch slots.`), this.liveNote(), el('div', { class: 'row', style: { marginTop: '10px' } }, btn('Close', () => this.close('inventory'), { 'data-autofocus': '' })));
+      node.append(el('div', { class: 'small dim', style: { marginTop: '12px' } }, `Tools: flashlight ${p.hasFlashlight ? Math.round(p.charge) + '%' : '—'} · camera ${p.hasCamera ? p.film + '/8' : '—'} · radio · journal. Tools and key evidence never use pouch slots.`), this.liveNote(), el('div', { class: 'row', style: { marginTop: '10px' } }, btn('Close', () => this.close('inventory'))));
+      // a rebuild replaces the focused button: focus the control in the same place (or the selected slot) so the controller keeps its position
+      if (at >= 0) { const it = node.querySelectorAll('[data-nav]'); (it[at] || node.querySelector('[data-autofocus]')).focus(); }
     };
     render();
     this.push('inventory', node);

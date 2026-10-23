@@ -14,8 +14,14 @@ export class MenuNav {
     this.lastDir = null;
     window.addEventListener('keydown', (e) => this._key(e));
   }
-  push(layer, onBack) { this.stack.push({ layer, onBack }); setTimeout(() => this.focusFirst(), 0); }
-  pop(layer) { this.stack = this.stack.filter((s) => s.layer !== layer); }
+  push(layer, onBack) { this.stack.push({ layer, onBack, opener: document.activeElement }); setTimeout(() => this.focusFirst(), 0); }
+  pop(layer) {
+    const gone = this.stack.find((s) => s.layer === layer);
+    this.stack = this.stack.filter((s) => s.layer !== layer);
+    // focus goes back to the control that opened the layer (a record in the journal, Settings in the pause menu)
+    const t = this.top();
+    if (gone && t && gone.opener && t.layer.contains(gone.opener)) gone.opener.focus({ preventScroll: true });
+  }
   top() { return this.stack[this.stack.length - 1] || null; }
   items() {
     const t = this.top();
