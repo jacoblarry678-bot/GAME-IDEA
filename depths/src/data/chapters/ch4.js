@@ -105,7 +105,7 @@ const records = [
   { id: '20', title: 'Superintendent rule', x: 3.0, y: 0.8, z: -8.4 },
   { id: '21', title: 'June\'s tally', x: 21, y: 0.05, z: 23.35, requires: 'ch4.juneSpoke' },
   { id: '22', title: 'Family picture', x: -7.4, y: 0.8, z: 26.5 },
-  { id: '23', title: 'Repair receipt', x: 12.4, y: 0.8, z: 29.0 },
+  { id: '23', title: 'Repair receipt', x: 12.4, y: 0.92, z: 29.0 },
   { id: '24', title: 'Rook recording three', audio: true, x: 3.8, y: 1.3, z: 66.8 },
 ];
 
