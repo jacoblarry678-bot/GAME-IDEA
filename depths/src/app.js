@@ -537,13 +537,14 @@ export class App {
         case 'cutoutPinned': if (A.envCaptions) this.hud.envCaption('[Flash: the figure is pinned for four seconds]', { dur: 2.5 }); break;
         case 'zoneTest': this.audio.play('tone'); break;
         case 'announcement': this.audio.voice('operator', 'speaker', 'Attention shoppers. The mall is now closed. Please make your way to the nearest exit.', 12); this.hud.line({ sp: 'operator', src: 'speaker', text: 'Attention shoppers. The mall is now closed. Please make your way to the nearest exit.', dur: 6 }); break;
-        case 'cycleClosed': this.audio.play('doorSlam'); break;
+        case 'cycleClosed': this.audio.play('doorSlam'); if (A.envCaptions && this._near(ev, 20)) this.hud.envCaption(`[${ev.label} closed]`, { dur: 3 }); break;
+        case 'cycleOpen': if (A.envCaptions && this._near(ev, 20)) this.hud.envCaption(`[${ev.label} open again]`, { dur: 3 }); break;
         case 'caption': this.hud.envCaption(ev.text, { dur: 4 }); break;
         case 'curtains': this.audio.play('paperRub', {}); break;
         case 'creatureKnock': if (A.envCaptions) this.hud.envCaption('[Three knocks]', { dur: 2.5 }); break;
         case 'stream': this.audio.play('splash', { x: ev.x, z: ev.z }); break;
         case 'tileCrack': this.audio.play('crack', { x: ev.x, z: ev.z }); break;
-        case 'tileLit': this.audio.play('tone'); break;
+        case 'tileLit': this.audio.play('tone'); if (A.envCaptions) this.hud.envCaption(`[A soft tone: tile ${ev.cell} holds]`, { dur: 2 }); break;
         case 'npcArrived': break;
         case 'footprint': if (this.creatures) this.creatures.addDecal('footprint', ev.x, ev.z, this._floorAt(ev.x, ev.z), ev.yaw || 0, { wet: ev.wet, delay: ev.delay }); break;
         case 'floorDent': if (this.creatures) this.creatures.addDecal('dent', ev.x, ev.z, this._floorAt(ev.x, ev.z)); if (A.envCaptions) this.hud.envCaption(`[Floor dent ${ev.n} of 3]`, { warn: true, dur: 1.2 }); this.input.rumble(0.2, 0.3, 120); break;
@@ -554,7 +555,7 @@ export class App {
         case 'machine': {
           if (ev.running) this.audio.play('pressHit', { x: ev.x, z: ev.z });
           const pp = g.players.get(me);
-          if (A.envCaptions && pp && Math.hypot(ev.x - pp.x, ev.z - pp.z) < 16) this.hud.envCaption(ev.running ? `[${ev.label} running: footsteps covered]` : `[${ev.label} at rest]`, { dur: 2 });
+          if (A.envCaptions && pp && Math.hypot(ev.x - pp.x, ev.z - pp.z) < 16) this.hud.envCaption(ev.running ? `[${ev.label} running: footsteps covered]` : `[${ev.label} at rest]`, { dur: ev.running && ev.dur ? ev.dur : 2, key: `machine:${ev.label}` });
           break;
         }
         case 'caretakerNegotiates': if (A.envCaptions) this.hud.envCaption(`[Behind you, it stops at the ${ev.what}. Tools scrape]`, { dur: 3 }); break;
@@ -592,6 +593,9 @@ export class App {
     }
     if (res) this.hud.polaroidDevelop(res.url, `${ph.roomName || ''}${ev.station ? ' · survey station' : ''}`, ev.develop || 0.6);
   }
+
+  /** Is the local player within r metres of an event (captions for sounds that only matter nearby)? */
+  _near(ev, r) { const p = this.game.players.get(this.pid); return !!p && Math.hypot(ev.x - p.x, ev.z - p.z) < r; }
 
   _floorAt(x, z) { const nav = this.game.level.nav, i = nav.indexAt(x, z); const y = i >= 0 ? nav.floorY[i] : 0; return Number.isFinite(y) ? y : 0; }
 

@@ -1,9 +1,11 @@
 /**
  * Hotfix 1.0.1 interface and accessibility checks (no browser).
  * Run: node tools/hotfix/interface.mjs
- * Covers caption trimming when dialogue and warnings overlap. The HUD is
- * built on a minimal stand-in for the DOM: element tree, class names and
- * text only.
+ * Covers caption trimming when dialogue and warnings overlap, subtitle
+ * settings across a restart, text for sound-based puzzle cues, speaker
+ * labels and a text guard. The HUD is built on a minimal stand-in for the
+ * DOM: element tree, class names and text only. Focus and flash checks
+ * need a browser: tools/hotfix/interface-e2e.mjs.
  */
 
 class FakeNode {
@@ -24,6 +26,9 @@ globalThis.document = { createElement: (t) => new FakeNode(t), createTextNode: (
 const { Hud } = await import('../../src/ui/hud.js');
 const { Settings } = await import('../../src/core/settings.js');
 const { remove } = await import('../../src/core/storage.js');
+const { Game } = await import('../../src/sim/game.js');
+const { closeCycle, openCycle } = await import('../../src/sim/shutters.js');
+const { startMachine } = await import('../../src/sim/machines.js');
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -35,6 +40,18 @@ function eq(a, b, msg = '') { if (JSON.stringify(a) !== JSON.stringify(b)) throw
 
 const hud = () => new Hud(new FakeNode('div'), { settings: new Settings() });
 const caps = (h) => h.captions.children.map((c) => c.textContent);
+
+/** A game positioned in a chapter (replay entry), with one player who takes no damage. */
+function game(ch) {
+  const g = new Game({ seed: 11, assists: { noDamage: true } });
+  g.addPlayer('p1', 'evan', 'Evan');
+  g.loadChapter(ch, { entry: 'replay' });
+  g.drainEvents();
+  return g;
+}
+const P = (g) => g.players.get('p1');
+const run = (g, sec) => { for (let i = 0; i < Math.round(sec / 0.05); i++) g.tick(0.05); };
+const events = (g, kind) => g.drainEvents().filter((e) => e.e === kind);
 
 // ------------------------------------------------------------------ 1. subtitles and warnings
 test('a radio line stays on screen while environmental warnings pile up', () => {
@@ -79,6 +96,68 @@ test('a preset\'s subtitle size survives a restart, and other tabs\' resets leav
   r.resetTab('Subtitles');
   eq(new Settings().data.accessibility.subtitleSize, 1.0, 'resetting the Subtitles tab restores the default');
   remove('settings');
+});
+
+// ------------------------------------------------------------------ 5. text for sound-based puzzle cues
+// Puzzles whose solution depends on hearing, and the text that stands in for each cue:
+//   P2 tone test, E1 keypad, P3 shutter order, P10 lock, P11 patch board: panel display and message
+//   P4 closing announcement: subtitle plus a caption for where the figures went
+//   P5 pump, E2 latch, E4 TEST LIGHT, P9 weights, expedition zone test: panel message
+//   P6 reflection tiles: warning on a cracking tile, caption on a safe tile's tone (tileLit)
+//   overflow levers (pool crossing): caption
+//   gallery and display shutter cycles: warning, then captions when they close and open (cycleClosed / cycleOpen)
+//   machine cover (press corridor, catwalk): caption for the whole running phase, replaced at rest
+test('P6 reflection tiles: a cracking tile warns in text, a safe tile reports its cell', () => {
+  const g = game(3);
+  Object.assign(P(g), { x: 11.25, z: 37.25 }); run(g, 0.1);
+  ok(events(g, 'warning').some((e) => /cracks/.test(e.text)), 'cracking tile warning text');
+  Object.assign(P(g), { x: 13.75, z: 37.25 }); run(g, 0.1);
+  eq(events(g, 'tileLit').map((e) => e.cell), ['B1'], 'safe tile event names the cell');
+});
+test('shutter cycles: closing warns in text, closed and reopened events carry the shutter name', () => {
+  const g = game(2);
+  closeCycle(g, 'gallery');
+  ok(events(g, 'warning').some((e) => /Gallery shutters: warning tone/.test(e.text)), 'closing warning');
+  run(g, 3.2);
+  const closed = g.drainEvents().find((e) => e.e === 'cycleClosed');
+  ok(closed && closed.label === 'Gallery shutters' && Number.isFinite(closed.x), 'closed event with name and position');
+  openCycle(g, 'gallery');
+  eq(events(g, 'cycleOpen').map((e) => e.label), ['Gallery shutters'], 'reopened event with name');
+});
+test('machine cover: running events say how long the cover lasts', () => {
+  const g = game(5);
+  run(g, 12.2);
+  const ev = g.drainEvents().filter((e) => e.e === 'machine' && e.id === 'press1');
+  ok(ev.some((e) => !e.running), 'press rests');
+  ok(ev.some((e) => e.running && e.dur === 6), 'running again for six seconds');
+  startMachine(g, 'press1', { until: 10 });
+  ok(events(g, 'machine').some((e) => e.running && e.dur === 10), 'a timed start reports its duration');
+});
+test('machine captions: the at-rest caption replaces the running caption', () => {
+  const h = hud();
+  h.envCaption('[Press running: footsteps covered]', { dur: 6, key: 'machine:Press' });
+  h.envCaption('[Press running: footsteps covered]', { dur: 6, key: 'machine:Press' });
+  eq(caps(h), ['[Press running: footsteps covered]'], 'three presses in step share one caption');
+  h.envCaption('[Press at rest]', { dur: 2, key: 'machine:Press' });
+  eq(caps(h), ['[Press at rest]']);
+});
+test('P4 closing announcement: both outcomes are captioned', () => {
+  const g = game(2), pz = g.puzzles.get('P4');
+  pz.input(P(g), 'play');
+  ok(events(g, 'caption').some((e) => /figures stay by the service exit/.test(e.text)), 'failure caption');
+  pz.state.cooldown = 0; pz.state.playing = 0;
+  for (const a of ['zone:atrium', 'zone:service', 'zone:west']) pz.input(P(g), a);
+  pz.input(P(g), 'play');
+  ok(events(g, 'caption').some((e) => /shuffle west/.test(e.text)), 'success caption');
+});
+test('pool overflow lever and TEST LIGHT give text with their sounds', () => {
+  const g = game(3);
+  const lever = g.level.interactables.find((it) => it.kind === 'overflow');
+  g.script.onInteract(g, P(g), lever, 'begin');
+  ok(events(g, 'caption').some((e) => /Water rushes/.test(e.text)), 'overflow caption');
+  const h = game(5);
+  h.puzzles.get('E4').input(P(h), 'channel');
+  ok(/trace jumps/.test(h.puzzles.get('E4').input(P(h), 'test').msg), 'TEST LIGHT response in text');
 });
 
 console.log(`${pass} passed, ${fail} failed`);

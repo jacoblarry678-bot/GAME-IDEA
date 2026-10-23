@@ -100,13 +100,15 @@ export class Hud {
     this._cap(c, ev.dur + 0.6);
   }
 
-  /** Environmental / warning caption with optional direction tag. */
-  envCaption(text, { warn = false, dir = null, dur = 4 } = {}) {
+  /** Environmental / warning caption with optional direction tag. A `key` replaces the earlier caption with the same key (a machine running, then at rest). */
+  envCaption(text, { warn = false, dir = null, dur = 4, key = null } = {}) {
     const A = this.app.settings.data.accessibility;
     if (!A.envCaptions && !warn) return;
     if (!A.subtitles && !A.envCaptions) return;
     const t = dir && A.directionTags ? `${text} (${dir})` : text;
-    this._cap(el('div', { class: `cap env ${warn ? 'warn' : ''}` }, t), dur);
+    const node = el('div', { class: `cap env ${warn ? 'warn' : ''}` }, t);
+    if (key) { for (const c of [...this.captions.children]) if (c.dataset.key === key) c.remove(); node.dataset.key = key; }
+    this._cap(node, dur);
   }
 
   _cap(node, dur) {
