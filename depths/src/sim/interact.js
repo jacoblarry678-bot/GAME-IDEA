@@ -10,6 +10,8 @@ import { evaluatePhoto } from './photo.js';
 import { EQUIP } from '../data/items.js';
 
 const AIM_COS = Math.cos(28 * Math.PI / 180);
+const AIM_SNAP = 0.12; // metres between the aim ray and an item's point
+const SMALL = new Set(['pickup', 'dropped', 'record', 'note', 'offered']);
 
 export function available(game, it) {
   const S = game.story;
@@ -34,7 +36,7 @@ export function findTarget(game, p) {
   if (p.hidden) { return game.level.interById.get(p.hidden) || null; }
   if (!p.alive && !p.downed) return null;
   const e = p.eye(), f = p.forward();
-  let best = null, bestScore = Infinity;
+  let best = null, bestScore = Infinity, near = null, nearMiss = AIM_SNAP;
   for (const it of candidates(game)) {
     if (it.kind === 'clock' && !it.pressable) continue;
     if (it.noTarget) continue;
@@ -52,8 +54,12 @@ export function findTarget(game, p) {
     if (hit && hit.t < d - 0.45 && !(hit.box.door && it.kind === 'door' && hit.box.door.id === it.door)) continue;
     const score = (1 - cos) * 4 + d * 0.15;
     if (score < bestScore) { bestScore = score; best = it; }
+    // how far the aim ray passes from the object's point
+    const miss = d * Math.sqrt(Math.max(0, 1 - cos * cos));
+    if (miss < nearMiss) { nearMiss = miss; near = it; }
   }
-  return best;
+  // a small item right under the crosshair beats a nearer prop the aim merely points toward (cluttered desks)
+  return near && SMALL.has(near.kind) ? near : best;
 }
 
 /** Prompt description: { name, verb, hold, locked?, note? } */
