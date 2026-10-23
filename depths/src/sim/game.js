@@ -508,6 +508,8 @@ export class Game {
   collectRecord(p, id) {
     const first = !this.persist.records[id];
     this.persist.records[id] = true;
+    // records are permanent: the held checkpoint (written again by a refuge Save and quit) keeps them too
+    if (this.checkpoint) this.checkpoint.persist.records[id] = true;
     const R = RECORDS[id];
     this.fx('record', { id, pid: p ? p.id : null, first, title: R.title, text: R.text, audio: !!R.audio });
     if (R.audio && first) this.story.say('rook', 'recording', R.text);
