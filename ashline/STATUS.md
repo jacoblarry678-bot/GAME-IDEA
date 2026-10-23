@@ -247,7 +247,7 @@ someone runs the server, and others connect to it.
 - Bot-only BR on Ashfield: 12 runs, 85–263 s each, all to a winner.
 - `tools/u090.mjs`: 13/13 (Armory emote tab, slot equip, looping preview, wheel opens, slot 3 plays in third person, moving cancels, all three new weapons fire in first person, BR → Ashfield with 84 loot items and a 131 m zone). Screenshots reviewed.
 - `nettest`: 30/30 twice (emote broadcast added). One earlier run had a single lag-compensation miss that did not reproduce on two reruns.
-- Browser regression results: see the commit message for this version.
+- Browser regression on 0.9.0: `e2e` 31/31, `br` 25/25, `online` 22/22, `onlinebr` 11/11, `mobile` 14/14, `u090` 13/13, `modes` 27/27, `m4` 16/16 (after updating two assertions that hard-coded 16 weapons and "everything unlocked at level 20"; the Talon Lever unlocks at 22).
 
 **Limits**: emote animations are simple procedural poses on a rigid rig (no facial animation or props). Ashfield is flat ground (no terrain height) and has no water depth. Weapon balance is by hand, not telemetry.
 

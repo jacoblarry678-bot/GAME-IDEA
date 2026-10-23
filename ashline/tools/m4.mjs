@@ -29,7 +29,7 @@ await p.waitForTimeout(500);
 await p.click('.menu-btn[data-go=loadouts]');
 await p.waitForTimeout(600);
 const opts = await ev(() => ({ total: document.querySelectorAll('.wpn-opt[data-slot=primary], .wpn-opt[data-slot=secondary]').length, locked: document.querySelectorAll('.wpn-opt.locked[data-slot=primary], .wpn-opt.locked[data-slot=secondary]').length, perks: document.querySelectorAll('.wpn-opt[data-slot=perk]').length, lockedOther: document.querySelectorAll('.wpn-opt.locked[data-slot=perk], .wpn-opt.locked[data-slot=tactical]').length }));
-check('loadouts list all 16 weapons; most locked at level 1', opts.total === 16 && opts.locked === 11, JSON.stringify(opts));
+check('loadouts list all 19 weapons; most locked at level 1', opts.total === 19 && opts.locked === 14, JSON.stringify(opts));
 check('loadouts show 9 perks in 3 slots; advanced perks and tacticals locked at level 1', opts.perks === 9 && opts.lockedOther === 8, JSON.stringify(opts));
 await S('01-loadouts-locked');
 await p.click('.wpn-opt[data-id=lmg_anvil]');
@@ -37,7 +37,7 @@ await p.waitForTimeout(300);
 const st1 = await ev(() => ({ primary: window.__ashline.profile.loadout.primary, toast: document.querySelector('.toast')?.textContent || '' }));
 check('clicking a locked weapon does not equip it and explains why', st1.primary === 'ar_kv7' && /level 14/.test(st1.toast), JSON.stringify(st1));
 // level up (test) and equip
-await ev(() => { const a = window.__ashline; a.profile.data.level = 20; a.profile.save(); });
+await ev(() => { const a = window.__ashline; a.profile.data.level = 22; a.profile.save(); });
 await p.click('[data-screen=loadouts] >> text=Back');
 await p.waitForTimeout(300);
 await p.click('.menu-btn[data-go=loadouts]');
@@ -50,8 +50,8 @@ await p.click('.wpn-opt[data-id=pk_ghost]');
 await p.click('.wpn-opt[data-id=shield]');
 await p.waitForTimeout(300);
 const st2 = await ev(() => ({ ...window.__ashline.profile.loadout, locked: document.querySelectorAll('.wpn-opt.locked').length }));
-check('perks and Bulwark equip at level 20', st2.perks.join() === 'pk_scavenger,pk_ghost,pk_resolve' && st2.tactical === 'shield', JSON.stringify(st2.perks) + st2.tactical);
-check('at level 20 every weapon is unlocked and equippable', st2.primary === 'ar_meridian' && st2.secondary === 'melee_axe' && st2.locked === 0, JSON.stringify(st2));
+check('perks and Bulwark equip at level 22', st2.perks.join() === 'pk_scavenger,pk_ghost,pk_resolve' && st2.tactical === 'shield', JSON.stringify(st2.perks) + st2.tactical);
+check('at level 22 every weapon is unlocked and equippable', st2.primary === 'ar_meridian' && st2.secondary === 'melee_axe' && st2.locked === 0, JSON.stringify(st2));
 await S('02-loadouts-unlocked');
 // ---- gunsmith
 await p.click('[data-a=gs-primary]');
