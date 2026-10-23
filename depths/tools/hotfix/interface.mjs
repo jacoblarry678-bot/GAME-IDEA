@@ -23,12 +23,15 @@ class FakeNode {
 }
 globalThis.document = { createElement: (t) => new FakeNode(t), createTextNode: (s) => new FakeNode('#text', s) };
 
+const { readFileSync, readdirSync } = await import('node:fs');
 const { Hud } = await import('../../src/ui/hud.js');
 const { Settings } = await import('../../src/core/settings.js');
 const { remove } = await import('../../src/core/storage.js');
 const { Game } = await import('../../src/sim/game.js');
 const { closeCycle, openCycle } = await import('../../src/sim/shutters.js');
 const { startMachine } = await import('../../src/sim/machines.js');
+const { SCENES, SPEAKERS, SOURCES } = await import('../../src/data/dialogue.js');
+const { ACHIEVEMENTS } = await import('../../src/data/achievements.js');
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -158,6 +161,38 @@ test('pool overflow lever and TEST LIGHT give text with their sounds', () => {
   const h = game(5);
   h.puzzles.get('E4').input(P(h), 'channel');
   ok(/trace jumps/.test(h.puzzles.get('E4').input(P(h), 'test').msg), 'TEST LIGHT response in text');
+});
+
+// ------------------------------------------------------------------ 6. speaker labels and text
+const SRC = new URL('../../src/', import.meta.url).pathname;
+const sources = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? sources(`${dir}${d.name}/`) : d.name.endsWith('.js') ? [`${dir}${d.name}`] : []));
+const FILES = sources(SRC).map((f) => ({ f: f.slice(SRC.length), text: readFileSync(f, 'utf8') }));
+test('every dialogue beat names a known speaker and source', () => {
+  const bad = [];
+  for (const [id, beats] of Object.entries(SCENES)) for (const b of beats) if (b.text !== undefined && (!SPEAKERS[b.sp] || !(b.src in SOURCES))) bad.push(`${id}: ${b.text}`);
+  eq(bad, [], 'beats without speaker or source');
+});
+test('every scripted line outside the scenes names a known speaker and source', () => {
+  const bad = [];
+  let n = 0;
+  for (const { f, text } of FILES) {
+    for (const m of text.matchAll(/\.say\(\s*'([^']*)',\s*'([^']*)'/g)) { n++; if (!SPEAKERS[m[1]] || !(m[2] in SOURCES)) bad.push(`${f}: ${m[0]}`); }
+    for (const m of text.matchAll(/hud\.line\(\{ sp: '([^']*)', src: '([^']*)'/g)) { n++; if (!SPEAKERS[m[1]] || !(m[2] in SOURCES)) bad.push(`${f}: ${m[0]}`); }
+  }
+  ok(n >= 10, `found ${n} scripted lines`);
+  eq(bad, [], 'lines without a known speaker');
+});
+test('text has no doubled words or unhyphenated compound numbers', () => {
+  // scans whole source lines: these patterns do not occur in code, so strings, records and journal text are all covered
+  const bad = [];
+  for (const { f, text } of FILES) {
+    text.split('\n').forEach((line, i) => {
+      const dup = /\b([a-z]{2,})[ \t]+\1\b/i.exec(line);
+      if (dup || /\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety) (one|two|three|four|five|six|seven|eight|nine)\b/i.test(line)) bad.push(`${f}:${i + 1}`);
+    });
+  }
+  eq(bad, []);
+  ok(ACHIEVEMENTS.find((a) => a.id === 'A11').cond.includes('thirty-six'), 'A11 reads thirty-six');
 });
 
 console.log(`${pass} passed, ${fail} failed`);
