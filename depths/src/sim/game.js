@@ -621,7 +621,8 @@ export class Game {
       c.loadData(e.data || {});
       this.enemies.push(c);
     }
- this.npcs = (snap.npcs || []).map((n) => ({ ...n }));
+    // escort paths are consumed as the NPC walks; never share the array with the snapshot
+    this.npcs = (snap.npcs || []).map((n) => ({ ...n, path: n.path ? n.path.slice() : null }));
     this.director.restore(snap.director || {});
     this.map = JSON.parse(JSON.stringify(snap.map || { rooms: {}, doors: {} }));
     this.refugeSecured = { ...(snap.refuges || {}) };
