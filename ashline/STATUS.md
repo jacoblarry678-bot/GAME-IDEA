@@ -209,6 +209,29 @@ someone runs the server, and others connect to it.
 - Supercharged XP and all progression are stored locally and remain editable by the user (as before).
 - Weather and BR performance are still unmeasured on a real GPU; the container renders with SwiftShader.
 
+## Update 0.7.0: Hollow Night (Halloween event), 15 cosmetics, sealed collab drop_002
+
+**Added**
+- **Event** `hollow_night`: active 16 Oct – 6 Nov 2026 on the device's clock (local dates). Night look in matches (`src/fx/halloween.js`: violet sky and moon via the sky shader uniforms, dimmed sun/ambient, purple fog, 14–20 jack-o'-lanterns near hotspots with flickering emissive faces and 4 point lights that follow the nearest lanterns), applied before the weather so both combine; fully restored when you leave. Candy per finished match (10, +10 win, +2 per elimination, +1 per headshot, +8 BR top 3) and 5 event challenges (25–30 Candy each); 8-reward free track unlocks automatically and self-heals; event Store section (7 items + 25%-off bundle, test credits) closes when the event ends; event screen from the main menu; results show Candy, unlocks and the next reward.
+- **15 cosmetics** across finishes, charms, cards, emblems, banners and outfits (new finish kinds, charm shapes and 2D art kinds).
+- **drop_002** sealed in the vault (second release code, kept out of git): a collab operator skin built on a new data-driven **suit kit** (jacket with lapels, white shirt and collar, tie, trousers, dress shoes, bare pale hands with long fingers) and a smooth featureless head, its outfit, and a banner. The drop also brings its own Store collab section and bundle (vault content can now register a collab definition). Same height (measured 1.876 m vs 1.863 m top of model), hitbox and team markings as other operators.
+- Battle Royale fix: during the weapons-cold phase bots no longer hunt each other by footsteps or pre-build target lock, so matches no longer open with 5–6 eliminations in the first two seconds after weapons go hot.
+
+**Verification**
+- `npm test`: 234/234 without codes; 245/245 with `VAULT_TEST_CODE` and `VAULT_TEST_CODE_2` (event dates, Candy maths, challenges, track unlocks, store gating after the event, persistence, sanitising, drop_002 unlock → collab section → bundle purchase → equip → reload). Two older tests were made date-independent (the date moved into new daily challenges).
+- `tools/halloween.mjs`: 14/14 with the drop code (menu entry, event screen, Store section and purchase, night match with lanterns, results Candy +34 and first unlock, restore on exit, toggle off, drop hidden before the code, revealed after, bundle purchase, preview, same in-match height). Screenshots reviewed.
+- Built bundle: no plaintext ids or names from either drop.
+
+**Limits**: event timing uses the device clock (changing the clock changes the event window). Lanterns are visual only (no collision). The skin was modelled from a screenshot reference by eye.
+
+## Update 0.8.0: mobile support
+
+**Added**: touch controls (`src/ui/touch.js`) that feed the existing input layer as virtual actions — floating move stick with full-push sprint, drag-to-look, two fire buttons (fire also aims while dragged), aim/crouch toggles, jump, reload, swap, melee, frag, tactical, support 1–3 (lit when ready), Battle Royale pick-up, scoreboard and pause. No pointer lock or "click to capture" on touch; touch layer hides immediately on pause. Compact menus (zoomed screens) and a smaller HUD on short screens, ammo moved bottom-centre and redundant readouts hidden while touch is on. Rotate-to-landscape prompt in portrait, Fullscreen button (Android), first-launch Low preset + dynamic resolution on phones, Touch Controls (Auto/On/Off) and Touch Look Sensitivity settings, mobile viewport meta.
+
+**Verification**: `tools/mobile.mjs` 14/14 in an emulated 844×390 Android phone with real touch-type pointer events (stick walked 10 m and sprinted, drag turned the view, FIRE shot, AIM/CROUCH toggled, JUMP jumped, pause/resume, portrait prompt). Desktop `e2e` rerun after the change. Screenshots reviewed (menu fits; HUD and buttons don't overlap).
+
+**Limits**: tested in Chromium's phone emulation only, not on a physical phone; real-device performance (especially with weather/night lights) is unmeasured. iOS Safari has no page fullscreen API. Touch controls aren't remappable yet (layout is fixed); online play on a phone needs the phone to reach the server's address.
+
 ## Possible next steps
 - Co-op survival, multiple rooms per server or a simple server list, an axe swing animation, a laser beam visual, and GPU profiling on real hardware.
 - A production online service would need hosted servers, accounts, server-side progression and entitlements, and anti-cheat. That isn't in scope without real infrastructure.

@@ -12,7 +12,7 @@ generated in code when the game loads.
 
 ## Run it
 
-Requires Node 18+ and a desktop browser with WebGL 2 (Chrome, Edge, Firefox or Safari).
+Requires Node 18+ and a browser with WebGL 2: desktop (Chrome, Edge, Firefox, Safari) or a phone/tablet (Chrome on Android, Safari on iOS) with touch controls.
 
 ```bash
 cd ashline
@@ -83,10 +83,12 @@ as a claude.ai artifact can't reach a server on your machine; open the server's 
 | Lethal (frag) / Tactical (smoke, flash or Bulwark) | G / Q | RB / LB |
 | Support: Recon Scan / Supply Drop / Area Strike | 3 / 4 / 5 | D-pad ← / ↑ / → |
 | Pick up weapon (Battle Royale) | F | D-pad ↓ |
+
+**Touch (phones and tablets, landscape)**: left thumb anywhere on the left side = floating move stick (push all the way forward to sprint); drag on the right side to look; FIRE (right, and a second one on the left; dragging while firing also aims); AIM and CROUCH toggle; JUMP, RELOAD, SWAP, MELEE, FRAG, TAC; support abilities 3/4/5 light up when ready; PICK UP appears over Battle Royale loot; pause and scoreboard top right. Settings → Controls → Touch Controls (Auto/On/Off) and Touch Look Sensitivity. The first launch on a phone uses the Low preset with dynamic resolution; the menu has a Fullscreen button (Android; iOS Safari has no page fullscreen); portrait shows a rotate prompt.
 | Scoreboard | Tab | View |
 | Pause | Esc | Menu |
 
-## What you can play now (Milestones 1–5, update 0.6.0)
+## What you can play now (Milestones 1–5, updates 0.6.0–0.8.0)
 
 - **Cinder Yard**: an industrial rail depot with a close-quarters warehouse, a rail yard with boxcars and a control booth, a container maze, a maintenance building, a long south road and two staging areas.
 - **Team Deathmatch** against up to 9 bots (5v5 with you), at four difficulty levels. You can set score and time limits and turn friendly fire on or off.
@@ -110,6 +112,9 @@ as a claude.ai artifact can't reach a server on your machine; open the server's 
   - **Battle Royale (mini)**: up to 10 players on any map, no respawns. Everyone drops in spread out with a pistol and an axe. A 30-second weapons-cold phase is for looting weapons (F to swap), ammo, medkits and grenade packs. Then a five-phase shrinking zone drifts toward a final circle and hurts you outside it. Natural regen stops at 60 health; medkits heal to full. Eliminated players drop their gun. Last one standing wins; if time runs out, the survivor with the most eliminations wins. After you're out you spectate, and offline you can press Space to simulate the rest of the match to a real winner. Online, the server runs the zone and loot.
   - **Dynamic weather**: clear → overcast → rain → thunderstorm, or fog, changing every 1–2 minutes (or fixed, chosen in Play setup). It brings an overcast sky, rain that roofs stop, lightning with delayed thunder, a rain audio bed, wet ground that soaks in and dries, and dimmer sun and flare under cloud. Fog and rain also shorten how far bots can see. Online, the server decides the weather. Settings → Graphics → Weather Effects turns off the rain, lightning flashes and wet sheen; fog and light still change because they affect visibility for everyone.
   - **Supercharged XP**: a free event gift on the main menu, claimed once per profile. It gives one hour of 2× player, weapon and battle-pass XP, which counts down only while you are in a match (so it doesn't depend on your device clock). The HUD shows a 2× XP timer, and results list the bonus. It never affects gameplay.
+- **Update 0.7.0: Hollow Night (Halloween event, 16 Oct – 6 Nov 2026 by the device date)**: matches play at night with a violet sky, moonlight, purple fog and glowing jack-o'-lanterns (Play setup can turn it off). Finished matches earn **Candy** (event-only, never sold) that unlocks an 8-reward free event track automatically; 5 event challenges pay extra Candy; the Store has a Hollow Night section (test credits). 15 new cosmetics: Jack-o'-Lantern, Ectoplasm and Ossuary finishes, Lantern Pumpkin, Rattle Skull and Little Ghost charms, Hollow Night and Pumpkin Patch cards, Jack, Grinning Skull and Night Wing emblems, Hollow Moon and Cobweb banners, Gravewalker and Wraith outfits. Event items stay yours after the event.
+- **Sealed collab drop `drop_002`**: an operator skin with its own outfit, banner and Store collab section ships encrypted (see *Staged content drops*). Same height, hitbox and team markings as every operator.
+- **Update 0.8.0: mobile support**: touch controls (see Controls), no mouse capture on touch, compact menus and HUD on short screens, rotate prompt, Fullscreen button, light graphics by default on phones.
 - **Graphics options**: bloom, GTAO ambient occlusion, 1K–4K shadows, dynamic resolution, render scale, FOV, frame cap and quality presets.
 
 ## Architecture
@@ -147,7 +152,7 @@ The match simulation does not depend on rendering. `tools/sim.mjs` and
 ## Testing
 
 ```bash
-npm test                         # 218 headless tests (movement, weapons, damage, equipment, modes, economy, attachments, maps, weather, BR, XP boost)
+npm test                         # 234 headless tests (+11 with both vault codes): movement, weapons, damage, modes, economy, maps, weather, BR, XP boost, Hollow Night, vault
 npm run sim -- 3 regular 5 dom old_quarter   # bots-only match: minutes, difficulty, bots per team, mode, map
 npm run maps                     # validates spawns, nav connectivity and objectives on every map
 npm run nettest                  # dedicated server with real WebSocket clients
@@ -161,6 +166,8 @@ node tools/maps.mjs              # map picker + screenshots of the new maps
 node tools/sun.mjs               # sun flare/occlusion, reflections, scope glint, Waspinator collab
 node tools/weather.mjs           # storm/fog/rain visuals, roofs stop rain, lightning, cleanup, dynamic changes
 node tools/br.mjs                # Battle Royale end to end + Supercharged XP claim → badge → ×2 results
+node tools/halloween.mjs         # Hollow Night event + drop_002 (set VAULT_TEST_CODE_2 for the drop checks)
+node tools/mobile.mjs            # phone viewport with touch: stick, look, fire, toggles, pause, rotate prompt
 npm run build && node tools/onlinebr.mjs   # Battle Royale on the dedicated server in a browser
 node tools/range.mjs             # firing range check
 node tools/beauty.mjs high       # review screenshots from fixed viewpoints
@@ -181,7 +188,7 @@ Resolution, Shadows or the quality preset.
 
 Unreleased cosmetics can ship inside a build as AES-256-GCM ciphertext (`src/data/vault.js`).
 Nothing about them — ids, names, colours — is readable until a release code is supplied. Hotfix
-0.5.2 shipped one sealed drop (still sealed in 0.6.0).
+Two drops ship sealed: `drop_001` (since 0.5.2) and `drop_002` (since 0.7.0), each with its own release code. A drop can bring a whole new collab Store section that stays invisible until it opens.
 
 Release it any of these ways (each one is instant, no rebuild needed for the first two):
 - **Code**: players type it into **Store → Redeem code**. It unlocks for that device and is remembered.

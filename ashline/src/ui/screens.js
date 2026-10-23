@@ -20,7 +20,7 @@ import { SUPPORT, SUPPORT_IDS } from '../data/support.js';
 import { MAPS, MAP_IDS } from '../world/maps/index.js';
 import { NetClient } from '../net/netClient.js';
 
-export const VERSION = 'Update 0.7.0';
+export const VERSION = 'Update 0.8.0';
 
 export class Screens {
   constructor(app) {

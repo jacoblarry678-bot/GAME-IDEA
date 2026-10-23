@@ -104,17 +104,17 @@ await waitState('menu');
 // ---- drop_002
 await p.click('.menu-btn[data-go=store]');
 await p.waitForTimeout(500);
-const before2 = await ev(() => [...document.querySelectorAll('.collab-box h3')].map((h) => h.textContent));
+const before2 = await ev(() => [...document.querySelectorAll('.collab-box:not(.event-box) h3')].map((h) => h.textContent));
 check('before release only the existing collab section is listed', before2.length === 1 && /Waspinator/.test(before2[0]), before2.join(' | '));
 if (CODE2) {
   await p.fill('.code-in', CODE2.toLowerCase());
   await p.click('[data-a=redeem]');
-  await p.waitForFunction(() => document.querySelectorAll('.collab-box').length >= 2, null, { timeout: 60000 });
+  await p.waitForFunction(() => document.querySelectorAll('.collab-box:not(.event-box)').length >= 2, null, { timeout: 60000 });
   await p.waitForTimeout(500);
-  const after = await ev(() => [...document.querySelectorAll('.collab-box h3')].map((h) => h.textContent));
+  const after = await ev(() => [...document.querySelectorAll('.collab-box:not(.event-box) h3')].map((h) => h.textContent));
   check('the code opens drop_002: a second collab section appears', after.length === 2, after.join(' | '));
   await ev(() => window.__ashline.profile.addTestCredits(3000));
-  const bundleBtn = await p.$('.collab-box:last-child [data-bundle]');
+  const bundleBtn = await p.$('.collab-box:not(.event-box):last-of-type [data-bundle], .collab-box:not(.event-box) [data-bundle^=bd_s]');
   await bundleBtn.click();
   await p.waitForTimeout(300);
   await p.click('[data-a=buyb]');
