@@ -511,6 +511,8 @@ export class Game {
   collectRecord(p, id) {
     const first = !this.persist.records[id];
     this.persist.records[id] = true;
+    // records are permanent: the held checkpoint (written again by a refuge Save and quit) keeps them too
+    if (this.checkpoint) this.checkpoint.persist.records[id] = true;
     const R = RECORDS[id];
     this.fx('record', { id, pid: p ? p.id : null, first, title: R.title, text: R.text, audio: !!R.audio });
     if (R.audio && first) this.story.say('rook', 'recording', R.text);
@@ -639,7 +641,8 @@ export class Game {
       c.loadData(e.data || {});
       this.enemies.push(c);
     }
- this.npcs = (snap.npcs || []).map((n) => ({ ...n }));
+    // escort paths are consumed as the NPC walks; never share the array with the snapshot
+    this.npcs = (snap.npcs || []).map((n) => ({ ...n, path: n.path ? n.path.slice() : null }));
     this.director.restore(snap.director || {});
     this.map = JSON.parse(JSON.stringify(snap.map || { rooms: {}, doors: {} }));
     this.refugeSecured = { ...(snap.refuges || {}) };

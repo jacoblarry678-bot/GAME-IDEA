@@ -198,7 +198,7 @@ const pickups = [
   { id: 'o6aid1', item: 'firstaid', qty: 1, route: 'optional', x: 13.6, y: 0.78, z: 3.6 },
   { id: 'o6aid2', item: 'firstaid', qty: 1, route: 'optional', x: 12.4, y: 0.78, z: 134 },
   { id: 'o6film1', item: 'film', qty: 1, route: 'optional', x: 4.6, y: 0.78, z: 120 },
-  { id: 'o6film2', item: 'film', qty: 1, route: 'optional', x: 3.5, y: 1.0, z: 54.5 },
+  { id: 'o6film2', item: 'film', qty: 1, route: 'optional', x: 4.45, y: 1.1, z: 54.5 },
   { id: 'o6wedge1', item: 'wedge', qty: 1, route: 'optional', x: 2.0, y: 0.05, z: 165 },
   { id: 'o6wedge2', item: 'wedge', qty: 1, route: 'optional', x: 12.8, y: 0.05, z: 109.6 },
 ];
