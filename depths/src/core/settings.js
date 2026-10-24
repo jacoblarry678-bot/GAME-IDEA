@@ -87,6 +87,8 @@ export const DEFAULT_SETTINGS = {
     padDeadzone: 0.14,
     oneHand: false,
     padVibration: true,
+    touch: 'auto',
+    touchLook: 1.0,
   },
   audio: { master: 0.85, dialogue: 0.9, threat: 0.9, environment: 0.75, music: 0.6, compressed: false, speech: false },
   graphics: { quality: 'high', renderScale: 1.0, shadows: true, fov: 90, brightness: 1.0, showFps: false },
@@ -175,6 +177,8 @@ export const SETTINGS_SCHEMA = [
     { key: 'controls.oneHand', label: 'One-hand controller layout', type: 'toggle', note: 'Left stick moves and turns; LB interacts, LT uses the tool, D-pad up flashlight, down crouch, left and right change tools, L3 sprints.' },
     { key: 'controls.padDeadzone', label: 'Stick dead zone', type: 'slider', min: 0.04, max: 0.4, step: 0.01, fmt: (v) => `${Math.round(v * 100)}%` },
     { key: 'controls.padVibration', label: 'Controller vibration', type: 'toggle' },
+    { key: 'controls.touch', label: 'Touch controls', type: 'select', options: [['auto', 'Automatic'], ['on', 'Always'], ['off', 'Off']], note: 'On-screen stick and buttons for phones and tablets. Automatic shows them once you touch the screen.' },
+    { key: 'controls.touchLook', label: 'Touch look sensitivity', type: 'slider', min: 0.3, max: 3, step: 0.1, fmt: (v) => v.toFixed(1) },
     { key: 'controls.bindings', label: 'Key bindings', type: 'bindings' },
   ] },
   { tab: 'Graphics', items: [
@@ -207,6 +211,7 @@ export class Settings {
   }
   _load() {
     const saved = load('settings', null);
+    this.fresh = !saved; // first launch: no stored settings yet
     const d = mergeDefaults(DEFAULT_SETTINGS, saved);
     // bindings: keep known actions only, fill missing
     const b = {};

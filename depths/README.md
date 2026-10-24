@@ -33,6 +33,12 @@ npm run build && npm run preview     # http://localhost:4195
 Click into the game to capture the mouse. `Esc` releases it and opens the pause
 menu. Solo play pauses the world; online play keeps running.
 
+On a phone or tablet, touch controls appear once you touch the screen: a stick
+on the left moves (it appears where your thumb lands), dragging anywhere else
+looks, and buttons cover the other actions. Hold **Act** to open doors quietly.
+**Full** goes full screen where the browser allows it. Settings → Controls can
+show the touch controls always or turn them off.
+
 ## Online co-op (self-hosted)
 
 One person hosts and up to three people join. The host's browser runs the game;
@@ -105,6 +111,7 @@ npm run expedition        # a bot completes twelve generated Expedition runs
 npm run coop              # co-op over real sockets: relay, host and guest
 npm run build && npm run e2e        # the built game in headless Chromium
 npm run build && npm run coop:e2e   # host and guest browsers through the real server
+npm run build && npm run touch:e2e  # a phone-sized touch screen: stick, look drag and buttons
 ```
 
 The playthrough bot uses only the public game API: inputs, interactions and

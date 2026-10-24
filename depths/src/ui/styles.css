@@ -266,3 +266,40 @@ input[type=text] { background: #111; color: var(--text); border: 1px solid var(-
 }
 .sheet.pn > .row { margin-bottom: 14px; }
 .sheet.pn > .row h2 { margin-bottom: 0; }
+
+/* touch controls */
+#touch { position: absolute; inset: 0; display: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+#touch.on { display: block; }
+.tstick { position: absolute; width: 120px; height: 120px; transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid rgba(232, 226, 204, 0.35); background: rgba(0, 0, 0, 0.2); pointer-events: none; }
+.tstick.rest { left: calc(36px + env(safe-area-inset-left)); bottom: calc(30px + env(safe-area-inset-bottom)); top: auto; transform: none; opacity: 0.4; }
+.tstick .knob { position: absolute; left: 34px; top: 34px; width: 52px; height: 52px; border-radius: 50%; background: rgba(232, 226, 204, 0.4); }
+.tbtn { position: absolute; width: var(--s); height: var(--s); right: calc(var(--r) + env(safe-area-inset-right)); bottom: calc(var(--b) + env(safe-area-inset-bottom)); border-radius: 50%; border: 1.5px solid rgba(232, 226, 204, 0.45); background: rgba(10, 11, 11, 0.45); color: var(--text); font: 600 10px/1 var(--font); letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; text-align: center; touch-action: none; }
+.tbtn.down { background: rgba(217, 194, 122, 0.35); }
+.tbtn.lit { border-color: var(--accent); color: var(--accent); }
+.tbtn.off { opacity: 0.3; }
+.ttop { position: absolute; top: calc(8px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); display: flex; gap: 6px; }
+.ttop .tbtn { position: static; width: 52px; height: 36px; border-radius: 6px; }
+/* HUD rearranged around the touch controls */
+#ui.touch .toasts { right: auto; left: 50%; transform: translateX(-50%); align-items: center; top: 54px; }
+#ui.touch .tool { bottom: auto; top: 54px; right: 14px; min-width: 0; }
+#ui.touch .saveind { bottom: auto; right: auto; top: 76px; left: 16px; align-items: flex-start; }
+#ui.touch .meters { left: 50%; transform: translateX(-50%); bottom: 8px; width: 150px; }
+#ui.touch .captions { bottom: 56px; width: min(520px, 54vw); }
+#ui.touch .objective { max-width: min(420px, 44vw); top: 14px; left: 16px; }
+#ui.touch .hint { left: 16px; max-width: min(420px, 44vw); }
+#ui.touch .hud .countdown { top: 52px; }
+/* short screens (phones held sideways): compact menus that scroll */
+.menu-side { overflow-y: auto; }
+@media (max-height: 520px) {
+  .menu-side { padding: 18px 4vw; }
+  .menu-list { margin-top: 12px; }
+  .title { font-size: calc(16px * var(--ts)); letter-spacing: 0.3em; line-height: 1.3; }
+  .title small { display: none; }
+  .menu-list { gap: 0; }
+  .menu-list .btn { padding: 4px 14px; }
+  .menu-list .btn .why { font-size: 0.66em; margin-top: 1px; }
+  .menu-foot { display: none; }
+  .sheet { padding: 16px 18px; max-height: 96vh; }
+}
+html, body { overscroll-behavior: none; }
+.overlay { z-index: 10; } /* menus and panels always draw over the HUD */

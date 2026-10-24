@@ -4,7 +4,9 @@
  * and the controller map from the design (A interact, B crouch/back, X reload,
  * Y inventory, LB tool radial, RB ping, LT inspect, RT use, View journal,
  * Menu pause, L3 sprint toggle, D-pad up flashlight, D-pad down callouts,
- * LT + D-pad left/right lean). Tracks the last used device for prompts.
+ * LT + D-pad left/right lean). Touch controls (src/ui/touch.js) feed the
+ * same actions through touchAction(), a move vector and a look delta.
+ * Tracks the last used device for prompts.
  */
 
 export const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, L3: 10, R3: 11, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
@@ -15,6 +17,11 @@ export const PAD_ACTIONS = {
 };
 /** One-hand controller layout (left hand): actions on the shoulder, trigger, D-pad and stick button. */
 export const PAD_ONEHAND = { interact: PAD.LB, mantle: PAD.LB, use: PAD.LT, crouch: PAD.DOWN, flashlight: PAD.UP, journal: PAD.VIEW, sprint: PAD.L3, pause: PAD.MENU };
+const TOUCH_LABELS = {
+  interact: 'ACT', mantle: 'ACT', use: 'USE', inspect: 'AIM', sprint: 'RUN', crouch: 'CROUCH', flashlight: 'LIGHT', cameraFlash: 'FLASH',
+  reload: 'RELOAD', breathe: 'BREATHE', journal: 'JOURNAL', inventory: 'BAG', pause: 'MENU', hint: 'HINT', toolNext: 'TOOL', radial: 'TOOL',
+  tool1: 'TOOL', tool2: 'TOOL', tool3: 'TOOL', tool4: 'TOOL',
+};
 const PAD_LABELS = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L3', 'R3', 'D-PAD ↑', 'D-PAD ↓', 'D-PAD ←', 'D-PAD →'];
 
 export class Input {
@@ -36,6 +43,10 @@ export class Input {
     this.listeners = { lockchange: [], device: [] };
     this.lastLockFail = 0;
     this.typing = false; // text field focused: gameplay keys suspended
+    this.touchDown = new Set(); this.touchPressed = new Set(); this.touchReleased = new Set();
+    this.touchMove = { x: 0, y: 0 }; // stick, -1..1, y forward
+    this.touchLook = { x: 0, y: 0 }; // radians this frame
+    this.lastTouch = -1e9;
     this._bind();
   }
 
@@ -62,7 +73,10 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => { this.down.delete(e.code); this.releasedSet.add(e.code); });
     window.addEventListener('blur', () => { for (const c of this.down) this.releasedSet.add(c); this.down.clear(); });
+    // a touch makes touch the active device; the mouse events a browser emulates after a tap are ignored
+    window.addEventListener('touchstart', () => { this.lastTouch = performance.now(); this._setDevice('touch'); }, { passive: true, capture: true });
     this.target.addEventListener('mousedown', (e) => {
+      if (performance.now() - this.lastTouch < 1000) return;
       if (this.captureCb) { e.preventDefault(); const cb = this.captureCb; this.captureCb = null; cb('Mouse' + e.button); return; }
       const code = 'Mouse' + e.button;
       if (!this.down.has(code)) this.pressedSet.add(code);
@@ -78,7 +92,7 @@ export class Input {
       this.pressedSet.add(e.deltaY > 0 ? 'WheelDown' : 'WheelUp');
     }, { passive: true });
     window.addEventListener('mousemove', (e) => {
-      if (!this.enabled) return;
+      if (!this.enabled || performance.now() - this.lastTouch < 1000) return;
       if (this.locked || !this.lockSupported() || performance.now() - this.lastLockFail < 60000) {
         this.mouseDX += e.movementX || 0;
         this.mouseDY += e.movementY || 0;
@@ -96,7 +110,7 @@ export class Input {
 
   lockSupported() { return 'pointerLockElement' in document && typeof this.target.requestPointerLock === 'function'; }
   requestLock() {
-    if (!this.lockSupported()) return;
+    if (!this.lockSupported() || this.device === 'touch') return;
     try {
       const p = this.target.requestPointerLock({ unadjustedMovement: true });
       if (p && p.catch) p.catch(() => {
@@ -142,16 +156,25 @@ export class Input {
   isDown(action) {
     if (this.typing) return false;
     for (const c of this.binding(action)) if (c && this.down.has(c)) return true;
-    return this._padDown(action);
+    return this.touchDown.has(action) || this._padDown(action);
   }
   pressed(action) {
     if (this.typing) return false;
     for (const c of this.binding(action)) if (c && this.pressedSet.has(c)) return true;
-    return this._padDown(action) && !this._padWas(action);
+    return this.touchPressed.has(action) || (this._padDown(action) && !this._padWas(action));
   }
   released(action) {
     for (const c of this.binding(action)) if (c && this.releasedSet.has(c)) return true;
-    return !this._padDown(action) && this._padWas(action);
+    return this.touchReleased.has(action) || (!this._padDown(action) && this._padWas(action));
+  }
+  /** An on-screen touch button went down or up. */
+  touchAction(action, down) {
+    if (down) { if (!this.touchDown.has(action)) this.touchPressed.add(action); this.touchDown.add(action); }
+    else if (this.touchDown.delete(action)) this.touchReleased.add(action);
+  }
+  touchReset() {
+    for (const a of this.touchDown) this.touchReleased.add(a);
+    this.touchDown.clear(); this.touchMove.x = 0; this.touchMove.y = 0;
   }
   /** Was this action triggered from the controller this frame (vs keyboard)? */
   padPressed(btn) { return !!(this.padNow[btn] && !this.padPrev[btn]); }
@@ -190,9 +213,13 @@ export class Input {
     if (act && act.playEffect) act.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch(() => {});
   }
 
-  endFrame() { this.pressedSet.clear(); this.releasedSet.clear(); this.mouseDX = 0; this.mouseDY = 0; }
+  endFrame() {
+    this.pressedSet.clear(); this.releasedSet.clear(); this.mouseDX = 0; this.mouseDY = 0;
+    this.touchPressed.clear(); this.touchReleased.clear(); this.touchLook.x = 0; this.touchLook.y = 0;
+  }
 
   label(action) {
+    if (this.device === 'touch' && TOUCH_LABELS[action]) return TOUCH_LABELS[action];
     if (this.device === 'pad') {
       if (action === 'leanLeft') return 'LT + D-PAD ←';
       if (action === 'leanRight') return 'LT + D-PAD →';

@@ -61,7 +61,7 @@ test('camera: one press held across frames through the controller takes one phot
   const down = new Set();
   let pressed = new Set();
   const input = {
-    mouseDX: 0, mouseDY: 0, padAxes: [0, 0, 0, 0], pad: null, down,
+    mouseDX: 0, mouseDY: 0, padAxes: [0, 0, 0, 0], pad: null, down, touchMove: { x: 0, y: 0 }, touchLook: { x: 0, y: 0 }, touchPressed: new Set(),
     binding: B, isDown: (a) => B(a).some((c) => c && down.has(c)), pressed: (a) => B(a).some((c) => c && pressed.has(c)),
     released: () => false, padPressed: () => false, keyPressed: (c) => pressed.has(c),
   };

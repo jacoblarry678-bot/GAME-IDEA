@@ -15,6 +15,7 @@
     "server": "node server/server.mjs",
     "expedition": "node tools/xrun.mjs 12",
     "coop": "node tools/cooptest.mjs",
+    "touch:e2e": "node tools/touche2e.mjs",
     "coop:e2e": "node tools/coope2e.mjs"
   },
   "dependencies": {

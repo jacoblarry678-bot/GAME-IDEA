@@ -50,6 +50,7 @@ await click('Continue');
 await frames(1);
 await click('Begin');
 await page.waitForFunction(() => window.__depths.state === 'game' && window.__depths.game && window.__depths.levelView, null, { timeout: 120000 });
+ok(!(await ev(() => document.getElementById('touch').classList.contains('on'))), 'no touch controls for mouse and keyboard play');
 await ev(() => window.__depths.overlays.pause());
 await frames(1);
 ok(await click('Patch notes'), 'pause menu has Patch notes');

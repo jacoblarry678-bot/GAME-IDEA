@@ -21,6 +21,7 @@ import { Hud } from './ui/hud.js';
 import { Overlays } from './ui/overlays.js';
 import { Menus, CHAPTER_NAMES } from './ui/menus.js';
 import { el } from './ui/dom.js';
+import { TouchControls } from './ui/touch.js';
 import { Profile } from './game/profile.js';
 import { Saves } from './game/saves.js';
 import { Controller } from './game/controller.js';
@@ -71,6 +72,8 @@ export class App {
     this.settings = new Settings();
     // test harnesses run on software rendering: ?lowgfx keeps quality minimal for this session only
     if (typeof location !== 'undefined' && location.search.includes('lowgfx')) Object.assign(this.settings.data.graphics, { quality: 'low', renderScale: 0.5, shadows: false });
+    // phones and tablets start on lighter graphics (first launch only; the settings can raise them)
+    else if (this.settings.fresh && window.matchMedia && matchMedia('(pointer: coarse)').matches) { Object.assign(this.settings.data.graphics, { quality: 'medium', renderScale: 0.75, shadows: false }); this.settings.persist(); }
     this.input = new Input(this.canvas, this.settings);
     this.profile = new Profile();
     this.saves = new Saves();
@@ -121,12 +124,14 @@ export class App {
     this.expeditionMenu = () => this.menus.expedition();
     this.joinMenu = () => this.menus.join();
     this.controller = new Controller(this);
+    this.touch = new TouchControls(this, this.uiRoot.parentNode, this.uiRoot);
     this.fadeEl = el('div', { class: 'fade' });
     this.cardEl = el('div', { class: 'card-title' });
     this.uiRoot.append(this.fadeEl, this.cardEl);
     this.profile.on((kind, data) => { if (kind === 'achievement') this.hud.toast(`Achievement · ${data.name}`); if (kind === 'finish') this.hud.toast(`Camera finish unlocked · ${data.name}`); });
     this.input.on('lockchange', (locked) => { if (!locked && this.inGame && !this.overlays.open && !this._ignoreUnlock && this.state === 'game') this.overlays.pause(); });
-    window.addEventListener('pointerdown', () => this.audio.init(), { capture: true });
+    // phones only count a touch as a gesture that may start audio once the finger lifts
+    for (const ev of ['pointerdown', 'pointerup', 'touchend']) window.addEventListener(ev, () => this.audio.init(), { capture: true });
     window.addEventListener('keydown', () => this.audio.init(), { capture: true });
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.inGame && !this.coop && !this.overlays.open) this.overlays.pause(); });
     window.addEventListener('keydown', (e) => { if (e.code === 'Escape' && this.state === 'game' && !this.overlays.open && !this.input.captureCb) this.overlays.pause(); });
@@ -353,6 +358,11 @@ export class App {
   pouch(slot, a, arg) { return this.game.pouchAction(this.pid, slot, a, arg); }
   requestHint() { this.game.requestHint(this.pid); }
   replayRadio() { const S = this.game.story; this.hud.setObjective(S.objective.text, S.radio && S.radio.text); if (S.lastLine) this.hud.line({ ...S.lastLine, dur: 4 }); }
+  /** Tutorial text names default keys in brackets; show the player's current binding or touch button instead. */
+  _keyText(text) {
+    const KEYS = { F: 'flashlight', 2: 'tool2', RMB: 'inspect', LMB: 'use', E: 'interact', X: 'cameraFlash', R: 'reload' };
+    return String(text).replace(/\[(F|2|RMB|LMB|E|X|R)\]/g, (m, k) => `[${this.input.label(KEYS[k])}]`);
+  }
   onInteractResult(r) { if (r && r.msg && r.ok === false) this.hud.toast(r.msg); }
   onOverlayChange() {
     if (!this.inGame) return;
@@ -366,6 +376,7 @@ export class App {
     this.t += dt;
     this.input.poll();
     this.nav.poll(dt);
+    this.touch.update();
     if (this.state === 'menu') {
       this.menuScene.update(dt, this.t);
       this.engine.render(dt, false);
@@ -502,7 +513,7 @@ export class App {
         case 'deck': if (mine) this.overlays.deck(); break;
         case 'message': if (mine) this.hud.toast(ev.text); break;
         case 'aimHint': if (mine) this.hud.toast(ev.text); break;
-        case 'tutorial': if (!this._tips) this._tips = {}; if (!this._tips[ev.id]) { this._tips[ev.id] = true; this.hud.toast(ev.text, 'tip'); } break;
+        case 'tutorial': if (!this._tips) this._tips = {}; if (!this._tips[ev.id]) { this._tips[ev.id] = true; this.hud.toast(this._keyText(ev.text), 'tip'); } break;
         case 'checkpoint': this._checkpoint(ev); break;
         case 'verified': if (mine) { this.audio.play('verified'); this.hud.toast(ev.first ? `${ev.label || 'Refuge'} verified. The second hand is moving.` : 'Refuge verified.'); } break;
         case 'clockStopped': if (mine) { this.hud.envCaption('The second hand does not move.', { warn: true, dur: 4 }); } break;

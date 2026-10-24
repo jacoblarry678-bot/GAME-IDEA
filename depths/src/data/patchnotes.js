@@ -27,6 +27,14 @@ export const PATCH_NOTES = [
           'Downloaded notes remain readable offline.',
         ],
       },
+      {
+        title: 'New: touch controls for phones and tablets',
+        items: [
+          'A floating stick on the left moves, dragging anywhere else looks, and on-screen buttons cover using tools, interacting (hold for quiet doors), crouching, running, aiming, the flashlight, the camera flash, tools, reloading, steady breathing, the menu, journal, bag, hints and co-op chat.',
+          'The controls appear once you touch the screen and hide under menus. Settings → Controls can show them always or turn them off, and sets touch look sensitivity.',
+          'Menus fit phone screens held sideways, prompts and tips name the touch buttons, and phones start on lighter graphics.',
+        ],
+      },
     ],
     fixes: [
       {
@@ -113,6 +121,17 @@ export const PATCH_NOTES = [
           'Fixed reduced-flash settings failing to apply to one scripted camera sequence.',
           'Added text descriptions to several sound-based puzzle cues.',
           'Corrected missing speaker labels and several journal typos.',
+        ],
+      },
+      {
+        title: 'Also fixed',
+        items: [
+          'Refuge supply cabinets could not be used.',
+          'Evidence and records collected after a refuge checkpoint were lost by Save and quit.',
+          'The radio tool now shows the subtitle of the instruction it replays.',
+          'Steady lights now also steadies a low flashlight’s flicker.',
+          'A resumed Expedition kept blank journal photographs after a page reload.',
+          'Menus and panels now always draw above the HUD.',
         ],
       },
     ],

@@ -3,6 +3,8 @@
  * simulation requests. Sprint and crouch honour hold/toggle settings
  * (controller sprint is always a toggle). With "holds become single
  * presses", an interaction starts on one press and a second press cancels.
+ * Touch: the stick and look drag add to movement and look; the Run and
+ * Crouch buttons always toggle.
  */
 import { PAD } from '../core/input.js';
 import { CALLOUTS } from '../data/characters.js';
@@ -43,6 +45,8 @@ export class Controller {
       pitch -= I.mouseDY * k * (C.invertY ? -1 : 1);
       yaw -= I.padAxes[2] * C.padLookX * dt;
       pitch -= I.padAxes[3] * C.padLookY * dt * (C.padInvertY ? -1 : 1);
+      yaw -= I.touchLook.x;
+      pitch -= I.touchLook.y * (C.invertY ? -1 : 1);
     }
     pitch = Math.max(-1.45, Math.min(1.45, pitch));
     // ---- move
@@ -56,15 +60,17 @@ export class Controller {
       else mx += I.padAxes[0];
       mz -= I.padAxes[1];
     }
+    mx += I.touchMove.x; mz += I.touchMove.y;
     // sprint
     if (C.sprintMode === 'toggle') { if (I.pressed('sprint')) this.sprintLatch = !this.sprintLatch; }
-    else if (I.padPressed(PAD.L3)) this.sprintLatch = !this.sprintLatch;
+    else if (I.padPressed(PAD.L3) || I.touchPressed.has('sprint')) this.sprintLatch = !this.sprintLatch;
     const kbSprint = I.binding('sprint').some((c) => c && I.down.has(c));
     let sprint = C.sprintMode === 'toggle' ? this.sprintLatch : (kbSprint || this.sprintLatch);
     if (Math.hypot(mx, mz) < 0.2) this.sprintLatch = false;
     // crouch
     if (C.crouchMode === 'toggle') { if (I.pressed('crouch')) this.crouchLatch = !this.crouchLatch; }
-    const crouch = C.crouchMode === 'toggle' ? this.crouchLatch : I.isDown('crouch');
+    else if (I.touchPressed.has('crouch')) this.crouchLatch = !this.crouchLatch;
+    const crouch = C.crouchMode === 'toggle' ? this.crouchLatch : (I.isDown('crouch') || this.crouchLatch);
     if (crouch) sprint = false;
     let lean = 0;
     if (I.isDown('leanLeft')) lean -= 1;
@@ -103,7 +109,7 @@ export class Controller {
         if (r) app.onInteractResult(r);
         else if (!game.findTarget(pid)) {
           // A also mantles at a marked obstacle; in cover it steadies breathing
-          if (I.padPressed(PAD.A) && !game.mantle(pid) && p.crouched) game.breathe(pid);
+          if ((I.padPressed(PAD.A) || I.touchPressed.has('interact')) && !game.mantle(pid) && p.crouched) game.breathe(pid);
         }
         this.interactHeld = true;
       }
