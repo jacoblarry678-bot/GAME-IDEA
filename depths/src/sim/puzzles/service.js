@@ -12,6 +12,7 @@ export class WeightsPuzzle extends Puzzle {
     const s = this.state;
     if (act.startsWith('w:')) {
       const w = +act.slice(2);
+      if (!this.def.weights.includes(w)) return { ok: false }; // only the four real counterweights
       if (s.on.includes(w)) s.on = s.on.filter((x) => x !== w); else s.on.push(w);
       return { ok: true, msg: `${this.def.payload} + ${s.on.join(' + ') || '0'} = ${this.total()}`, sound: 'leverClunk' };
     }

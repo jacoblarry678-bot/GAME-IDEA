@@ -538,6 +538,8 @@ export class Game {
   collectEvidence(id, p) {
     const first = !this.persist.evidence[id];
     this.persist.evidence[id] = true;
+    // like records, proof survives a refuge Save and quit that writes the held checkpoint
+    if (this.checkpoint) this.checkpoint.persist.evidence[id] = true;
     this.story.set(id);
     this.fx('evidence', { id, pid: p ? p.id : null, first });
     if (first) this.fx('profile', { kind: 'evidence', id });

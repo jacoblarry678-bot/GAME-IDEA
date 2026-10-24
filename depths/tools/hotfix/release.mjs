@@ -11,6 +11,8 @@ import { normVersion } from '../../src/net/protocol.js';
 import { Relay } from '../../server/relay.mjs';
 import { Saves } from '../../src/game/saves.js';
 import { Game } from '../../src/sim/game.js';
+import { findTarget } from '../../src/sim/interact.js';
+import { CHAPTERS } from '../../src/data/chapters/index.js';
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -146,6 +148,32 @@ test('a story flag without persisted evidence is repaired on load', () => {
   const h = new Game({ seed: 5 }); h.addPlayer('p1', 'evan', 'Evan');
   h.restore(snap);
   ok(h.persist.evidence.E2, 'persisted');
+});
+
+test('every refuge supply cabinet can be targeted from in front of it', () => {
+  for (const ch of Object.keys(CHAPTERS).map(Number)) {
+    const g = game(ch), p = g.players.get('p1');
+    for (const ref of g.level.refuges) {
+      const cab = ref.items.find((it) => it.kind === 'cabinet');
+      let hit = false;
+      for (let a = 0; a < 24 && !hit; a++) for (const r of [0.9, 1.1, 1.3]) {
+        p.x = cab.x + Math.cos(a / 24 * Math.PI * 2) * r; p.z = cab.z + Math.sin(a / 24 * Math.PI * 2) * r; p.y = g.level.room(cab.room).floorY || 0;
+        if (g.level.world.overlaps(p.x - 0.35, p.y + 0.05, p.z - 0.35, p.x + 0.35, p.y + 1.8, p.z + 0.35, 1)) continue;
+        const e = p.eye(), dx = cab.x - e.x, dz = cab.z - e.z;
+        p.yaw = Math.atan2(-dx, -dz); p.pitch = Math.atan2((cab.y ?? 1) - e.y, Math.hypot(dx, dz));
+        const t = findTarget(g, p);
+        if (t && t.id === cab.id) { hit = true; break; }
+      }
+      ok(hit, `chapter ${ch} ${ref.label} cabinet`);
+    }
+  }
+});
+
+test('the counterweight panel ignores weights that are not on the rail', () => {
+  const g = game(5), pz = g.puzzles.get('P9'), p = g.players.get('p1');
+  ok(pz, 'P9 present');
+  ok(!pz.act(p, 'w:90').ok, 'made-up weight refused');
+  eq(pz.state.on, [], 'nothing added');
 });
 
 console.log(`${pass} passed, ${fail} failed`);

@@ -49,9 +49,9 @@ export function findTarget(game, p) {
     if (flat > reach) continue;
     const cos = (dx * f.x + dy * f.y + dz * f.z) / (d || 1);
     if (cos < (d < 0.8 ? 0.4 : AIM_COS)) continue;
-    // unobstructed view (ignore whatever the object itself is mounted in)
+    // unobstructed view (ignore whatever the object itself is mounted in; a cabinet's point sits inside its own body)
     const hit = game.level.world.raycast(e.x, e.y, e.z, dx / d, dy / d, dz / d, d, 'sight');
-    if (hit && hit.t < d - 0.45 && !(hit.box.door && it.kind === 'door' && hit.box.door.id === it.door)) continue;
+    if (hit && hit.t < d - (it.housing || 0.45) && !(hit.box.door && it.kind === 'door' && hit.box.door.id === it.door)) continue;
     const score = (1 - cos) * 4 + d * 0.15;
     if (score < bestScore) { bestScore = score; best = it; }
     // how far the aim ray passes from the object's point

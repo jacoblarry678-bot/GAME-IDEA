@@ -284,7 +284,7 @@ export class Level {
       const mid = L / 2;
       ref.clock = { id: `clock_${r.id}`, kind: 'clock', ...pos(mid, 0.1, 2.15), room: r.id, face: inward(side), genuine };
       ref.items.push({ id: `map_${r.id}`, kind: 'mapboard', ...pos(Math.max(1.0, mid - 1.8), 0.1, 1.45), room: r.id, face: inward(side) });
-      ref.items.push({ id: `cab_${r.id}`, kind: 'cabinet', ...pos(Math.min(L - 1.0, mid + 1.7), 0.35, 0.9), room: r.id, face: inward(side) });
+      ref.items.push({ id: `cab_${r.id}`, kind: 'cabinet', ...pos(Math.min(L - 1.0, mid + 1.7), 0.35, 0.9), room: r.id, face: inward(side), housing: 0.9 });
       ref.items.push({ id: `chg_${r.id}`, kind: 'charger', ...pos(Math.min(L - 1.0, mid + 0.9), 0.2, 1.1), room: r.id, face: inward(side) });
       ref.items.push({ id: `deck_${r.id}`, kind: 'deck', ...pos(mid, 0.9, 0.8), room: r.id, face: inward(side) });
       if (!genuine) {
