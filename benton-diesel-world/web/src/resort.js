@@ -168,6 +168,7 @@ const ADS = MARDI_GRAS ? ADS_MARDI : CHRISTMAS ? ADS_XMAS : XMAS_OVER ? ADS_NEWY
   { title: 'FORTNITEMARES', sub: 'THE STORM IS CLOSING IN', foot: 'NEW SCARE ZONE  ·  FAMILY LANDING', art: 'skull', fg: 0xb04aff },
   { title: 'WOLVERINE', sub: 'THE CLAWS ARE OUT  ·  NOW OPEN', foot: 'BACKWOODS  ·  BENTON DIESEL WORLD', art: 'skull', fg: 0xf2c818 },
   { title: 'FINAL DESTINATION', sub: "DEATH'S DESIGN  ·  NOW OPEN", foot: "YOU CAN'T CHEAT DEATH  ·  BENTON HAUNT", art: 'skull', fg: 0xe02020 },
+  { title: 'FRONT OF THE LINE', sub: 'EVERY HOUSE  ·  FASTER THAN EXPRESS', foot: 'BENTON HAUNT  ·  AT ALL PARK SHOPS', art: 'skull', fg: 0xe02020 },
   { title: 'FLIGHT 180 IS DELAYED', sub: 'PERMANENTLY', foot: 'FINAL DESTINATION  ·  NOW OPEN AT BENTON HAUNT', art: 'moon', fg: 0xffc040 },
   { title: "DEAD MAN'S GARAGE", sub: 'YOUR CAR IS OVERDUE FOR SERVICE...', foot: 'BENTON HAUNT  ·  NOW OPEN', art: 'skull', fg: 0xff3a20 },
   { title: 'LIGHTS OUT AT LAKESIDE', sub: 'THE LAKE REMEMBERS', foot: 'BENTON HAUNT  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0x9ad8ff },

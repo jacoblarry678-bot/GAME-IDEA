@@ -49,6 +49,27 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Express lines, extended queues and Front of the Line (browser only):**
+  every ride and house now has three ways in.
+  - **Standby**, which on a busy day spills into an **extended queue**: a
+    rope-and-stanchion switchback on its own paving beyond the end of the
+    line, with an "EXTENDED QUEUE · OPENS WHEN BUSY" sign. Twelve rides got
+    one (wherever there was room by the entrance), so the headliners'
+    lines can now grow past their mazes at peak.
+  - **Express** (F) is now a short line of its own: Express guests stand
+    beside standby and merge at the front, one Express party boarding with
+    every train, so it's a few minutes rather than straight on. Your
+    Express Passes are still unlimited.
+  - **Front of the Line** (G) is faster still: straight to the gate (or the
+    house door) for the very next train or group. Two new all-day tickets
+    at the park shops: **Benton Haunt Front of the Line** (B$250, every
+    house) and **Ride Front of the Line** (B$350, every ride).
+
+  The ride prompt shows all three (the standby wait, the Express wait and
+  the Front of the Line button), the Wait Times tab shows each ride's
+  Express wait and when its extended queue is open, the line pill says
+  which line you're in, the top bar shows your FOTL tickets, and a new
+  billboard advertises Haunt Front of the Line.
 - **Final Destination: Death's Design is open (browser only):** Stage 6
   is finished at the east end of the backstage lot (the lot now runs out
   to it), making Benton Haunt 7 houses. Out front: a "Gate 47" facade with
@@ -266,7 +287,8 @@ npm run serve-web    # open http://localhost:8080
 ```
 
 Controls: WASD or arrows to walk, hold Shift to run, drag to look, wheel to
-zoom, Space to jump, E to join a line or open a shop, F for an Express Pass,
+zoom, Space to jump, E to join a line or open a shop, F for the Express line,
+G for Front of the Line (with a ticket),
 1–3 to eat. On a phone, use your left thumb to walk (push all the way to run)
 and drag anywhere else to look.
 
@@ -314,7 +336,7 @@ saving in Studio.
 | Do this | How |
 |---|---|
 | Ride a ride | Walk up to the ride's entrance sign and press **E** (*Join Line*). Your guest walks into the queue and moves up with the line; you can also steer yourself. Walking out of the queue leaves the line. When it's your turn you're seated at the boarding gate. |
-| Skip the line | Press **F** at an entrance to use a **Diesel Express Pass**. You walk past the line to the boarding gate. You start with one pass; buy more in the shops. |
+| Skip the line | Press **F** at an entrance for the short **Express line** (Express Passes are unlimited), or **G** for **Front of the Line**: straight to the next train or house group, with a Ride or Benton Haunt Front of the Line ticket from the shops. |
 | Check wait times | Use the **Wait Times** tab in the app (left side of the screen), or the big boards at the front gate and the Hub. |
 | Get directions | Press **Guide me** on any ride, show or restaurant, or tap it on the **Map** tab. A glowing path leads you there. |
 | Shop or eat | Press **E** at a shop or restaurant counter. Food goes in your backpack; click to take a bite. |

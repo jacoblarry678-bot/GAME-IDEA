@@ -4,6 +4,11 @@
 import * as THREE from 'three';
 
 const FLOOR = 0.55; // top of the queue floor
+// the Express line stands beside standby; Front of the Line waits at the
+// gate on the other side
+export const EXPRESS_SIDE = 1.3;
+export const FOTL_SIDE = -1.3;
+export const FOTL = { ride: 'RideFOTL', haunt: 'HauntFOTL' };
 const WALK = 4.5; // how fast guests shuffle forward (studs/s)
 
 export class QueuePath {
@@ -15,10 +20,12 @@ export class QueuePath {
     this.signAt = q.signAt;
     this.gate = { x: q.gate[0], z: q.gate[1] };
     this.floor = q.floor ?? FLOOR;
+    this.extendedAt = q.extendedAt ?? 0; // where the extended queue starts (0: none)
   }
 
   // position `s` studs back from the gate and the direction toward the front
-  pointAt(s, out = { x: 0, z: 0, fx: 0, fz: 1 }) {
+  // (`side` steps off to one side of the line: the Express lane)
+  pointAt(s, out = { x: 0, z: 0, fx: 0, fz: 1 }, side = 0) {
     const { pts, cum } = this;
     s = Math.min(Math.max(s, 0), this.length);
     let i = 1;
@@ -31,6 +38,7 @@ export class QueuePath {
     const len = Math.hypot(a.x - b.x, a.z - b.z) || 1;
     out.fx = (a.x - b.x) / len;
     out.fz = (a.z - b.z) / len;
+    if (side) { out.x += out.fz * side; out.z -= out.fx * side; }
     return out;
   }
 
@@ -88,7 +96,8 @@ export class QueueCrowd {
       if (!path) continue;
       const near = Math.hypot(path.gate.x - cam.x, path.gate.z - cam.z) < 420;
       const party = st.party || 1;
-      st.queue.forEach((e, index) => {
+      const lanes = [[st.queue, 0], [st.express || [], EXPRESS_SIDE]];
+      for (const [lane, side] of lanes) lane.forEach((e, index) => {
         if (e.player) return;
         seen.add(e.id);
         const target = slotAt(index, st.gap || this.spacing);
@@ -109,7 +118,7 @@ export class QueueCrowd {
         // a party stands one behind another
         for (let j = 0; j < party; j++) {
           const seed = j ? e.seed + j * 7919 : e.seed;
-          path.pointAt(Math.min(path.length, v.s + j * this.spacing), this.pt);
+          path.pointAt(Math.min(path.length, v.s + j * this.spacing), this.pt, side);
           // idle guests glance around now and then
           const look = v.walking ? 0 : Math.sin(time * 0.6 + (seed % 97)) * 0.5;
           const yaw = Math.atan2(-this.pt.fx, -this.pt.fz) + look;

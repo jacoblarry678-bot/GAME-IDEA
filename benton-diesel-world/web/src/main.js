@@ -29,6 +29,7 @@ import { buildChristmas, buildXmasTeardown, Christmas } from './christmas.js';
 import { CHRISTMAS, XMAS_OVER, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
 import { buildMardiGras } from './mardigras.js';
+import { buildLineTickets, buildExtendedQueues } from './lanes.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -111,6 +112,10 @@ async function main() {
   if (MARDI_GRAS) buildMardiGras(data);
   // Final Destination, going up on Stage 6 for next fall's Benton Haunt
   const fdLayout = FD_BUILDING ? buildFinalDestination(data) : null;
+  // Express lines, Front of the Line tickets and extended queues
+  buildLineTickets(data);
+  const extended = buildExtendedQueues(data);
+  console.log(`extended queues: ${extended}`);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 

@@ -2,7 +2,7 @@
 // simulated guests, posted waits, dispatching, shows, shops, food, hunger
 // and the saved profile. Mirrors the Roblox server's rules.
 import * as Clock from './clock.js';
-import { QueuePath, slotAt } from './queue.js';
+import { QueuePath, slotAt, EXPRESS_SIDE, FOTL_SIDE, FOTL } from './queue.js';
 
 const SAVE_KEY = 'bentonDieselWorld.v1';
 // You have unlimited Express Passes: they never run out.
@@ -64,7 +64,7 @@ export class Sim {
       const slots = path ? Math.max(4, Math.floor((path.length - 8) / gap)) : 40;
       const st = {
         id: r.id, cfg, capacity, seatList, duration, slots, party, gap,
-        queue: [], status: 'Open', cycleStart: 0, cycleEnds: 0, riders: [], downUntil: 0, player: null, cycleId: 0,
+        queue: [], express: [], fotl: null, status: 'Open', cycleStart: 0, cycleEnds: 0, riders: [], downUntil: 0, player: null, cycleId: 0,
       };
       // closed for a refurbishment: no line, no running
       if (cfg.refurb) Object.assign(st, { refurb: true, status: 'Closed', downUntil: Infinity });
@@ -131,20 +131,62 @@ export class Sim {
     return Math.round(realMinutes(this.eta(st, st.queue.length + 1)));
   }
 
+  // the Express line: one Express party boards with every train
+  expressWait(st) {
+    return Math.round(realMinutes(this.eta(st, st.express.length + 1)));
+  }
+
+  // Front of the Line: the very next train
+  fotlWait(st) {
+    return Math.round(realMinutes(this.eta(st, 1)));
+  }
+
   rideState(id) {
     const st = this.rides.get(id);
-    return { status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, lastWait: st.lastWait ?? null };
+    return {
+      status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, lastWait: st.lastWait ?? null,
+      express: this.expressWait(st), fotl: this.fotlWait(st), extended: this.extendedOpen(st),
+    };
+  }
+
+  // is the line long enough to have spilled into the extended queue?
+  extendedOpen(st) {
+    const path = this.paths.get(st.id);
+    return !!(path?.extendedAt && slotAt(st.queue.length, st.gap) > path.extendedAt);
+  }
+
+  // which Front of the Line ticket a ride takes, and whether you have it
+  fotlTicket(st) {
+    return st.cfg.kind === 'walkthrough' ? FOTL.haunt : FOTL.ride;
+  }
+
+  hasFotl(id) {
+    const st = this.rides.get(id);
+    return !!st && this.owns(this.fotlTicket(st));
+  }
+
+  // where the player is: which lane, and how far from the front
+  playerEntry() {
+    if (!this.queueRide) return null;
+    const st = this.rides.get(this.queueRide);
+    if (st.fotl?.player) return { st, lane: 'fotl', index: 0 };
+    let index = st.express.findIndex((e) => e.player);
+    if (index >= 0) return { st, lane: 'express', index };
+    index = st.queue.findIndex((e) => e.player);
+    if (index >= 0) return { st, lane: 'standby', index };
+    return null;
   }
 
   playerQueue() {
-    if (!this.queueRide) return null;
-    const st = this.rides.get(this.queueRide);
-    const pos = st.queue.findIndex((e) => e.player) + 1;
-    if (pos <= 0) return null;
-    return { ride: st.cfg, pos, eta: Math.round(realMinutes(this.eta(st, pos))) };
+    const e = this.playerEntry();
+    if (!e) return null;
+    return { ride: e.st.cfg, pos: e.index + 1, lane: e.lane, eta: Math.round(realMinutes(this.eta(e.st, e.index + 1))) };
   }
 
-  join(id, express) {
+  // mode: false (standby), true or 'express', or 'fotl'
+  join(id, mode) {
+    const express = mode === true || mode === 'express';
+    const fotl = mode === 'fotl';
     const st = this.rides.get(id);
     if (!st) return;
     if (st.refurb) {
@@ -155,12 +197,22 @@ export class Sim {
       this.hooks.toast('Finish your current ride first!', 'warn');
       return;
     }
-    if (this.queueRide === id && !express) {
+    const here = this.playerEntry();
+    if (this.queueRide === id && ((!express && !fotl) || (express && here?.lane === 'express') || (fotl && here?.lane === 'fotl'))) {
       this.hooks.toast(`You're already in line for ${st.cfg.name}.`, 'info');
       return;
     }
+    if (fotl && !this.owns(this.fotlTicket(st))) {
+      const item = this.cfg.Items.find((i) => i.id === this.fotlTicket(st));
+      this.hooks.toast(`You need a ${item ? item.name : 'Front of the Line'} ticket for this. Get one at the shops!`, 'warn');
+      return;
+    }
     if (this.queueRide) this.leave(true);
-    if (express) {
+    if (fotl) {
+      this.hooks.sound?.('express');
+      st.fotl = { id: 'player', player: true, fotl: true, at: Clock.now() };
+      this.hooks.toast(`Front of the Line! Walk straight to the ${st.cfg.kind === 'walkthrough' ? 'door' : 'boarding gate'} - you're on the next ${st.cfg.kind === 'walkthrough' ? 'group' : 'train'} for ${st.cfg.name}.`, 'reward');
+    } else if (express) {
       if (!UNLIMITED_EXPRESS && this.profile.passes <= 0) {
         this.hooks.toast("You don't have any Express Passes. Buy them at the shops!", 'warn');
         return;
@@ -168,10 +220,8 @@ export class Sim {
       if (!UNLIMITED_EXPRESS) this.profile.passes -= 1;
       this.save();
       this.hooks.sound?.('express');
-      let at = 0;
-      st.queue.forEach((e, i) => { if (e.express) at = i + 1; });
-      st.queue.splice(at, 0, { id: 'player', player: true, express: true, at: Clock.now() });
-      this.hooks.toast(`Express Pass used! Head past the line to the front for ${st.cfg.name}.`, 'reward');
+      st.express.push({ id: 'player', player: true, express: true, at: Clock.now() });
+      this.hooks.toast(`Express Pass used! Take the Express line beside standby for ${st.cfg.name} - ${st.express.length <= 1 ? "you're at the front" : `about ${Math.round(realMinutes(this.eta(st, st.express.length)))} min`}.`, 'reward');
     } else {
       st.queue.push({ id: 'player', player: true, at: Clock.now() });
       this.hooks.sound?.('join');
@@ -186,11 +236,11 @@ export class Sim {
   // Where the player should be standing in line (distance from the gate).
   playerSlot() {
     if (!this.queueRide || this.ridingRide) return null;
-    const st = this.rides.get(this.queueRide);
-    const index = st.queue.findIndex((e) => e.player);
+    const e = this.playerEntry();
     const path = this.paths.get(this.queueRide);
-    if (index < 0 || !path) return null;
-    return { path, s: slotAt(index, st.gap) };
+    if (!e || !path) return null;
+    if (e.lane === 'fotl') return { path, s: 0, side: FOTL_SIDE, lane: e.lane };
+    return { path, s: slotAt(e.index, e.st.gap), side: e.lane === 'express' ? EXPRESS_SIDE : 0, lane: e.lane };
   }
 
   // Point the player should walk to next to keep their place in line, or
@@ -199,9 +249,11 @@ export class Sim {
     const slot = this.playerSlot();
     if (!slot) return null;
     const { s, d } = slot.path.project(pos.x, pos.z);
-    if (d > 1.5) return { ...slot.path.pointAt(s), final: false }; // step back onto the path first
-    if (Math.abs(s - slot.s) < 0.6) return null;
-    return slot.path.nextWaypoint(s, slot.s);
+    if (d > 1.5 + Math.abs(slot.side)) return { ...slot.path.pointAt(s), final: false }; // step back onto the path first
+    const spot = slot.path.pointAt(slot.s, undefined, slot.side);
+    if (Math.abs(s - slot.s) < 0.6 && Math.hypot(spot.x - pos.x, spot.z - pos.z) < 0.7) return null;
+    const next = slot.path.nextWaypoint(s, slot.s);
+    return next.final ? { ...spot, final: true } : next;
   }
 
   // Walking out of the queue maze (or back out past the sign) leaves the line.
@@ -220,19 +272,29 @@ export class Sim {
     if (!this.queueRide) return;
     const st = this.rides.get(this.queueRide);
     st.queue = st.queue.filter((e) => !e.player);
+    st.express = st.express.filter((e) => !e.player);
+    if (st.fotl?.player) st.fotl = null;
     if (!quiet) this.hooks.toast(`You left the line for ${st.cfg.name}.`, 'info');
     this.queueRide = null;
   }
 
   dispatch(st, now) {
-    if (!st.queue.length) return;
+    if (!st.queue.length && !st.express.length && !st.fotl) return;
     const boardedAt = Clock.now();
-    // the party at the front boards, and the rest of the train fills up
-    const e = st.queue.shift();
-    // how long they really waited, in real minutes
-    if (e.at !== undefined) st.lastWait = Math.round(realMinutes(boardedAt - e.at));
-    const riders = [e.player ? { player: true } : { npc: e.seed }];
-    const base = e.seed ?? 7;
+    // every train takes Front of the Line first, then the party at the
+    // front of the Express line and the party at the front of standby,
+    // and the rest of the train fills up
+    const parties = [];
+    if (st.fotl) { parties.push(st.fotl); st.fotl = null; }
+    if (st.express.length) parties.push(st.express.shift());
+    if (st.queue.length) {
+      const e = st.queue.shift();
+      // how long they really waited, in real minutes
+      if (e.at !== undefined) st.lastWait = Math.round(realMinutes(boardedAt - e.at));
+      parties.push(e);
+    }
+    const riders = parties.map((e) => (e.player ? { player: true } : { npc: e.seed }));
+    const base = parties.find((e) => e.seed)?.seed ?? 7;
     while (riders.length < st.capacity) riders.push({ npc: 1 + ((base * 7919 + riders.length * 104729) % 999983) });
     let next = 0;
     const used = new Set();
@@ -312,6 +374,11 @@ export class Sim {
         // posted wait stays true)
         st.queue.pop();
       }
+      // the Express line stays short: a few parties at most
+      const expDesired = Math.max(0, Math.min(4, Math.round(crowd * wobble * 3 - 0.6)));
+      const expNpcs = st.express.filter((e) => !e.player).length;
+      if (expNpcs < expDesired && (warmup || Math.random() < 0.35)) st.express.push({ id: ++this.entryId, seed: 1 + Math.floor(Math.random() * 1e6), express: true, at: warmup ? undefined : t });
+      else if (expNpcs > expDesired && st.express.length && !st.express[st.express.length - 1].player) st.express.pop();
       if (!warmup && st.status === 'Open' && !st.player && Math.random() < 0.004) {
         st.status = 'Closed';
         st.downUntil = t + 40 + Math.random() * 40;
@@ -329,7 +396,7 @@ export class Sim {
         }
         continue;
       }
-      if (st.status === 'Open' && st.queue.length) this.dispatch(st, now);
+      if (st.status === 'Open' && (st.queue.length || st.express.length || st.fotl)) this.dispatch(st, now);
       else if (st.status === 'Boarding' && now >= st.cycleStart) st.status = 'Running';
       else if (st.status === 'Running' && now >= st.cycleStart + st.duration) {
         st.status = 'Unloading';
@@ -405,6 +472,10 @@ export class Sim {
     const item = this.cfg.Items.find((i) => i.id === itemId);
     if (!venue || !item || !venue.items.includes(itemId)) return false;
     const wearable = ['hat', 'face', 'balloon', 'held'].includes(item.kind);
+    if (item.kind === 'fotl' && this.owns(item.id)) {
+      this.hooks.toast(`You already have ${item.name} - it's good all day!`, 'info');
+      return false;
+    }
     if (wearable && this.owns(item.id)) {
       this.hooks.toast(`You already own the ${item.name}. Equip it from your Bag!`, 'info');
       return false;
@@ -419,7 +490,10 @@ export class Sim {
     }
     this.profile.bucks -= item.price;
     this.hooks.sound?.('buy');
-    if (item.kind === 'pass') {
+    if (item.kind === 'fotl') {
+      this.profile.owned.push(item.id);
+      this.hooks.toast(`${item.name} is yours! Press G (or tap Front of the Line) at any ${item.scope === 'haunt' ? 'haunted house' : 'ride'} entrance.`, 'reward');
+    } else if (item.kind === 'pass') {
       this.profile.passes += 1;
       this.hooks.toast('Express Pass added! Press F (or tap Express) at any ride entrance.', 'reward');
     } else if (item.kind === 'food') {

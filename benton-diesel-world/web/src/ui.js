@@ -184,7 +184,7 @@ export class UI {
   // ---------------------------------------------------------- wait times
   renderWaits(c) {
     const sim = this.g.sim;
-    c.append(h('p', { class: 'note' }, 'Posted waits are worked out live from the real line: the guests ahead of you, how many fit on each train and how long a cycle takes. Waits are in real minutes: a 45 min wait is 45 minutes in line, and a long wait means a long line. "Last" is how long the most recent guest to board actually waited. Use an Express Pass to skip the line!'));
+    c.append(h('p', { class: 'note' }, 'Posted waits are worked out live from the real line: the guests ahead of you, how many fit on each train and how long a cycle takes. Waits are in real minutes: a 45 min wait is 45 minutes in line, and a long wait means a long line (on busy days it spills into an extended queue). "Last" is how long the most recent guest to board actually waited. ⚡ is the short Express line; Front of the Line tickets go straight to the next train.'));
     c.append(h('div', { class: 'row' }, h('button', { class: 'btn ghost small', onclick: () => { this.sortWaits = !this.sortWaits; this.refresh(); } }, this.sortWaits ? 'Sort: shortest wait' : 'Sort: by land')));
     let rides = [...this.cfg.Rides];
     if (this.sortWaits) {
@@ -203,7 +203,7 @@ export class UI {
       c.append(this.card(ride.name, `${ride.category}  ${stars(ride.thrill)}  |  ${this.sortWaits ? land.name : ride.kind}`, land.color, h('div', {}, wait, last), this.guideButton(ride.entrance, ride.name)));
       this.live.push(() => {
         const s = sim.rideState(ride.id);
-        last.textContent = !s.refurb && s.lastWait !== null ? `last ${s.lastWait} min` : '';
+        last.textContent = s.refurb || s.status === 'Closed' ? '' : [`⚡ ${s.express <= 0 ? 'no wait' : `${s.express} min`}`, s.lastWait !== null ? `last ${s.lastWait}` : '', s.extended ? 'extended queue open' : ''].filter(Boolean).join(' · ');
         if (s.refurb) { wait.textContent = 'REFURB'; wait.style.color = '#f0a040'; }
         else if (s.status === 'Closed') { wait.textContent = 'CLOSED'; wait.style.color = '#f04636'; }
         else { wait.textContent = s.wait <= 0 ? 'No wait' : `${s.wait} min`; wait.style.color = waitColor(s.wait); }
@@ -415,8 +415,11 @@ export class UI {
       let tag = '';
       if (item.kind === 'food') tag = `+${item.hunger} hunger${item.buff ? (item.buff.kind === 'speed' ? ' · ⚡ speed' : ' · 🦘 jump') : ''}`;
       else if (item.kind === 'pass') tag = UNLIMITED_EXPRESS ? 'You have unlimited' : `You have ${sim.profile.passes}`;
+      else if (item.kind === 'fotl') tag = sim.owns(id) ? '✓ You have it - good all day' : item.scope === 'haunt' ? 'Faster than Express · every house' : 'Faster than Express · every ride';
       const img = h('img', { alt: '', src: this.g.thumbs.get(id) || '' });
-      const btn = owned
+      const btn = item.kind === 'fotl' && sim.owns(id)
+        ? h('button', { class: 'btn small ghost', disabled: true }, 'Owned ✓')
+        : owned
         ? h('button', { class: `btn small ${equipped ? 'ghost' : ''}`, onclick: () => { sim.equip(item.kind, equipped ? '' : id); this.g.applyWear(); this.renderVenueModal(); } }, equipped ? 'Take off' : 'Wear')
         : h('button', { class: 'btn small', disabled: sim.profile.bucks < item.price ? true : undefined, onclick: () => { if (sim.buy(v.id, id)) { this.g.applyWear(); this.refresh(); } } }, `Buy ${this.cfg.CurrencyShort}${item.price}`);
       grid.append(h('div', { class: 'good' }, h('div', { class: 'thumb', style: `background:${css(item.colors[0])}22` }, img),
@@ -539,7 +542,8 @@ export class UI {
         this.promptSub = h('div', { class: 'psub' });
         this.promptJoin = h('button', { class: 'btn', onclick: () => this.primary() }, '');
         this.promptExpress = h('button', { class: 'btn ghost', onclick: () => this.secondary() }, '');
-        el.append(h('div', { class: 'ptitle' }, p.ride.name), this.promptSub, h('div', { class: 'pbtns' }, this.promptJoin, this.promptExpress));
+        this.promptFotl = h('button', { class: 'btn ghost fotl', onclick: () => this.tertiary() }, '');
+        el.append(h('div', { class: 'ptitle' }, p.ride.name), this.promptSub, h('div', { class: 'pbtns' }, this.promptJoin, this.promptExpress, this.promptFotl));
       } else {
         const land = this.lands.get(p.venue.land);
         el.style.setProperty('--accent', css(land.color));
@@ -551,11 +555,15 @@ export class UI {
     if (p.kind === 'ride') {
       const s = sim.rideState(p.ride.id);
       const inLine = sim.queueRide === p.ride.id;
-      this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}`;
-      this.promptJoin.replaceChildren(h('kbd', {}, 'E'), inLine ? ' In line ✓' : ' Join Line');
-      this.promptJoin.disabled = inLine || s.refurb;
-      this.promptExpress.replaceChildren(h('kbd', {}, 'F'), ` Express Pass (${UNLIMITED_EXPRESS ? '∞' : sim.profile.passes})`);
-      this.promptExpress.disabled = (!UNLIMITED_EXPRESS && sim.profile.passes <= 0) || s.refurb;
+      const lane = inLine ? sim.playerEntry()?.lane : null;
+      this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}  ·  ⚡ Express ${s.express <= 0 ? 'no wait' : `${s.express} min`}${s.extended ? '  ·  extended queue open' : ''}`;
+      this.promptJoin.replaceChildren(h('kbd', {}, 'E'), lane === 'standby' ? ' In line ✓' : ' Join Line');
+      this.promptJoin.disabled = lane === 'standby' || s.refurb;
+      this.promptExpress.replaceChildren(h('kbd', {}, 'F'), lane === 'express' ? ' Express ✓' : ` Express (${UNLIMITED_EXPRESS ? '∞' : sim.profile.passes})`);
+      this.promptExpress.disabled = lane === 'express' || (!UNLIMITED_EXPRESS && sim.profile.passes <= 0) || s.refurb;
+      const has = sim.hasFotl(p.ride.id);
+      this.promptFotl.replaceChildren(h('kbd', {}, 'G'), lane === 'fotl' ? ' Front of the Line ✓' : has ? ' Front of the Line' : ' Front of the Line 🔒');
+      this.promptFotl.disabled = lane === 'fotl' || !has || s.refurb;
     }
   }
 
@@ -573,6 +581,11 @@ export class UI {
     if (p && p.kind === 'ride') this.g.sim.join(p.ride.id, true);
   }
 
+  tertiary() {
+    const p = this.prompt;
+    if (p && p.kind === 'ride') this.g.sim.join(p.ride.id, 'fotl');
+  }
+
   // ----------------------------------------------------------- per frame
   update(dt, state) {
     const sim = this.g.sim;
@@ -580,7 +593,7 @@ export class UI {
     const minute = Clock.minutes();
     this.clockEl.textContent = `🕒 ${Clock.format(minute)}`;
     this.bucksEl.textContent = `${this.cfg.CurrencyShort}${p.bucks}`;
-    this.passesEl.textContent = `🎫 ${UNLIMITED_EXPRESS ? '∞' : p.passes}`;
+    this.passesEl.textContent = `🎫 ${UNLIMITED_EXPRESS ? '∞' : p.passes}${sim.owns('RideFOTL') ? '  🎢 FOTL' : ''}${sim.owns('HauntFOTL') ? '  🎃 FOTL' : ''}`;
     const hunger = sim.hunger / this.cfg.Hunger.Max;
     this.hungerEl.style.width = `${hunger * 100}%`;
     this.hungerChip.classList.toggle('low', sim.hunger <= this.cfg.Hunger.HungryAt);
@@ -607,7 +620,8 @@ export class UI {
       const st = sim.rides.get(sim.queueRide);
       $('span', pill).textContent = st.status === 'Closed'
         ? `⏳ ${q.ride.name}: temporarily closed (#${q.pos} in line)`
-        : `⏳ In line for ${q.ride.name}  ·  #${q.pos} in line  ·  ${q.eta <= 0 ? 'boarding next' : `about ${q.eta} min`}`;
+        : q.lane === 'fotl' ? `🎟️ Front of the Line for ${q.ride.name}  ·  ${q.eta <= 0 ? 'boarding next' : `next ${q.ride.kind === 'walkthrough' ? 'group' : 'train'}, about ${q.eta} min`}`
+          : `⏳ ${q.lane === 'express' ? 'Express line' : 'In line'} for ${q.ride.name}  ·  #${q.pos} in line  ·  ${q.eta <= 0 ? 'boarding next' : `about ${q.eta} min`}`;
     } else pill.hidden = true;
 
     // land banner
@@ -662,6 +676,7 @@ export class UI {
       else this.primary();
     }
     if (input.consume('f')) this.secondary();
+    if (input.consume('g')) this.tertiary();
     for (const k of ['1', '2', '3']) {
       if (input.consume(k)) { this.g.sim.eat(Number(k) - 1); this.renderFood(); }
     }
@@ -726,7 +741,7 @@ const HELP = `
 <div class="keys"><b>Computer</b>
 <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows: walk · hold <kbd>Shift</kbd> to run</span>
 <span>Drag the mouse: look around · wheel: zoom</span>
-<span><kbd>Space</kbd> jump · <kbd>E</kbd> join a line / open a shop · <kbd>F</kbd> Express Pass</span>
+<span><kbd>Space</kbd> jump · <kbd>E</kbd> join a line / open a shop · <kbd>F</kbd> Express line · <kbd>G</kbd> Front of the Line</span>
 <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> eat food · <kbd>M</kbd> park map · <kbd>Tab</kbd> wait times</span></div>
 <div class="keys"><b>Phone &amp; tablet</b>
 <span>Left thumb: walk (push all the way to run) · drag anywhere else: look</span>
