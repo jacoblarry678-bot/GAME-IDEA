@@ -35,6 +35,7 @@ const TABS = [
   { id: 'Shops', icon: '🛍', label: 'Shops' },
   { id: 'Passport', icon: '📘', label: 'Passport' },
   { id: 'Bag', icon: '🎒', label: 'My Bag' },
+  { id: 'Social', icon: '📱', label: 'BentonGram' },
 ];
 
 const SHIRTS = [0x1e6ee6, 0xc42828, 0xff8c1a, 0x2e9e52, 0x7a3fc4, 0xf0c040, 0x222831, 0xf5f5f0];
@@ -125,8 +126,9 @@ export class UI {
     const dock = $('#dock');
     for (const t of TABS) {
       dock.append(h('button', { class: 'tab', 'data-tab': t.id, title: t.label, onclick: () => this.open(this.tab === t.id ? null : t.id) },
-        h('span', { class: 'ico' }, t.icon), h('span', { class: 'lbl' }, t.label)));
+        h('span', { class: 'ico' }, t.icon), h('span', { class: 'lbl' }, t.label), t.id === 'Social' ? h('span', { class: 'badge', hidden: true }, '') : null));
     }
+    this.socialBadge = $('#dock .tab[data-tab="Social"] .badge');
   }
 
   open(tab) {
@@ -141,6 +143,7 @@ export class UI {
       return;
     }
     panel.hidden = false;
+    if (tab === 'Social' && this.g.social) this.g.social.unread = 0;
     const def = TABS.find((t) => t.id === tab);
     $('#panel h2').textContent = `${def.icon} ${def.label}`;
     const content = $('#panel .content');
@@ -306,6 +309,77 @@ export class UI {
   renderDining(c) { this.renderVenues(c, 'restaurant'); }
   renderShops(c) { this.renderVenues(c, 'shop'); }
 
+  // ---------------------------------------------------------- BentonGram
+  takePhoto() {
+    const social = this.g.social;
+    if (!social) return;
+    this.g.audio?.ui('open');
+    social.requestPhoto((img) => {
+      if (!img) { this.toast("Couldn't take a photo here.", 'warn'); return; }
+      this.composeImg = img;
+      this.composeText = social.autoCaption();
+      this.venueOpen = 'compose';
+      this.renderVenueModal();
+      $('#modal').hidden = false;
+    });
+  }
+
+  renderCompose(box) {
+    const social = this.g.social;
+    box.style.setProperty('--accent', '#e0508a');
+    box.append(h('header', {}, h('div', {}, h('h2', {}, '📸 New post'), h('p', {}, `Posting as ${social.handle}`)),
+      h('button', { class: 'close', 'aria-label': 'Close', onclick: () => this.closeModal() }, '✕')));
+    const input = h('input', { type: 'text', class: 'caption-in', maxlength: 140, value: this.composeText || '' });
+    box.append(h('div', { class: 'compose' },
+      h('img', { class: 'shot', alt: 'Your photo', src: this.composeImg }),
+      input,
+      h('div', { class: 'row' },
+        h('button', { class: 'btn', onclick: () => { social.postPhoto(this.composeImg, input.value.trim()); this.closeModal(); this.open('Social'); } }, 'Post'),
+        h('button', { class: 'btn ghost', onclick: () => { this.closeModal(); this.takePhoto(); } }, 'Retake'),
+        h('button', { class: 'btn ghost', onclick: () => this.closeModal() }, 'Cancel'))));
+    setTimeout(() => input.focus(), 50);
+  }
+
+  renderSocial(c) {
+    const social = this.g.social;
+    if (!social) return;
+    c.append(h('div', { class: 'gram-head' },
+      h('div', {}, h('b', {}, social.handle), h('small', {}, `${social.mine.length} post${social.mine.length === 1 ? '' : 's'}  ·  following @BentonDieselWorld`)),
+      h('button', { class: 'btn small', onclick: () => this.takePhoto() }, '📸 Take a photo')));
+    c.append(h('p', { class: 'note' }, 'Snap the view (or press P), add a caption and post it. Your first few posts each visit earn B$5, and 100 likes earns B$20!'));
+    const feed = social.feed().slice(0, 40);
+    this.socialCount = social.mine.length + social.live.length;
+    for (const p of feed) {
+      const likes = h('span', {}, '');
+      const heart = h('button', { class: `like ${social.liked.has(p.id) ? 'on' : ''}`, onclick: () => { social.like(p); heart.classList.toggle('on', social.liked.has(p.id)); } }, '♥ ', likes);
+      const comments = h('div', { class: 'comments' });
+      const color = p.mine ? 0xe0508a : p.color ?? 0x5a6e8a;
+      const handle = p.mine ? social.handle : p.handle;
+      const media = p.img ? h('img', { class: 'shot', alt: '', src: p.img })
+        : p.art ? h('div', { class: 'art', style: `--c:${css(p.art.color)}` }, h('span', { class: 'emo' }, p.art.emoji), h('b', {}, p.art.title), h('small', {}, p.art.sub))
+        : p.video ? h('div', { class: 'art video', style: `--c:${css(color)}` }, h('span', { class: 'emo' }, '▶'), h('b', {}, p.video), h('small', {}, `${handle} · fan video`))
+        : null;
+      c.append(h('div', { class: `post ${p.official ? 'official' : ''}` },
+        h('div', { class: 'post-top' },
+          h('div', { class: 'av', style: `background:${css(color)}` }, handle.replace('@', '').charAt(0).toUpperCase()),
+          h('div', {}, h('b', {}, handle, p.verified ? h('span', { class: 'tick' }, ' ✔') : null), h('small', {}, `${social.ago(p)}${p.place ? `  ·  ${p.place}` : ''}`))),
+        media, h('p', {}, p.text), h('div', { class: 'post-foot' }, heart, h('span', { class: 'cc' }, '')), comments));
+      const cc = $('.cc', c.lastChild);
+      this.live.push(() => {
+        likes.textContent = Math.round(p.likes).toLocaleString();
+        cc.textContent = `💬 ${p.comments.length}`;
+        if (comments.children.length !== Math.min(3, p.comments.length)) {
+          comments.replaceChildren(...p.comments.slice(-3).map((t) => {
+            const [who, ...rest] = String(t).startsWith('@') ? t.split(' ') : ['', t];
+            return h('div', {}, who ? h('b', {}, `${who} `) : null, rest.join(' '));
+          }));
+        }
+      });
+    }
+    // new posts while you watch
+    this.live.push(() => { if (social.mine.length + social.live.length !== this.socialCount) this.refresh(); });
+  }
+
   // ------------------------------------------------------------ passport
   renderPassport(c) {
     const p = this.g.sim.profile;
@@ -398,6 +472,7 @@ export class UI {
     const box = $('#modal .sheet');
     box.replaceChildren();
     if (this.venueOpen === 'settings') return this.renderSettings(box);
+    if (this.venueOpen === 'compose') return this.renderCompose(box);
     const v = this.cfg.Venues.find((x) => x.id === this.venueOpen);
     const sim = this.g.sim;
     const land = this.lands.get(v.land);
@@ -593,6 +668,11 @@ export class UI {
     const minute = Clock.minutes();
     this.clockEl.textContent = `🕒 ${Clock.format(minute)}`;
     this.bucksEl.textContent = `${this.cfg.CurrencyShort}${p.bucks}`;
+    if (this.socialBadge) {
+      const n = this.tab === 'Social' ? 0 : this.g.social?.unread || 0;
+      this.socialBadge.hidden = !n;
+      this.socialBadge.textContent = n > 9 ? '9+' : String(n);
+    }
     this.passesEl.textContent = `🎫 ${UNLIMITED_EXPRESS ? '∞' : p.passes}${sim.owns('RideFOTL') ? '  🎢 FOTL' : ''}${sim.owns('HauntFOTL') ? '  🎃 FOTL' : ''}`;
     const hunger = sim.hunger / this.cfg.Hunger.Max;
     this.hungerEl.style.width = `${hunger * 100}%`;
@@ -677,6 +757,7 @@ export class UI {
     }
     if (input.consume('f')) this.secondary();
     if (input.consume('g')) this.tertiary();
+    if (input.consume('p')) this.takePhoto();
     for (const k of ['1', '2', '3']) {
       if (input.consume(k)) { this.g.sim.eat(Number(k) - 1); this.renderFood(); }
     }
@@ -742,7 +823,7 @@ const HELP = `
 <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrows: walk · hold <kbd>Shift</kbd> to run</span>
 <span>Drag the mouse: look around · wheel: zoom</span>
 <span><kbd>Space</kbd> jump · <kbd>E</kbd> join a line / open a shop · <kbd>F</kbd> Express line · <kbd>G</kbd> Front of the Line</span>
-<span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> eat food · <kbd>M</kbd> park map · <kbd>Tab</kbd> wait times</span></div>
+<span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> eat food · <kbd>M</kbd> park map · <kbd>Tab</kbd> wait times · <kbd>P</kbd> take a photo for BentonGram</span></div>
 <div class="keys"><b>Phone &amp; tablet</b>
 <span>Left thumb: walk (push all the way to run) · drag anywhere else: look</span>
 <span>Pinch: zoom · tap ⤒ to jump · tap the buttons that pop up at rides and shops</span></div>

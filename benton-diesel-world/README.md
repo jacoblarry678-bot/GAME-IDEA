@@ -49,6 +49,22 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **BentonGram: social media in the Benton App (browser only):** a new 📱
+  BentonGram tab with a live feed.
+  - **The park's account** (@BentonDieselWorld, verified) has a poster for
+    every announcement and opening so far, from Benton Haunt and Fast &
+    Furious to Wolverine, Final Destination and Front of the Line.
+  - **Fan posts** include @coasterkid's two videos.
+  - **Guests post live** about what's around them every half minute or so:
+    real waits ("Wolverine is at 55 min right now 😩"), walk-ons, the
+    Express line, extended queues opening, and haunt posts after dark.
+  - **Your photos:** press 📸 Take a photo (or P) to snap the view. It
+    writes a caption from where you are (riding, in line, or the land and
+    time of day), which you can edit, then post. Likes and comments roll
+    in. Your first five posts each visit earn B$5, and a post that hits 100
+    likes earns B$20.
+  - Tap ♥ to like anything. A badge on the tab counts new posts, and your
+    handle and posts are saved between visits.
 - **Express lines, extended queues and Front of the Line (browser only):**
   every ride and house now has three ways in.
   - **Standby**, which on a busy day spills into an **extended queue**: a
@@ -288,7 +304,7 @@ npm run serve-web    # open http://localhost:8080
 
 Controls: WASD or arrows to walk, hold Shift to run, drag to look, wheel to
 zoom, Space to jump, E to join a line or open a shop, F for the Express line,
-G for Front of the Line (with a ticket),
+G for Front of the Line (with a ticket), P to take a photo for BentonGram,
 1–3 to eat. On a phone, use your left thumb to walk (push all the way to run)
 and drag anywhere else to look.
 

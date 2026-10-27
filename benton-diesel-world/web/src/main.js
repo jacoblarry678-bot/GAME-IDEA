@@ -30,6 +30,7 @@ import { CHRISTMAS, XMAS_OVER, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from '.
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
 import { buildMardiGras } from './mardigras.js';
 import { buildLineTickets, buildExtendedQueues } from './lanes.js';
+import { Social } from './social.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -299,6 +300,7 @@ async function main() {
   window.addEventListener('resize', resize);
   applyQuality();
 
+  game.social = new Social(game);
   const ui = new UI(game);
   game.ui = ui;
   game.rideVis = rideVis;
@@ -450,9 +452,11 @@ async function main() {
     }
     const guideDist = guide.update(player.pos, time, (name) => ui.toast(`You've arrived at ${name}!`, 'info'));
 
+    game.social?.update(started);
     if (started) ui.update(dt, { pos: player.pos, caption, guideDist, movement: sim.movement() });
     input.endFrame();
     post.render(1 - daylight);
+    game.social?.capture(canvas); // a photo, if one was asked for
     requestAnimationFrame(frame);
   }
 
