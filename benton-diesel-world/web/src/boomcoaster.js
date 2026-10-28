@@ -27,7 +27,7 @@ const PLAT = PL + 2.3;
 const SITE = { x0: 810, x1: 1004, z0: -400, z1: 236 };
 const MTN = { x0: 815, x1: 992, z0: -392, z1: -252, H: 30 }; // Boom Mountain
 const GATE = { z0: -40, z1: -16 };
-const RUST = 0x7a4a2a, IRON = 0x2a2a2a, TIMBER = 0x6a4a30, DARKWOOD = 0x4a3220, ROCK = 0x7a6450, ROCKD = 0x5a4838, STEEL = 0x8a8e94, LAMP = 0xffc060, TNT = 0xc81e1e, CRYSTAL = 0x5ae8ff, AMETHYST = 0xb05aff, WATER = 0x3a8adc;
+const RUST = 0x7a4a2a, IRON = 0x2a2a2a, TIMBER = 0x6a4a30, DARKWOOD = 0x4a3220, ROCK = 0x4a3a2a, ROCKD = 0x33281e, STEEL = 0x8a8e94, LAMP = 0xffc060, TNT = 0xc81e1e, CRYSTAL = 0x5ae8ff, AMETHYST = 0xb05aff, WATER = 0x3a8adc;
 
 // the circuit: x, y, z of the steel rails and the speed there, from where
 // the front car stops in the station (heading north)
@@ -83,7 +83,7 @@ export function buildBoomCoaster(data) {
   data.trees = (data.trees || []).filter((t) => !(t.pos[0] > SITE.x0 - 6 && t.pos[0] < SITE.x1 + 6 && t.pos[2] > SITE.z0 - 6 && t.pos[2] < SITE.z1 + 6));
   const vel = data.config.Lands.find((l) => l.id === 'Velocity');
   if (vel) vel.regions = [...vel.regions, [SITE.x0, SITE.z0, SITE.x1, SITE.z1]];
-  add([SITE.x1 - SITE.x0, 1, SITE.z1 - SITE.z0], [(SITE.x0 + SITE.x1) / 2, G - 0.5, (SITE.z0 + SITE.z1) / 2], 0x6a5a44, 'Concrete');
+  add([SITE.x1 - SITE.x0, 1, SITE.z1 - SITE.z0], [(SITE.x0 + SITE.x1) / 2, G - 0.5, (SITE.z0 + SITE.z1) / 2], 0x3e5a2c, 'Grass');
   const STONE = 0x96928c, CAP = 0xc4beb4;
   const wallSeg = (xa, za, xb, zb) => {
     const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
@@ -268,13 +268,13 @@ export function buildBoomCoaster(data) {
   // the mountain itself: boulders heaped over the building, a few peaks
   for (let k = 0; k < 70; k++) {
     const x = M.x0 + ((k * 37) % 100) / 100 * (M.x1 - M.x0), z = M.z0 + ((k * 61) % 100) / 100 * (M.z1 - M.z0), s = 10 + (k % 5) * 4;
-    add([s, s * 0.7, s * 0.9], [x, G + M.H + s * 0.2, z], [ROCK, ROCKD, 0x8a7458][k % 3], 'Slate', { collide: 0, yaw: k * 0.7 });
+    add([s, s * 0.7, s * 0.9], [x, G + M.H + s * 0.2, z], [ROCK, ROCKD, 0x5a4634][k % 3], 'Slate', { collide: 0, yaw: k * 0.7 });
   }
   for (const [x, z, h] of [[870, -330, 30], [930, -300, 24], [960, -360, 20]]) for (let k = 0; k < 4; k++) add([22 - k * 5, 8, 20 - k * 5], [x, G + M.H + 4 + k * 7, z], [ROCK, ROCKD][k % 2], 'Slate', { collide: 0, yaw: k * 0.5 + h });
   for (let k = 0; k < 30; k++) { // rock skin on the north face
     const x = M.x0 + 4 + (k * 6.1) % (M.x1 - M.x0 - 8);
     if (portals.some(([px, w]) => Math.abs(x - px) < w + 3)) continue;
-    add([7, 6 + (k % 4) * 3, 2.4], [x, G + 4 + (k % 5) * 5, M.z1 + 1.4], [ROCK, ROCKD, 0x8a7458][k % 3], 'Slate', { collide: 0, yaw: (k % 3) * 0.3 - 0.3 });
+    add([7, 6 + (k % 4) * 3, 2.4], [x, G + 4 + (k % 5) * 5, M.z1 + 1.4], [ROCK, ROCKD, 0x5a4634][k % 3], 'Slate', { collide: 0, yaw: (k % 3) * 0.3 - 0.3 });
   }
   // the portals: timber frames, lanterns, BOOM MOUNTAIN on a board
   for (const [x, w] of portals) {
