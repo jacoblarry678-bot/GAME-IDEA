@@ -490,7 +490,7 @@ export class UI {
       let tag = '';
       if (item.kind === 'food') tag = `+${item.hunger} hunger${item.buff ? (item.buff.kind === 'speed' ? ' · ⚡ speed' : ' · 🦘 jump') : ''}`;
       else if (item.kind === 'pass') tag = UNLIMITED_EXPRESS ? 'You have unlimited' : `You have ${sim.profile.passes}`;
-      else if (item.kind === 'fotl') tag = sim.owns(id) ? '✓ You have it - good all day' : item.scope === 'haunt' ? 'Faster than Express · every house' : 'Faster than Express · every ride';
+      else if (item.kind === 'fotl') tag = sim.owns(id) ? '✓ Yours free - unlimited, all day' : item.scope === 'haunt' ? 'Faster than Express · every house' : 'Faster than Express · every ride';
       const img = h('img', { alt: '', src: this.g.thumbs.get(id) || '' });
       const btn = item.kind === 'fotl' && sim.owns(id)
         ? h('button', { class: 'btn small ghost', disabled: true }, 'Owned ✓')

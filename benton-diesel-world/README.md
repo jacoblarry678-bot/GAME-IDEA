@@ -49,6 +49,9 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Free Front of the Line for you (browser only):** both Front of the Line
+  tickets (rides and Benton Haunt) are now yours from the start, free and
+  unlimited, just like your Express Passes. Press G at any ride or house.
 - **Diesel Run: a motion-simulator dark ride (browser only):** a new
   high-tech dark ride, fully indoors, in a huge show building on the land
   west of Diesel District.

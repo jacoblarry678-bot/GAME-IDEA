@@ -7,6 +7,8 @@ import { QueuePath, slotAt, EXPRESS_SIDE, FOTL_SIDE, FOTL } from './queue.js';
 const SAVE_KEY = 'bentonDieselWorld.v1';
 // You have unlimited Express Passes: they never run out.
 export const UNLIMITED_EXPRESS = true;
+// ...and both Front of the Line tickets (rides and Benton Haunt) are yours, free.
+export const FREE_FOTL = true;
 
 // Waits are posted in real minutes: a 45 minute wait is 45 minutes of
 // standing in line.
@@ -39,6 +41,7 @@ export class Sim {
     this.cfg = data.config;
     this.hooks = hooks; // { toast, startRide, endRide, onProfile, showStarted }
     this.profile = loadProfile(this.cfg.Economy);
+    if (FREE_FOTL) for (const id of [FOTL.ride, FOTL.haunt]) if (!this.profile.owned.includes(id)) this.profile.owned.push(id);
     this.hunger = this.cfg.Hunger.Max;
     this.buffs = [];
     this.food = []; // { id, bites }
