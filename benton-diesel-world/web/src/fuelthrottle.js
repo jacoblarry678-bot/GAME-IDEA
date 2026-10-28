@@ -110,7 +110,7 @@ export function buildFuelThrottle(data) {
   };
   wallSeg(375, -40, GATE.x0, -40);
   wallSeg(GATE.x1, -40, 808, -40);
-  wallSeg(808, -40, 808, 236);
+  wallSeg(808, -16, 808, 236); // (open at the south end: the gate to Benton Boom Coaster)
   wallSeg(808, 236, 500, 236);
   const gx = (GATE.x0 + GATE.x1) / 2;
   for (const x of [GATE.x0 + 1.4, GATE.x1 - 1.4]) {
@@ -142,7 +142,7 @@ export function buildFuelThrottle(data) {
   // hazard stripes painted down the walk
   for (let z = -86; z < -14; z += 6) W.add([0.5, 0.05, 3], [gx - 4, 0.45, z], HAZARD, 'SmoothPlastic', { collide: 0 });
   for (let z = -86; z < -14; z += 6) W.add([0.5, 0.05, 3], [gx + 4, 0.45, z], HAZARD, 'SmoothPlastic', { collide: 0 });
-  for (const [x, z] of [[gx - 7, -70], [gx + 7, -30], [600, -18], [660, -18], [700, -18], [500, -18], [460, 40], [420, 90]]) lampW(x, z, AMBER);
+  for (const [x, z] of [[gx - 7, -70], [gx + 7, -20], [600, -18], [660, -18], [700, -18], [500, -18], [460, 40], [420, 90]]) lampW(x, z, AMBER);
   // the refinery yard: fuel tanks, a flare stack, pipe racks, drums
   const tank = (x, z, r, h, color, label) => {
     W.add([r * 2, h, r * 2], [x, G + h / 2, z], color, 'Metal', { shape: 5 });

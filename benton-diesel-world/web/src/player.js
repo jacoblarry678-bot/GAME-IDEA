@@ -283,7 +283,7 @@ export class Player {
         }
       }
       // keep inside the world
-      this.pos.x = THREE.MathUtils.clamp(this.pos.x, -600, 810);
+      this.pos.x = THREE.MathUtils.clamp(this.pos.x, -600, 1004);
       this.pos.z = THREE.MathUtils.clamp(this.pos.z, -720, 830);
       this.holder.position.copy(this.pos);
       this.holder.rotation.set(0, this.yaw, 0);

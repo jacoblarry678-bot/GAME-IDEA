@@ -49,6 +49,22 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Boom Coaster: a boom coaster and dark ride (browser only):** a
+  runaway mine train east of Throttle Works, through a timber mine portal
+  in its east wall. Each car's bogie rides a low, dark steel coaster track
+  and carries a curved steel boom up and over to one side, where a rusty
+  mine cart (headlamps for eyes, four wooden seats) hangs over a rickety
+  wooden mine track on timber trestles. That mine track is just for show,
+  so where it's broken the carts seem to jump the gap: over a ravine where
+  the BRIDGE OUT sign stands (a wrecked cart lies at the bottom), and over
+  the blown-out track in the dynamite store. Outdoors: a lift hill by the
+  water tower, a drop into a big turn, the ravine jump, a camelback and a
+  swerve. Then into Boom Mountain, a rocky mountain over a dark ride: the
+  mine shaft, a crystal cavern, the dynamite store, an underground river
+  with a waterfall, and a cave-in, before rolling out into daylight. The
+  queue zigzags under a timber shed past ore carts and TNT crates to a mine
+  loading platform. 16 riders a train (four carts of four), about 2 1/2
+  minutes.
 - **Escape Fuel Throttle: a robot-arm dark ride (browser only):** at the
   Throttle Works refinery north of Stranger Things, through a new gate in
   that land's north wall (ESCAPE FUEL THROTTLE in orange, hazard-striped
