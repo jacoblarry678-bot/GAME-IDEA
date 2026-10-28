@@ -277,7 +277,7 @@ export function buildDieselRun(data) {
     const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
     add([1, h, len], [(xa + xb) / 2, G + h / 2, (za + zb) / 2], color, 'Metal', { yaw });
   };
-  wall(-462, 118, -578, 118); // finish row | the first scenes
+  wall(-462, 118, -565, 118); // finish row | the first scenes
   wall(-468, 182, -538, 182); // engine | canyon
   wall(-474, 232, -560, 232); // canyon | bridge (the screen wall)
   wall(-558, 126, -558, 238); // the highway screen wall | the warp run

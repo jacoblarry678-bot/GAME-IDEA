@@ -304,7 +304,7 @@ export function buildStrangerThings(data) {
     const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
     add([1, h, len], [(xa + xb) / 2, G + h / 2, (za + zb) / 2], color, 'Metal', { yaw });
   };
-  wall(-462, 118, -578, 118);
+  wall(-462, 118, -565, 118);
   wall(-468, 182, -538, 182);
   wall(-474, 232, -560, 232);
   wall(-558, 126, -558, 238);

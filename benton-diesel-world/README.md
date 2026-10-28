@@ -49,6 +49,27 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Escape Fuel Throttle: a robot-arm dark ride (browser only):** at the
+  Throttle Works refinery north of Stranger Things, through a new gate in
+  that land's north wall (ESCAPE FUEL THROTTLE in orange, hazard-striped
+  barrier arms). The yard has fuel tanks, a burning flare stack, pipe racks,
+  drums and a giant throttle lever jammed WIDE OPEN. Benton Diesel's
+  experimental THROTTLE engine has stuck at 900%, and you ride a test rig:
+  a bench of four seats held out on the end of an orange industrial robot
+  arm that rides a track. The arm lifts you, tips you back and pushes you
+  right up to wrap-around screens (five glowing panels in an arc) through
+  nine scenes: the Throttle core (with a lever slamming back and forth), the
+  pump room's pounding pistons, the pipeline, the tank farm (a spinning
+  valve wheel and a leak), the flare stacks in a storm, a collapsing
+  catwalk with falling debris, the fireball, the exhaust tunnel and out into
+  daylight. Nothing is left bare: every wall has panels, ribs, pipes,
+  gauges, valves, light strips and hazard bands; the ceiling is trusses,
+  pipe runs and work lights; and the floor between the scenes is filled
+  with drums, tanks, manifolds, crates and control cabinets. The big indoor
+  queue winds through the test hall past briefing screens to the THROTTLE
+  engine itself, glowing, its intake fan spinning. Parties of 12, about a
+  3-minute ride. Also fixed: on Diesel Run and Stranger Things, the cars
+  drove through a scene wall where the track enters the final tunnel.
 - **Stranger Things: Escape the Upside Down (browser only):** a second
   motion-simulator dark ride, fully indoors, in the Hawkins National
   Laboratory show building east of Fast & Furious. A new gate in Velocity

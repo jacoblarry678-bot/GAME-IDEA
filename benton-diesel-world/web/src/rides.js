@@ -92,6 +92,31 @@ export class Sampler {
   }
 }
 
+// A two-link robot arm from the shoulder on a vehicle's chassis to the
+// wrist on the back of its seat: the elbow found by simple two-bone IK,
+// bending up and back. Each link is posed with its +Y along the link.
+const _S = new THREE.Vector3(), _W = new THREE.Vector3(), _E = new THREE.Vector3(), _u = new THREE.Vector3(), _p = new THREE.Vector3();
+const _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3(), _bx = new THREE.Vector3();
+function linkMatrix(from, to, side) {
+  _y.subVectors(to, from).normalize();
+  _x.copy(side).addScaledVector(_y, -side.dot(_y)).normalize();
+  _z.crossVectors(_x, _y);
+  return new THREE.Matrix4().makeBasis(_x, _y, _z).setPosition(from);
+}
+function armPose(A, base, cab, extras, k) {
+  _S.set(...A.shoulder).applyMatrix4(base);
+  _W.set(...A.wrist).applyMatrix4(cab);
+  const d = Math.min(_S.distanceTo(_W), A.l1 + A.l2 - 0.01);
+  _u.subVectors(_W, _S).normalize();
+  const a = (A.l1 * A.l1 - A.l2 * A.l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, A.l1 * A.l1 - a * a));
+  _p.setFromMatrixColumn(base, 2).multiplyScalar(0.6).add(_bx.set(0, 1, 0));
+  _p.addScaledVector(_u, -_p.dot(_u)).normalize();
+  _E.copy(_S).addScaledVector(_u, a).addScaledVector(_p, h);
+  _bx.setFromMatrixColumn(base, 0);
+  extras[`ArmA${k}`] = linkMatrix(_S, _E, _bx);
+  extras[`ArmB${k}`] = linkMatrix(_E, _W, _bx);
+}
+
 // Returns pose(t) -> { cars: Matrix4[], extras: {name: Matrix4} }
 export function makeMotion(r, cfg) {
   const origin = cfMatrix(r.origin);
@@ -117,12 +142,19 @@ export function makeMotion(r, cfg) {
           const base = sampler.matrixAt(s0 - i * r.carSpacing);
           extras[`Base${i + 1}`] = base;
           const ss = (((s0 - i * r.carSpacing) % L) + L) % L;
-          let yaw = 0, pitch = 0, roll = 0, heave = 0;
+          let yaw = 0, pitch = 0, roll = 0, heave = 0, lift = 0, reach = 0;
           if (t > 0) {
             for (const sc of M.scenes) {
               const w = sm((ss - sc.s0) / 8) * (1 - sm((ss - sc.s1) / 8));
               if (w <= 0) continue;
               const ph = Math.min(1, Math.max(0, (ss - sc.s0) / (sc.s1 - sc.s0)));
+              // a robot arm also lifts the riders up and pushes them in
+              // toward each scene's screen
+              if (M.arm && sc.style !== 'warp') {
+                const bump = sm(ph * 4) * (1 - sm((ph - 0.75) * 4));
+                lift += w * M.arm.lift * bump;
+                if (sc.target) reach += w * M.arm.reach * bump;
+              }
               if (sc.target) {
                 inv.copy(base).invert();
                 v.set(sc.target[0], base.elements[13], sc.target[1]).applyMatrix4(inv);
@@ -140,13 +172,16 @@ export function makeMotion(r, cfg) {
                   heave += w * (ph > 0.55 ? -0.9 * Math.sin(Math.min(1, (ph - 0.55) * 2.5) * Math.PI) : 0);
                   break;
                 case 'fire': heave += w * 0.07 * Math.sin(13 * t + k); roll += w * 0.05 * Math.sin(5 * t + k); break;
-                case 'warp': roll += w * 0.22 * Math.sin(ph * Math.PI * 4); pitch -= w * 0.08; heave += w * 0.04 * Math.sin(25 * t); break;
+                case 'warp': roll += w * 0.22 * Math.sin(ph * Math.PI * 4) * (M.arm ? 0.5 / M.arm.gain : 1); pitch -= w * 0.08; heave += w * 0.04 * Math.sin(25 * t); break;
                 case 'finish': pitch += w * 0.03 * Math.sin(2 * t); break;
                 default: break;
               }
             }
           }
-          cars.push(base.clone().multiply(TR(0, M.H + heave, 0)).multiply(RY(yaw)).multiply(new THREE.Matrix4().makeRotationX(pitch)).multiply(RZ(roll)));
+          const g = M.arm ? M.arm.gain : 1;
+          const cab = base.clone().multiply(TR(0, M.H + heave * g + lift, 0)).multiply(RY(yaw)).multiply(TR(0, 0, -reach)).multiply(new THREE.Matrix4().makeRotationX(pitch * g)).multiply(RZ(roll * g));
+          cars.push(cab);
+          if (M.arm) armPose(M.arm, base, cab, extras, i + 1);
         }
         // animated scenery
         for (const p of M.props || []) {
