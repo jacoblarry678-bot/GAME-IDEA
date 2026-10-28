@@ -98,6 +98,67 @@ export function makeMotion(r, cfg) {
   const n = r.carCount;
   // walk-through houses have no vehicles: guests walk them
   if (r.kind === 'walkthrough') return { duration: r.duration, pose: () => ({ cars: [], extras: {} }) };
+  // a motion-simulator dark ride: each vehicle's chassis follows the floor
+  // track (an extra), and its cabin (the car, with the riders) sits up on
+  // the motion base, turning to face each scene and pitching, rolling and
+  // heaving with the action
+  if (r.kind === 'motionsim') {
+    const sampler = new Sampler(r.track);
+    const M = r.motionsim, L = sampler.length;
+    const inv = new THREE.Matrix4(), v = new THREE.Vector3();
+    const sm = (x) => smoothstep(x);
+    return {
+      duration: r.duration,
+      sampler,
+      pose(t) {
+        const s0 = sampler.distanceAt(t);
+        const cars = [], extras = {};
+        for (let i = 0; i < n; i++) {
+          const base = sampler.matrixAt(s0 - i * r.carSpacing);
+          extras[`Base${i + 1}`] = base;
+          const ss = (((s0 - i * r.carSpacing) % L) + L) % L;
+          let yaw = 0, pitch = 0, roll = 0, heave = 0;
+          if (t > 0) {
+            for (const sc of M.scenes) {
+              const w = sm((ss - sc.s0) / 8) * (1 - sm((ss - sc.s1) / 8));
+              if (w <= 0) continue;
+              const ph = Math.min(1, Math.max(0, (ss - sc.s0) / (sc.s1 - sc.s0)));
+              if (sc.target) {
+                inv.copy(base).invert();
+                v.set(sc.target[0], base.elements[13], sc.target[1]).applyMatrix4(inv);
+                yaw += w * Math.atan2(-v.x, -v.z);
+              }
+              const k = i * 1.7;
+              switch (sc.style) {
+                case 'launch': pitch += w * (0.16 * sm(ph * 3) * (1 - sm((ph - 0.6) * 4)) + 0.015 * Math.sin(40 * t)); heave += w * 0.05 * Math.sin(30 * t); break;
+                case 'engine': heave += w * 0.09 * Math.sin(18 * t + k); roll += w * 0.035 * Math.sin(23 * t + k); pitch += w * 0.03 * Math.sin(15 * t); break;
+                case 'highway': roll += w * 0.1 * Math.sin(1.6 * t + k); pitch += w * 0.04 * Math.sin(0.9 * t); heave += w * 0.05 * Math.sin(7 * t); break;
+                case 'canyon': pitch += w * 0.08 * Math.sin(3 * t + k); roll += w * 0.11 * Math.sin(2.2 * t + 1 + k); heave -= w * 0.45 * Math.max(0, Math.sin(4.5 * t + k)) ** 4; break;
+                case 'storm': roll += w * 0.15 * Math.sin(1.1 * t + k); pitch += w * 0.06 * Math.sin(2.7 * t); heave += w * 0.1 * Math.sin(9 * t); break;
+                case 'bridge':
+                  pitch += w * (ph < 0.5 ? 0.22 * sm(ph * 2) : 0.22 - 0.48 * sm((ph - 0.5) * 4));
+                  heave += w * (ph > 0.55 ? -0.9 * Math.sin(Math.min(1, (ph - 0.55) * 2.5) * Math.PI) : 0);
+                  break;
+                case 'fire': heave += w * 0.07 * Math.sin(13 * t + k); roll += w * 0.05 * Math.sin(5 * t + k); break;
+                case 'warp': roll += w * 0.22 * Math.sin(ph * Math.PI * 4); pitch -= w * 0.08; heave += w * 0.04 * Math.sin(25 * t); break;
+                case 'finish': pitch += w * 0.03 * Math.sin(2 * t); break;
+                default: break;
+              }
+            }
+          }
+          cars.push(base.clone().multiply(TR(0, M.H + heave, 0)).multiply(RY(yaw)).multiply(new THREE.Matrix4().makeRotationX(pitch)).multiply(RZ(roll)));
+        }
+        // animated scenery
+        for (const p of M.props || []) {
+          const [x, y, z] = p.at;
+          if (p.kind === 'piston') extras[p.name] = TR(x, y + p.amp * Math.sin(p.freq * t + p.phase), z);
+          else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(new THREE.Matrix4().makeRotationX(p.speed * t));
+          else if (p.kind === 'fall') { const u = ((t / p.period + p.phase) % 1 + 1) % 1; extras[p.name] = TR(x, y - p.drop * u * u, z).multiply(RY(u * 3)); }
+        }
+        return { cars, extras };
+      },
+    };
+  }
   if (r.track) {
     const sampler = new Sampler(r.track);
     if (r.kind === 'karts') {

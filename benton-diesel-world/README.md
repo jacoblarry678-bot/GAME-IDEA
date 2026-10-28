@@ -49,6 +49,31 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Diesel Run: a motion-simulator dark ride (browser only):** a new
+  high-tech dark ride, fully indoors, in a huge show building on the land
+  west of Diesel District.
+  - **Getting there:** a new gate in the park's west wall (z ≈ 139), and a
+    path from the Diesel District walkway lined with orange lamps.
+  - **Outside:** a dark facade with orange light stripes, a giant DIESEL RUN
+    sign over the entrance and a live wait sign.
+  - **The queue is entirely inside and very large:** a corridor up the east
+    wall, then seven switchbacks about 200 studs long through the "R&D
+    hall", with blue and orange light strips, pre-run briefing screens, an
+    X-1 rig on a turntable and a WELCOME, TEST DRIVERS screen. Guests stand
+    in groups of 12 here, so a long wait really fills the hall.
+  - **The vehicles:** three Benton Diesel X-1 rigs with 8 seats each and lap
+    bars. Each is a cabin (gray, orange edges, window slots) on a
+    turntable atop a six-legged hexapod motion base, on a wheeled chassis
+    that follows a black rail in the floor.
+  - **The motion:** the cabin turns to face each scene and pitches, rolls,
+    heaves and drops with the action.
+  - **The show (about 3 minutes):** the launch bay countdown; inside a
+    diesel engine (giant pistons pumping, a spinning crankshaft, fire);
+    Route 9, a desert highway at night; a canyon closing in with boulders
+    falling; a storm; a jump over a broken bridge (nose up, then the
+    drop); a tunnel of fire; a warp run through rings of light; and the
+    finish line ("RUN COMPLETE · 00:59.8 · NEW RECORD").
+  - **Exiting:** you leave down an exit corridor.
 - **BentonGram: social media in the Benton App (browser only):** a new 📱
   BentonGram tab with a live feed.
   - **The park's account** (@BentonDieselWorld, verified) has a poster for

@@ -31,6 +31,7 @@ import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
 import { buildMardiGras } from './mardigras.js';
 import { buildLineTickets, buildExtendedQueues } from './lanes.js';
 import { Social } from './social.js';
+import { buildDieselRun, DieselRunSite } from './dieselrun.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -113,6 +114,8 @@ async function main() {
   if (MARDI_GRAS) buildMardiGras(data);
   // Final Destination, going up on Stage 6 for next fall's Benton Haunt
   const fdLayout = FD_BUILDING ? buildFinalDestination(data) : null;
+  // Diesel Run: the motion-simulator dark ride past Diesel District
+  const drLayout = buildDieselRun(data);
   // Express lines, Front of the Line tickets and extended queues
   buildLineTickets(data);
   const extended = buildExtendedQueues(data);
@@ -229,6 +232,7 @@ async function main() {
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
+  const drSite = new DieselRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, drLayout);
   const fdSite = fdLayout ? new FinalDestinationSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, fdLayout) : null;
   const wvSite = wvLayout ? new WolverineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wvLayout) : null;
   const ffSite = new FastFuriousSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout);
@@ -407,7 +411,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -426,6 +430,7 @@ async function main() {
     ffSite.update(dt, player.pos, started);
     wvSite?.update(dt, player.pos, started);
     fdSite?.update(dt, player.pos, started);
+    drSite.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);

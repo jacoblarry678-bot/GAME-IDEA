@@ -111,7 +111,7 @@ class RideSound {
     this.body.connect(this.src.input);
     this.noise.start();
     // engines for karts, trucks, the tram and the drop tower motor
-    if (['karts', 'trucks', 'tram', 'droptower', 'spinner'].includes(this.kind)) {
+    if (['karts', 'trucks', 'tram', 'droptower', 'spinner', 'motionsim'].includes(this.kind)) {
       this.eng = E.osc(this.kind === 'trucks' ? 'square' : 'sawtooth', 50, E.now);
       this.eng2 = E.osc('sawtooth', 75, E.now);
       this.engLp = E.filter('lowpass', this.kind === 'karts' ? 900 : 380, 1.2);

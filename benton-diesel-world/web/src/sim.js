@@ -58,7 +58,7 @@ export class Sim {
       // the front plus enough other guests to fill it, so the line moves
       // up one spot per dispatch; haunted houses send groups of four through
       // their long mazes. The maze holds this many parties.
-      const party = r.kind === 'walkthrough' ? 4 : 1;
+      const party = r.party ?? (r.kind === 'walkthrough' ? 4 : 1);
       const gap = this.spacing * party;
       const path = this.paths.get(r.id);
       const slots = path ? Math.max(4, Math.floor((path.length - 8) / gap)) : 40;

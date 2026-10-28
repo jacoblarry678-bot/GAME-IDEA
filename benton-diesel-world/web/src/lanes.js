@@ -44,7 +44,7 @@ export function buildExtendedQueues(data) {
   const built = [];
   for (const r of data.rides) {
     const q = r.queue;
-    if (!q || r.kind === 'walkthrough') continue;
+    if (!q || r.kind === 'walkthrough' || r.noExtended) continue;
     const cfg = data.config.Rides.find((c) => c.id === r.id);
     if (!cfg || cfg.refurb) continue;
     const n = q.points.length / 2;
