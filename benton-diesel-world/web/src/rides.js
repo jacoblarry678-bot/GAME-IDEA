@@ -154,6 +154,8 @@ export function makeMotion(r, cfg) {
           if (p.kind === 'piston') extras[p.name] = TR(x, y + p.amp * Math.sin(p.freq * t + p.phase), z);
           else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(new THREE.Matrix4().makeRotationX(p.speed * t));
           else if (p.kind === 'fall') { const u = ((t / p.period + p.phase) % 1 + 1) % 1; extras[p.name] = TR(x, y - p.drop * u * u, z).multiply(RY(u * 3)); }
+          else if (p.kind === 'lunge') { const u = ((t / p.period) % 1 + 1) % 1, k = u < 0.15 ? u / 0.15 : u < 0.4 ? 1 : Math.max(0, 1 - (u - 0.4) / 0.4); extras[p.name] = TR(x + p.dir[0] * p.reach * k, y, z + p.dir[1] * p.reach * k).multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))); }
+          else if (p.kind === 'swing') extras[p.name] = TR(x, y, z).multiply(RZ(p.amp * Math.sin(p.freq * t)));
         }
         return { cars, extras };
       },

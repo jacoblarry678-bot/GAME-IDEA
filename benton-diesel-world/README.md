@@ -49,6 +49,23 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Stranger Things: Escape the Upside Down (browser only):** a second
+  motion-simulator dark ride, fully indoors, in the Hawkins National
+  Laboratory show building east of Fast & Furious. A new gate in Velocity
+  City's east wall (STRANGER THINGS in red) opens onto a path through
+  Mirkwood: pines, a HAWKINS sign and a dropped bike with its light still on.
+  The very large indoor queue winds through the lab: flickering fluorescent
+  tubes, the Byers' Christmas lights strung up the whole corridor, lab
+  monitors (SUBJECT 011, GATE STATUS: OPEN), vines across the ceiling and
+  Eleven's sensory tank under WELCOME TO HAWKINS LAB. Board a lab containment
+  pod (white with a red stripe and a red roof beacon, on a six-legged motion
+  base) and ride through the Gate: the Byers' alphabet wall with the lights
+  spelling R-U-N as the Demogorgon lunges out, Mirkwood at night with the
+  boys' bikes, the Upside Down with Demodogs and drifting spores, the Mind
+  Flayer over a red storm, Starcourt Mall (Scoops Ahoy!) as the floor gives
+  way, Vecna's grandfather clock swinging, then red and blue rings back
+  through the Gate to WELCOME BACK TO HAWKINS. Parties of 12, about a
+  3-minute ride.
 - **Free Front of the Line for you (browser only):** both Front of the Line
   tickets (rides and Benton Haunt) are now yours from the start, free and
   unlimited, just like your Express Passes. Press G at any ride or house.
