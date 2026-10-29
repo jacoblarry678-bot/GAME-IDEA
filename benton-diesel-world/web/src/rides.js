@@ -145,7 +145,8 @@ export function makeMotion(r, cfg) {
             v.setFromMatrixColumn(base, 2).setY(0);
             if (v.lengthSq() > 1e-8) {
               v.normalize();
-              base.makeBasis(new THREE.Vector3(v.z, 0, -v.x), new THREE.Vector3(0, 1, 0), v.clone()).setPosition(base.elements[12], base.elements[13], base.elements[14]);
+              const [px, py, pz] = [base.elements[12], base.elements[13], base.elements[14]];
+              base.makeBasis(new THREE.Vector3(v.z, 0, -v.x), new THREE.Vector3(0, 1, 0), v.clone()).setPosition(px, py, pz);
             }
           }
           extras[`Base${i + 1}`] = base;

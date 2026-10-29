@@ -329,6 +329,7 @@ export function buildConstructionRunaway(data) {
   }
   for (const [x, c, d] of [[-560, ORANGE, 1.6], [-520, 0x8a9096, 1.2], [-485, FUEL, 1.4], [-455, ORANGE, 1], [-414, 0x8a9096, 1.4], [-400, FUEL, 1]]) add([B.z1 - B.z0 - 4, d, d], [x, G + 25.4, cz], c, 'Metal', { shape: 2, collide: 0, yaw: Math.PI / 2 });
   for (let x = B.x0 + 10; x < B.x1; x += 22) for (let z = B.z0 + 14; z < B.z1; z += 24) {
+    if (x < -556 && z > 90 && z < 252) continue; // (over the top floor)
     add([0.15, 3, 0.15], [x, G + 26, z], 0x1a1a1a, 'Metal', { collide: 0 });
     neon([1.6, 0.4, 1.6], [x, G + 24.4, z], 0xffd8a0, { shape: 5 });
   }
@@ -414,7 +415,7 @@ export function buildConstructionRunaway(data) {
     sampler.matrixAt(s, m4);
     Pv.setFromMatrixPosition(m4);
     const e = m4.elements;
-    if (Pv.y > FLOOR + 0.3 && Pv.y < DECK - 0.3) continue; // in an elevator shaft
+    if (Pv.y > FLOOR + 0.3 && (Pv.y < DECK - 0.3 || Pv.x - 726 > 229.5 || Pv.x - 726 < 119)) continue; // in an elevator shaft
     const ry = Math.atan2(e[8], e[10]) + Math.PI;
     W.add([2.4, 0.05, 2.2], [Pv.x, Pv.y + 0.03, Pv.z], 0x1a1a1c, 'Metal', { collide: 0, yaw: ry });
     if (s % 6 === 0) W.add([0.3, 0.06, 2.2], [Pv.x, Pv.y + 0.05, Pv.z], HAZARD, 'SmoothPlastic', { collide: 0, yaw: ry });
@@ -610,20 +611,19 @@ export function buildConstructionRunaway(data) {
   light(-528, 8, 255, ORANGE);
   // 8 the construction elevator and the top floor
   const shaft = (zc) => {
-    for (const [dx, dz] of [[-6.2, -7], [5.8, -7], [-6.2, 7], [5.8, 7]]) box([0.8, 27, 0.8], [-572 + dx, G, zc + dz], HAZARD, 'Metal', { collide: 0 });
-    for (const y of [6, 12.6, 20, 26]) {
-      for (const dz of [-7, 7]) add([12, 0.5, 0.5], [-572.2, G + y, zc + dz], HAZARD, 'Metal', { collide: 0 });
-      for (const dx of [-6.2, 5.8]) add([0.5, 0.5, 14], [-572 + dx, G + y, zc], HAZARD, 'Metal', { collide: 0 });
-    }
-    for (const dx of [-6.4, 6]) add([0.1, 24, 13], [-572 + dx, G + 13, zc], 0x8a9096, 'Metal', { collide: 0, trans: 0.7 }); // the cage mesh
-    neon([0.8, 0.8, 0.8], [-565.8, G + 26.8, zc], ORANGE, { shape: 3 });
-    light(-566, 20, zc, ORANGE);
-    sign([0.2, 2.4, 6], [-565.6, G + 16, zc], HAZARD, 'Right', [['HOIST', 0, 0, 1, 0.55, BLACK], ['MAX LOAD: 1 RIG', 0, 0.58, 1, 0.42, BLACK, 'GothamBold']]);
+    // (open front and back: the rig rides in and out along the shaft)
+    for (const [dx, dz] of [[-6.6, -7], [8.5, -7], [-6.6, 7], [8.5, 7]]) box([0.8, 27, 0.8], [-572 + dx, G, zc + dz], HAZARD, 'Metal', { collide: 0 });
+    for (const dz of [-7, 7]) add([15.9, 0.5, 0.5], [-571, G + 26.2, zc + dz], HAZARD, 'Metal', { collide: 0 });
+    for (const y of [6, 12.6, 20, 26]) for (const dx of [-6.6, 8.5]) add([0.5, 0.5, 14], [-572 + dx, G + y, zc], HAZARD, 'Metal', { collide: 0 });
+    for (const dx of [-6.6, 8.5]) add([0.1, 24, 13], [-572 + dx, G + 13, zc], 0x8a9096, 'Metal', { collide: 0, trans: 0.7 }); // the cage mesh
+    neon([0.8, 0.8, 0.8], [-563.5, G + 26.8, zc], ORANGE, { shape: 3 });
+    light(-564, 20, zc, ORANGE);
+    sign([0.2, 2.4, 6], [-563.3, G + 16, zc], HAZARD, 'Right', [['HOIST', 0, 0, 1, 0.55, BLACK], ['MAX LOAD: 1 RIG', 0, 0.58, 1, 0.42, BLACK, 'GothamBold']]);
   };
   shaft(238);
   shaft(108);
   // the top floor: a concrete deck on columns, unfinished steel, the sky
-  add([19.4, 1, 116], [-569, DECK - 0.5, 172.5], CONCRETE, 'Concrete', { collide: 0 });
+  add([19.4, 1, 112], [-569, DECK - 0.5, 174.25], CONCRETE, 'Concrete', { collide: 0 });
   for (let z = 120; z <= 226; z += 16) for (const x of [-578, -560.4]) box([1.4, DECK - 1 - G, 1.4], [x, G, z], CONCRETE, 'Concrete', { collide: 0 });
   for (let z = 118; z <= 226; z += 12) {
     box([0.6, 11, 0.6], [-560.6, DECK, z], 0x7a4a2a, 'Metal', { collide: 0 });
