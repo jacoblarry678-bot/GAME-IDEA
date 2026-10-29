@@ -35,6 +35,7 @@ import { buildDieselRun, DieselRunSite } from './dieselrun.js';
 import { buildStrangerThings, StrangerThingsSite } from './strangerthings.js';
 import { buildFuelThrottle, FuelThrottleSite } from './fuelthrottle.js';
 import { buildBoomCoaster, BoomCoasterSite } from './boomcoaster.js';
+import { buildConstructionRunaway, ConstructionRunawaySite } from './constructionrunaway.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -125,6 +126,8 @@ async function main() {
   const ftLayout = buildFuelThrottle(data);
   // Benton Boom Coaster: the boom coaster and dark ride, east of Throttle Works
   const bbLayout = buildBoomCoaster(data);
+  // Construction Runaway: the robot-arm ride with the elevator, north of Throttle Works
+  const crLayout = buildConstructionRunaway(data);
   // Express lines, Front of the Line tickets and extended queues
   buildLineTickets(data);
   const extended = buildExtendedQueues(data);
@@ -241,6 +244,7 @@ async function main() {
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
+  const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
   const bbSite = new BoomCoasterSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bbLayout);
   const ftSite = new FuelThrottleSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ftLayout);
   const stSite = new StrangerThingsSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, stLayout);
@@ -423,7 +427,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -446,6 +450,7 @@ async function main() {
     stSite.update(dt, player.pos, started);
     ftSite.update(dt, player.pos, started);
     bbSite.update(dt, player.pos, started);
+    crSite.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);

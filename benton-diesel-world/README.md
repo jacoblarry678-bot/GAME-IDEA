@@ -49,6 +49,28 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Construction Runaway: a robot-arm ride with an elevator (browser
+  only):** north of Throttle Works, through a yellow-and-black I-beam gate
+  in its north wall (a path runs up the side of the refinery from the Boom
+  Coaster walk). The Benton Tower building site has hoarding, a tower crane
+  whose jib slowly swings round, the site office, porta-potties, a mixer
+  truck and an excavator; the show building is wrapped in scaffolding and
+  debris netting. RIG 3, a four-seat bench on a yellow robot arm, is meant
+  to give a gentle site tour and runs away with you. It still lifts,
+  tilts, pitches, rolls and pushes you up to the screens, and now does
+  bigger moves too: it rolls you right over onto your side to duck the
+  wrecking ball, and tips you halfway upside down, flat on your back,
+  under a sky screen as a steel beam swings overhead in the excavation pit.
+  Then come the jackhammers and the concrete mixer, the welding bay,
+  collapsing scaffolding with falling planks, and a burning fuel tanker.
+  For the finale the whole rig rides the construction elevator up a hoist
+  shaft to the 40th floor, an open concrete deck under the sky (it flips
+  you onto your back again to look up), and drops back down another shaft
+  to the inspector's office: PASSED (BARELY). Every wall is dressed in
+  plywood hoarding, scaffold ribs, pipes, gauges and work lights, and the
+  floor between the scenes is piled with cones, rebar, cement bags,
+  I-beams, cable drums, barriers and generators. Parties of 12, about 4
+  minutes.
 - **Benton Boom Coaster: a boom coaster and dark ride (browser only):** a
   runaway mine train east of Throttle Works, through a timber mine portal
   in its east wall. Each car's bogie rides a low, dark steel coaster track

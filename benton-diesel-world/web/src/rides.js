@@ -140,9 +140,17 @@ export function makeMotion(r, cfg) {
         const cars = [], extras = {};
         for (let i = 0; i < n; i++) {
           const base = sampler.matrixAt(s0 - i * r.carSpacing);
+          // a level chassis (it rides elevators upright), facing along the track
+          if (M.level) {
+            v.setFromMatrixColumn(base, 2).setY(0);
+            if (v.lengthSq() > 1e-8) {
+              v.normalize();
+              base.makeBasis(new THREE.Vector3(v.z, 0, -v.x), new THREE.Vector3(0, 1, 0), v.clone()).setPosition(base.elements[12], base.elements[13], base.elements[14]);
+            }
+          }
           extras[`Base${i + 1}`] = base;
           const ss = (((s0 - i * r.carSpacing) % L) + L) % L;
-          let yaw = 0, pitch = 0, roll = 0, heave = 0, lift = 0, reach = 0;
+          let yaw = 0, pitch = 0, roll = 0, heave = 0, lift = 0, reach = 0, pitchAbs = 0, rollAbs = 0;
           if (t > 0) {
             for (const sc of M.scenes) {
               const w = sm((ss - sc.s0) / 8) * (1 - sm((ss - sc.s1) / 8));
@@ -150,7 +158,7 @@ export function makeMotion(r, cfg) {
               const ph = Math.min(1, Math.max(0, (ss - sc.s0) / (sc.s1 - sc.s0)));
               // a robot arm also lifts the riders up and pushes them in
               // toward each scene's screen
-              if (M.arm && sc.style !== 'warp') {
+              if (M.arm && sc.style !== 'warp' && sc.style !== 'lift') {
                 const bump = sm(ph * 4) * (1 - sm((ph - 0.75) * 4));
                 lift += w * M.arm.lift * bump;
                 if (sc.target) reach += w * M.arm.reach * bump;
@@ -174,12 +182,17 @@ export function makeMotion(r, cfg) {
                 case 'fire': heave += w * 0.07 * Math.sin(13 * t + k); roll += w * 0.05 * Math.sin(5 * t + k); break;
                 case 'warp': roll += w * 0.22 * Math.sin(ph * Math.PI * 4) * (M.arm ? 0.5 / M.arm.gain : 1); pitch -= w * 0.08; heave += w * 0.04 * Math.sin(25 * t); break;
                 case 'finish': pitch += w * 0.03 * Math.sin(2 * t); break;
+                // the robot arm's big moves: tipped halfway upside down onto
+                // your back, or rolled right over onto your side
+                case 'flip': { const k2 = sm((ph - 0.12) * 4) * (1 - sm((ph - 0.78) * 5)); pitchAbs += w * 1.45 * k2; lift += w * 1.6 * k2; break; }
+                case 'sideways': { const k2 = sm((ph - 0.12) * 4) * (1 - sm((ph - 0.78) * 5)); rollAbs += w * 1.3 * k2 * (i % 2 ? 1 : -1); lift += w * 1.6 * k2; pitch += w * 0.04 * Math.sin(9 * t); break; }
+                case 'lift': heave += w * 0.04 * Math.sin(28 * t + k); break;
                 default: break;
               }
             }
           }
           const g = M.arm ? M.arm.gain : 1;
-          const cab = base.clone().multiply(TR(0, M.H + heave * g + lift, 0)).multiply(RY(yaw)).multiply(TR(0, 0, -reach)).multiply(new THREE.Matrix4().makeRotationX(pitch * g)).multiply(RZ(roll * g));
+          const cab = base.clone().multiply(TR(0, M.H + heave * g + lift, 0)).multiply(RY(yaw)).multiply(TR(0, 0, -reach)).multiply(new THREE.Matrix4().makeRotationX(pitch * g + pitchAbs)).multiply(RZ(roll * g + rollAbs));
           cars.push(cab);
           if (M.arm) armPose(M.arm, base, cab, extras, i + 1);
         }
@@ -190,7 +203,8 @@ export function makeMotion(r, cfg) {
           else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(new THREE.Matrix4().makeRotationX(p.speed * t));
           else if (p.kind === 'fall') { const u = ((t / p.period + p.phase) % 1 + 1) % 1; extras[p.name] = TR(x, y - p.drop * u * u, z).multiply(RY(u * 3)); }
           else if (p.kind === 'lunge') { const u = ((t / p.period) % 1 + 1) % 1, k = u < 0.15 ? u / 0.15 : u < 0.4 ? 1 : Math.max(0, 1 - (u - 0.4) / 0.4); extras[p.name] = TR(x + p.dir[0] * p.reach * k, y, z + p.dir[1] * p.reach * k).multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))); }
-          else if (p.kind === 'swing') extras[p.name] = TR(x, y, z).multiply(RZ(p.amp * Math.sin(p.freq * t)));
+          else if (p.kind === 'swing') extras[p.name] = TR(x, y, z).multiply(p.axis === 'x' ? new THREE.Matrix4().makeRotationX(p.amp * Math.sin(p.freq * t)) : RZ(p.amp * Math.sin(p.freq * t)));
+          else if (p.kind === 'turn') extras[p.name] = TR(x, y, z).multiply(RY(p.speed * t + (p.phase || 0)));
         }
         return { cars, extras };
       },
