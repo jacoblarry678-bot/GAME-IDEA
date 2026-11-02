@@ -27,7 +27,8 @@ export function randomLook(rnd = Math.random, overrides = {}) {
     build: 0.9 + rnd() * 0.25,
     skin: pick(skins), hair: pick(hairs), top: pick(tops), bottom: pick(bottoms),
     shoes: pick([0xf4f4f4, 0x222222, 0x6b4a2b, 0x3355aa]),
-    hairStyle: female ? pick(['long', 'bun', 'long', 'short']) : pick(['short', 'short', 'buzz', 'bald', 'long']),
+    hairStyle: female ? pick(['long', 'bun', 'long', 'short', 'ponytail', 'curly']) : pick(['short', 'short', 'buzz', 'bald', 'long', 'curly']),
+    eyes: pick([0x3b2414, 0x3b2414, 0x4a2e1a, 0x6b4a2a, 0x3a6a8a, 0x4a6a3a]),
     shorts: rnd() < 0.35,
     sleeveless: rnd() < 0.25,
     hat: rnd() < 0.12 ? pick([0xf4f4f4, 0x1f3a5f, 0xd94f4f]) : null,
@@ -45,18 +46,23 @@ function capsule(r, len, sx = 1, sz = 1) {
 /** Build the body geometry with per-vertex colour and rigid skin weights. */
 function buildGeometry(look) {
   const parts = [];
-  const add = (geo, bone, color, x, y, z, rx = 0, ry = 0, rz = 0) => {
+  // surface per vertex: [roughness, skin]; skin gets a soft subsurface warmth in the shader
+  const SURF = { cloth: [0.88, 0], skin: [0.52, 1], hair: [0.42, 0], eye: [0.08, 0], shoe: [0.55, 0], lip: [0.38, 0.6], leather: [0.45, 0] };
+  const add = (geo, bone, color, x, y, z, rx = 0, ry = 0, rz = 0, surf = null) => {
     const g = geo.index ? geo.toNonIndexed() : geo;
     g.deleteAttribute('uv');
     g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(1, 1, 1)));
     const n = g.attributes.position.count;
     const c = new THREE.Color(color);
-    const cols = new Float32Array(n * 3), si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+    const cols = new Float32Array(n * 3), si = new Uint16Array(n * 4), sw = new Float32Array(n * 4), sf = new Float32Array(n * 2);
+    const kind = SURF[surf || (color === look.skin ? 'skin' : color === look.hair ? 'hair' : 'cloth')];
     for (let i = 0; i < n; i++) {
       cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;
       si[i * 4] = BI[bone]; sw[i * 4] = 1;
+      sf[i * 2] = kind[0]; sf[i * 2 + 1] = kind[1];
     }
     g.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    g.setAttribute('surf', new THREE.BufferAttribute(sf, 2));
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4));
     g.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
     parts.push(g);
@@ -73,23 +79,38 @@ function buildGeometry(look) {
   for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.075 * b, 8, 6), 'chest', look.sleeveless ? skin : top, s * (sh - 0.02), 1.42, 0);
   // neck and head
   add(new THREE.CylinderGeometry(0.048, 0.055, 0.12, 8), 'neck', skin, 0, 1.53, 0);
-  add(new THREE.SphereGeometry(0.105, 14, 10).scale(0.92, 1.12, 1.02), 'head', skin, 0, 1.66, 0.005);
-  add(new THREE.BoxGeometry(0.03, 0.045, 0.04), 'head', skin, 0, 1.655, 0.11); // nose
+  add(new THREE.SphereGeometry(0.105, 18, 14).scale(0.92, 1.12, 1.02), 'head', skin, 0, 1.66, 0.005);
+  // jaw and chin, cheekbones
+  add(new THREE.SphereGeometry(0.075, 14, 10).scale(f ? 0.95 : 1.05, 0.8, 0.95), 'head', skin, 0, 1.6, 0.03);
+  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.03, 8, 6), 'head', skin, s * 0.05, 1.645, 0.075);
+  // nose: bridge and tip
+  add(new THREE.CylinderGeometry(0.009, 0.016, 0.045, 8).rotateX(-0.35), 'head', skin, 0, 1.66, 0.1);
+  add(new THREE.SphereGeometry(0.014, 8, 6).scale(1.15, 0.85, 1), 'head', skin, 0, 1.638, 0.11);
+  const tint = (hex, k, r = 0) => { const c = new THREE.Color(hex); c.r = Math.min(1, c.r * k + r); c.g *= k; c.b *= k; return c.getHex(); };
   for (const s of [-1, 1]) {
-    add(new THREE.SphereGeometry(0.014, 6, 4), 'head', 0x1a1a1a, s * 0.038, 1.685, 0.094);
-    add(new THREE.BoxGeometry(0.04, 0.008, 0.01), 'head', look.hair, s * 0.038, 1.71, 0.1); // brows
-    add(new THREE.SphereGeometry(0.022, 6, 4).scale(0.6, 1, 0.8), 'head', skin, s * 0.098, 1.66, 0); // ears
+    // eyes: sclera, iris, pupil, and an upper lid that shades them
+    add(new THREE.SphereGeometry(0.0145, 10, 8), 'head', 0xefe9e0, s * 0.037, 1.682, 0.091, 0, 0, 0, 'eye');
+    add(new THREE.SphereGeometry(0.0085, 10, 8).scale(1, 1, 0.5), 'head', look.eyes ?? 0x3b2414, s * 0.037, 1.682, 0.1035, 0, 0, 0, 'eye');
+    add(new THREE.SphereGeometry(0.0042, 8, 6).scale(1, 1, 0.5), 'head', 0x050505, s * 0.037, 1.682, 0.1078, 0, 0, 0, 'eye');
+    add(new THREE.SphereGeometry(0.0165, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.42), 'head', tint(skin, 0.92), s * 0.037, 1.684, 0.0905, -0.3, 0, 0, 'skin');
+    add(new THREE.BoxGeometry(0.04, 0.009, 0.012), 'head', look.hair, s * 0.038, 1.708, 0.099, 0, 0, s * -0.12, 'hair'); // brows
+    add(new THREE.SphereGeometry(0.022, 8, 6).scale(0.6, 1, 0.8), 'head', skin, s * 0.098, 1.66, 0); // ears
   }
-  add(new THREE.BoxGeometry(0.05, 0.008, 0.01), 'head', 0x7a3b3b, 0, 1.61, 0.1); // mouth
+  // lips
+  const lip = tint(skin, f ? 0.78 : 0.84, f ? 0.12 : 0.05);
+  add(new THREE.CapsuleGeometry(0.0075, 0.03, 3, 8).rotateZ(Math.PI / 2).scale(1, 0.8, 0.7), 'head', lip, 0, 1.613, 0.1, 0, 0, 0, 'lip');
+  add(new THREE.CapsuleGeometry(0.0085, 0.026, 3, 8).rotateZ(Math.PI / 2).scale(1, 0.85, 0.75), 'head', lip, 0, 1.6, 0.098, 0, 0, 0, 'lip');
   if (look.beard) add(new THREE.SphereGeometry(0.1, 10, 6, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.35).scale(0.95, 1.1, 1.05), 'head', look.hair, 0, 1.665, 0.01);
   // hair
   const hs = look.hairStyle;
   if (hs !== 'bald') {
-    const cap = new THREE.SphereGeometry(0.113, 14, 8, 0, Math.PI * 2, 0, hs === 'buzz' ? Math.PI * 0.42 : Math.PI * 0.55);
+    const cap = new THREE.SphereGeometry(0.113, 18, 10, 0, Math.PI * 2, 0, hs === 'buzz' ? Math.PI * 0.42 : Math.PI * 0.55);
     cap.scale(0.95, 1.1, 1.06);
     add(cap, 'head', look.hair, 0, 1.675, -0.006, -0.25);
-    if (hs === 'long') add(capsule(0.085, 0.16, 1.25, 0.55), 'head', look.hair, 0, 1.55, -0.07);
-    if (hs === 'bun') add(new THREE.SphereGeometry(0.055, 8, 6), 'head', look.hair, 0, 1.76, -0.08);
+    if (hs === 'long') { add(capsule(0.085, 0.16, 1.25, 0.55), 'head', look.hair, 0, 1.55, -0.07); for (const s of [-1, 1]) add(capsule(0.03, 0.14, 1, 0.8), 'head', look.hair, s * 0.085, 1.58, 0.0); }
+    if (hs === 'bun') add(new THREE.SphereGeometry(0.055, 10, 8), 'head', look.hair, 0, 1.76, -0.08);
+    if (hs === 'ponytail') { add(new THREE.SphereGeometry(0.03, 8, 6), 'head', look.hair, 0, 1.7, -0.115); add(capsule(0.032, 0.16, 1, 0.8), 'head', look.hair, 0, 1.58, -0.13, 0.25); }
+    if (hs === 'curly') add(new THREE.IcosahedronGeometry(0.125, 2).scale(1.02, 0.95, 1.05), 'head', look.hair, 0, 1.71, -0.012);
   }
   if (look.hat) add(new THREE.CylinderGeometry(0.115, 0.12, 0.07, 12), 'head', look.hat, 0, 1.76, 0), add(new THREE.BoxGeometry(0.2, 0.015, 0.12), 'head', look.hat, 0, 1.735, 0.1);
   // arms: upper arm, forearm, hand
@@ -98,8 +119,8 @@ function buildGeometry(look) {
     const x = s * sh;
     add(capsule(0.048 * b, 0.2), 'upperArm' + L, look.sleeveless ? skin : top, x, 1.28, 0);
     add(capsule(0.042 * b, 0.19), 'foreArm' + L, skin, x, 1.02, 0);
-    add(new THREE.BoxGeometry(0.06, 0.1, 0.035), 'hand' + L, skin, x, 0.85, 0.005);
-    add(new THREE.BoxGeometry(0.025, 0.06, 0.03), 'hand' + L, skin, x - s * 0.035, 0.87, 0.03, 0, 0, s * 0.4); // thumb
+    add(capsule(0.028, 0.05, 1.05, 0.62), 'hand' + L, skin, x, 0.85, 0.005);
+    add(capsule(0.012, 0.035), 'hand' + L, skin, x - s * 0.03, 0.865, 0.02, 0, 0, s * 0.45); // thumb
   }
   // legs: thigh, shin, foot
   for (const s of [-1, 1]) {
@@ -108,8 +129,12 @@ function buildGeometry(look) {
     add(capsule(0.072 * b, 0.32, 1, 1.05), 'thigh' + L, bot, x, 0.7, 0);
     add(capsule(0.055 * b, 0.32), 'shin' + L, look.shorts ? skin : bot, x, 0.3, 0);
     if (look.shorts) add(new THREE.CylinderGeometry(0.078 * b, 0.075 * b, 0.12, 10), 'thigh' + L, bot, x, 0.56, 0);
-    add(new THREE.BoxGeometry(0.095, 0.07, 0.25).translate(0, 0, 0.04), 'foot' + L, look.shoes, x, 0.035, 0.02);
+    // sneaker: a rounded upper on a pale sole
+    add(new THREE.CapsuleGeometry(0.045, 0.16, 4, 10).rotateX(Math.PI / 2).scale(1.0, 0.75, 1), 'foot' + L, look.shoes, x, 0.05, 0.06, 0, 0, 0, 'shoe');
+    add(new THREE.BoxGeometry(0.094, 0.022, 0.25).translate(0, 0, 0.04), 'foot' + L, 0xe8e4dc, x, 0.011, 0.02, 0, 0, 0, 'shoe');
   }
+  // belt over the waistband (not on bare midriffs or dresses)
+  if (!look.noBelt) add(new THREE.CylinderGeometry(0.152 * b * 1.05, 0.152 * b * 1.05, 0.035, 16, 1, true).scale(1.12, 1, 0.76), 'hips', 0x2b1d14, 0, 1.005, 0, 0, 0, 0, 'leather');
   const g = mergeGeometries(parts, false);
   const sc = look.height / 1.78;
   g.scale(sc, sc, sc);
@@ -143,6 +168,17 @@ function buildSkeleton(look, sc) {
 }
 
 const sharedMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 });
+sharedMat.onBeforeCompile = (sh) => {
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', '#include <common>\nattribute vec2 surf;\nvarying vec2 vSurf;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSurf = surf;');
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', '#include <common>\nvarying vec2 vSurf;')
+    .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = vSurf.x;')
+    // skin: light scattered under the surface warms the shadowed side a little
+    .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\nreflectedLight.indirectDiffuse += diffuseColor.rgb * vec3(0.95, 0.42, 0.3) * 0.12 * vSurf.y;');
+};
+sharedMat.customProgramCacheKey = () => 'human-surf';
 
 export class HumanModel {
   constructor(look) {

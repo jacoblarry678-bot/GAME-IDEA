@@ -300,18 +300,63 @@ export function buildProps(collision, mats) {
   return { group, night, crowns };
 }
 
+/**
+ * Lummus Park lifeguard towers: each one a little different, as on the real beach —
+ * a deco drum with a domed roof and portholes, a box with a swept shed roof, or one
+ * banded in rainbow stripes — on stilts with a deck, rails, a ramp and a flag.
+ */
 function lifeguardTower(B, p, cw) {
   const y = groundHeight(p.x, p.z);
   const c = new THREE.Color(p.color);
-  const w = new THREE.Color(0xf4f1ea);
+  const w = new THREE.Color(0xf4f1ea), dark = new THREE.Color(0x2b3440);
+  const at = (geo, x, yy, z, color, ry = 0) => B.geometry('trim', geo, new THREE.Matrix4().compose(V(x, yy, z), new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), ry), V(1, 1, 1)), color);
+  // stilts with cross bracing, and the deck
   for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) B.box('trim', p.x + dx * 1.1 - 0.08, p.x + dx * 1.1 + 0.08, y - 0.5, y + 1.6, p.z + dz * 1.1 - 0.08, p.z + dz * 1.1 + 0.08, { color: w });
-  B.box('trim', p.x - 1.6, p.x + 1.6, y + 1.6, y + 1.75, p.z - 1.6, p.z + 1.6, { color: w });
-  B.box('trim', p.x - 1.2, p.x + 1.2, y + 1.75, y + 3.6, p.z - 1.2, p.z + 1.2, { color: c });
-  B.box('trim', p.x - 1.5, p.x + 1.5, y + 3.6, y + 3.85, p.z - 1.5, p.z + 1.5, { color: w });
-  B.box('glass', p.x - 1.22, p.x + 1.22, y + 2.5, y + 3.3, p.z - 0.8, p.z + 0.8, { sides: { top: false } });
+  for (const dz of [-1.1, 1.1]) {
+    const brace = new THREE.BoxGeometry(0.06, 0.06, 2.9);
+    brace.rotateX(Math.PI / 2 - 0.5); brace.rotateY(Math.PI / 2);
+    at(brace, p.x, y + 0.8, p.z + dz, w);
+  }
+  B.box('trim', p.x - 1.7, p.x + 1.7, y + 1.6, y + 1.75, p.z - 1.7, p.z + 1.7, { color: w });
+  // deck rails on the sea side
+  for (const dz of [-1.6, -0.8, 0, 0.8, 1.6]) B.box('trim', p.x + 1.58, p.x + 1.66, y + 1.75, y + 2.55, p.z + dz - 0.04, p.z + dz + 0.04, { color: w });
+  B.box('trim', p.x + 1.56, p.x + 1.68, y + 2.5, y + 2.6, p.z - 1.7, p.z + 1.7, { color: w });
+  const style = Math.abs(Math.round(p.z)) % 3;
+  if (style === 0) {
+    // deco drum with a dome and three portholes facing the sea
+    at(new THREE.CylinderGeometry(1.15, 1.15, 1.9, 20), p.x, y + 2.7, p.z, c);
+    at(new THREE.SphereGeometry(1.25, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), p.x, y + 3.65, p.z, w);
+    at(new THREE.CylinderGeometry(1.3, 1.3, 0.12, 20), p.x, y + 3.65, p.z, w);
+    for (const dz of [-0.6, 0, 0.6]) {
+      const port = new THREE.CylinderGeometry(0.22, 0.22, 0.06, 14);
+      port.rotateZ(Math.PI / 2);
+      at(port, p.x + 1.12 - Math.abs(dz) * 0.17, y + 2.95, p.z + dz, dark);
+    }
+  } else if (style === 1) {
+    // box cabin with a shed roof sweeping out over the sea side as an awning
+    B.box('trim', p.x - 1.2, p.x + 1.2, y + 1.75, y + 3.5, p.z - 1.2, p.z + 1.2, { color: c });
+    B.box('glass', p.x + 1.18, p.x + 1.24, y + 2.45, y + 3.25, p.z - 0.9, p.z + 0.9, {});
+    const roof = new THREE.BoxGeometry(3.6, 0.14, 3.0);
+    roof.rotateZ(-0.28);
+    at(roof, p.x + 0.35, y + 3.75, p.z, w);
+    B.box('trim', p.x - 1.25, p.x + 1.25, y + 3.45, y + 3.55, p.z - 1.25, p.z + 1.25, { color: new THREE.Color(0xffffff) });
+  } else {
+    // rainbow-banded cabin
+    const bands = [0xe63946, 0xf4a261, 0xf7d35b, 0x52b788, 0x4895ef, 0x9d4edd];
+    for (let i = 0; i < bands.length; i++) B.box('trim', p.x - 1.2, p.x + 1.2, y + 1.75 + i * 0.3, y + 2.05 + i * 0.3, p.z - 1.2, p.z + 1.2, { color: new THREE.Color(bands[i]) });
+    B.box('glass', p.x + 1.18, p.x + 1.24, y + 2.6, y + 3.3, p.z - 0.85, p.z + 0.85, {});
+    B.box('trim', p.x - 1.5, p.x + 1.5, y + 3.55, y + 3.8, p.z - 1.5, p.z + 1.5, { color: w });
+    const peak = new THREE.ConeGeometry(1.45, 0.7, 4);
+    peak.rotateY(Math.PI / 4);
+    at(peak, p.x, y + 4.15, p.z, w);
+  }
+  // flag pole with the red-over-yellow surf flag
+  B.box('metal', p.x - 1.0, p.x - 0.94, y + 1.75, y + 5.6, p.z + 1.3, p.z + 1.36, { color: new THREE.Color(0xbfc4c8) });
+  B.box('trim', p.x - 1.0, p.x - 0.98, y + 5.15, y + 5.5, p.z + 1.36, p.z + 2.0, { color: new THREE.Color(0xd62828) });
+  B.box('trim', p.x - 1.0, p.x - 0.98, y + 4.8, y + 5.15, p.z + 1.36, p.z + 2.0, { color: new THREE.Color(0xf7c548) });
   // ramp down to the sand on the town side
-  B.quad('wood', [[p.x - 1.6, y + 1.7, p.z - 0.5], [p.x - 1.6, y + 1.7, p.z + 0.5], [p.x - 5, y, p.z + 0.5], [p.x - 5, y, p.z - 0.5]].reverse(), [[0, 0], [1, 0], [1, 1], [0, 1]]);
-  cw.add({ type: 'box', cx: p.x, cz: p.z, hx: 1.6, hz: 1.6, y0: y - 1, y1: y + 3.9, material: 'wood', tag: 'prop' });
+  B.quad('wood', [[p.x - 1.7, y + 1.7, p.z - 0.5], [p.x - 1.7, y + 1.7, p.z + 0.5], [p.x - 5, y, p.z + 0.5], [p.x - 5, y, p.z - 0.5]].reverse(), [[0, 0], [1, 0], [1, 1], [0, 1]]);
+  cw.add({ type: 'box', cx: p.x, cz: p.z, hx: 1.7, hz: 1.7, y0: y - 1, y1: y + 4.2, material: 'wood', tag: 'prop' });
 }
 
 function boat(B, p, cw) {
