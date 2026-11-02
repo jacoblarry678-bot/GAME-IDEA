@@ -47,7 +47,7 @@ function capsule(r, len, sx = 1, sz = 1) {
 function buildGeometry(look) {
   const parts = [];
   // surface per vertex: [roughness, skin]; skin gets a soft subsurface warmth in the shader
-  const SURF = { cloth: [0.88, 0], skin: [0.52, 1], hair: [0.42, 0], eye: [0.08, 0], shoe: [0.55, 0], lip: [0.38, 0.6], leather: [0.45, 0] };
+  const SURF = { cloth: [0.88, 0], skin: [0.52, 1], hair: [0.62, 0], eye: [0.08, 0], shoe: [0.55, 0], lip: [0.38, 0.6], leather: [0.45, 0] };
   const add = (geo, bone, color, x, y, z, rx = 0, ry = 0, rz = 0, surf = null) => {
     const g = geo.index ? geo.toNonIndexed() : geo;
     g.deleteAttribute('uv');
@@ -82,7 +82,7 @@ function buildGeometry(look) {
   add(new THREE.SphereGeometry(0.105, 18, 14).scale(0.92, 1.12, 1.02), 'head', skin, 0, 1.66, 0.005);
   // jaw and chin, cheekbones
   add(new THREE.SphereGeometry(0.075, 14, 10).scale(f ? 0.95 : 1.05, 0.8, 0.95), 'head', skin, 0, 1.6, 0.03);
-  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.03, 8, 6), 'head', skin, s * 0.05, 1.645, 0.075);
+  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.022, 8, 6), 'head', skin, s * 0.05, 1.645, 0.068);
   // nose: bridge and tip
   add(new THREE.CylinderGeometry(0.009, 0.016, 0.045, 8).rotateX(-0.35), 'head', skin, 0, 1.66, 0.1);
   add(new THREE.SphereGeometry(0.014, 8, 6).scale(1.15, 0.85, 1), 'head', skin, 0, 1.638, 0.11);
@@ -100,7 +100,11 @@ function buildGeometry(look) {
   const lip = tint(skin, f ? 0.78 : 0.84, f ? 0.12 : 0.05);
   add(new THREE.CapsuleGeometry(0.0075, 0.03, 3, 8).rotateZ(Math.PI / 2).scale(1, 0.8, 0.7), 'head', lip, 0, 1.613, 0.1, 0, 0, 0, 'lip');
   add(new THREE.CapsuleGeometry(0.0085, 0.026, 3, 8).rotateZ(Math.PI / 2).scale(1, 0.85, 0.75), 'head', lip, 0, 1.6, 0.098, 0, 0, 0, 'lip');
-  if (look.beard) add(new THREE.SphereGeometry(0.1, 10, 6, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.35).scale(0.95, 1.1, 1.05), 'head', look.hair, 0, 1.665, 0.01);
+  if (look.beard) {
+    // a short beard that follows the jaw below the mouth, and a moustache
+    add(new THREE.SphereGeometry(0.079, 16, 10, 0, Math.PI * 2, Math.PI * 0.56, Math.PI * 0.44).scale(f ? 0.98 : 1.08, 0.84, 0.99), 'head', look.hair, 0, 1.6, 0.03, 0, 0, 0, 'hair');
+    add(new THREE.CapsuleGeometry(0.006, 0.034, 3, 8).rotateZ(Math.PI / 2), 'head', look.hair, 0, 1.623, 0.103, 0, 0, 0, 'hair');
+  }
   // hair
   const hs = look.hairStyle;
   if (hs !== 'bald') {
