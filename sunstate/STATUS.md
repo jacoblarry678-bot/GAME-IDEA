@@ -7,7 +7,7 @@ Updated at each milestone handoff: what works, what was verified and how, what's
 
 - Boot → title flyover → New Game / Continue → play → pause.
 - Third-person character: run, sprint, jump, crouch, swim, climb out. The camera rig has wall and ceiling collision, an over-the-shoulder aim mode, and a vehicle chase cam with auto-centring.
-- Ocean Mile district: roads, signals, buildings, beach, causeway, interiors (see README).
+- South Beach district: roads, signals, buildings, beach, causeway, interiors (see README).
 - Two distinct drivable cars at the safehouse (Kestrel LX sedan, Ironhorse 455 muscle car), plus a pickup and a police cruiser.
 - Enter and exit with blocked-door handling, carjacking, and no entry through walls.
 - Traffic with lanes, signals, obstacle braking and recovery. Pedestrians with activities and reactions.
@@ -26,7 +26,7 @@ Updated at each milestone handoff: what works, what was verified and how, what's
 - Versioned save: validation, a backup copy, corrupt-data recovery, owned cars without duplicates.
 
 ## Milestone 3: World and partner (complete)
-**Gate:** both protagonists playable with switching; a second region reached by a twin-span bridge; a two-person mission with driver/passenger roles; rain. **Met** (e2e runs below).
+**Gate:** both protagonists playable with switching; a second region reached by a long bridge (now the Seven Mile Bridge); a two-person mission with driver/passenger roles; rain. **Met** (e2e runs below).
 
 - **Cal and Sol**, with switching on Tab. Each keeps their own health, armour, weapons and ammo, position and car; money is shared.
   - The switch rules are our own design (see docs/REFERENCES.md #15).
@@ -38,7 +38,7 @@ Updated at each milestone handoff: what works, what was verified and how, what's
   - gets out with you and shoots back at mission enemies
   - is taken to hospital when downed
 - **Passenger drive-by** shooting.
-- **Cayo Lento**, reached by the twin-span bridge.
+- **Marathon**, reached by the Seven Mile Bridge.
   - The key has a loop of roads, a marina and pier, shops and houses, and mangroves.
   - Around it are shallow swimmable flats and the further keys as backdrop.
 - **Mission "Low Tide":** drive to the marina, meet Rudy on the pier, then the ambush and a chase where one drives and the other shoots (Tab swaps). Then the police if any, the return to the motel, and the $4,000 payout. It has checkpoints, a failure reason and a retry.
@@ -58,7 +58,7 @@ Asked for: AI that remembers you, a more advanced LOOP with AI-written posts and
   - staff who remember Cal and Sol separately
   - the Calderas' grudge hunts after *Low Tide*
   - all of it saved
-- **Places** (`src/game/places.js`): Bayfront Arms (guns), Threads on 5th (clothes), Sunshine Gas, Coral Auto Body (repair, respray and new plates), Velvet Palms, and Bayshore Park.
+- **Places** (`src/game/places.js`): Bayfront Arms (guns), Threads on Lincoln (clothes), Sunray Gas, Deco Auto Body (repair, respray and new plates), Velvet Palms, and Flamingo Park.
   - **Velvet Palms can be entered** (`src/game/club.js`). It is an adults-only club, open from 8 PM to 4 AM, and non-explicit: costumed dancers doing pole work and dancing.
     - Pay the cover, or walk in as a regular or VIP; otherwise the rope stays closed.
     - Inside are three dancers, about 20 regulars (seated, at the rail or dancing), a bartender, a DJ and a VIP host.
@@ -87,6 +87,21 @@ Asked for: "add where we can post and get likes and follows".
 - **Milestones:** brand DMs at 250, better sponsor pay at 1k, the Velvet Palms VIP list at 10k, verified at 50k.
 - **Brand deals:** a DM offers money for a specific post from a specific place within 4 minutes, and the GPS points there. The post is tagged #ad.
 - **Risk:** posting while wanted moves the police search to where you are.
+
+## After M3: the "IRL" revamp (complete)
+- **Real places:**
+  - South Beach (Alton Rd, Washington Ave, Collins Ave, Ocean Dr; 17th St, Lincoln Rd, Española Way, 5th St, 3rd St, 1st St, South Pointe Dr), with Lummus Park beach, Muscle Beach and Flamingo Park.
+  - The MacArthur Causeway over Biscayne Bay to downtown Miami.
+  - The Seven Mile Bridge down to Marathon, with Boot Key Harbor.
+  - Businesses, people and police stay fictional. Old saves migrate their notoriety to the new area names.
+- **Rendering:** Preetham sky with matching sun, sky light, fog and PMREM reflections; GTAO; bloom; filmic grade; HalfFloat MSAA composer. New graphics options: AO, post effects, texture detail and automatic quality.
+- **Materials:** GPU-baked tileable PBR ground surfaces; facades with relief and sky-reflecting glass.
+- **Models:**
+  - coconut and royal palms with real frond geometry, dappled shadows and sway
+  - lofted car bodies (curved sides, arches, seams, clearcoat, see-through glass with interiors, alloys)
+  - two new models: the Sprite GT hatchback and the Tarpon XL SUV
+- **Water:** environment-map sky reflections, swell, sun glitter.
+- **Ambient life:** boats with wakes, a jet ski, sailboats, a cruise ship, a banner plane with fictional ads, and gulls.
 
 ## Verification
 
@@ -119,9 +134,9 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
   - wanted: witness call → report, search-area escape, cancelled calls, rate-limited escalation
   - save/settings: validation, version handling, backup, rebinding swaps
   - **M3:**
-    - both twin-span decks are continuous, the gap between them is open water behind railings, and boats fit under
-    - Cayo Lento is dry land with roads at grade; the flats are swimmable, not wadeable
-    - the marina is reachable by road from the motel; twin-span lanes sit one direction per deck
+    - both Seven Mile Bridge decks are continuous, the gap between them is open water behind railings, and boats fit under
+    - Marathon is dry land with roads at grade; the flats are swimmable, not wadeable
+    - the marina is reachable by road from the motel; Seven Mile Bridge lanes sit one direction per deck
     - save v2 and v1 migration
     - the weather cycle, wet roads drying slowly, and the setting pinning the weather
     - wet braking ~19 % longer (47 m vs 39.5 m from 60 mph)
@@ -148,7 +163,7 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
   - **5 minutes of simulated driving through traffic: 1.7 km, populations bounded (≤34 vehicles, ≤53 people), no page errors**
 
   Two parts of the e2e are scripted rather than "played", and they're labelled in `tools/e2e.mjs`:
-  - **Driving.** The test drives the player's car with the traffic AI (same physics), starting from a car on Palmetto Ave. The AI follows lanes; it doesn't do parking-lot manoeuvres.
+  - **Driving.** The test drives the player's car with the traffic AI (same physics), starting from a car on Washington Ave. The AI follows lanes; it doesn't do parking-lot manoeuvres.
   - **The getaway.** The test relocates the player out of sight, then checks that the wanted level clears by the real search rules. The AI driver can't evade police, and when it tried, the police (correctly) caught it, and once ran over deployed officers and escalated to 5★. Pursuit → search → escape was also verified with a live chase in a separate run: lost sight, the search began, the player drove out of the circle, and it cleared after 36 s.
 - Bugs these runs found and fixed:
   - car occupants kept a stale position, which broke mission triggers
@@ -171,7 +186,7 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
   - save v2 holds both, and Continue restores each one's health, ammo and position
 - `node tools/e2e-lowtide.mjs` (M3, LOWTIDE_RESULT): the mission end to end.
   - The start is offered with Sol at the motel; G by the sedan makes Sol drive.
-  - She drives the crew **over the twin-span to Cayo Lento** (deck height 7.5 m, ~95–135 s).
+  - She drives the crew **over the Seven Mile Bridge to Marathon** (deck height 7.5 m, ~95–135 s).
   - Rudy on the pier hands over the cooler, and the Calderas' two cars arrive.
   - G again by the car; both get in, and the chase begins.
   - Cal shoots from the passenger seat while Sol drives; the Calderas closed to 4–21 m in the runs.
@@ -200,15 +215,15 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
     - A progress watchdog now switches a car that has wanted to move for 12 s without getting 5 m to the off-road mode.
     - The off-road mode backs out toward a way out that's behind it.
     - Verified from three wedged starts: all three got out, in 13–29 s.
-  - **Traffic gridlocked the marina road on Cayo Lento** in 2 of 4 traced "Low Tide" drives. With the player out there, all 16 traffic cars spawned onto the key's few short roads.
-    - Traffic is now capped at 7 cars on the twin span and the key; 2 of 2 drives after the change were clear.
+  - **Traffic gridlocked the marina road on Marathon** in 2 of 4 traced "Low Tide" drives. With the player out there, all 16 traffic cars spawned onto the key's few short roads.
+    - Traffic is now capped at 7 cars on the Seven Mile Bridge and the key; 2 of 2 drives after the change were clear.
   - **Head-on standoffs:** a car cutting a corner into the oncoming lane left both cars waiting on each other. The lower-ranked one now backs off once, and the usual go-around finishes it.
     - Staged on six edges: 14–15 s to pass with no crash damage. Before, it took 9–12 s, with crash damage in 3 of 6.
   - The partner's drive home in "Low Tide" stalled on the bridge. The driver AI treated the bridge railing as hiding the road.
   - Destinations off the road (a lot, a door) now count as reached from the nearest road point.
   - Caldera hunters no longer vanish while on screen when a hunt times out.
-- `npm run shots`: now also covers Bayshore Park, Sunshine Gas, Coral Auto Body, and Velvet Palms outside at night and inside. The garage reads more like an office block from the street (it uses the shop-window facade); that's a known cosmetic limit.
-- `npm run shots`: screenshots of the title, the spawn, Ocean Blvd driving, the store interior, a sunset and night neon. They were reviewed by eye, which is how the stretched-suspension bug, the opaque shop windows and the dull sand were caught.
+- `npm run shots`: now also covers Flamingo Park, Sunray Gas, Deco Auto Body, and Velvet Palms outside at night and inside. The garage reads more like an office block from the street (it uses the shop-window facade); that's a known cosmetic limit.
+- `npm run shots`: screenshots of the title, the spawn, Ocean Dr driving, the store interior, a sunset and night neon. They were reviewed by eye, which is how the stretched-suspension bug, the opaque shop windows and the dull sand were caught.
 
 ### Implemented but not verified on real hardware
 - **Frame rate on a GPU is unmeasured.** The target is 60 FPS at 1080p on a mid-range 2020+ GPU. Use Settings → *Show FPS / stats*; the overlay reports FPS, draw calls, triangles and population. Expect about 150–250 draw calls in busy streets and ~60 skinned characters at most.
@@ -216,13 +231,19 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
 - Long sessions of real-time play by a human.
 
 ## Known issues / limits
-- People and cars are placeholder-grade: primitive bodies, no IK, doors that don't open (see docs/ASSETS.md).
-- AI drivers still bump into each other and into kerbside poles now and then: 3–8 light impacts per 4 minutes of cruising in tests. They recover by backing up or going around. Street furniture (benches, bins, hydrants) can be knocked over by cars. They don't overtake on the twin-span; they wait behind a stopped car instead.
+- **Still not photoreal.**
+  - People are the weakest part: primitive bodies, no IK.
+  - Cars have lofted bodies but no opening doors or deformation.
+  - Buildings are box massing with PBR tiles.
+  - Water reflects the sky but not the city.
+  - The revamp was tuned in SwiftShader screenshots only. It has never been profiled on a real GPU; the automatic quality governor is the safety net (see docs/ASSETS.md).
+- The street grid uses real names but is compressed and not to scale. Miami Beach and Marathon are joined by one bridge for gameplay.
+- AI drivers still bump into each other and into kerbside poles now and then: 3–8 light impacts per 4 minutes of cruising in tests. They recover by backing up or going around. Street furniture (benches, bins, hydrants) can be knocked over by cars. They don't overtake on the Seven Mile Bridge; they wait behind a stopped car instead.
 - AI driving out of parking lots uses feelers and is slow and clumsy. It gets out, but expect three-point-turn shuffles. The test autopilot (the traffic AI driving your car) is a test tool, not a game feature.
 - Police and the mission enemies use simple obstacle feelers off-road. They can get stuck on props and recover by reversing.
 - The partner's combat is basic: they stand and shoot at mission enemies, without cover. They don't fight the police or brawling civilians.
 - The partner drives with the traffic AI: lane-following, so it's no stunt driver. In a getaway it ignores red lights.
-- How a chase goes varies run to run. Sometimes the Calderas catch up and trade shots on the twin-span. Sometimes they get boxed in by traffic and fall behind (the "200 m away for 6 s" rule then ends the chase). If you get out near them, they get out and fight.
+- How a chase goes varies run to run. Sometimes the Calderas catch up and trade shots on the Seven Mile Bridge. Sometimes they get boxed in by traffic and fall behind (the "200 m away for 6 s" rule then ends the chase). If you get out near them, they get out and fight.
 - Rain has no puddle reflections or splashes, the water surface doesn't react to it, and there are no umbrellas. Wet roads are a darker, glossier material using the sky reflection.
 - No phone UI yet (messages appear in the feed). The cooler in "Low Tide" isn't shown as an object.
 - **City memory and places:**
@@ -243,8 +264,8 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
 - Anti-aliasing changes apply after a page reload, and the menu says so.
 
 ## Next milestone (M4: depth): first concrete task
-1. **Boats** on the Cayo Lento flats and Vela Bay: a drivable skiff at the marina and water physics for it. The flats and the old bridge are already set up for this.
+1. **Boats** on the Marathon flats and Biscayne Bay: a drivable skiff at the marina and water physics for it. The flats and the old bridge are already set up for this.
 2. **Phone UI:** contacts, messages, a map shortcut and mission replays.
-3. **A third mission:** the Calderas come to Ocean Mile. A defend-the-motel job where you switch between Cal on the roof and Sol in the lot.
+3. **A third mission:** the Calderas come to South Beach. A defend-the-motel job where you switch between Cal on the roof and Sol in the lot.
 4. **The city's memory in missions:** jobs that react to your nickname, banned places and grudges, and a phone call when the Calderas are coming.
 (Shops, a garage with respray, and an enterable club were built after M3: see above.)

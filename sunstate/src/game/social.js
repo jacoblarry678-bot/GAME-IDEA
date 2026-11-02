@@ -1,5 +1,5 @@
 /**
- * LOOP — the fictional social app of Costa Vela (P opens it on the phone).
+ * LOOP — the fictional social app of Miami (P opens it on the phone).
  *
  * Posts come from three places:
  *  1. The feed engine here: a cast of locals with their own voices, a news
@@ -23,8 +23,8 @@ import * as THREE from 'three';
 import { roadAt, KEYS, ISLAND } from '../world/layout.js';
 import { Creator } from './creator.js';
 
-const NEWS = { handle: 'OceanMileNow', name: 'Ocean Mile Now', color: '#ff4d6d', verified: true };
-const SCANNER = { handle: 'VelaScanner', name: 'Vela Scanner (unofficial)', color: '#6ea0ff', verified: false };
+const NEWS = { handle: 'SoBeNow', name: 'SoBe Now', color: '#ff4d6d', verified: true };
+const SCANNER = { handle: 'SoBeScanner', name: 'SoBe Scanner (unofficial)', color: '#6ea0ff', verified: false };
 
 /** The locals: handle, colour, and how they write. */
 export const PERSONAS = [
@@ -32,12 +32,12 @@ export const PERSONAS = [
   { handle: 'TidewaterTony', color: '#ffd23f', lower: false, emoji: ['🍳', '☕'], tags: ['#OceanMile'] },
   { handle: 'coralave_kid', color: '#9b5de5', lower: true, emoji: ['💀', '😂', '🔥'], tags: [] },
   { handle: 'lifeguard_dre', color: '#f15bb5', lower: true, emoji: ['🏊', '🚩'], tags: ['#staysafe'] },
-  { handle: 'mango_and_mo', color: '#00bbf9', lower: true, emoji: ['🥭', '✨'], tags: ['#CostaVela'] },
+  { handle: 'mango_and_mo', color: '#00bbf9', lower: true, emoji: ['🥭', '✨'], tags: ['#MiamiBeach'] },
   { handle: 'velabaydad', color: '#fee440', lower: false, emoji: ['👍'], tags: [] },
-  { handle: 'keys.kat', color: '#00f5d4', lower: true, emoji: ['🐚', '🌴'], tags: ['#CayoLento'] },
+  { handle: 'keys.kat', color: '#00f5d4', lower: true, emoji: ['🐚', '🌴'], tags: ['#Marathon'] },
   { handle: 'pastelito_pat', color: '#ff924c', lower: true, emoji: ['🥐', '😳'], tags: [] },
-  { handle: 'NoParkingNina', color: '#4cc9f0', lower: false, emoji: ['😤'], tags: ['#CoralAve'] },
-  { handle: 'gymrat_gus', color: '#80ed99', lower: true, emoji: ['💪', '🏀'], tags: ['#BayshorePark'] },
+  { handle: 'NoParkingNina', color: '#4cc9f0', lower: false, emoji: ['😤'], tags: ['#CollinsAve'] },
+  { handle: 'gymrat_gus', color: '#80ed99', lower: true, emoji: ['💪', '🏀'], tags: ['#FlamingoPark'] },
   { handle: 'halcyon.nights', color: '#c77dff', lower: true, emoji: ['🪩', '🌙'], tags: ['#nightlife'] },
   { handle: 'grandma.lourdes', color: '#ffadad', lower: false, emoji: ['🙏', '❤️'], tags: [] },
 ];
@@ -46,20 +46,20 @@ const AMBIENT = {
     'rent went up AGAIN. moving into my car, it has AC at least',
     'pelican stole a whole empanada out of my hand on the promenade',
     'Tidewater Diner key lime pie is a personality trait',
-    'traffic on Coral Ave is a hate crime',
+    'traffic on Collins Ave is a hate crime',
     'anybody else hear sirens all night or just me',
-    'the twin span at golden hour >>> everything',
-    'Cayo Lento is the only place left that feels like the 90s',
+    'the Seven Mile Bridge at golden hour >>> everything',
+    'Marathon is the only place left that feels like the 90s',
     'bait shop on the key has better coffee than downtown. fight me',
-    'pickup game at Bayshore Park, need two more, no ball hogs',
-    'Raj at Sunshine Gas remembered my coffee order. that\'s love',
-    'Threads on 5th sale again. it\'s always a sale. I keep buying things',
-    'Hector at Coral Auto Body fixed my bumper and roasted my driving for free',
+    'pickup game at Flamingo Park, need two more, no ball hogs',
+    'Raj at Sunray Gas remembered my coffee order. that\'s love',
+    'Threads on Lincoln sale again. it\'s always a sale. I keep buying things',
+    'Hector at Deco Auto Body fixed my bumper and roasted my driving for free',
   ],
-  morning: ['café con leche on the promenade, 10/10 morning', 'beach at 7am is the only quiet hour in Ocean Mile'],
-  evening: ['the sunset off Ocean Blvd tonight 🌅 no filter', 'golden hour on the twin span, I pulled over (safely)'],
+  morning: ['café con leche on the promenade, 10/10 morning', 'beach at 7am is the only quiet hour in South Beach'],
+  evening: ['the sunset off Ocean Dr tonight 🌅 no filter', 'golden hour on the Seven Mile Bridge, I pulled over (safely)'],
   night: ['Club Halcyon line is already around the block', 'Velvet Palms neon is so loud you can see it from the bay', 'can\'t sleep, sirens again'],
-  rain: ['rain. again. my hair 🙃', 'just got soaked crossing 9th St', 'storm rolling in over the bay, it looks unreal', 'Coral Ave is a river rn'],
+  rain: ['rain. again. my hair 🙃', 'just got soaked crossing Española Way', 'storm rolling in over the bay, it looks unreal', 'Collins Ave is a river rn'],
 };
 const CRIME = {
   carjack: ['someone just got PULLED out of their car on {street} 😳', 'carjacking on {street} in broad daylight. this city'],
@@ -75,10 +75,10 @@ const CRIME = {
   recognized: ['cops just stopped someone on {street} who looked JUST like the guy from the news'],
 };
 const FAME = [
-  '{nick} sighting on {street}?? 👀', 'my cousin swears {nick} buys coffee at Sunshine Gas', 'is {nick} single or', '{nick} is the most Costa Vela thing that has ever happened',
+  '{nick} sighting on {street}?? 👀', 'my cousin swears {nick} buys coffee at Sunray Gas', 'is {nick} single or', '{nick} is the most Miami thing that has ever happened',
   'every time I hear sirens now I think it\'s {nick}', 'not me checking LOOP every 5 min for {nick} updates', 'they should make a movie about {nick} honestly',
 ];
-const REPLIES = ['no way 😳', 'this city 💀', 'stay safe out there', 'that\'s literally my street', 'send the full video', 'police doing nothing as usual', 'I was RIGHT there', 'this is why I moved to Cayo Lento', 'ok but who\'s filming 😂', 'my mom just sent me this', 'not again', 'praying for the clerk 🙏'];
+const REPLIES = ['no way 😳', 'this city 💀', 'stay safe out there', 'that\'s literally my street', 'send the full video', 'police doing nothing as usual', 'I was RIGHT there', 'this is why I moved to Marathon', 'ok but who\'s filming 😂', 'my mom just sent me this', 'not again', 'praying for the clerk 🙏'];
 
 const pick = (a, r = Math.random) => a[Math.floor(r() * a.length)];
 const camel = (s) => s.replace(/^the /i, '').split(/[^A-Za-z0-9]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join('');
@@ -145,7 +145,7 @@ export class Social {
 
   seed() {
     for (let i = 0; i < 4; i++) this.post({ persona: PERSONAS[(i * 5) % PERSONAS.length], text: AMBIENT.any[(i * 5) % AMBIENT.any.length], age: 600 + i * 900, likes: 20 + i * 37 }, false);
-    this.post({ ...NEWS, text: 'Weekend forecast: hot, humid, chance of afternoon storms. So, Costa Vela.', age: 3000, likes: 214 }, false);
+    this.post({ ...NEWS, text: 'Weekend forecast: hot, humid, chance of afternoon storms. So, Miami.', age: 3000, likes: 214 }, false);
     this.unread = 0;
   }
 
@@ -156,7 +156,7 @@ export class Social {
     if (r) return r.name;
     if (z > KEYS.z0 - 8) return KEYS.name;
     if (x > ISLAND.sandStart) return 'the beach';
-    return 'Ocean Mile';
+    return 'South Beach';
   }
 
   /** Write in a persona's voice. */
@@ -221,8 +221,8 @@ export class Social {
     ev.on('wantedCleared', ({ level }) => { if (level >= 2) this.post({ text: 'cops just gave up on whoever they were chasing lmao', about: true, likes: 12 }); });
     ev.on('busted', () => this.post({ text: 'watched someone get BUSTED outside my window. live entertainment', about: true, likes: 25 }));
     ev.on('missionPassed', ({ def }) => {
-      const text = def.id === 'small_change' ? 'Sunny Stop convenience store on 14th St robbed at gunpoint. Clerk unharmed. Police seek a masked suspect.'
-        : def.id === 'low_tide' ? 'Shots fired on the Vela Keys Twin Span as two vehicles chased a sedan toward Ocean Mile. Cayo Lento charter captain reported missing.'
+      const text = def.id === 'small_change' ? 'Sunny Stop convenience store on 3rd St robbed at gunpoint. Clerk unharmed. Police seek a masked suspect.'
+        : def.id === 'low_tide' ? 'Shots fired on the Seven Mile Bridge as two vehicles chased a sedan toward South Beach. Marathon charter captain reported missing.'
           : `${def.title}: police are investigating.`;
       this.post({ ...NEWS, text, about: true, likes: 120 });
     });
@@ -240,9 +240,9 @@ export class Social {
     if (nick) return '#' + camel(nick);
     const g = this.game;
     if ((g.weather?.rain || 0) > 0.5) return '#StormDay';
-    if (this.posts.some((p) => p.about && /Twin Span/i.test(p.text))) return '#TwinSpanChase';
+    if (this.posts.some((p) => p.about && /Seven Mile/i.test(p.text))) return '#SevenMileChase';
     if (this.posts.some((p) => p.about && /Sunny Stop/i.test(p.text))) return '#SunnyStop';
-    return '#CostaVela';
+    return '#MiamiBeach';
   }
 
   step(dt) {
@@ -264,7 +264,7 @@ export class Social {
       this.fameT = 70 + Math.random() * 60;
       if (nick && fame > 25) {
         const s = this.memory.state.sightings[0];
-        this.post({ text: pick(FAME).replace('{nick}', nick).replace('{street}', s?.place || 'Ocean Mile'), likes: Math.floor(fame / 3) });
+        this.post({ text: pick(FAME).replace('{nick}', nick).replace('{street}', s?.place || 'South Beach'), likes: Math.floor(fame / 3) });
       }
     }
     const rain = g.weather?.rain || 0;
@@ -299,7 +299,7 @@ export class Social {
       if (m.nickname) lines.push(`Locals call the people behind it all "${m.nickname}".`);
       if (m.description) lines.push(`Police are looking for ${this.memory.describe(m.description)}.`);
       if (m.sightings.length) lines.push('Recent incidents, newest first: ' + m.sightings.slice(0, 6).map((s) => `${s.what} near ${s.place}`).join('; ') + '.');
-      if (m.grudges.calderas) lines.push('A local crime family, the Calderas, is looking for a couple who crossed them on Cayo Lento.');
+      if (m.grudges.calderas) lines.push('A local crime family, the Calderas, is looking for a couple who crossed them in Marathon.');
     }
     const recent = this.posts.slice(0, 6).map((p) => `@${p.handle}: ${p.text}`).join('\n');
     return lines.join('\n') + '\nLatest posts:\n' + recent;
@@ -312,9 +312,9 @@ export class Social {
     ai.busy = true; ai.status = 'Claude is writing…';
     const handles = PERSONAS.map((p) => '@' + p.handle).join(', ');
     const prompt = [
-      'You write posts for LOOP, a social app inside a fan-made video game prototype set in the fictional coastal city of Costa Vela',
-      '(districts: Ocean Mile, an art-deco beach strip with Coral Ave, Ocean Blvd, the Sunny Stop store, Bayshore Park, Velvet Palms club, Sunshine Gas, Coral Auto Body;',
-      'and Cayo Lento, a sleepy key reached by a twin-span bridge). Write 5 short posts by different locals reacting to what is happening.',
+      'You write posts for LOOP, a social app inside a fan-made video game prototype set in Miami Beach and the Florida Keys (real streets and landmarks; every business, person and crew is fictional)',
+      '(areas: South Beach, the art-deco beach strip with Collins Ave, Ocean Dr, the Sunny Stop store, Flamingo Park, Velvet Palms club, Sunray Gas, Deco Auto Body;',
+      'and Marathon in the Keys, reached over the Seven Mile Bridge). Write 5 short posts by different locals reacting to what is happening.',
       'Rules: under 180 characters each; varied voices (gossip, worry, jokes, a reply or two); PG-13, no slurs, nothing explicit;',
       'no real people, brands or places; locals do not know the criminals\' real names.',
       `Use these handles or invent similar ones: ${handles}.`,

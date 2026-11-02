@@ -4,7 +4,7 @@
  *  - Police keep a DESCRIPTION after they've seen you during a crime: what
  *    the person was wearing and the car they drove. While it's fresh, an
  *    officer who gets a good look at a match may recognise you even with no
- *    stars — change clothes (Threads on 5th) or respray the car (Coral Auto
+ *    stars — change clothes (Threads on Lincoln) or respray the car (Deco Auto
  *    Body) to shake it.
  *  - NOTORIETY per area rises with witnessed and reported crimes and fades
  *    slowly. High notoriety: people recognise you in the street, film you
@@ -37,7 +37,7 @@ const NICK_NOUN = { carjack: 'Carjacker', robbery: 'Bandit', shooting: 'Shooter'
 export const DESCRIPTION_TIME = 600; // seconds (ten in-game hours)
 
 export function defaultMemory() {
-  return { notoriety: { 'Ocean Mile': 0, 'Cayo Lento': 0 }, crimes: {}, description: null, nickname: null, people: {}, grudges: { calderas: false }, sightings: [] };
+  return { notoriety: { 'South Beach': 0, 'Marathon': 0 }, crimes: {}, description: null, nickname: null, people: {}, grudges: { calderas: false }, sightings: [] };
 }
 
 export class Memory {
@@ -52,8 +52,8 @@ export class Memory {
   }
 
   /** Area name for notoriety. */
-  area(x, z) { return z > KEYS.z0 - 40 ? 'Cayo Lento' : 'Ocean Mile'; }
-  street(x, z) { const r = roadAt(x, z); return r ? r.name : z > KEYS.z0 - 8 ? KEYS.name : x > ISLAND.sandStart ? 'the beach' : 'Ocean Mile'; }
+  area(x, z) { return z > KEYS.z0 - 40 ? 'Marathon' : 'South Beach'; }
+  street(x, z) { const r = roadAt(x, z); return r ? r.name : z > KEYS.z0 - 8 ? KEYS.name : x > ISLAND.sandStart ? 'the beach' : 'South Beach'; }
   notoriety(x, z) { return this.state.notoriety[this.area(x, z)] || 0; }
   bump(x, z, amount) { const a = this.area(x, z); this.state.notoriety[a] = Math.min(100, (this.state.notoriety[a] || 0) + amount); }
 
@@ -180,7 +180,7 @@ export class Memory {
       // a timed-out hunt only ends once none of them is on screen (no vanishing mid-fight)
       const seen = h.t > 180 && [h.vehicle, ...h.crew].some((o) => !o.removed && g.traffic?.visible(o.pos.x, (o.pos.y || 0) + 1, o.pos.z, 3));
       if (!alive || (h.t > 180 && !seen) || far || g.player.dead) {
-        if (!alive) g.social?.post({ handle: 'OceanMileNow', name: 'Ocean Mile Now', color: '#ff4d6d', verified: true, text: 'Two men linked to the Caldera family were found injured after a shootout in Ocean Mile. No arrests.', about: true, likes: 80 });
+        if (!alive) g.social?.post({ handle: 'SoBeNow', name: 'SoBe Now', color: '#ff4d6d', verified: true, text: 'Two men linked to the Caldera family were found injured after a shootout in South Beach. No arrests.', about: true, likes: 80 });
         this.endHunt();
       }
       return;
@@ -204,7 +204,7 @@ export class Memory {
       for (const c of r.crew) c.controller.alerted = true;
       this.hunt = { ...r, t: 0 };
       const d0 = this.state.description, car = this.look().vehicle || d0?.vehicle;
-      g.social?.post({ handle: 'calle_caldera', name: 'calle', color: '#1a1a1a', text: car ? `anybody seen a ${car.color} ${car.model} around ${this.street(pp.x, pp.z)}? asking for my brothers 🙂` : `looking for a couple. he's tall, she talks a lot. Ocean Mile. 🙂`, about: true, likes: 3 });
+      g.social?.post({ handle: 'calle_caldera', name: 'calle', color: '#1a1a1a', text: car ? `anybody seen a ${car.color} ${car.model} around ${this.street(pp.x, pp.z)}? asking for my brothers 🙂` : `looking for a couple. he's tall, she talks a lot. South Beach. 🙂`, about: true, likes: 3 });
       g.hud?.notify('A Caldera truck is cruising the area, looking for you.', 'Heads up', 'warn', 6);
       return;
     }
@@ -238,7 +238,9 @@ export function sanitizeMemory(m) {
   const d = defaultMemory();
   if (!m || typeof m !== 'object') return d;
   const num = (v, a, b) => (typeof v === 'number' && isFinite(v) ? Math.min(b, Math.max(a, v)) : a);
-  for (const k of Object.keys(d.notoriety)) d.notoriety[k] = num(m.notoriety?.[k], 0, 100);
+  // saves from before the real-geography update used the old area names
+  const OLD_AREA = { 'South Beach': 'Ocean Mile', Marathon: 'Cayo Lento' };
+  for (const k of Object.keys(d.notoriety)) d.notoriety[k] = num(m.notoriety?.[k] ?? m.notoriety?.[OLD_AREA[k]], 0, 100);
   if (m.crimes && typeof m.crimes === 'object') for (const [k, v] of Object.entries(m.crimes)) if (/^[a-zA-Z]{1,24}$/.test(k)) d.crimes[k] = Math.round(num(v, 0, 1e6));
   if (typeof m.nickname === 'string' && m.nickname.length < 60) d.nickname = m.nickname;
   d.grudges.calderas = m.grudges?.calderas === true;

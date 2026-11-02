@@ -1,7 +1,7 @@
 /**
  * Milestone 3 mission playthrough, "Low Tide", in headless Chromium:
  *   npm run build && npm run preview &   then   node tools/e2e-lowtide.mjs
- * Sol drives the crew over the twin-span to Cayo Lento (partner AI driving,
+ * Sol drives the crew over the Seven Mile Bridge to Marathon (partner AI driving,
  * player as passenger), the pickup on the pier, the Caldera ambush, a chase
  * with the player shooting from the passenger seat, a role switch mid-chase
  * (Tab), the return to the motel, the reward and the autosave; then a failure
@@ -99,7 +99,7 @@ const sedan = await T(() => { const v = window.__sun.game.vehicles.find((x) => x
 await T(([x, z]) => { const t = window.__t; t.walkTo(x - 3.2, z + 2, { within: 1.2 }); t.press('partner'); t.waitFor('g.partner.vehicle && g.partner.seat === 0', 15); t.press('enterVehicle'); t.waitFor('g.player.vehicle && g.player.seat > 0', 10); }, [sedan.x, sedan.z]);
 check('G by a car: Sol drives and Cal rides as passenger', await T(() => { const g = window.__sun.game; return g.partner.seat === 0 && g.player.seat > 0 && g.player.vehicle === g.partner.vehicle; }));
 
-// ---- Sol drives over the twin-span to the marina ----
+// ---- Sol drives over the Seven Mile Bridge to the marina ----
 let maxY = 0;
 const driveT = await T(() => {
   const g = window.__sun.game;
@@ -110,7 +110,7 @@ const driveT = await T(() => {
 });
 maxY = await T(() => window.__maxY);
 if (driveT < 0) console.log('   drive debug:', await T(() => { const g = window.__sun.game, v = g.player.vehicle || g.partner.vehicle || g.player, ai = g.partner.partnerAI.ai; return JSON.stringify({ pIn: !!g.player.vehicle, sIn: !!g.partner.vehicle, stage: g.missions.stage?.id, failed: g.missions.failed?.reason, v: v && [v.pos.x, v.pos.y, v.pos.z, v.speed || 0, v.yaw].map((n) => +n.toFixed(1)), ai: ai && { mode: ai.mode, edge: ai.edge, off: ai.offroad, wp: ai.wp.slice(0, 3).map((w) => [Math.round(w.x), Math.round(w.z)]), blocked: ai.blockedBy ? (ai.blockedBy.modelId || ai.blockedBy.role) + '@' + Math.round(ai.blockedBy.pos.x) + ',' + Math.round(ai.blockedBy.pos.z) : null }, near: g.vehicles.filter((o) => o !== v && Math.hypot(o.pos.x - v.pos.x, o.pos.z - v.pos.z) < 20).map((o) => [o.modelId, Math.round(o.pos.x), Math.round(o.pos.z), +o.speed.toFixed(1)]) }); }));
-check('Sol drives the crew across the twin-span to Cayo Lento', driveT >= 0 && maxY > 6, `${driveT}s, max deck height ${maxY.toFixed(1)} m, at ${await T(() => JSON.stringify([Math.round(window.__sun.game.player.pos.x), Math.round(window.__sun.game.player.pos.z)]))}`);
+check('Sol drives the crew across the Seven Mile Bridge to Marathon', driveT >= 0 && maxY > 6, `${driveT}s, max deck height ${maxY.toFixed(1)} m, at ${await T(() => JSON.stringify([Math.round(window.__sun.game.player.pos.x), Math.round(window.__sun.game.player.pos.z)]))}`);
 
 // ---- the pier ----
 await T(() => { const t = window.__t; t.press('enterVehicle'); t.waitFor('!g.player.vehicle', 6); });
@@ -179,7 +179,7 @@ check('the Calderas are shaken off', ['escape', 'return'].includes(afterChase.st
 // ---- police (if the gunfight drew them): cleared by the test, as in the M2 e2e ----
 if (await T(() => window.__sun.game.wanted.level > 0)) await T(() => { const g = window.__sun.game; g.wanted.clear(); g.police.clearAll(); window.__t.tick(1); });
 
-// ---- home: Sol (partner AI) drives back over the twin-span to the motel; then walk to the door together ----
+// ---- home: Sol (partner AI) drives back over the Seven Mile Bridge to the motel; then walk to the door together ----
 const ret = await T(() => {
   const g = window.__sun.game, t = window.__t, S = window.__sun;
   if (!g.player.vehicle) return 'on foot';

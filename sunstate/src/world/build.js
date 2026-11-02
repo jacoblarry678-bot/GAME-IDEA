@@ -115,7 +115,7 @@ function buildGround(B, cw) {
   slabs.push([ISLAND.west, gx0, ISLAND.north, CAUSEWAY.z - cwH]);
   slabs.push([ISLAND.west, gx0, CAUSEWAY.z + cwH, ISLAND.south]);
   slabs.push([gx0, gx1, ISLAND.north, gz0]);
-  // south strip, cut for the twin-span approach (two carriageways at road level, raised median between)
+  // south strip, cut for the Seven Mile Bridge approach (two carriageways at road level, raised median between)
   const tw = TWIN.median / 2 + TWIN.deckW;
   slabs.push([gx0, TWIN.x - tw, gz1, ISLAND.south]);
   slabs.push([TWIN.x - TWIN.median / 2, TWIN.x + TWIN.median / 2, gz1, ISLAND.south]);
@@ -127,7 +127,7 @@ function buildGround(B, cw) {
     // sidewalk ring (concrete) — interiors of blocks are drawn as concrete too
     B.flat('concrete', x0, x1, z0, z1, top, 3);
   }
-  // promenade pavers and a grass park strip along Ocean Blvd
+  // promenade pavers and a grass park strip along Ocean Dr
   B.flat('pavers', gx1 + 4, gx1 + 6.5, ISLAND.north + 2, ISLAND.south - 2, top + 0.012, 4);
   B.flat('grass', gx1 + 6.5, ISLAND.sandStart - 2.5, ISLAND.north + 2, ISLAND.south - 2, top + 0.012, 6);
   B.flat('pavers', ISLAND.sandStart - 2.5, ISLAND.sandStart, ISLAND.north + 2, ISLAND.south - 2, top + 0.012, 4);
@@ -311,7 +311,7 @@ function buildCauseway(B, cw) {
 }
 
 /**
- * Cayo Lento: low limestone-edged land with grass, a sandy south shore, the
+ * Marathon: low limestone-edged land with grass, a sandy south shore, the
  * shallow flats around it, and the further keys of the chain (backdrop).
  */
 function buildKeys(B, group, mats, cw) {
@@ -365,7 +365,7 @@ function buildKeys(B, group, mats, cw) {
 }
 
 /**
- * The twin-span: two parallel decks (southbound on the west deck, northbound
+ * The Seven Mile Bridge: two parallel decks (southbound on the west deck, northbound
  * on the east) with an open gap between them, parapets on both edges of each
  * deck, lane markings, and paired piers with hammerhead caps.
  */
@@ -374,7 +374,7 @@ function buildTwinSpan(B, cw) {
   const nodeSouth = STREETS[STREETS.length - 1].z + roadHalfWidth(STREETS[STREETS.length - 1].lanes);
   medianPlanter(B, cw, nodeSouth + 6, T0.zStart + 0.6);
   medianPlanter(B, cw, T0.zEnd - 0.8, KEYS.hwyZ - roadHalfWidth(1) - 2);
-  // guide walls funnel each lane onto its deck (southbound at the Ocean Mile end, northbound at the key)
+  // guide walls funnel each lane onto its deck (southbound at the South Beach end, northbound at the key)
   const inner = T0.median / 2 + 0.12;
   guideWall(B, cw, T0.x - 1, nodeSouth + 2.5, T0.x - inner, T0.zStart + 0.2);
   guideWall(B, cw, T0.x + 1, KEYS.hwyZ - roadHalfWidth(1) - 2.5, T0.x + inner, T0.zEnd - 0.2);
@@ -416,7 +416,7 @@ function buildTwinSpan(B, cw) {
   }
 }
 
-/** A raised planter along the median where the twin-span meets land: cars can't mount it and drop into the gap. */
+/** A raised planter along the median where the Seven Mile Bridge meets land: cars can't mount it and drop into the gap. */
 function medianPlanter(B, cw, z0, z1) {
   // narrower than the median so cars turning in from the junction clear it; the gap that's left
   // beside it is closed off by the ends of the deck railings
@@ -426,7 +426,7 @@ function medianPlanter(B, cw, z0, z1) {
   cw.add({ type: 'box', cx: TWIN.x, cz: (z0 + z1) / 2, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2, y0: -1, y1: h + 0.5, tag: 'railing', material: 'concrete', cameraBlock: false });
 }
 
-/** Bayshore Park: lawns, crossing paths, a basketball court. */
+/** Flamingo Park: lawns, crossing paths, a basketball court. */
 function buildPark(B) {
   const P = PLACES.park, b = P.bounds, y = CURB + 0.012;
   B.flat('grass', b.x0, b.x1, b.z0, b.z1, y, 6);
@@ -442,7 +442,7 @@ function buildPark(B) {
 }
 
 /**
- * Coral Auto Body: a workshop with an open drive-in bay on its frontage
+ * Deco Auto Body: a workshop with an open drive-in bay on its frontage
  * (three walls and a roof around the bay), a roller door above it and a sign.
  */
 function buildGarage(B, b, cw, signs, group) {
@@ -980,6 +980,9 @@ function buildWater(engine) {
       fogNear: { value: 100 },
       fogFar: { value: 800 },
       night: { value: 0 },
+      overcast: { value: 0 },
+      envMap: { value: null },
+      hasEnv: { value: 0 },
     },
     vertexShader: /* glsl */`
       varying vec3 vWorld;
@@ -989,40 +992,74 @@ function buildWater(engine) {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: /* glsl */`
-      uniform float time, fogNear, fogFar, night;
+      uniform float time, fogNear, fogFar, night, overcast, hasEnv;
       uniform sampler2D normalMap, depthMap;
       uniform vec2 depthRect;
       uniform vec3 sunDir, sunColor, skyTop, skyHor, fogColor;
       varying vec3 vWorld;
+      #ifdef ENVMAP_TYPE_CUBE_UV
+        uniform sampler2D envMap;
+        #include <cube_uv_reflection_fragment>
+      #endif
+      vec3 skyAt(vec3 R, float rough) {
+        vec3 g = mix(skyHor, skyTop, clamp(R.y * 1.5, 0.0, 1.0));
+        #ifdef ENVMAP_TYPE_CUBE_UV
+          // the real sky (clouds, sunset, stars) from the image-based environment
+          g = mix(g, textureCubeUV(envMap, vec3(R.x, max(R.y, 0.02), R.z), rough).rgb, hasEnv);
+        #endif
+        return g;
+      }
       void main() {
         vec2 duv = (vWorld.xz - depthRect.x) / depthRect.y;
         float depth = texture2D(depthMap, duv).r * 12.0;
+        vec3 V = normalize(cameraPosition - vWorld);
+        float dist = length(cameraPosition - vWorld);
+        // waves: three scales of chop drifting with the wind, plus long Atlantic swell from the
+        // east; detail fades with distance so the far sea settles into a smooth mirror
+        float detail = 1.0 - smoothstep(40.0, 700.0, dist);
         vec2 uv = vWorld.xz * 0.035;
         vec3 n1 = texture2D(normalMap, uv + vec2(time * 0.012, time * 0.007)).xzy * 2.0 - 1.0;
         vec3 n2 = texture2D(normalMap, uv * 2.3 - vec2(time * 0.017, -time * 0.011)).xzy * 2.0 - 1.0;
-        vec3 n = normalize(vec3(n1.x + n2.x, 6.0, n1.z + n2.z));
-        vec3 V = normalize(cameraPosition - vWorld);
-        float fres = 0.04 + 0.96 * pow(1.0 - max(dot(n, V), 0.0), 5.0);
+        vec3 n3 = texture2D(normalMap, uv * 6.1 + vec2(-time * 0.031, time * 0.023)).xzy * 2.0 - 1.0;
+        vec2 sw = vec2(0.0);
+        sw += vec2(0.92, 0.38) * cos(dot(vWorld.xz, vec2(0.92, 0.38)) * 0.09 - time * 0.9) * 0.09;
+        sw += vec2(0.80, -0.6) * cos(dot(vWorld.xz, vec2(0.80, -0.6)) * 0.14 - time * 1.15) * 0.05;
+        sw *= smoothstep(0.4, 4.0, depth); // the swell feels the bottom and fades in the shallows
+        vec2 chop = (n1.xz + n2.xz * 0.7 + n3.xz * 0.45 * detail) * (0.3 + 0.7 * detail);
+        vec3 n = normalize(vec3(chop.x + sw.x, 5.5, chop.y + sw.y));
+        float NV = max(dot(n, V), 0.0);
+        float fres = 0.02 + 0.98 * pow(1.0 - NV, 5.0);
         vec3 R = reflect(-V, n);
-        vec3 sky = mix(skyHor, skyTop, clamp(R.y * 1.5, 0.0, 1.0));
+        R.y = abs(R.y);
+        vec3 sky = skyAt(R, mix(0.04, 0.12, 1.0 - detail) + overcast * 0.2);
+        // the water body: turquoise over sand, deepening to Gulf Stream blue
         vec3 shallow = vec3(0.30, 0.82, 0.78);
-        vec3 mid = vec3(0.07, 0.52, 0.66);
-        vec3 deep = vec3(0.02, 0.20, 0.36);
+        vec3 mid = vec3(0.06, 0.50, 0.64);
+        vec3 deep = vec3(0.015, 0.17, 0.32);
         vec3 body = mix(shallow, mid, smoothstep(0.2, 2.8, depth));
         body = mix(body, deep, smoothstep(3.0, 11.0, depth));
+        body = mix(body, body * vec3(0.72, 0.82, 0.86), overcast);
         float dayLight = max(0.12, 1.0 - night * 0.85);
         body *= dayLight * (0.65 + 0.35 * max(sunDir.y, 0.0));
-        vec3 colr = mix(body, sky, fres * 0.85);
-        float spec = pow(max(dot(R, normalize(sunDir)), 0.0), 220.0) * step(0.0, sunDir.y);
-        colr += sunColor * spec * 3.0;
+        // light scattered up through wave crests facing away from the sun
+        vec3 L = normalize(sunDir);
+        float scatter = pow(max(dot(V, -L) * 0.5 + 0.5, 0.0), 3.0) * max(n.x * 0.6 + n.z * 0.4 + 0.15, 0.0);
+        body += shallow * 0.18 * scatter * dayLight * (1.0 - overcast) * smoothstep(0.5, 3.0, depth);
+        vec3 colr = mix(body, sky, fres);
+        // sun glitter: a sharp GGX-like highlight plus a broad sheen along the sun's path
+        vec3 H = normalize(L + V);
+        float NH = max(dot(n, H), 0.0);
+        float a2 = mix(0.0009, 0.004, 1.0 - detail);
+        float D = a2 / (3.14159 * pow(NH * NH * (a2 - 1.0) + 1.0, 2.0));
+        float sunUp = smoothstep(-0.02, 0.06, sunDir.y) * (1.0 - overcast * 0.9);
+        colr += sunColor * (D * 0.012 + pow(max(dot(R, L), 0.0), 60.0) * 0.12) * fres * 12.0 * sunUp;
         // shoreline foam: animated bands in the last half metre of depth
         float wave = sin(time * 1.3 - depth * 18.0 + sin(vWorld.z * 0.08) * 2.0) * 0.5 + 0.5;
-        float foam = smoothstep(0.55, 0.05, depth) * smoothstep(0.35, 0.9, wave + n1.x * 0.6);
+        float foam = smoothstep(0.55, 0.05, depth) * smoothstep(0.35, 0.9, wave + n1.x * 0.6 + n3.z * 0.3);
         foam += smoothstep(0.12, 0.0, depth) * 0.7;
         colr = mix(colr, vec3(0.95) * dayLight + 0.05, clamp(foam, 0.0, 1.0) * 0.85);
         float alpha = mix(0.35, 0.94, smoothstep(0.0, 1.6, depth));
-        alpha = max(alpha, foam * 0.9);
-        float dist = length(cameraPosition - vWorld);
+        alpha = max(alpha, max(foam * 0.9, fres));
         float f = smoothstep(fogNear, fogFar, dist);
         colr = mix(colr, fogColor, f);
         gl_FragColor = vec4(colr, mix(alpha, 1.0, f));
@@ -1045,6 +1082,17 @@ function buildWater(engine) {
     u.fogColor.value.copy(engine.scene.fog.color);
     u.fogNear.value = engine.scene.fog.near; u.fogFar.value = engine.scene.fog.far;
     u.night.value = engine.time.night;
+    u.overcast.value = sky.overcast?.value ?? 0;
+    // reflect the PMREM sky once it exists (its size fixes the cube-UV defines)
+    const env = engine.scene.environment;
+    if (env && env.image?.height) {
+      u.envMap.value = env; u.hasEnv.value = 1;
+      if (!mat.defines.ENVMAP_TYPE_CUBE_UV) {
+        const h = env.image.height, maxMip = Math.log2(h) - 2;
+        Object.assign(mat.defines, { ENVMAP_TYPE_CUBE_UV: '', CUBEUV_TEXEL_HEIGHT: 1 / h, CUBEUV_TEXEL_WIDTH: 1 / (3 * Math.max(2 ** maxMip, 7 * 16)), CUBEUV_MAX_MIP: maxMip.toFixed(1) });
+        mat.needsUpdate = true;
+      }
+    } else u.hasEnv.value = 0;
   };
   return mesh;
 }

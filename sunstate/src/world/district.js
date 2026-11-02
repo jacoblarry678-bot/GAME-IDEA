@@ -1,5 +1,5 @@
 /**
- * District plan for Ocean Mile: which building stands on which lot, the named
+ * District plan for South Beach: which building stands on which lot, the named
  * landmarks the game refers to, interiors, parking and street furniture.
  * Deterministic (seeded) so collision, AI, minimap and meshes always agree.
  */
@@ -41,7 +41,7 @@ function plan() {
   // --- special blocks -------------------------------------------------------
   const special = new Set();
 
-  // Safehouse: the Bayside Motel (Bayshore/Palmetto, 9th St to Causeway Blvd)
+  // Safehouse: the Bayside Motel (Alton/Washington, Española Way to 5th St)
   {
     const b = blockAt(0, 2); special.add(b.id);
     // L-shaped two-storey motel along the west and north edges, lot opening east
@@ -59,7 +59,7 @@ function plan() {
     props.push({ type: 'pylonSign', x: b.lx1 - 2, z: b.lz1 - 3, text: 'BAYSIDE MOTEL', color: 0x29e6ff });
   }
 
-  // Convenience store: Sunny Stop, corner of 14th St and Coral Ave (enterable)
+  // Convenience store: Sunny Stop, corner of 3rd St and Collins Ave (enterable)
   {
     const b = blockAt(1, 4); special.add(b.id);
     const sx0 = b.lx1 - 22, sx1 = b.lx1, sz0 = b.lz0 + 8, sz1 = b.lz0 + 28;
@@ -75,7 +75,7 @@ function plan() {
       bounds: { x0: sx0, x1: sx1, z0: sz0, z1: sz1 },
     };
     parking.push({ x: sx0 + 2, z: b.lz0 + 3.5, rot: 0, model: 'kestrel', color: 0x6c7a52 });
-    // rest of the block: shops along Palmetto
+    // rest of the block: shops along Washington
     fillStrip(b.lx0, b.lx0 + 17, b.lz0, b.lz1, 'w');
     fillStrip(sx0, b.lx1, sz1 + 6, b.lz1, 'e');
   }
@@ -91,18 +91,18 @@ function plan() {
   // Police precinct (busted respawn)
   {
     const b = blockAt(0, 5); special.add(b.id);
-    add({ x0: b.lx0 + 2, x1: b.lx1 - 2, z0: b.lz0 + 2, z1: b.lz1 - 16, h: 11, style: 'civic', color: 0xdcd6c8, accent: 0x1f3c78, frontage: 'e', sign: 'OMPD PRECINCT 3', neon: 0x3a7bff });
+    add({ x0: b.lx0 + 2, x1: b.lx1 - 2, z0: b.lz0 + 2, z1: b.lz1 - 16, h: 11, style: 'civic', color: 0xdcd6c8, accent: 0x1f3c78, frontage: 'e', sign: 'POLICE · PRECINCT 3', neon: 0x3a7bff });
     lots.push({ x0: b.lx0, x1: b.lx1, z0: b.lz1 - 16, z1: b.lz1 });
-    PLACES.police = { name: 'OMPD Precinct 3', x: 0, z: b.lz1 - 8, rot: 0 };
+    PLACES.police = { name: 'Police Precinct 3', x: 0, z: b.lz1 - 8, rot: 0 };
     for (let i = 0; i < 4; i++) parking.push({ x: b.lx0 + 6 + i * 6, z: b.lz1 - 8, rot: 0, model: 'police', color: 0xffffff, police: true });
   }
 
   // --- Milestone 3: more places to go --------------------------------------------
-  // Bayshore Park: lawns, paths, a fountain, a basketball court, shade trees
+  // Flamingo Park: lawns, paths, a fountain, a basketball court, shade trees
   {
     const b = blockAt(0, 3); special.add(b.id);
     const cx = (b.lx0 + b.lx1) / 2, cz = (b.lz0 + b.lz1) / 2;
-    PLACES.park = { name: 'Bayshore Park', x: cx, z: cz, fountain: { x: cx, z: cz + 4 }, court: { x0: b.lx0 + 2.5, x1: b.lx0 + 17.5, z0: b.lz0 + 3, z1: b.lz0 + 27 }, bounds: { x0: b.lx0, x1: b.lx1, z0: b.lz0, z1: b.lz1 } };
+    PLACES.park = { name: 'Flamingo Park', x: cx, z: cz, fountain: { x: cx, z: cz + 4 }, court: { x0: b.lx0 + 2.5, x1: b.lx0 + 17.5, z0: b.lz0 + 3, z1: b.lz0 + 27 }, bounds: { x0: b.lx0, x1: b.lx1, z0: b.lz0, z1: b.lz1 } };
     props.push({ type: 'fountain', x: cx, z: cz + 4 });
     for (const z of [PLACES.park.court.z0 + 1.2, PLACES.park.court.z1 - 1.2]) props.push({ type: 'hoop', x: (PLACES.park.court.x0 + PLACES.park.court.x1) / 2, z, rot: z < cz ? 0 : Math.PI });
     for (let i = 0; i < 16; i++) {
@@ -114,7 +114,7 @@ function plan() {
     for (const [x, z, rot] of [[cx - 3, cz - 12, Math.PI / 2], [cx + 3, cz - 12, -Math.PI / 2], [cx - 3, cz + 20, Math.PI / 2], [cx + 3, cz + 20, -Math.PI / 2], [cx + 10, cz + 2, 0], [cx - 10, cz + 6, Math.PI]]) props.push({ type: 'bench', x, z, rot });
   }
 
-  // Bayfront Arms (gun shop), Palmetto Ave between 1st and 5th
+  // Bayfront Arms (gun shop), Washington Ave between 1st and 5th
   const shopFront = (b, face, x0, x1, z0, z1, extra) => add({ x0, x1, z0, z1, h: 7.4, style: 'shop', frontage: face, ...extra });
   {
     const b = blockAt(1, 0); special.add(b.id);
@@ -125,28 +125,28 @@ function plan() {
     fillStrip(mid + 2, b.lx1, b.lz0, b.lz1, 'e');
   }
 
-  // Block (1,1): Coral Auto Body (drive-in garage), Threads on 5th (clothes), Sunshine Gas
+  // Block (1,1): Deco Auto Body (drive-in garage), Threads on Lincoln (clothes), Sunray Gas
   {
     const b = blockAt(1, 1); special.add(b.id);
     const mid = (b.lx0 + b.lx1) / 2;
     const gz0 = b.lz0, gz1 = b.lz0 + 18, bay = { z0: gz0 + 5, z1: gz0 + 13 };
     add({ x0: mid + 2, x1: b.lx1, z0: gz0, z1: gz1, h: 7, style: 'garage', frontage: 'e', sign: 'CORAL AUTO BODY', color: 0xdedad0, accent: 0x2b7fd1, bay });
-    PLACES.autoshop = { name: 'Coral Auto Body', door: { x: b.lx1 + 2, z: (bay.z0 + bay.z1) / 2 }, bay: { x0: mid + 3, x1: b.lx1 + 1, z0: bay.z0 + 0.3, z1: bay.z1 - 0.3 }, staff: { x: b.lx1 + 0.8, z: bay.z1 + 1.6, rot: Math.PI / 2 } };
+    PLACES.autoshop = { name: 'Deco Auto Body', door: { x: b.lx1 + 2, z: (bay.z0 + bay.z1) / 2 }, bay: { x0: mid + 3, x1: b.lx1 + 1, z0: bay.z0 + 0.3, z1: bay.z1 - 0.3 }, staff: { x: b.lx1 + 0.8, z: bay.z1 + 1.6, rot: Math.PI / 2 } };
     fillStrip(mid + 2, b.lx1, gz1 + 2, b.lz1 - 26, 'e');
     shopFront(b, 'w', b.lx0, mid - 4, b.lz0, b.lz0 + 18, { sign: 'THREADS ON 5TH', color: 0xf6d6c2, accent: 0x6f5bd6 });
-    PLACES.clothes = { name: 'Threads on 5th', door: { x: b.lx0 - 1.6, z: b.lz0 + 9 }, staff: { x: b.lx0 - 0.9, z: b.lz0 + 12.5, rot: -Math.PI / 2 } };
+    PLACES.clothes = { name: 'Threads on Lincoln', door: { x: b.lx0 - 1.6, z: b.lz0 + 9 }, staff: { x: b.lx0 - 0.9, z: b.lz0 + 12.5, rot: -Math.PI / 2 } };
     fillStrip(b.lx0, mid - 4, b.lz0 + 20, b.lz1 - 26, 'w');
-    // Sunshine Gas across the south end of the block, open to Coral Ave and 9th St
+    // Sunray Gas across the south end of the block, open to Collins Ave and Española Way
     const sz0 = b.lz1 - 24, sz1 = b.lz1;
     lots.push({ x0: b.lx0 + 12, x1: b.lx1, z0: sz0, z1: sz1 });
     add({ x0: b.lx0, x1: b.lx0 + 12, z0: sz0 + 2, z1: sz1 - 4, h: 4.6, style: 'shop', frontage: 'e', sign: 'SUNSHINE GAS', color: 0xf7e3a1, accent: 0xe86b2a });
     props.push({ type: 'canopy', x: b.lx1 - 11, z: (sz0 + sz1) / 2, w: 14, d: 9, color: 0xf2a03d });
     for (const x of [b.lx1 - 15, b.lx1 - 7]) props.push({ type: 'pump', x, z: (sz0 + sz1) / 2 });
-    PLACES.gas = { name: 'Sunshine Gas', door: { x: b.lx0 + 13.6, z: (sz0 + sz1) / 2 - 1 }, staff: { x: b.lx0 + 12.9, z: (sz0 + sz1) / 2 + 2.5, rot: Math.PI / 2 } };
+    PLACES.gas = { name: 'Sunray Gas', door: { x: b.lx0 + 13.6, z: (sz0 + sz1) / 2 - 1 }, staff: { x: b.lx0 + 12.9, z: (sz0 + sz1) / 2 + 2.5, rot: Math.PI / 2 } };
   }
 
-  // Velvet Palms (adults-only club, enterable), Coral Ave side of the Club Halcyon block.
-  // Entrance on Coral Ave looks straight down the runway to the stage; the bar runs
+  // Velvet Palms (adults-only club, enterable), Collins Ave side of the Club Halcyon block.
+  // Entrance on Collins Ave looks straight down the runway to the stage; the bar runs
   // along the north wall, the DJ booth sits in the north-east corner, booths line
   // the south wall. Everything here is shared by the mesh builder and the club runtime.
   {
@@ -190,7 +190,7 @@ function plan() {
   // Tidewater Diner + nightclub + garage frontages are placed in generic strips
   // with fixed names so they read as landmarks.
   const named = {
-    'b11': { e: 'Coral Auto Body' },
+    'b11': { e: 'Deco Auto Body' },
     'b12': { w: 'Tidewater Diner' },
     'b23': { e: 'Club Halcyon' },
   };
@@ -241,7 +241,7 @@ function plan() {
         add({ x0, x1, z0: zz0, z1: zz1, h: 7 + Math.floor(rnd() * 3) * 3.2, style: 'residential', frontage: face });
       } else {
         const name = landmark && first ? landmark : (rnd() < 0.75 ? SHOP_NAMES[shopI++ % SHOP_NAMES.length] : null);
-        add({ x0, x1, z0: zz0, z1: zz1, h: 7 + Math.floor(rnd() * 4) * 3.2, style: 'shop', frontage: face, sign: name, diner: name === 'Tidewater Diner', garage: name === 'Coral Auto Body' });
+        add({ x0, x1, z0: zz0, z1: zz1, h: 7 + Math.floor(rnd() * 4) * 3.2, style: 'shop', frontage: face, sign: name, diner: name === 'Tidewater Diner', garage: name === 'Deco Auto Body' });
       }
       first = false;
       z += w;
@@ -277,7 +277,7 @@ function plan() {
       props.push({ type: 'signal', x: n.x + sx * (n.hx + 2.6), z: n.z + sz * (n.hz + 2.6), node: n.id, corner: `${sx},${sz}` }); // set back from the kerb so turning cars clear it
     }
   }
-  // palms: Ocean Blvd promenade and beach park, plus avenue sidewalks
+  // palms: Ocean Dr promenade and beach park, plus avenue sidewalks
   for (let z = ISLAND.north + 12; z < ISLAND.south - 10; z += 9 + rnd() * 4) {
     props.push({ type: 'palm', x: ISLAND.promenade + 2.5 + rnd() * 1.5, z, h: 8 + rnd() * 5, lean: rnd() });
     if (rnd() < 0.8) props.push({ type: 'palm', x: ISLAND.promenade + 9 + rnd() * 9, z: z + rnd() * 5, h: 7 + rnd() * 6, lean: rnd() });
@@ -331,7 +331,7 @@ function plan() {
   // a beach volleyball net and an outdoor workout area for later activities
   props.push({ type: 'volley', x: beachX0 + 26, z: 60, rot: 0 });
   props.push({ type: 'gym', x: ISLAND.promenade + 12, z: -40 });
-  PLACES.beachGym = { name: 'Ocean Mile Outdoor Gym', x: ISLAND.promenade + 12, z: -40 };
+  PLACES.beachGym = { name: 'Muscle Beach', x: ISLAND.promenade + 12, z: -40 };
 
   // marina docks on the bay side (decorative boats moored)
   for (const z of [-200, -130, -60, 60, 130]) {
@@ -360,7 +360,7 @@ function plan() {
 }
 
 /**
- * Cayo Lento (Milestone 3): a bait-and-fuel stop, stilt houses, a dive bar,
+ * Marathon (Milestone 3): a bait-and-fuel stop, stilt houses, a dive bar,
  * an RV park, a marina with a long pier, mangroves, and the closed old bridge
  * east toward the rest of the chain. Names and businesses are invented.
  */
@@ -369,7 +369,7 @@ function planKeys({ add, props, parking, lots, rnd, pick }) {
   const north0 = K.z0 + 3, north1 = hz - rw - 2; // strip between the north shore and the highway
   const south0 = hz + rw + 2; // south side starts here
   const STILT = [0xf3e6c8, 0xbfe3e0, 0xf6d6c2, 0xe8eef0, 0xd8e6c4, 0xf2d7e0];
-  // Lento Bait & Fuel, west of the bridge landing
+  // Slow Tide Bait & Fuel, west of the bridge landing
   add({ x0: 112, x1: 128, z0: north0 + 1, z1: north0 + 13, h: 5, style: 'shop', color: 0xf4efe2, accent: 0x2b7fd1, frontage: 's', sign: 'LENTO BAIT & FUEL', neon: 0x49ff9a, keys: true });
   lots.push({ x0: 86, x1: 132, z0: north0 - 1, z1: north1 + 1.5 });
   props.push({ type: 'canopy', x: 99, z: north0 + 9, w: 14, d: 8, color: 0xd8443c });
@@ -396,8 +396,8 @@ function planKeys({ add, props, parking, lots, rnd, pick }) {
   props.push({ type: 'dock', axis: 'z', x: pierX, z: K.z1 + pierLen / 2 - 1, len: pierLen });
   PLATFORMS.push({ x0: pierX - 1.5, x1: pierX + 1.5, z0: K.z1 - 1, z1: K.z1 + pierLen - 1, y: 0.1 });
   for (const [dx, dz, c] of [[-6, 12, 0xffffff], [6, 22, 0x1d3557], [-6, 34, 0xf1efe8], [6, 40, 0xffffff]]) props.push({ type: 'boat', x: pierX + dx, z: K.z1 + dz, rot: (rnd() - 0.5) * 0.2, color: c });
-  PLACES.marina = { name: 'Cayo Lento Marina', x: pierX, z: K.z1 + 4, pierEnd: { x: pierX, z: K.z1 + pierLen - 4 }, lot: { x: 246, z: K.shoreZ - 4 } };
-  PLACES.baitShop = { name: 'Lento Bait & Fuel', x: 99, z: north0 + 4 };
+  PLACES.marina = { name: 'Boot Key Harbor', x: pierX, z: K.z1 + 4, pierEnd: { x: pierX, z: K.z1 + pierLen - 4 }, lot: { x: 246, z: K.shoreZ - 4 } };
+  PLACES.baitShop = { name: 'Slow Tide Bait & Fuel', x: 99, z: north0 + 4 };
   PLACES.saltHook = { name: 'The Salt Hook', x: 77, z: south0 + 3 };
   PLACES.keys = { name: K.name, x: TWIN.x, z: hz };
   // water tower at the west point, the old bridge east (closed), shoreline mangroves and palms
@@ -421,7 +421,7 @@ function planKeys({ add, props, parking, lots, rnd, pick }) {
   for (let x = 70; x < 200; x += 7 + rnd() * 6) props.push({ type: 'palm', x, z: K.z1 - 3 - rnd() * 2, h: 8 + rnd() * 4, lean: 0.4 + rnd() * 0.6 });
   // highway lights, set well back on the verge and away from the junctions (cars swing wide out here)
   for (const x of [168, 200, 254, 286]) props.push({ type: 'streetlight', x, z: hz + rw + 2.6, rot: Math.PI, keys: true });
-  // lights along the outer parapets of the twin-span
+  // lights along the outer parapets of the Seven Mile Bridge
   const tw = TWIN.median / 2 + TWIN.deckW + 0.25; // standing on the outer parapet
   for (let z = TWIN.zStart + 18; z < TWIN.zEnd - 10; z += 36) {
     props.push({ type: 'streetlight', x: TWIN.x - tw, z, rot: Math.PI / 2, bridge: true });
@@ -431,7 +431,7 @@ function planKeys({ add, props, parking, lots, rnd, pick }) {
   for (const k of BACKDROP.keys) for (let i = 0; i < 9; i++) props.push({ type: 'palm', x: k.x0 + 6 + rnd() * (k.x1 - k.x0 - 12), z: k.z0 + 4 + rnd() * (k.z1 - k.z0 - 8), h: 7 + rnd() * 6, lean: rnd() });
 }
 
-/** Where people wander on Cayo Lento (no sidewalk grid out here). */
+/** Where people wander in Marathon (no sidewalk grid out here). */
 export const KEYS_ZONES = [
   { x0: KEYS.x0 + 30, x1: KEYS.x1 - 30, z0: KEYS.hwyZ + 7, z1: KEYS.z1 - 6 },
   { x0: 86, x1: 132, z0: KEYS.z0 + 3, z1: KEYS.hwyZ - 7 },

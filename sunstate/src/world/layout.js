@@ -1,5 +1,6 @@
 /**
- * Ocean Mile — the first district of the fictional coastal city of Costa Vela.
+ * South Beach, Miami Beach — real street names and landmarks, laid out compactly;
+ * every business, person and crew in it is fictional.
  *
  * Pure data and geometry helpers (no rendering), so the simulation, AI and the
  * Node tests share one description of the world.
@@ -17,23 +18,23 @@ export const CURB = 0.14; // sidewalk / lot height above the road surface
 
 /** Avenues run north–south (constant x). Streets run east–west (constant z). */
 export const AVENUES = [
-  { id: 'bay', name: 'Bayshore Rd', x: -30, lanes: 1 },
-  { id: 'palm', name: 'Palmetto Ave', x: 30, lanes: 1 },
-  { id: 'coral', name: 'Coral Ave', x: 90, lanes: 2 },
-  { id: 'ocean', name: 'Ocean Blvd', x: 150, lanes: 2 },
+  { id: 'bay', name: 'Alton Rd', x: -30, lanes: 1 },
+  { id: 'palm', name: 'Washington Ave', x: 30, lanes: 1 },
+  { id: 'coral', name: 'Collins Ave', x: 90, lanes: 2 },
+  { id: 'ocean', name: 'Ocean Dr', x: 150, lanes: 2 },
 ];
 export const STREETS = [
-  { id: 's1', name: '1st St', z: -240, lanes: 1 },
-  { id: 's2', name: '5th St', z: -160, lanes: 1 },
-  { id: 's3', name: '9th St', z: -80, lanes: 1 },
-  { id: 's4', name: 'Causeway Blvd', z: 0, lanes: 2 },
-  { id: 's5', name: '14th St', z: 80, lanes: 1 },
-  { id: 's6', name: 'Flamingo St', z: 160, lanes: 1 },
-  { id: 's7', name: 'Pointe St', z: 240, lanes: 1 },
+  { id: 's1', name: '17th St', z: -240, lanes: 1 },
+  { id: 's2', name: 'Lincoln Rd', z: -160, lanes: 1 },
+  { id: 's3', name: 'Española Way', z: -80, lanes: 1 },
+  { id: 's4', name: '5th St', z: 0, lanes: 2 },
+  { id: 's5', name: '3rd St', z: 80, lanes: 1 },
+  { id: 's6', name: '1st St', z: 160, lanes: 1 },
+  { id: 's7', name: 'South Pointe Dr', z: 240, lanes: 1 },
 ];
 
 export const roadHalfWidth = (lanes) => lanes * LANE_W + 0.5;
-/** Half width of a road segment or graph edge (the twin-span is wider: two decks and a gap). */
+/** Half width of a road segment or graph edge (the Seven Mile Bridge is wider: two decks and a gap). */
 export const segHalfWidth = (s) => s.hw ?? roadHalfWidth(s.lanes);
 
 export const ISLAND = {
@@ -45,7 +46,7 @@ export const ISLAND = {
   shore: 222,
 };
 
-/** The causeway: a raised bridge crossing the bay west from Causeway Blvd. */
+/** The causeway: a raised bridge crossing the bay west from 5th St. */
 export const CAUSEWAY = {
   z: 0,
   lanes: 2,
@@ -57,12 +58,12 @@ export const CAUSEWAY = {
 export const MAINLAND = { east: -300, west: -420, north: -70, south: 70, barrierX: -385 };
 
 /**
- * Cayo Lento, the first of the Vela Keys (Milestone 3): a low, flat key south
- * of Ocean Mile, reached by a twin-span bridge (one deck per direction with an
- * open gap between them) that carries Ocean Blvd south over the water. The
+ * Marathon, the first of the Florida Keys (Milestone 3): a low, flat key south
+ * of South Beach, reached by the Seven Mile Bridge (one deck per direction with an
+ * open gap between them) that carries Ocean Dr south over the water. The
  * shallow turquoise flats around it are swimmable, not wadeable.
  */
-export const KEYS = { x0: 40, x1: 330, z0: 612, z1: 716, hwyZ: 640, shoreZ: 704, pointX: 60, marinaX: 230, name: 'Cayo Lento' };
+export const KEYS = { x0: 40, x1: 330, z0: 612, z1: 716, hwyZ: 640, shoreZ: 704, pointX: 60, marinaX: 230, name: 'Marathon' };
 export const TWIN = { x: 150, median: 5, deckW: 5, zStart: ISLAND.south, zEnd: KEYS.z0, rampLen: 60, deckY: 7.5 };
 export const FLATS = { x0: -20, x1: 470, z0: 540, z1: 820, y: -2.4 }; // shallow water around the keys
 
@@ -86,10 +87,10 @@ export function onCauseway(x, z) {
 
 /** Neighbouring land that is visible but not reachable (backdrop city). */
 export const BACKDROP = {
-  downtownX: -620, // everything west of this is downtown Costa Vela
+  downtownX: -620, // everything west of this is downtown Miami
   north: { x0: -200, x1: 215, z0: -1100, z1: -300 },
-  south: { x0: -260, x1: -50, z0: 300, z1: 1100 }, // Vela Point; open water and the keys to its east
-  // further keys of the chain, low and green, seen from Cayo Lento but not reachable
+  south: { x0: -260, x1: -50, z0: 300, z1: 1100 }, // Virginia Key; open water and the keys to its east
+  // further keys of the chain, low and green, seen from Marathon but not reachable
   keys: [{ x0: 430, x1: 560, z0: 600, z1: 660 }, { x0: 640, x1: 760, z0: 520, z1: 570 }, { x0: 200, x1: 300, z0: 860, z1: 905 }],
 };
 
@@ -155,7 +156,7 @@ export function groundHeight(x, z, y = 100) {
   return t;
 }
 
-/** Deck height of the twin-span at z (null off the span). Both decks share the profile. */
+/** Deck height of the Seven Mile Bridge at z (null off the span). Both decks share the profile. */
 export function twinDeck(z) {
   const t = TWIN;
   if (z < t.zStart - 2 || z > t.zEnd + 2) return null;
@@ -194,14 +195,14 @@ export function roadSegments() {
   const xMin = AVENUES[0].x, xMax = AVENUES[AVENUES.length - 1].x;
   for (const a of AVENUES) segs.push({ id: a.id, name: a.name, dir: 'ns', c: a.x, from: zMin, to: zMax, lanes: a.lanes });
   for (const s of STREETS) segs.push({ id: s.id, name: s.name, dir: 'ew', c: s.z, from: xMin, to: xMax, lanes: s.lanes });
-  // causeway continues Causeway Blvd west across the bay to the mainland
-  segs.push({ id: 'causeway', name: 'Vela Causeway', dir: 'ew', c: CAUSEWAY.z, from: MAINLAND.barrierX + 12, to: xMin, lanes: 2, bridge: true });
-  // Milestone 3: the twin-span south to Cayo Lento, and the key's own roads
-  segs.push({ id: 'twinspan', name: 'Vela Keys Twin Span', dir: 'ns', c: TWIN.x, from: zMax, to: KEYS.hwyZ, lanes: 1, twin: true, hw: TWIN.median / 2 + TWIN.deckW });
+  // causeway continues 5th St west across the bay to the mainland
+  segs.push({ id: 'causeway', name: 'MacArthur Causeway', dir: 'ew', c: CAUSEWAY.z, from: MAINLAND.barrierX + 12, to: xMin, lanes: 2, bridge: true });
+  // Milestone 3: the Seven Mile Bridge south to Marathon, and the key's own roads
+  segs.push({ id: 'twinspan', name: 'Seven Mile Bridge', dir: 'ns', c: TWIN.x, from: zMax, to: KEYS.hwyZ, lanes: 1, twin: true, hw: TWIN.median / 2 + TWIN.deckW });
   segs.push({ id: 'keyhwy', name: 'Overseas Rd', dir: 'ew', c: KEYS.hwyZ, from: KEYS.pointX, to: KEYS.x1 - 10, lanes: 1, keys: true });
   segs.push({ id: 'marina', name: 'Marina Rd', dir: 'ns', c: KEYS.marinaX, from: KEYS.hwyZ, to: KEYS.shoreZ, lanes: 1, keys: true });
   segs.push({ id: 'shore', name: 'Shore Rd', dir: 'ew', c: KEYS.shoreZ, from: KEYS.pointX, to: KEYS.marinaX, lanes: 1, keys: true });
-  segs.push({ id: 'point', name: 'Lento Point Rd', dir: 'ns', c: KEYS.pointX, from: KEYS.hwyZ, to: KEYS.shoreZ, lanes: 1, keys: true });
+  segs.push({ id: 'point', name: 'Sombrero Beach Rd', dir: 'ns', c: KEYS.pointX, from: KEYS.hwyZ, to: KEYS.shoreZ, lanes: 1, keys: true });
   return segs;
 }
 
@@ -251,7 +252,7 @@ export function buildRoadGraph() {
     for (let i = 0; i < AVENUES.length - 1; i++) link(byKey.get(`${AVENUES[i].x},${s.z}`), byKey.get(`${AVENUES[i + 1].x},${s.z}`), s.lanes, s.id);
   }
   link(byKey.get(`${AVENUES[0].x},${CAUSEWAY.z}`), west, 2, 'causeway');
-  // the twin-span and Cayo Lento
+  // the Seven Mile Bridge and Marathon
   const K = KEYS;
   const kw = addNode(K.pointX, K.hwyZ, { keys: true });
   const kj = addNode(TWIN.x, K.hwyZ, { keys: true });
@@ -396,5 +397,5 @@ export const blockAt = (col, row) => BLOCKS.find((b) => b.col === col && b.row =
 // ---------------------------------------------------------------------------
 // Named places. Positions are filled in by the district plan (district.js).
 
-export const DISTRICT_NAME = 'Ocean Mile';
-export const CITY_NAME = 'Costa Vela';
+export const DISTRICT_NAME = 'South Beach';
+export const CITY_NAME = 'Miami Beach';

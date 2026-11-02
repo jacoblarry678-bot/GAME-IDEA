@@ -99,7 +99,7 @@ check('enters a parked car with F', st.inVehicle, JSON.stringify(st.vpos));
 
 // --- drive to the store (autopilot = traffic AI driving the player's car) ---------------
 // The autopilot is the lane-following traffic AI; it doesn't do parking-lot manoeuvres, so the
-// scripted drive starts from the street: hop out of the sedan and into a car on Palmetto Ave.
+// scripted drive starts from the street: hop out of the sedan and into a car on Washington Ave.
 const exitOk = await T(() => { window.__t.press('enterVehicle'); window.__t.waitFor('!g.player.vehicle', 5); window.__t.tick(0.3); return !window.__sun.game.player.vehicle; });
 check('exits the parked sedan', exitOk);
 await T(() => { const g = window.__sun.game; g.respawnPlayer(33.5, -20, 0); const v = g.addVehicle('kestrel', 28.25, -20, 0, 0x8fb7c9); v.owner = 'player'; g.seatCharacter(v, 0, g.player); window.__t.tick(0.3); });
@@ -163,7 +163,7 @@ console.log('  after hiding:', await wantedLine());
 check('escape: the wanted level clears once out of sight and outside the search area', escapeT >= 0, `${escapeT}s`);
 st = await state();
 check('mission moves on to the safehouse', st.stage === 'return', st.stage);
-// swim back: put the player in a car on Ocean Blvd for the drive home
+// swim back: put the player in a car on Ocean Dr for the drive home
 await T(() => { const g = window.__sun.game; g.respawnPlayer(146.75, -40, Math.PI); const v = g.addVehicle('kestrel', 146.75, -40, Math.PI); g.seatCharacter(v, 0, g.player); window.__t.tick(0.5); });
 
 // --- return & save ------------------------------------------------------------------------
@@ -287,7 +287,7 @@ check('cannot enter a car through a wall', throughWall.blocked, `car ${throughWa
 const longRun = await T(() => {
   const g = window.__sun.game;
   g.respawnPlayer(160, 60, Math.PI);
-  const v = g.addVehicle('ironhorse', 151.75, 60, Math.PI); // Ocean Blvd, northbound lane
+  const v = g.addVehicle('ironhorse', 151.75, 60, Math.PI); // Ocean Dr, northbound lane
   g.seatCharacter(v, 0, g.player);
   window.__sun.debug.autopilot(0, 0, { cruise: true });
   const t0 = performance.now();

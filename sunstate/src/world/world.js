@@ -7,6 +7,7 @@ import { CollisionWorld } from './collision.js';
 import { makeMaterials, buildWorld } from './build.js';
 import { buildProps, updateProps } from './props.js';
 import { swayPalms } from './palms.js';
+import { Ambient } from './ambient.js';
 import { INTERIORS, PLACES } from './district.js';
 import { groundHeight, isWater, surfaceAt, WATER_Y } from './layout.js';
 
@@ -36,6 +37,7 @@ export class World {
     this.clubPulse = 0; // set by the club's music (0..1 on each kick)
     this.lightRig = null;
     this.placeInteriorLight('store');
+    this.ambient = new Ambient(engine); // boats, the banner plane, gulls (decorative)
   }
 
   placeInteriorLight(id) {
@@ -94,6 +96,7 @@ export class World {
     this.placeInteriorLight(inClub ? 'club' : 'store');
     if (inClub) this.engine.interiorLight.intensity = this.lightRigs.club.intensity * (0.75 + 0.45 * this.clubPulse);
     this.water.userData.update(dt);
+    this.ambient.update(dt);
     // gentle palm sway
     const sw = this.props;
     sw.swayT = (sw.swayT || 0) + dt;

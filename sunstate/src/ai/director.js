@@ -19,10 +19,10 @@ const LINES = {
   ],
   breakdown: [
     'Third time this month. Third. Time.',
-    'Yeah, I\'m on Coral... no, the car\'s on fire again. Little bit.',
+    'Yeah, I\'m on Collins... no, the car\'s on fire again. Little bit.',
   ],
   party: ['Somebody get the speaker out of the sand!', 'Is this the sunset thing? Are we live?'],
-  performer: ['Tips welcome, opinions are not!', 'Ocean Mile, make some noise!'],
+  performer: ['Tips welcome, opinions are not!', 'South Beach, make some noise!'],
 };
 
 export const DIRECTOR_CONFIG = { globalCooldown: 45, typeCooldown: 180, maxActive: 2, spawnMin: 45, spawnMax: 110, despawnDist: 180 };

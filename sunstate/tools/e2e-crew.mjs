@@ -117,7 +117,7 @@ const gstate = await T(() => { const g = window.__sun.game; window.__t.walkTo(80
 console.log('   wait command:', JSON.stringify(gstate));
 check('the partner key makes them wait', (await T(() => window.__t.who())).mode === 'wait');
 const calSpot = await T(() => ({ x: window.__sun.game.partner.pos.x, z: window.__sun.game.partner.pos.z }));
-// walk up the Coral Ave sidewalk, ~40 m from where Cal waits
+// walk up the Collins Ave sidewalk, ~40 m from where Cal waits
 const walked = await T(() => { const t = window.__t, p = window.__sun.game.player; t.walkTo(80, -92, { within: 2, maxSec: 40 }); /* along the sidewalk, not the road */ return [p.pos.x, p.pos.z].map(Math.round); });
 d = await T(() => window.__t.dist());
 // witnesses of the drive-by may still have called it in; that's covered by the wanted tests, so wipe it here

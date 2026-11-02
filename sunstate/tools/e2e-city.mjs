@@ -20,7 +20,7 @@ const { browser, page, logs, sun } = await launch();
 await page.addInitScript(() => {
   window.claude = {
     use: async (name) => (name === 'sample' ? Object.assign(async () => ({ text: '' }), {
-      json: async (prompt) => { window.__prompt = prompt; return [{ handle: 'sandbar.sofi', text: 'the stub says hi from the beach', replyTo: null }, { handle: 'keys.kat', text: 'Cayo Lento has been weird since the shooting on the twin span', replyTo: null }, { handle: '<bad>', text: 'dropped' }]; },
+      json: async (prompt) => { window.__prompt = prompt; return [{ handle: 'sandbar.sofi', text: 'the stub says hi from the beach', replyTo: null }, { handle: 'keys.kat', text: 'Marathon has been weird since the shooting on the Seven Mile Bridge', replyTo: null }, { handle: '<bad>', text: 'dropped' }]; },
     }) : null),
   };
 });
@@ -60,7 +60,7 @@ check('buying ammo, armour and the Vela Viper SMG works and costs money', gun.am
 const back = await T(() => { const t = window.__t, g = window.__sun.game; t.tick(130); t.at('gunshop'); t.press('interact'); const a = t.shop().greeting; t.press('interact'); t.tick(1.5); g.crew.switchCharacter(); t.at('gunshop'); t.press('interact'); const b = t.shop().greeting; t.press('interact'); t.tick(1.5); g.crew.switchCharacter(); t.tick(0.2); return { cal2: a, sol1: b, back: g.player.protagonist }; });
 check('Dee remembers Cal on his second visit, and has never met Sol', /Cal, right\? Back already/.test(back.cal2) && /Licence/.test(back.sol1), JSON.stringify(back));
 
-// ---- the police description, and Threads on 5th to change it ----
+// ---- the police description, and Threads on Lincoln to change it ----
 const desc = await T(() => {
   const t = window.__t, g = window.__sun.game;
   g.events.emit('crimeReported', { crimeId: 'assault', x: g.player.pos.x, z: g.player.pos.z, by: 'police', level: 1 });
@@ -73,13 +73,13 @@ const desc = await T(() => {
   return r;
 });
 check('police keep a description after seeing a crime', desc.m1 === 1 && /in a cream top/.test(desc.d), desc.d);
-check('Threads on 5th: Ines notices, a new outfit no longer matches the description', /news/.test(desc.greet) && desc.changed && desc.m2 === 0 && desc.modelOk, JSON.stringify(desc));
+check('Threads on Lincoln: Ines notices, a new outfit no longer matches the description', /news/.test(desc.greet) && desc.changed && desc.m2 === 0 && desc.modelOk, JSON.stringify(desc));
 
-// ---- Sunshine Gas ----
+// ---- Sunray Gas ----
 const gas = await T(() => { const t = window.__t, g = window.__sun.game; t.at('gas'); g.player.health = 50; t.press('interact'); t.press('shop1'); const r = { open: t.shop()?.id, hp: Math.round(g.player.health) }; t.press('interact'); return r; });
-check('Sunshine Gas: snacks restore health', gas.open === 'gas' && gas.hp === 75, JSON.stringify(gas));
+check('Sunray Gas: snacks restore health', gas.open === 'gas' && gas.hp === 75, JSON.stringify(gas));
 
-// ---- Coral Auto Body: drive in, respray, lose the police ----
+// ---- Deco Auto Body: drive in, respray, lose the police ----
 const respray = await T(() => {
   const t = window.__t, g = window.__sun.game, S = window.__sun;
   const v = g.vehicles.find((x) => x.persistentId === 'start-sedan');
@@ -100,7 +100,7 @@ const respray = await T(() => {
   t.press('interact');
   return r;
 });
-check('Coral Auto Body: drive into the bay and the shop opens', respray.inBay && /Coral Auto Body/.test(respray.prompt || '') && respray.open === 'autoshop', JSON.stringify(respray));
+check('Deco Auto Body: drive into the bay and the shop opens', respray.inBay && /Deco Auto Body/.test(respray.prompt || '') && respray.open === 'autoshop', JSON.stringify(respray));
 check('repair and respray: new paint, new plates, and the police lose the car', respray.repaired === 1000 && respray.color && respray.plate && respray.wanted === 0, JSON.stringify(respray));
 
 // ---- Velvet Palms: the door, the room, the counters, and getting thrown out ----
@@ -182,14 +182,14 @@ const reel = await T(() => {
 check('a witness films a reel: frames captured from their phone', reel.frames >= 6 && reel.w === 90, JSON.stringify(reel));
 const ai = await T(async () => {
   const S = window.__sun, g = S.game;
-  g.memory.state.nickname = 'the Coral Ave Carjacker';
+  g.memory.state.nickname = 'the Collins Ave Carjacker';
   S.input.virtual.edges.add('phone'); S.advance(0.1, 1);
   const avail = g.social.ai.available;
   S.input.virtual.edges.add('loopAI'); S.advance(0.1, 1);
   for (let i = 0; i < 20 && g.social.ai.busy; i++) await new Promise((r) => setTimeout(r, 50));
   S.advance(0.2, 1);
   const posts = g.social.posts.filter((p) => p.ai);
-  return { avail, n: posts.length, texts: posts.map((p) => p.text), prompt: (window.__prompt || '').includes('Coral Ave Carjacker'), canvas: !!document.querySelector('.loopfeed canvas.reel'), status: g.social.ai.status };
+  return { avail, n: posts.length, texts: posts.map((p) => p.text), prompt: (window.__prompt || '').includes('Collins Ave Carjacker'), canvas: !!document.querySelector('.loopfeed canvas.reel'), status: g.social.ai.status };
 });
 check('LOOP asks Claude (stubbed) with what the city remembers, and adds the posts it gets back', ai.avail && ai.n === 2 && ai.prompt && /Claude/.test(ai.status), JSON.stringify(ai));
 check('reels play in the LOOP feed', ai.canvas);
@@ -197,7 +197,7 @@ await sun.shot('shots/loop-reel.png');
 
 // ---- memory survives a save ----
 const mem = await T(() => { const g = window.__sun.game; g.saveGame('test'); const s = JSON.parse(localStorage.getItem('sunstate.save')); return { visits: s.memory.people.gunshop?.cal?.visits, nick: s.memory.nickname }; });
-check('memory is saved with the game', mem.visits === 2 && mem.nick === 'the Coral Ave Carjacker', JSON.stringify(mem));
+check('memory is saved with the game', mem.visits === 2 && mem.nick === 'the Collins Ave Carjacker', JSON.stringify(mem));
 
 const errs = logs.filter((l) => l.includes('PAGEERROR'));
 check('no page errors', errs.length === 0, errs.slice(0, 3).join('\n'));

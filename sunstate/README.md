@@ -1,7 +1,7 @@
-# SUNSTATE: Ocean Mile
+# SUNSTATE: South Beach
 
-A playable browser prototype of a third-person, open-world crime game set on a fictional sun-belt coast. You play two partners, Cal and Sol, and switch between them. You can:
-- explore an art-deco beach district and drive a twin-span bridge out to a sleepy island key
+A playable browser prototype of a third-person, open-world crime game set in a stylised Miami Beach and the Florida Keys: real streets and landmarks, fictional businesses, people and crews. You play two partners, Cal and Sol, and switch between them. You can:
+- explore an art-deco beach district and drive the Seven Mile Bridge out to Marathon in the Keys
 - steal and drive cars through living traffic
 - hold up a convenience store
 - run a two-person job where one of you drives and the other shoots
@@ -59,9 +59,9 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
   - Combat: shoots back at mission enemies.
   - If they go down, they're patched up at Ocean Mercy.
 - **Passenger drive-by:** as a passenger, aim (RMB) and shoot (LMB) out of the side window.
-- **Cayo Lento, the first of the Vela Keys:**
-  - Reached by a **twin-span bridge**: two decks with an open gap, parapets, piers and lights, carrying Ocean Blvd south over shallow turquoise flats.
-  - On the key: Lento Bait & Fuel, stilt houses, The Salt Hook (a dive bar), the Palm Hammock RV park and a marina with a long pier.
+- **Marathon, in the Florida Keys:**
+  - Reached by the **Seven Mile Bridge**: two decks with an open gap, parapets, piers and lights, carrying Ocean Dr south over shallow turquoise flats.
+  - On the key: Slow Tide Bait & Fuel, stilt houses, The Salt Hook (a dive bar), the Palm Hammock RV park and a marina with a long pier.
   - Also a water tower, mangroves, a loop of roads, and the closed, half-collapsed old bridge onward to the rest of the chain.
 - **Mission "Low Tide":** a two-person job, unlocked after *Small Change*. Drive to the marina and meet Rudy on the pier, then get away from the Caldera brothers' two cars. One of you drives while the other shoots, and **Tab** swaps roles mid-chase. Lose them, then bring the cooler home for **$4,000**. It has checkpoints, fails if either partner goes down, and retries without duplicates.
 - **Rain:**
@@ -76,8 +76,8 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
 
 - **The city remembers you.** These are this prototype's own rules:
   - **Police descriptions.** When officers see a crime, they note what the person wore and the car they drove. The description lasts ten in-game hours. While it's fresh, a patrol officer who gets a good look at someone matching it can recognise you, even with no stars. To shake it, change clothes, or respray the car and swap the plates.
-  - **Notoriety per area** (Ocean Mile and Cayo Lento) rises with reported crimes and slowly fades. When it's high, people recognise you in the street, film you and post it. At the top end they call it in.
-  - **A nickname** forms from what you do most and where you do it (for example "the Coral Ave Carjacker"). LOOP uses it.
+  - **Notoriety per area** (South Beach and Marathon) rises with reported crimes and slowly fades. When it's high, people recognise you in the street, film you and post it. At the top end they call it in.
+  - **A nickname** forms from what you do most and where you do it (for example "the Collins Ave Carjacker"). LOOP uses it.
   - **People remember Cal and Sol separately:**
     - the store clerk you robbed
     - the gunsmith whose regular you are
@@ -86,9 +86,9 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
   - All of this is saved with the game.
 - **New places** (all names and businesses are invented). Walk up and press **E**, pick with **1–6**, and press **E** again to leave:
   - **Bayfront Arms** (gun shop): pistol ammo, body armour, and the *Vela Viper* SMG.
-  - **Threads on 5th** (clothes): five outfits for each protagonist. A new outfit no longer matches the police description.
-  - **Sunshine Gas** (mini-mart and pumps): snacks and coffee (restore health), and scratch tickets.
-  - **Coral Auto Body:** drive into the bay. It offers repairs, and a respray with new plates. The respray makes the police lose the car if they can't see you (3★ or less).
+  - **Threads on Lincoln** (clothes): five outfits for each protagonist. A new outfit no longer matches the police description.
+  - **Sunray Gas** (mini-mart and pumps): snacks and coffee (restore health), and scratch tickets.
+  - **Deco Auto Body:** drive into the bay. It offers repairs, and a respray with new plates. The respray makes the police lose the car if they can't see you (3★ or less).
   - **Velvet Palms:** an adults-only club you can walk into (open 8 PM – 4 AM). It's non-explicit: the dancers wear full sequined costumes, and the show is pole work and dancing.
     - **The door:** pay Big Tomas the $20 cover. Regulars and VIPs walk in. Without paying, the rope stays closed.
     - **Inside:** a dark lounge with:
@@ -103,7 +103,7 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
     - **Trouble:**
       - Start a fight and Big Tomas throws you out and won't let you back for a day.
       - Fire a gun and the room empties: people run, cower and call 911, and the club is closed for the night.
-  - **Bayshore Park:** lawns, a fountain, a basketball court, and people out for a walk.
+  - **Flamingo Park:** lawns, a fountain, a basketball court, and people out for a walk.
 - **LOOP, now with reels:**
   - When a witness calls you in, or someone recognises you, they film a short clip from their own point of view. The clip plays in the feed.
   - Locals now have distinct voices and reply to each other.
@@ -123,7 +123,7 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
   - **Places:**
     - golden hour on the beach
     - Velvet Palms at night
-    - the twin span and Cayo Lento
+    - the Seven Mile Bridge and Marathon
     - neon streets after dark
   - **Who's in it:** the two of you together.
   - **The moment:** a fast car, or posting in the middle of a chase.
@@ -138,16 +138,43 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
   - 10,000: Big Tomas puts you on the Velvet Palms VIP list.
   - 50,000: you get a verified ✔.
 - **Brand deals:** a DM offers money for a specific post before a 4-minute deadline, and the GPS points there. Examples:
-  - a selfie at Threads on 5th
-  - your car in the Coral Auto Body bay
+  - a selfie at Threads on Lincoln
+  - your car in the Deco Auto Body bay
   - a clip from inside Velvet Palms
-  - a photo out on Cayo Lento
+  - a photo out on Marathon
 - **Risk:** posting while the police are after you tells them exactly where you are.
 - Followers, posts, likes and badges are saved.
 
+## Real places and the graphics revamp
+
+- **Real geography, fictional people:**
+  - The map is South Beach: Alton Rd, Washington Ave, Collins Ave and Ocean Dr, crossed by 17th St, Lincoln Rd, Española Way, 5th St, 3rd St, 1st St and South Pointe Dr.
+  - Also included: Lummus Park beach with Muscle Beach, Flamingo Park, and Biscayne Bay with the MacArthur Causeway to the downtown Miami skyline.
+  - Down the Seven Mile Bridge (the old bridge alongside, closed) is Marathon, with Boot Key Harbor and Sombrero Beach Rd.
+  - The layout is compressed; distances are not to scale.
+  - Every business, character, crew, brand and police unit is invented. Police are just "Police / Precinct 3", not a real agency.
+- **Lighting:** a physically based (Preetham) sky drives the sun colour, sky light, fog and an image-based environment, so reflections match the time of day. Post-processing adds ground-truth ambient occlusion (GTAO), HDR bloom and a filmic colour grade (ACES, warmth, vignette, grain).
+- **Materials:**
+  - Every ground surface is a tileable PBR material (colour, normal, roughness, AO) baked on the GPU at startup: asphalt with cracks and patches, sidewalk slabs, sand ripples, St. Augustine grass, pavers, boardwalk, terrazzo.
+  - Facades have relief, and their windows reflect the sky.
+- **Palms:** coconut palms with curved, ring-scarred trunks, drooping fronds, dead fronds and coconuts; royal palms with smooth trunks and crownshafts along the avenues. The fronds cast dappled shadows and sway.
+- **Cars:**
+  - Bodies are lofted from cross-sections, with curved sides, rounded corners, real wheel arches, door seams, handles and mirrors.
+  - Paint has a clearcoat; the tinted glass shows the interior and occupants.
+  - Wheels are alloys with brake discs.
+  - Two new everyday models join traffic: the Sprite GT hatchback and the Tarpon XL SUV.
+- **Water:**
+  - The water reflects the real sky, clouds and sunsets.
+  - Layered waves with an Atlantic swell calm with distance; there is a sun-glitter path and shoreline foam.
+- **Ambient life:**
+  - Speedboats and a yacht leave foam wakes across the bay; a jet ski runs behind the surf.
+  - Sailboats and a cruise ship sit out on the Atlantic; the ship's cabins light up at night.
+  - A banner plane tows ads for local (fictional) businesses along the beach, and gulls wheel over the sand.
+- **Automatic quality:** if the frame rate stays under 40 fps, the game lowers render scale, then AO, then shadows. You can turn this off in Settings.
+
 ## What's in this build (Milestones 1 and 2)
 
-- **Ocean Mile**, a connected island district of Costa Vela:
+- **South Beach, Miami Beach** (a compact take on the real street grid):
   - 4 avenues × 7 streets with lane markings, crosswalks and working traffic signals
   - a beach with umbrella clusters and lifeguard towers, a palm promenade and an outdoor gym
   - pastel art-deco hotels with neon fins, ocean-side condo towers, shops, a diner, a nightclub frontage
@@ -157,7 +184,7 @@ Requirements: Node 18+ and a desktop browser with WebGL2 (Chrome, Edge, Firefox 
 - **Enterable interior:** the Sunny Stop convenience store, with real walls, shelves, a counter, fridges, a clerk and customers.
 - **Day/night cycle** (one game day per 24 real minutes): sunset sky, stars, lit windows, neon with bloom, streetlight pools, headlights.
 - **Character:** walk, run, sprint, jump, crouch, swim, climb out of the water, curb steps, fall damage. Procedural skinned animation covers aiming, punching, hands-up, cowering, phone calls, sitting and driving poses.
-- **Cars:** four original vehicles that handle differently (FWD sedan, RWD muscle car, heavy pickup, police cruiser). Tyre-slip handling includes weight transfer, wheelspin, power oversteer, handbrake turns and speed-sensitive steering. Also:
+- **Cars:** six original vehicles that handle differently (FWD sedan, FWD hatchback, RWD muscle car, SUV, heavy pickup, police cruiser). Tyre-slip handling includes weight transfer, wheelspin, power oversteer, handbrake turns and speed-sensitive steering. Also:
   - suspension pitch and roll, collisions and damage, smoke when a car is badly damaged, sinking in water
   - entering a car walks you to the door, going around the car if the door is on the far side
   - carjacking, sliding across from the passenger side, and exiting at the first clear spot (the other door, front, back, or the roof)
@@ -189,12 +216,12 @@ The environment has no Unreal, Unity or Godot installs and no GPU (the container
 
 Vehicle and character physics are custom rather than a general physics library. The district is mostly flat, and the cars need hand-tuned arcade handling. A deterministic 60 Hz fixed step also lets the headless tests drive the real simulation faster than real time.
 
-The trade-off is visual fidelity. This is stylised, not photorealistic, and the people and cars are placeholder-grade (see the upgrade list in [docs/ASSETS.md](docs/ASSETS.md)).
+The trade-off is visual fidelity. The revamp pushes three.js a long way: physically based sky and materials, AO, procedural palms and lofted car bodies. It is still not photoreal, though. Everything is generated in code (no scanned or licensed assets), the people are the weakest part, and the container has no GPU to profile on. See the upgrade list in [docs/ASSETS.md](docs/ASSETS.md).
 
 ## Tests
 
 ```bash
-npm test                                  # 93 rules/simulation checks in Node (no browser)
+npm test                                  # 94 rules/simulation checks in Node (no browser)
 npm run build && npm run preview &        # then:
 npm run e2e                               # M1/M2 playthrough in headless Chromium (49 checks)
 node tools/e2e-crew.mjs                   # M3: two protagonists, partner AI, switching, save v2
@@ -212,7 +239,8 @@ The browser tools need Playwright (`npm i -D playwright`, or link a global insta
 ```
 src/
   core/      engine (renderer, sky, time of day), weather, input, settings, storage, events
-  world/     layout (roads, terrain), district plan, collision, mesh builders, props, textures
+  world/     layout (roads, terrain), district plan, collision, mesh builders, props, palms, PBR surfaces,
+             textures, ambient life (boats, banner plane, gulls)
   entities/  humans (model + animation + physics), vehicles (model + physics)
   ai/        traffic drivers, pedestrians, police, partner, mission enemies, ambient director
   game/      game loop, crew (Cal/Sol + switching), player controller, camera, combat, wanted, missions,

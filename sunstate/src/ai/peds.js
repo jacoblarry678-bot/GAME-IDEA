@@ -326,7 +326,7 @@ export class PedManager {
         let x, z, kind, zone = null;
         const r = Math.random();
         if (p.z > KEYS_ZONES[0].z0 - 160) { zone = KEYS_ZONES[Math.random() < 0.75 ? 0 : 1]; const q = randomIn(zone); x = q.x; z = q.z; kind = 'keys'; }
-        else if (r < 0.2 && (this.game.weather?.rain || 0) < 0.3 && Math.hypot(p.x - (PARK_ZONE.x0 + PARK_ZONE.x1) / 2, p.z - (PARK_ZONE.z0 + PARK_ZONE.z1) / 2) < 170) { zone = PARK_ZONE; const q = randomIn(zone); x = q.x; z = q.z; kind = 'keys'; } // people in Bayshore Park
+        else if (r < 0.2 && (this.game.weather?.rain || 0) < 0.3 && Math.hypot(p.x - (PARK_ZONE.x0 + PARK_ZONE.x1) / 2, p.z - (PARK_ZONE.z0 + PARK_ZONE.z1) / 2) < 170) { zone = PARK_ZONE; const q = randomIn(zone); x = q.x; z = q.z; kind = 'keys'; } // people in Flamingo Park
         else if (r < 0.3 && (this.game.weather?.rain || 0) < 0.3) { const q = randomIn(BEACH_ZONE); x = q.x; z = q.z; kind = 'beach'; }
         else if (r < 0.45) { const q = randomIn(PROMENADE_ZONE); x = q.x; z = q.z; kind = 'walker'; }
         else { const node = SW[Math.floor(Math.random() * SW.length)]; x = node.x + rand(-1, 1); z = node.z + rand(-1, 1); kind = 'walker'; }

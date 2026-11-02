@@ -9,7 +9,7 @@ import { DriverAI, laneLine } from './driver.js';
 import { Character } from '../entities/character.js';
 import { randomLook } from '../entities/humanModel.js';
 
-const MODELS = [['kestrel', 0.58], ['pickup', 0.24], ['ironhorse', 0.18]];
+const MODELS = [['kestrel', 0.38], ['sprite', 0.2], ['tarpon', 0.18], ['pickup', 0.14], ['ironhorse', 0.1]];
 
 export class TrafficManager {
   constructor(game) {
@@ -54,7 +54,7 @@ export class TrafficManager {
     }
     this.cleanupAbandoned(ppos);
     if (!this.enabled) return;
-    // out on the twin span and Cayo Lento every spawn lands on the key's few short roads: keep it to a handful
+    // out on the Seven Mile Bridge and Marathon every spawn lands on the key's few short roads: keep it to a handful
     const target = ppos.z > ISLAND.south + 30 ? Math.min(this.target, 7) : this.target;
     let n = 0;
     while (this.cars.size < target && n++ < 2) this.trySpawn(ppos);

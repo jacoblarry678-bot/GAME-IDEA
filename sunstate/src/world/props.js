@@ -149,7 +149,7 @@ export function buildProps(collision, mats) {
     Bt.box('wood', p.x - p.len / 2, p.x + p.len / 2, y - 0.25, y, p.z - 1.5, p.z + 1.5, { tile: [3, 3], topTile: 3 });
     for (let x = p.x - p.len / 2 + 1; x < p.x + p.len / 2; x += 4) for (const s of [-1.3, 1.3]) Bt.box('wood', x - 0.15, x + 0.15, -4.3, y, p.z + s - 0.15, p.z + s + 0.15, { tile: [1, 1] });
   }
-  // --- Cayo Lento (Milestone 3) ----------------------------------------------------
+  // --- Marathon (Milestone 3) ----------------------------------------------------
   const C = (hex) => new THREE.Color(hex);
   for (const p of by('canopy')) {
     const y0 = CURB, y1 = CURB + 4.6;
@@ -213,7 +213,7 @@ export function buildProps(collision, mats) {
     // the approach from the key: a short ramp up to the old deck height
     Bt.quad('seawall', [[p.x0, CURB, p.z - 4], [p.x0, CURB, p.z + 4], [p.x0 + 12, deckY, p.z + 4], [p.x0 + 12, deckY, p.z - 4]].reverse(), [[0, 0], [1, 0], [1, 1], [0, 1]]);
   }
-  // Bayshore Park: the fountain, basketball hoops and shade trees
+  // Flamingo Park: the fountain, basketball hoops and shade trees
   for (const p of by('fountain')) {
     const y = CURB;
     const basin = new THREE.CylinderGeometry(3.2, 3.4, 0.6, 28); basin.translate(p.x, y + 0.3, p.z);

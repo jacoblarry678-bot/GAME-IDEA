@@ -3,12 +3,12 @@
  * you — Cal and Sol separately (see memory.js):
  *
  *   Bayfront Arms      gun shop: ammo, body armour, the Vela Viper SMG
- *   Threads on 5th     clothes: a new outfit (and a description that no longer fits)
- *   Sunshine Gas       mini-mart: snacks, coffee, scratch tickets
- *   Coral Auto Body    drive into the bay: repair, respray + new plates
+ *   Threads on Lincoln     clothes: a new outfit (and a description that no longer fits)
+ *   Sunray Gas       mini-mart: snacks, coffee, scratch tickets
+ *   Deco Auto Body    drive into the bay: repair, respray + new plates
  *   Velvet Palms       adults-only club (enterable; game/club.js): the door, the bar, the
  *                      stage rail, the DJ booth and the VIP host
- *   Bayshore Park      lawns, a fountain, a basketball court (no shop)
+ *   Flamingo Park      lawns, a fountain, a basketball court (no shop)
  *
  * Shop menus: walk up and press E (drive into the auto-shop bay and press E),
  * pick with the number keys, E again to leave. Names and businesses are invented.
@@ -48,24 +48,24 @@ export const SHOPS = {
     refuse: (g) => (g.wanted.level > 0 ? 'Not with cops on your tail. Come back clean.' : null),
   },
   clothes: {
-    title: 'Threads on 5th', staff: 'Ines', verb: 'Try something on',
+    title: 'Threads on Lincoln', staff: 'Ines', verb: 'Try something on',
     look: look({ female: true, height: 1.65, skin: 0xe0ac69, hair: 0x4a3020, top: 0x6f5bd6, bottom: 0x1c1c1c, hairStyle: 'long' }),
     greet: (p, name, ctx) => (ctx.described ? 'Mm. You look like the person on the news. Let\'s fix that.'
       : p.visits === 0 ? 'Welcome to Threads! Everything\'s on sale. Everything is always on sale.' : `Back again, ${name}? I set something aside for you.`),
     refuse: () => null,
   },
   gas: {
-    title: 'Sunshine Gas', staff: 'Raj', verb: 'Go to the counter',
+    title: 'Sunray Gas', staff: 'Raj', verb: 'Go to the counter',
     look: look({ skin: 0xa66a3f, hair: 0x111111, top: 0xe86b2a, bottom: 0x2e3b55, beard: true }),
     greet: (p, name, ctx) => (ctx.fame > 60 ? 'I know who you are. Pay and go, please. No trouble.'
-      : p.visits === 0 ? 'Sunshine Gas, how you doing.' : p.visits < 4 ? 'Hey, you again. Coffee?' : `${name}! The usual?`),
+      : p.visits === 0 ? 'Sunray Gas, how you doing.' : p.visits < 4 ? 'Hey, you again. Coffee?' : `${name}! The usual?`),
     refuse: (g) => (g.wanted.level > 1 ? 'Doors are locked. Police are everywhere, man.' : null),
   },
   autoshop: {
-    title: 'Coral Auto Body', staff: 'Hector', verb: 'Pull into the bay', inCar: true,
+    title: 'Deco Auto Body', staff: 'Hector', verb: 'Pull into the bay', inCar: true,
     look: look({ skin: 0xc68642, hair: 0x2e1f14, top: 0x2b7fd1, bottom: 0x2b2b2b, hat: 0x2b7fd1, beard: true, build: 1.15 }),
     greet: (p, name, ctx) => (p.resprays >= 2 ? `Again, ${name}? I don't ask questions. I just mix paint.`
-      : ctx.wanted ? 'Get it inside, quick. Door\'s coming down.' : p.visits === 0 ? 'Coral Auto Body. What happened to it?' : `${name}. What did you do to it this time?`),
+      : ctx.wanted ? 'Get it inside, quick. Door\'s coming down.' : p.visits === 0 ? 'Deco Auto Body. What happened to it?' : `${name}. What did you do to it this time?`),
     refuse: (g) => (g.player.vehicle?.police ? 'A police car? Absolutely not. Get that out of my shop.' : !g.player.vehicle || g.player.seat !== 0 ? 'Bring the car in, then we talk.' : null),
   },
   club: {
@@ -160,7 +160,7 @@ export class Places {
     const A = PLACES.autoshop.bay, v = p.vehicle;
     this.inBay = !!v && p.seat === 0 && v.pos.x > A.x0 && v.pos.x < A.x1 && v.pos.z > A.z0 && v.pos.z < A.z1;
     if (this.inBay && !this.openShop && v.speed < 1.5) {
-      p.controller.prompt = { key: 'interact', text: 'Coral Auto Body: repair / respray' };
+      p.controller.prompt = { key: 'interact', text: 'Deco Auto Body: repair / respray' };
       if (g.input.pressed('interact')) this.open('autoshop');
     }
     if (!this.openShop) return;
@@ -229,7 +229,7 @@ export class Places {
         act: () => {
           const before = g.memory.matchScore();
           p.setLook({ ...p.look, top: o2.top, bottom: o2.bottom, sleeveless: !!o2.sleeveless, shorts: !!o2.shorts });
-          if (before > 0 && g.memory.matchScore() === 0) g.hud?.notify('You no longer match the description the police have.', 'Threads on 5th', '', 5);
+          if (before > 0 && g.memory.matchScore() === 0) g.hud?.notify('You no longer match the description the police have.', 'Threads on Lincoln', '', 5);
         },
       }));
       case 'gas': return [
@@ -238,7 +238,7 @@ export class Places {
         { label: 'Scratch ticket', price: 10, act: () => {
           const r = Math.random();
           const win = r < 0.05 ? 500 : r < 0.3 ? 20 + Math.floor(Math.random() * 5) * 10 : 0;
-          if (win) { g.economy.add(win, 'Scratch ticket'); o.msg = `Winner! $${win}.`; if (win >= 500) g.social?.post({ local: true, text: 'somebody just won $500 on a scratcher at Sunshine Gas and Raj did a little dance 😭', likes: 30, about: true }); }
+          if (win) { g.economy.add(win, 'Scratch ticket'); o.msg = `Winner! $${win}.`; if (win >= 500) g.social?.post({ local: true, text: 'somebody just won $500 on a scratcher at Sunray Gas and Raj did a little dance 😭', likes: 30, about: true }); }
           else o.msg = 'Nothing. Raj shrugs.';
         } },
       ];
@@ -279,7 +279,7 @@ export class Places {
     const desc = g.memory.state.description;
     if (desc?.vehicle && desc.vehicle.id === (v.persistentId || v.id)) desc.vehicle = null;
     // the respray loses the police if none of them can see the car right now
-    if (g.wanted.level > 0 && g.wanted.level <= 3 && !g.police.canSeePlayer()) { g.wanted.clear(); g.hud?.notify('New paint, new plates. The police lost track of the car.', 'Coral Auto Body', '', 5); }
+    if (g.wanted.level > 0 && g.wanted.level <= 3 && !g.police.canSeePlayer()) { g.wanted.clear(); g.hud?.notify('New paint, new plates. The police lost track of the car.', 'Deco Auto Body', '', 5); }
   }
 
 

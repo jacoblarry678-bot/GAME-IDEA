@@ -33,7 +33,7 @@ check('visibility closes in (fog)', wet.fog < dry.fog * 0.6, `${Math.round(dry.f
 check('traffic drives with headlights on in the rain', wet.aiLights > 0.9, `${Math.round(wet.aiLights * 100)}% of AI cars`);
 check('the HUD names the weather', /Rain/.test(wet.label), wet.label);
 
-// screenshots: a street in Ocean Mile and the twin-span
+// screenshots: a street in South Beach and the Seven Mile Bridge
 const shot = async (file, [x, y, z, tx, ty, tz]) => {
   await T(([x, y, z, tx, ty, tz]) => {
     const S = window.__sun, g = S.game, V = S.engine.camera.position.constructor;

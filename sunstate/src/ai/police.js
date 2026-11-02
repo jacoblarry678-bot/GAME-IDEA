@@ -102,7 +102,7 @@ export class PoliceManager {
       if (d < (patrol ? 120 : 100) || d > 230) continue;
       if (tr && tr.visible(x, 1, z, 5)) continue;
       if (g.vehicles.some((o) => Math.hypot(o.pos.x - x, o.pos.z - z) < 12)) continue;
-      const v = g.addVehicle('police', x, z, Math.atan2(l.dx, l.dz), 0x101318, { plate: 'OMPD ' + (10 + Math.floor(Math.random() * 89)) });
+      const v = g.addVehicle('police', x, z, Math.atan2(l.dx, l.dz), 0x101318, { plate: 'PD ' + (10 + Math.floor(Math.random() * 89)) });
       v.engineOn = true;
       const unit = { vehicle: v, cops: [], mode: patrol ? 'patrol' : 'respond', patrol, t: 0, stuckT: 0, reverseT: 0, lostT: 0, routeT: 0 };
       for (const seat of [0, 1]) {

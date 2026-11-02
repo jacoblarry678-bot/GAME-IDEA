@@ -103,20 +103,20 @@ function fakeGame() {
   check('no street furniture stands on the road', poles.length === 0, poles.slice(0, 3).map((c) => `${c.cx.toFixed(1)},${c.cz.toFixed(1)}`).join(' '));
   check('causeway deck is continuous over the water', [-45, -50, -100, -200, -280, -298].every((x) => L.groundHeight(x, 0, 10) > -0.01) && L.groundHeight(-150, 0, 10) > 6);
   check('a boat can pass under the causeway', L.groundHeight(-150, 0, -1) < -4);
-  // Milestone 3: the twin-span and Cayo Lento
+  // Milestone 3: the Seven Mile Bridge and Marathon
   const T = L.TWIN, laneX = (s) => T.x + s * (T.median / 2 + L.LANE_W / 2);
   const deckOk = [-1, 1].every((s) => [250, 258, 300, 434, 560, 605, 615].every((z) => L.groundHeight(laneX(s), z, 12) > -0.01 && !L.isWater(laneX(s), z)));
-  check('both twin-span decks are continuous from Ocean Mile to the key', deckOk && L.groundHeight(laneX(1), 434, 12) > 7);
+  check('both Seven Mile Bridge decks are continuous from South Beach to the key', deckOk && L.groundHeight(laneX(1), 434, 12) > 7);
   check('the gap between the decks is open water (railings keep cars out)', L.isWater(T.x, 434) && cw.all.some((c) => c.tag === 'railing' && Math.abs(c.cx - (T.x + T.median / 2)) < 0.5 && Math.abs(c.cz - 434) < 4));
-  check('a boat can pass under the twin-span', L.groundHeight(laneX(-1), 434, -1) < -4);
-  check('Cayo Lento is dry land with roads at grade', !L.isWater(150, 660) && L.groundHeight(200, 640) === 0 && L.groundHeight(200, 625) > 0.1 && L.isClimbable(100, 615));
+  check('a boat can pass under the Seven Mile Bridge', L.groundHeight(laneX(-1), 434, -1) < -4);
+  check('Marathon is dry land with roads at grade', !L.isWater(150, 660) && L.groundHeight(200, 640) === 0 && L.groundHeight(200, 625) > 0.1 && L.isClimbable(100, 615));
   check('the flats around the key are deep enough to swim, not wade', [[150, 590], [100, 730], [350, 650]].every(([x, z]) => L.isWater(x, z) && L.WATER_Y - L.terrainHeight(x, z) > 1.25));
   const kn = L.ROAD_GRAPH.nodes.find((n) => n.x === L.KEYS.marinaX && n.z === L.KEYS.shoreZ);
   const route = L.findRoute(L.nearestNode(PLACES.safehouse.x, PLACES.safehouse.z).id, kn.id);
-  check('the marina is reachable by road from the motel (over the twin-span)', !!route && route.some((id) => L.ROAD_GRAPH.nodes[id].z === L.KEYS.hwyZ), route ? `${route.length} nodes` : 'no route');
+  check('the marina is reachable by road from the motel (over the Seven Mile Bridge)', !!route && route.some((id) => L.ROAD_GRAPH.nodes[id].z === L.KEYS.hwyZ), route ? `${route.length} nodes` : 'no route');
   const twinEdge = L.ROAD_GRAPH.edges.find((e) => e.road === 'twinspan');
   const ll = laneLine(twinEdge, twinEdge.a, 0), lr = laneLine(twinEdge, twinEdge.b, 0);
-  check('twin-span lanes run on the decks, one direction per deck', Math.abs(Math.abs(ll.x0 - T.x) - (T.median / 2 + L.LANE_W / 2)) < 0.01 && Math.sign(ll.x0 - T.x) === -Math.sign(lr.x0 - T.x));
+  check('Seven Mile Bridge lanes run on the decks, one direction per deck', Math.abs(Math.abs(ll.x0 - T.x) - (T.median / 2 + L.LANE_W / 2)) < 0.01 && Math.sign(ll.x0 - T.x) === -Math.sign(lr.x0 - T.x));
 }
 
 // ---- collision maths -----------------------------------------------------------
@@ -308,7 +308,7 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   check('LOOP starts with a few posts and nothing unread', so.posts.length >= 4 && so.unread === 0);
   g.events.emit('witnessCall', { crimeId: 'carjack', x: 90, z: -100 });
   const clip = so.posts[0];
-  check('a witness films the crime: a clip naming the street, flagged in the notifications', clip.clip && clip.about && /coral ave/i.test(clip.text) && notes.length === 1 && so.unread === 1, clip.text);
+  check('a witness films the crime: a clip naming the street, flagged in the notifications', clip.clip && clip.about && /collins ave/i.test(clip.text) && notes.length === 1 && so.unread === 1, clip.text);
   for (let i = 0; i < 600; i++) { g.time += 0.1; so.step(0.1); }
   check('clips gather likes faster than ordinary posts', clip.likes > 100, `${Math.round(clip.likes)} likes after 60 s`);
   g.events.emit('missionPassed', { def: { id: 'small_change', title: 'Small Change' } });
@@ -348,7 +348,7 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   check('...the old clothes still match', m.matchScore() === 1);
   ev.emit('crimeReported', { crimeId: 'carjack', x: 90, z: -120, by: 'witness', level: 1 });
   ev.emit('crimeReported', { crimeId: 'shooting', x: 90, z: -90, by: 'witness', level: 2 });
-  check('a nickname forms from what you do most and where', m.state.nickname === 'the Coral Ave Carjacker', m.state.nickname);
+  check('a nickname forms from what you do most and where', m.state.nickname === 'the Collins Ave Carjacker', m.state.nickname);
   const fame = m.notoriety(90, -100);
   for (let i = 0; i < 620; i++) { g.time += 1; m.step(1); }
   check('notoriety rises with crimes and fades over time; old descriptions expire', fame > 15 && m.notoriety(90, -100) < fame && m.state.description === null, `${fame.toFixed(0)} → ${m.notoriety(90, -100).toFixed(0)}`);
@@ -356,7 +356,8 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   player.protagonist = 'sol';
   check('people remember Cal and Sol separately', m.person('gunshop').visits === 0 && m.state.people.gunshop.cal.visits === 2);
   const saved = sanitizeMemory(JSON.parse(JSON.stringify(m.snapshot())));
-  check('memory survives a save (and bad data is cleaned)', saved.nickname === m.state.nickname && saved.people.gunshop.cal.visits === 2 && JSON.stringify(sanitizeMemory({ notoriety: { 'Ocean Mile': 'lots' }, people: { '<script>': {} } })) === JSON.stringify(defaultMemory()));
+  check('memory survives a save (and bad data is cleaned)', saved.nickname === m.state.nickname && saved.people.gunshop.cal.visits === 2 && JSON.stringify(sanitizeMemory({ notoriety: { 'South Beach': 'lots' }, people: { '<script>': {} } })) === JSON.stringify(defaultMemory()));
+  check('old saves keep their notoriety under the real area names', sanitizeMemory({ notoriety: { 'Ocean Mile': 40, 'Cayo Lento': 12 } }).notoriety['South Beach'] === 40 && sanitizeMemory({ notoriety: { 'Cayo Lento': 12 } }).notoriety.Marathon === 12);
   const club = sanitizeMemory({ people: { clubbar: { cal: { visits: 3, usual: 'Velvet mojito', drinks: 7, vip: true, requests: { house: 2, evil: 9 }, troubleAt: 50 } }, clubdj: { sol: { usual: '<img onerror=x>' } } } });
   check('the club remembers your usual, VIP status and requests across saves', club.people.clubbar.cal.usual === 'Velvet mojito' && club.people.clubbar.cal.vip === true && club.people.clubbar.cal.requests.house === 2 && club.people.clubbar.cal.requests.evil === undefined && club.people.clubbar.cal.troubleAt === undefined && club.people.clubdj.sol.usual === undefined);
 }

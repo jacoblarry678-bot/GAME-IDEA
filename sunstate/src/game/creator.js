@@ -6,7 +6,7 @@
  *   3  clip (a few seconds of what you see)    4  selfie with a Claude-written caption
  *
  * How a post does is decided by what's in it: golden hour on the beach,
- * Velvet Palms at night, the twin span, the two of you together, a fast
+ * Velvet Palms at night, the Seven Mile Bridge, the two of you together, a fast
  * car, a chase... Posting too often wears your audience out. Likes come in
  * over a minute or two and turn into followers; a strong post can go viral.
  * Locals reply. Follower milestones bring perks (brand DMs, better pay, the
@@ -29,31 +29,31 @@ export const MILESTONES = [
   { n: 100, text: '100 followers. Somebody out there likes you.' },
   { n: 250, text: '250 followers: brands have started sliding into your DMs.', deals: true },
   { n: 1000, text: '1,000 followers! Sponsors pay you 50% more now.' },
-  { n: 5000, text: '5,000 followers. People point at you on Ocean Blvd.' },
+  { n: 5000, text: '5,000 followers. People point at you on Ocean Dr.' },
   { n: 10000, text: '10,000 followers: Big Tomas put you on the Velvet Palms VIP list.', vip: true },
   { n: 50000, text: '50,000 followers. LOOP verified you ✔', verified: true },
-  { n: 100000, text: '100,000 followers. You are Costa Vela content now.' },
+  { n: 100000, text: '100,000 followers. You are Miami content now.' },
 ];
 const DEAL_FROM = 250; // followers before brands notice
 const MIN_GAP = 8; // seconds between posts (you can't post faster than the phone)
 
 /** Brands that pay for a post from their place (checked when you post). */
 export const DEALS = [
-  { id: 'gas', brand: 'Sunshine Gas', what: 'a post from Sunshine Gas', pay: 150, at: () => PLACES.gas.door, r: 20 },
-  { id: 'threads', brand: 'Threads on 5th', what: 'a selfie at Threads on 5th', need: 'selfie', pay: 250, at: () => PLACES.clothes.door, r: 12 },
-  { id: 'autobody', brand: 'Coral Auto Body', what: 'a photo of your car in the Coral Auto Body bay', need: 'photo', pay: 300, at: () => PLACES.autoshop.door, check: (g) => !!g.places?.inBay },
+  { id: 'gas', brand: 'Sunray Gas', what: 'a post from Sunray Gas', pay: 150, at: () => PLACES.gas.door, r: 20 },
+  { id: 'threads', brand: 'Threads on Lincoln', what: 'a selfie at Threads on Lincoln', need: 'selfie', pay: 250, at: () => PLACES.clothes.door, r: 12 },
+  { id: 'autobody', brand: 'Deco Auto Body', what: 'a photo of your car in the Deco Auto Body bay', need: 'photo', pay: 300, at: () => PLACES.autoshop.door, check: (g) => !!g.places?.inBay },
   { id: 'palms', brand: 'Velvet Palms', what: 'a clip from inside Velvet Palms', need: 'clip', pay: 400, at: () => PLACES.club.layout.door, check: (g) => !!g.club?.playerInside, when: (g) => !!g.club?.isOpen },
-  { id: 'park', brand: 'Bayshore Park Conservancy', what: 'a selfie in Bayshore Park', need: 'selfie', pay: 120, at: () => PLACES.park, r: 30 },
-  { id: 'lento', brand: 'Lento Bait & Fuel', what: 'a photo out on Cayo Lento', pay: 350, at: () => ({ x: (KEYS.x0 + KEYS.x1) / 2, z: (KEYS.z0 + KEYS.z1) / 2 }), check: (g, pos) => pos.z > KEYS.z0 - 8 },
+  { id: 'park', brand: 'SoBe Parks Fund', what: 'a selfie in Flamingo Park', need: 'selfie', pay: 120, at: () => PLACES.park, r: 30 },
+  { id: 'lento', brand: 'Slow Tide Bait & Fuel', what: 'a photo out in Marathon', pay: 350, at: () => ({ x: (KEYS.x0 + KEYS.x1) / 2, z: (KEYS.z0 + KEYS.z1) / 2 }), check: (g, pos) => pos.z > KEYS.z0 - 8 },
 ];
 
 // what the two of them write (Cal: dry, few words; Sol: warm, emoji)
 const CAPTIONS = {
   club: { cal: ['velvet kind of night', 'don\'t wait up'], sol: ['Velvet Palms with my favorite person 🪩💜', 'the DJ is on another level tonight 🔥'] },
-  goldenBeach: { cal: ['not bad, Costa Vela', 'sunset. that\'s the post.'], sol: ['golden hour hits different here 🌅', 'no filter needed ☀️ #beachlife'] },
+  goldenBeach: { cal: ['not bad, Miami', 'sunset. that\'s the post.'], sol: ['golden hour hits different here 🌅', 'no filter needed ☀️ #beachlife'] },
   beach: { cal: ['sand everywhere', 'beach.'], sol: ['ocean therapy 🌊', 'salt in my hair ☀️'] },
-  twin: { cal: ['halfway to nowhere', 'the long bridge'], sol: ['twin span therapy 🌊🛣️', 'windows down on the twin span 🎶'] },
-  keys: { cal: ['island time', 'Cayo Lento. quiet. for now.'], sol: ['island time 🐚🌴', 'Cayo Lento, population: us'] },
+  twin: { cal: ['halfway to nowhere', 'the long bridge'], sol: ['Seven Mile Bridge therapy 🌊🛣️', 'windows down on the Seven Mile Bridge 🎶'] },
+  keys: { cal: ['island time', 'Marathon. quiet. for now.'], sol: ['island time 🐚🌴', 'Marathon, population: us'] },
   park: { cal: ['park.', 'someone challenge me to a game'], sol: ['park day 🌴', 'touching grass as requested 🌿'] },
   store: { cal: ['snack run', 'the usual'], sol: ['the clerk loves us (she does not) 😅', 'snack run 🍫'] },
   neon: { cal: ['{street}. late.', 'night shift'], sol: ['neon nights on {street} 💜', 'this city at night ✨'] },
@@ -62,11 +62,11 @@ const CAPTIONS = {
   fast: { cal: ['{speed} on {street}', 'late for nothing'], sol: ['{speed} and the windows down 🏎️', 'speed limit? never heard of her 💨'] },
   couple: { cal: ['with Sol. obviously.', 'her idea'], sol: ['me and Cal 💕', 'partner in crime (literally) 😇'] },
   tipsy: { cal: ['one more', 'it\'s fine'], sol: ['one more?? 🍹', 'who keeps buying shots 😵‍💫'] },
-  rain: { cal: ['rain.', 'storm day'], sol: ['rain day ☔', 'Costa Vela storms are unreal ⛈️'] },
+  rain: { cal: ['rain.', 'storm day'], sol: ['rain day ☔', 'Miami storms are unreal ⛈️'] },
 };
-const REPLIES_GOOD = ['this is everything 😍', 'ok but where is this', 'obsessed', 'the lighting 🔥', 'iconic', 'you two are goals', 'need this energy', 'saving this', 'Costa Vela never looked better'];
+const REPLIES_GOOD = ['this is everything 😍', 'ok but where is this', 'obsessed', 'the lighting 🔥', 'iconic', 'you two are goals', 'need this energy', 'saving this', 'Miami never looked better'];
 const REPLIES_RISKY = ['bro posting DURING a chase 💀', 'the police are literally behind you', 'delete this 😭', 'evidence #1', 'this app is undefeated'];
-const REPLIES_FAST = ['posting while driving 😬', 'eyes on the road!!', 'that\'s Ocean Blvd right? slow down lol'];
+const REPLIES_FAST = ['posting while driving 😬', 'eyes on the road!!', 'that\'s Ocean Dr right? slow down lol'];
 const REPLIES_MEH = ['ok', 'cool', 'nice', 'who?', 'mid tbh', 'why is this on my feed'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -137,7 +137,7 @@ export class Creator {
     const together = !!partner && !partner.dead && Math.hypot(partner.pos.x - pos.x, partner.pos.z - pos.z) < 7;
     const speed = v ? v.speed : 0;
     return {
-      pos, place, street: road ? road.name : this.social.where?.(pos.x, pos.z) || 'Ocean Mile',
+      pos, place, street: road ? road.name : this.social.where?.(pos.x, pos.z) || 'South Beach',
       wanted: (g.wanted?.level || 0) > 0, fast: speed > 22, speed, together, rain: (g.weather?.rain || 0) > 0.5, tipsy: (g.club?.tipsy || 0) > 0.4,
       clubOpen: !!g.club?.isOpen, night, golden,
     };
@@ -265,8 +265,8 @@ export class Creator {
     const ai = this.social.ai;
     const who = this.id === 'sol' ? 'Sol Vega (warm, playful, uses emoji)' : 'Cal Reyes (dry, few words, no emoji)';
     const prompt = [
-      `Write one caption for a ${kind} that ${who} is posting on LOOP, a social app in a fan-made video game prototype set in the fictional coastal city of Costa Vela.`,
-      `Where: ${ctx.place === 'goldenBeach' ? 'the beach at golden hour' : ctx.place === 'club' ? 'inside Velvet Palms, a nightclub' : ctx.place === 'twin' ? 'the Vela Keys twin-span bridge' : ctx.place === 'keys' ? 'Cayo Lento, a sleepy island key' : ctx.street}.`,
+      `Write one caption for a ${kind} that ${who} is posting on LOOP, a social app in a fan-made video game prototype set in Miami Beach and the Florida Keys (real streets and landmarks; every business, person and crew is fictional).`,
+      `Where: ${ctx.place === 'goldenBeach' ? 'the beach at golden hour' : ctx.place === 'club' ? 'inside Velvet Palms, a nightclub' : ctx.place === 'twin' ? 'the Seven Mile Bridge' : ctx.place === 'keys' ? 'Marathon, a sleepy island key' : ctx.street}.`,
       `Moment: ${[ctx.wanted && 'the police are looking for them', ctx.fast && 'driving fast', ctx.together && 'with their partner', ctx.rain && 'it is raining', ctx.night && 'night'].filter(Boolean).join(', ') || 'an ordinary day'}.`,
       'Under 110 characters, PG-13, no real people, brands or places, no hashtags about crimes.',
       'Reply with only JSON like {"caption":"..."}',

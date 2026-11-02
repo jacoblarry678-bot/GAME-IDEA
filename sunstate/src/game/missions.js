@@ -39,13 +39,13 @@ export const MISSIONS = {
     intro: [
       ['sol', 'Teo wants his two grand by Friday, Cal. You know what he does when people are late.'],
       ['cal', 'I know what he does.'],
-      ['sol', 'Sunny Stop on 14th and Coral keeps the week\'s take in the register until the Monday pickup.'],
+      ['sol', 'Sunny Stop on 3rd and Collins keeps the week\'s take in the register until the Monday pickup.'],
       ['sol', 'In, out. Nobody gets hurt. Then come back here and we lie low.'],
       ['cal', 'Nobody gets hurt.'],
     ],
     stages: [
       {
-        id: 'drive', objective: 'Go to the Sunny Stop on 14th St & Coral Ave.', target: () => ({ x: ST.door.x, z: ST.door.z - 4, label: 'Sunny Stop' }),
+        id: 'drive', objective: 'Go to the Sunny Stop on 3rd St & Collins Ave.', target: () => ({ x: ST.door.x, z: ST.door.z - 4, label: 'Sunny Stop' }),
         checkpoint: true,
         done: (g) => g.player.distanceTo(ST.door.x, ST.door.z - 2) < 14,
       },
@@ -102,9 +102,9 @@ export const MISSIONS = {
     allowSwitch: true,
     requires: ['small_change'],
     start: { x: S.x + 3.5, z: S.z + 2.5 },
-    summary: 'Rudy Ojeda wants out of Cayo Lento, and he\'ll pay to have a cooler carried back across the twin-span.',
+    summary: 'Rudy Ojeda wants out of Marathon, and he\'ll pay to have a cooler carried back across the Seven Mile Bridge.',
     intro: [
-      ['sol', 'Remember Rudy Ojeda? Runs fishing charters out of Cayo Lento.'],
+      ['sol', 'Remember Rudy Ojeda? Runs fishing charters out of Marathon.'],
       ['cal', 'The guy whose boat never catches any fish.'],
       ['sol', 'He\'s been skimming the Caldera brothers\' charter money. He wants out, and he\'ll pay four grand to get a cooler off the key.'],
       ['cal', 'And the Calderas?'],
@@ -114,8 +114,8 @@ export const MISSIONS = {
     onStart: (g) => { for (const ch of g.crew.list) ch.armor = Math.max(ch.armor, 60); },
     stages: [
       {
-        id: 'drive', objective: 'Drive to the Cayo Lento Marina with Sol.', target: () => ({ x: MA.lot.x, z: MA.lot.z, label: 'Marina' }),
-        hint: 'Ocean Blvd runs south over the twin-span. Want your partner to drive? Press G by a car, then get in.',
+        id: 'drive', objective: 'Drive to Boot Key Harbor with Sol.', target: () => ({ x: MA.lot.x, z: MA.lot.z, label: 'Marina' }),
+        hint: 'Ocean Dr runs south over the Seven Mile Bridge. Want your partner to drive? Press G by a car, then get in.',
         checkpoint: true,
         partnerDrive: () => ({ x: MA.lot.x, z: MA.lot.z, arrive: 16, line: 'Marina. Rudy said the end of the pier.' }),
         done: (g) => Math.hypot((g.player.vehicle || g.player).pos.x - MA.lot.x, (g.player.vehicle || g.player).pos.z - MA.lot.z) < 22 && g.crew.partnerWithPlayer(),
@@ -145,7 +145,7 @@ export const MISSIONS = {
             ['sol', 'Pleasure doing business, Rudy.'],
             ['rudy', 'Oh, no. That\'s the Calderas\' truck at the fuel stop. They followed me here.'],
             ['rudy', 'Go! Go!'],
-          ], 'Cayo Lento Marina');
+          ], 'Boot Key Harbor');
           const r = m.data.rudy;
           if (r && !r.dead) { r.anim_.phone = false; r.controller.panic({ x: MA.lot.x, z: MA.lot.z - 30 }, 'gunfire'); }
           // two cars come down from the fuel stop toward the marina
@@ -198,7 +198,7 @@ export const MISSIONS = {
       ['sol', 'Rudy\'s on a boat to anywhere. The Calderas are going to remember our faces, though.'],
     ],
     reward: { bonus: 4000 },
-    onPassMessage: { from: 'sol', text: 'The Calderas are asking around Ocean Mile. Keep your head down for a while. Love you.' },
+    onPassMessage: { from: 'sol', text: 'The Calderas are asking around South Beach. Keep your head down for a while. Love you.' },
   },
 };
 

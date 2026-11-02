@@ -18,9 +18,9 @@ export class Menus {
     this.root = root;
     this.buildTitle();
     this.buildPause();
-    this.loading = h('div', 'loading', '<div><h1>SUNSTATE</h1><p>Building Ocean Mile…</p></div>');
+    this.loading = h('div', 'loading', '<div><h1>SUNSTATE</h1><p>Building South Beach…</p></div>');
     root.appendChild(this.loading);
-    this.card = h('div', 'card', '<h2>Ocean Mile</h2><p>Costa Vela</p>');
+    this.card = h('div', 'card', '<h2>South Beach</h2><p>Miami Beach</p>');
     root.appendChild(this.card);
   }
 
@@ -36,7 +36,7 @@ export class Menus {
   buildTitle() {
     const s = h('div', 'screen title-screen');
     s.innerHTML = `
-      <div class="logo"><h1>SUNSTATE</h1><p>Ocean Mile · Costa Vela</p></div>
+      <div class="logo"><h1>SUNSTATE</h1><p>South Beach · Miami</p></div>
       <div class="menu"></div>
       <div class="footnote">An original, non-commercial fan prototype inspired by the atmosphere of a modern sun-belt crime epic.
       Not affiliated with or endorsed by any game publisher. All characters, places, models, textures, music and sounds are original and generated in code.</div>`;
@@ -142,7 +142,7 @@ export class Menus {
     const ledger = g.economy.ledger.slice(0, 8).map((l) => `<li>${l.amount >= 0 ? '+' : '−'}$${Math.abs(l.amount).toLocaleString()} — ${l.reason}</li>`).join('') || '<li>No transactions yet.</li>';
     const crimes = Object.values(CRIMES).map((c) => `<li>${c.label}: ${c.level}★${c.civilians === false ? ' (only if an officer sees it)' : ''}</li>`).join('');
     b.innerHTML = `<h2>Brief</h2>
-      <p><b>${CAST.cal.full}</b> owes a loan shark, Teo, more than he can pay. His partner <b>${CAST.sol.full}</b> has ideas about where the money could come from — and about getting out of Costa Vela together.</p>
+      <p><b>${CAST.cal.full}</b> owes a loan shark, Teo, more than he can pay. His partner <b>${CAST.sol.full}</b> has ideas about where the money could come from — and about getting out of Miami together.</p>
       <h3>Missions</h3><ul>${missions}</ul>
       <h3>Police log</h3><ul>${log}</ul>
       <h3>Money</h3><ul>${ledger}</ul>

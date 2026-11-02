@@ -99,11 +99,11 @@ export class App {
     this.engine.time.hour = 17.6;
     this.begin();
     if (!quick) {
-      this.menus.showCard('Ocean Mile', 'Costa Vela', 3.5);
+      this.menus.showCard('South Beach', 'Miami Beach', 3.5);
       setTimeout(() => this.game === g && g.events.emit('phoneMessage', { from: 'sol', text: 'You up? I\'m out by the motel lot — blue marker by your door. We need to talk about Teo.' }), 2500);
       setTimeout(() => this.game === g && this.hud.notify(`<span class="key">${this.keyLabel('switchCharacter')}</span> switches between Cal and Sol · <span class="key">${this.keyLabel('partner')}</span> tells your partner to follow or wait.`, 'Tip', '', 10), 9000);
     }
-    g.hud.setObjective('Explore Ocean Mile, or start the mission at the blue <span class="hl">S</span> marker by the motel.');
+    g.hud.setObjective('Explore South Beach, or start the mission at the blue <span class="hl">S</span> marker by the motel.');
   }
 
   continueGame() {
@@ -112,7 +112,7 @@ export class App {
     const g = this.createGame();
     applySave(g, s);
     this.begin();
-    this.menus.showCard('Ocean Mile', 'Welcome back', 2.5);
+    this.menus.showCard('South Beach', 'Welcome back', 2.5);
     g.hud.setObjective(g.missions.available.length ? 'Start the next mission at the blue <span class="hl">S</span> marker.' : 'Free roam.');
   }
 
@@ -160,7 +160,7 @@ export class App {
     this.overlay = kind;
     this.timeScale = kind === 'wasted' ? 0.35 : 0.6;
     this.canvas.classList.add('grayscale');
-    this.hud.big(kind === 'wasted' ? 'WASTED' : 'BUSTED', kind === 'wasted' ? 'Ocean Mercy Medical patched you up.' : 'You spent the night at OMPD Precinct 3.', kind, 4.2);
+    this.hud.big(kind === 'wasted' ? 'WASTED' : 'BUSTED', kind === 'wasted' ? 'Ocean Mercy Medical patched you up.' : 'You spent the night at Precinct 3.', kind, 4.2);
     g.player.controller.frozen = true;
     if (kind === 'busted') g.player.anim_.surrender = true;
     const myGame = g;
@@ -189,7 +189,7 @@ export class App {
     this.canvas.classList.remove('grayscale');
     this.overlay = null;
     this.timeScale = 1;
-    this.hud.notify(kind === 'wasted' ? `Hospital bill: $${fee}.` : `Bail and fines: $${fee}. Your spare ammo was confiscated.`, kind === 'wasted' ? 'Ocean Mercy' : 'OMPD', 'warn', 7);
+    this.hud.notify(kind === 'wasted' ? `Hospital bill: $${fee}.` : `Bail and fines: $${fee}. Your spare ammo was confiscated.`, kind === 'wasted' ? 'Ocean Mercy' : 'Police', 'warn', 7);
   }
 
   retryMission() {
@@ -276,7 +276,7 @@ export class App {
     if (what) this.hud?.notify(`Frame rate was low, so: ${what}. (Settings → Graphics)`, 'Quality', '', 4);
   }
 
-  /** Slow flyover along Ocean Blvd for the title screen. */
+  /** Slow flyover along Ocean Dr for the title screen. */
   titleCamera(dt) {
     const t = this.titleT * 0.035;
     const cam = this.engine.camera;

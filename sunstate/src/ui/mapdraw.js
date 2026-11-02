@@ -22,7 +22,7 @@ export function staticMap() {
   // backdrop lands
   rect(MAP.x0, MAP.z0, BACKDROP.downtownX, MAP.z1, '#b9b2a4');
   for (const R of [BACKDROP.north, BACKDROP.south]) rect(R.x0, R.z0, R.x1, R.z1, '#b9b2a4');
-  // the Vela Keys: turquoise flats, Cayo Lento, and the further keys
+  // the Florida Keys: turquoise flats, Marathon, and the further keys
   x.fillStyle = '#2a8f9a'; x.beginPath();
   x.roundRect?.(X(FLATS.x0), Z(FLATS.z0), (FLATS.x1 - FLATS.x0) * MAP.ppm, (FLATS.z1 - FLATS.z0) * MAP.ppm, 160);
   x.fill();
@@ -106,11 +106,11 @@ export const STATIC_BLIPS = [
   { ...PLACES.store, icon: 'store', color: '#ffd23f', label: 'Sunny Stop' },
   { ...PLACES.hospital, icon: 'hospital', color: '#ff5566', label: 'Hospital' },
   { ...PLACES.police, icon: 'police', color: '#6ea0ff', label: 'Police' },
-  { ...PLACES.marina, icon: 'marina', color: '#9fd8ff', label: 'Cayo Lento Marina' },
+  { ...PLACES.marina, icon: 'marina', color: '#9fd8ff', label: 'Boot Key Harbor' },
   { ...PLACES.gunshop.door, icon: 'gunshop', color: '#ff8a5c', label: 'Bayfront Arms' },
-  { ...PLACES.clothes.door, icon: 'clothes', color: '#c77dff', label: 'Threads on 5th' },
-  { ...PLACES.gas.door, icon: 'gas', color: '#ffd23f', label: 'Sunshine Gas' },
-  { ...PLACES.autoshop.door, icon: 'autoshop', color: '#4cc9f0', label: 'Coral Auto Body' },
+  { ...PLACES.clothes.door, icon: 'clothes', color: '#c77dff', label: 'Threads on Lincoln' },
+  { ...PLACES.gas.door, icon: 'gas', color: '#ffd23f', label: 'Sunray Gas' },
+  { ...PLACES.autoshop.door, icon: 'autoshop', color: '#4cc9f0', label: 'Deco Auto Body' },
   { ...PLACES.club.door, icon: 'club', color: '#ff3fa4', label: 'Velvet Palms' },
-  { x: PLACES.park.x, z: PLACES.park.z, icon: 'park', color: '#80ed99', label: 'Bayshore Park' },
+  { x: PLACES.park.x, z: PLACES.park.z, icon: 'park', color: '#80ed99', label: 'Flamingo Park' },
 ];

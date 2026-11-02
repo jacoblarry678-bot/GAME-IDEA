@@ -234,7 +234,7 @@ export class HUD {
     const pos = v ? v.pos : p.pos;
     const road = roadAt(pos.x, pos.z);
     const inside = !v && g.world.interiorAt(pos.x, pos.z, pos.y);
-    const area = inside ? inside.name : pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Vela Keys Twin Span' : pos.x > ISLAND.sandStart ? 'Ocean Mile Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Mainland Landing' : 'Vela Bay') : DISTRICT_NAME;
+    const area = inside ? inside.name : pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Seven Mile Bridge' : pos.x > ISLAND.sandStart ? 'Lummus Park Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Downtown Miami' : 'Biscayne Bay') : DISTRICT_NAME;
     const wl = g.weather?.label;
     setHTML(this.street, `${road && !inside ? road.name : area}<small>${road && !inside ? area : ''} · ${g.engine.time.label()}${wl ? ' · ' + wl : ''}</small>`);
     // fps
@@ -298,7 +298,7 @@ export class HUD {
     const deal = me.deal ? `<div class="deal">💼 <b>${esc(me.deal.def.brand)}</b>: $${me.deal.pay.toLocaleString()} for ${esc(me.deal.def.what)} · ${Math.max(0, Math.ceil(me.deal.until - g.time))}s</div>` : '';
     const compose = `<div class="compose"><span class="key">1</span>Selfie <span class="key">2</span>Photo <span class="key">3</span>Clip${so.ai.available ? ' <span class="key">4</span>✨ Claude caption' : ''}${me.status ? `<em>${esc(me.status)}</em>` : ''}</div>`;
     const profile = `<div class="me"><i style="background:${prof.color}">${prof.name[0]}</i><div><b>${esc(prof.name)}</b>${acc.verified ? ' <u>✔</u>' : ''} <small>@${prof.handle}</small><span><b>${fmt(acc.followers)}</b> followers · <b>${acc.posts}</b> post${acc.posts === 1 ? '' : 's'} · <b>${fmt(acc.likes)}</b> like${Math.floor(acc.likes) === 1 ? '' : 's'}</span></div></div>`;
-    setHTML(this.loop, `<header>LOOP<small>Costa Vela · trending <em>${esc(so.trending)}</em> · ${key} to close</small></header>${profile}${compose}${deal}${ai}${items}`);
+    setHTML(this.loop, `<header>LOOP<small>Miami · trending <em>${esc(so.trending)}</em> · ${key} to close</small></header>${profile}${compose}${deal}${ai}${items}`);
     // play the reels
     const reels = new Map(); for (const p of so.posts) if (p.reel) reels.set(String(p.id), p.reel);
     const frame = Math.floor(performance.now() / 220);

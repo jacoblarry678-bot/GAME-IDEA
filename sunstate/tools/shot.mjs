@@ -15,7 +15,7 @@ const g = (fn, a) => sun.eval(fn, a);
 await g(() => { const G = window.__sun.game; G.cameraRig.yaw = Math.PI / 2 + 0.5; G.cameraRig.pitch = -0.1; });
 await sun.advance(3, 60);
 await sun.shot(`${out}/02-spawn.png`);
-// put the player in the muscle car on Ocean Blvd
+// put the player in the muscle car on Ocean Dr
 await g(() => {
   const G = window.__sun.game, v = G.vehicles.find((x) => x.persistentId === 'start-muscle');
   v.pos.set(146, 0, 30); v.yaw = Math.PI; v.vel.set(0, -18);
@@ -42,7 +42,7 @@ await sun.shot(`${out}/05-sunset-promenade.png`);
 await g(() => { const G = window.__sun.game; G.respawnPlayer(146, 40, Math.PI); G.cameraRig.yaw = Math.PI * 0.9; G.cameraRig.pitch = 0.08; G.engine.time.hour = 21.5; });
 await sun.advance(1.5, 30);
 await sun.shot(`${out}/06-night-neon.png`);
-// Milestone 3: Cal and Sol together, the twin-span, Cayo Lento, a drive-by from the passenger seat
+// Milestone 3: Cal and Sol together, the Seven Mile Bridge, Marathon, a drive-by from the passenger seat
 await g(() => {
   const G = window.__sun.game; G.engine.time.hour = 16.8;
   G.respawnPlayer(-2, -24, Math.PI / 2); G.crew.regroupAt(-2, -24, Math.PI / 2, true);
@@ -58,13 +58,13 @@ await g(() => {
   G.cameraRig.yaw = 0.35; G.cameraRig.pitch = -0.16;
 });
 await sun.advance(2, 30);
-await sun.shot(`${out}/08-twin-span.png`);
+await sun.shot(`${out}/08-seven-mile-bridge.png`);
 await g(() => {
   const G = window.__sun.game, V = G.engine.camera.position.constructor;
   G.cameraRig.override = { pos: new V(205, 26, 580), target: new V(170, 2, 660) };
 });
 await sun.advance(0.6, 30);
-await sun.shot(`${out}/09-cayo-lento.png`);
+await sun.shot(`${out}/09-marathon.png`);
 await g(() => {
   const G = window.__sun.game; G.cameraRig.override = null;
   G.player.controller.inventory.current = 'pistol';
@@ -74,7 +74,7 @@ await g(() => {
 await sun.advance(1, 30);
 await sun.shot(`${out}/10-passenger-aim.png`);
 await sun.clearInput();
-// the living city: Bayshore Park, Sunshine Gas, Coral Auto Body, Velvet Palms at night
+// the living city: Flamingo Park, Sunray Gas, Deco Auto Body, Velvet Palms at night
 const place = async (file, hour, fn) => {
   await g(([h, src]) => {
     const G = window.__sun.game, P = G.places.PLACES, V = G.engine.camera.position.constructor;
@@ -87,7 +87,7 @@ const place = async (file, hour, fn) => {
   await sun.shot(`${out}/${file}`);
 };
 await g(() => { const G = window.__sun.game; if (G.player.vehicle) G.unseatCharacter(G.player.vehicle, G.player, null); });
-await place('12-bayshore-park.png', 16.5, (P) => [[P.park.bounds.x1 + 6, 14, P.park.bounds.z0 - 6], [P.park.x - 4, 0, P.park.z + 6], [P.park.x + 2, P.park.z - 4]]);
+await place('12-flamingo-park.png', 16.5, (P) => [[P.park.bounds.x1 + 6, 14, P.park.bounds.z0 - 6], [P.park.x - 4, 0, P.park.z + 6], [P.park.x + 2, P.park.z - 4]]);
 await place('13-sunshine-gas.png', 17.2, (P) => [[P.gas.door.x + 34, 6, P.gas.door.z + 16], [P.gas.door.x + 4, 2, P.gas.door.z], [P.gas.door.x + 3, P.gas.door.z]]);
 await place('14-coral-auto-body.png', 15.5, (P) => [[P.autoshop.door.x + 16, 5, P.autoshop.door.z - 10], [P.autoshop.door.x - 6, 2.5, P.autoshop.door.z + 1], [P.autoshop.door.x + 3, P.autoshop.door.z + 7]]);
 await place('15-velvet-palms-night.png', 22.3, (P) => [[P.club.layout.door.x - 15, 2.2, P.club.layout.door.z - 9], [P.club.layout.door.x, 3.5, P.club.layout.door.z + 1], [P.club.layout.door.x - 4, P.club.layout.door.z + 5, -Math.PI / 2]]);
