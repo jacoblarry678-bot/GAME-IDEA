@@ -234,15 +234,21 @@ function banner(text) {
   return m;
 }
 
-/** A gull: two swept wings in a shallow V; flapping is a scale on y. */
+/** A gull: slender wings with the bent "M" profile (inner wing up, outer wing drooping); flapping is a scale on y. */
 function gullGeometry() {
-  const pos = new Float32Array([
-    0, 0, 0.25, -0.55, 0.08, -0.12, 0, 0, -0.15,
-    0, 0, 0.25, 0, 0, -0.15, 0.55, 0.08, -0.12,
-    0, -0.02, 0.32, -0.06, -0.03, -0.3, 0.06, -0.03, -0.3,
-  ]);
+  const P = [];
+  for (const s of [-1, 1]) {
+    // inner wing: root to wrist
+    P.push(0, 0, 0.1, s * 0.3, 0.07, 0.02, 0, 0, -0.08);
+    P.push(s * 0.3, 0.07, 0.02, s * 0.3, 0.07, -0.08, 0, 0, -0.08);
+    // outer wing: wrist to a swept, drooping tip
+    P.push(s * 0.3, 0.07, 0.02, s * 0.66, -0.02, -0.16, s * 0.3, 0.07, -0.08);
+  }
+  // body and tail
+  P.push(0, -0.01, 0.24, -0.04, -0.02, -0.18, 0.04, -0.02, -0.18);
+  P.push(-0.07, -0.01, -0.3, 0.07, -0.01, -0.3, 0, -0.01, -0.12);
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   g.computeVertexNormals();
   return g;
 }
@@ -315,7 +321,8 @@ export class Ambient {
 
     // gulls
     this.gullCount = 18;
-    this.gulls = new THREE.InstancedMesh(gullGeometry(), new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.8, side: THREE.DoubleSide }), this.gullCount);
+    // seen from below against the sky a gull is pale, not a silhouette: a little self-light keeps it white
+    this.gulls = new THREE.InstancedMesh(gullGeometry(), new THREE.MeshStandardMaterial({ color: 0xf4f4f0, emissive: 0x9a9a98, roughness: 0.9, side: THREE.DoubleSide }), this.gullCount);
     this.gulls.frustumCulled = false;
     this.gullData = Array.from({ length: this.gullCount }, (_, i) => ({ r: 8 + Math.random() * 22, h: 8 + Math.random() * 10, w: (0.25 + Math.random() * 0.25) * (i % 2 ? 1 : -1), p: Math.random() * 6.28, f: 4 + Math.random() * 3 }));
     this.gullCentre = V(200, 0, 0);
@@ -378,7 +385,7 @@ export class Ambient {
         this._e.set(Math.sin(t + i) * 0.2, -a + (d.w > 0 ? 0 : Math.PI), (d.w > 0 ? -1 : 1) * 0.35, 'YXZ');
         this._q.setFromEuler(this._e);
         const flap = Math.sin(t * d.f + i * 1.7);
-        this._m.compose(this._s.set(x, y, z), this._q, V(1.4, 1.4 * (flap > -0.3 ? flap : -0.3) * 2.2, 1.4));
+        this._m.compose(this._s.set(x, y, z), this._q, V(1.6, 1.6 * Math.max(-0.4, flap) * 1.6, 1.6));
         this.gulls.setMatrixAt(i, this._m);
       });
       this.gulls.instanceMatrix.needsUpdate = true;
