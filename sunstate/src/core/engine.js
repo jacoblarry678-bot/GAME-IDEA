@@ -363,6 +363,12 @@ export class Engine {
       this.gtao = new GTAOPass(this.scene, this.camera, w, h);
       this.gtao.output = GTAOPass.OUTPUT.Default;
       this.gtao.blendIntensity = 0.85;
+      // the AO depth/normal pass ignores alpha cut-outs, so alpha-tested foliage would
+      // shade its whole card; leave anything tagged noAO out of it
+      this.gtao.overrideVisibility = function () {
+        const cache = this._visibilityCache;
+        this.scene.traverse((o) => { cache.set(o, o.visible); if (o.isPoints || o.isLine || o.userData.noAO) o.visible = false; });
+      };
       this.gtao.updateGtaoMaterial({ radius: 1.1, distanceExponent: 1.4, thickness: 1.5, scale: 1.1, samples: 12, distanceFallOff: 1, screenSpaceRadius: false });
       this.gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, radiusExponent: 1, rings: 2, samples: 12 });
       this.composer.addPass(this.gtao);

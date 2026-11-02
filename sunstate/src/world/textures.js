@@ -147,38 +147,45 @@ export const frond = () => cached('frond', () => {
 });
 
 /**
- * A coconut palm frond, seen from above: a midrib down the middle (v runs base → tip)
- * with long, narrow leaflets angled toward the tip, gaps between them (alpha), lighter
- * undersides toward the edges. The geometry folds it into a V along the midrib.
+ * Palm fronds, seen from above, as a two-cell atlas: a live green frond in the left half,
+ * a dead brown one in the right. v runs base → tip along the rachis; long narrow leaflets
+ * angle toward the tip with gaps between them (alpha). The geometry folds each into a
+ * drooping V along the rachis.
  */
-export const frondLeaf = (dead = false) => cached('frondLeaf:' + dead, () => {
-  const W = 256, H = 512, c = canvas(W, H), x = c.getContext('2d'), r = mulberry32(dead ? 41 : 40);
-  const n = 64;
-  for (let i = 0; i < n; i++) {
-    const t = i / n, y = H - 6 - t * (H - 12);
-    for (const sd of [-1, 1]) {
-      const len = (W / 2 - 6) * (0.85 + r() * 0.15);
-      const g = x.createLinearGradient(W / 2, y, W / 2 + sd * len, y - 70);
-      if (dead) { g.addColorStop(0, '#7a6440'); g.addColorStop(1, '#a88a5c'); }
-      else { const k = r() * 18; g.addColorStop(0, `rgb(${46 + k | 0},${88 + k | 0},${32 + k * 0.5 | 0})`); g.addColorStop(0.7, `rgb(${70 + k | 0},${120 + k | 0},${44 + k * 0.5 | 0})`); g.addColorStop(1, `rgb(${92 + k | 0},${128 + k | 0},${58 | 0})`); }
-      x.fillStyle = g;
-      // a leaflet: narrow, pointed, reaching outward and toward the tip
-      x.beginPath();
-      x.moveTo(W / 2, y + 3);
-      x.quadraticCurveTo(W / 2 + sd * len * 0.5, y - 18 + r() * 6, W / 2 + sd * len, y - 62 - r() * 12);
-      x.quadraticCurveTo(W / 2 + sd * len * 0.5, y - 12, W / 2, y - 4);
-      x.closePath(); x.fill();
-      // the leaflet's own midvein
-      x.strokeStyle = dead ? 'rgba(80,60,30,0.6)' : 'rgba(150,170,90,0.45)'; x.lineWidth = 1;
-      x.beginPath(); x.moveTo(W / 2, y); x.quadraticCurveTo(W / 2 + sd * len * 0.5, y - 15, W / 2 + sd * len * 0.97, y - 60); x.stroke();
+export const frondLeaf = () => cached('frondLeaf', () => {
+  const W = 256, H = 512, c = canvas(W * 2, H), x = c.getContext('2d');
+  for (const dead of [false, true]) {
+    const r = mulberry32(dead ? 41 : 40), ox = dead ? W : 0, cx = ox + W / 2;
+    x.save(); x.beginPath(); x.rect(ox, 0, W, H); x.clip();
+    const n = 58;
+    for (let i = 0; i < n; i++) {
+      const t = i / n, y = H - 10 - t * (H - 24);
+      for (const sd of [-1, 1]) {
+        if (dead && r() < 0.18) continue; // dead fronds lose leaflets
+        const len = (W / 2 - 8) * (0.82 + r() * 0.18) * (dead ? 0.8 + r() * 0.2 : 1);
+        const rise = 58 + r() * 14, k = r() * 22;
+        const g = x.createLinearGradient(cx, y, cx + sd * len, y - rise);
+        if (dead) { g.addColorStop(0, `rgb(${110 + k | 0},${88 + k | 0},${56 + k * 0.5 | 0})`); g.addColorStop(1, `rgb(${150 + k | 0},${124 + k | 0},${84 + k * 0.5 | 0})`); }
+        else { g.addColorStop(0, `rgb(${50 + k | 0},${92 + k | 0},${30 + k * 0.4 | 0})`); g.addColorStop(0.65, `rgb(${78 + k | 0},${128 + k | 0},${42 + k * 0.4 | 0})`); g.addColorStop(1, `rgb(${112 + k | 0},${140 + k | 0},${58 + k * 0.4 | 0})`); }
+        x.fillStyle = g;
+        x.beginPath();
+        x.moveTo(cx, y + 4);
+        x.quadraticCurveTo(cx + sd * len * 0.5, y - 16 + r() * 6, cx + sd * len, y - rise);
+        x.quadraticCurveTo(cx + sd * len * 0.5, y - 10, cx, y - 3);
+        x.closePath(); x.fill();
+        x.strokeStyle = dead ? 'rgba(90,68,40,0.55)' : 'rgba(170,185,100,0.4)'; x.lineWidth = 1;
+        x.beginPath(); x.moveTo(cx, y); x.quadraticCurveTo(cx + sd * len * 0.5, y - 13, cx + sd * len * 0.96, y - rise + 2); x.stroke();
+      }
     }
+    const g = x.createLinearGradient(cx - 7, 0, cx + 7, 0);
+    g.addColorStop(0, dead ? '#5c4a2c' : '#6d7a3a'); g.addColorStop(0.5, dead ? '#a08a5c' : '#c2c07a'); g.addColorStop(1, dead ? '#5c4a2c' : '#6d7a3a');
+    x.fillStyle = g;
+    x.beginPath(); x.moveTo(cx - 7, H); x.lineTo(cx + 7, H); x.lineTo(cx + 1.5, 4); x.lineTo(cx - 1.5, 4); x.closePath(); x.fill();
+    x.restore();
   }
-  // the rachis
-  const g = x.createLinearGradient(W / 2 - 6, 0, W / 2 + 6, 0);
-  g.addColorStop(0, dead ? '#5c4a2c' : '#6d7a3a'); g.addColorStop(0.5, dead ? '#9a8458' : '#b8b870'); g.addColorStop(1, dead ? '#5c4a2c' : '#6d7a3a');
-  x.fillStyle = g;
-  x.beginPath(); x.moveTo(W / 2 - 7, H); x.lineTo(W / 2 + 7, H); x.lineTo(W / 2 + 1.5, 0); x.lineTo(W / 2 - 1.5, 0); x.closePath(); x.fill();
-  return tex(c, { repeat: false });
+  const t = tex(c, { repeat: false });
+  t.generateMipmaps = true;
+  return t;
 });
 
 /** Palm bark: coconut palms have grey-brown trunks ringed with old leaf scars; royals are smooth pale grey. */
@@ -188,7 +195,7 @@ export function palmBark(kind = 'coconut') {
     const L = new Layers(W, H);
     const r = mulberry32(kind === 'royal' ? 52 : 51);
     if (kind === 'royal') {
-      L.rect(0, 0, W, H, '#b9b5ac', { rough: 0.8, height: 0.5 });
+      L.rect(0, 0, W, H, '#9c9890', { rough: 0.8, height: 0.5 });
       noise(L.x, W, H, r, 5000, (v) => `rgba(${v < 0.5 ? '90,88,84' : '230,228,220'},${0.05 + v * 0.08})`);
       for (let i = 0; i < 30; i++) { const y = r() * H; L.rect(0, y, W, 1 + r() * 2, 'rgba(110,105,96,0.25)', { rough: 0.85, height: 0.42 }); }
     } else {

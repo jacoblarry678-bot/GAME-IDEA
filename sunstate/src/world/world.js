@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { CollisionWorld } from './collision.js';
 import { makeMaterials, buildWorld } from './build.js';
 import { buildProps, updateProps } from './props.js';
+import { swayPalms } from './palms.js';
 import { INTERIORS, PLACES } from './district.js';
 import { groundHeight, isWater, surfaceAt, WATER_Y } from './layout.js';
 
@@ -94,20 +95,9 @@ export class World {
     if (inClub) this.engine.interiorLight.intensity = this.lightRigs.club.intensity * (0.75 + 0.45 * this.clubPulse);
     this.water.userData.update(dt);
     // gentle palm sway
-    const crowns = this.props.crowns;
-    crowns.userData.t = (crowns.userData.t || 0) + dt;
-    if (!crowns.userData.acc || crowns.userData.t - crowns.userData.acc > 0.1) {
-      crowns.userData.acc = crowns.userData.t;
-      const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-      const tt = crowns.userData.t;
-      crowns.userData.sway.forEach((d, i) => {
-        e.set(Math.sin(tt * 0.9 + i) * 0.05, d.yaw + Math.sin(tt * 0.5 + i * 0.7) * 0.06, Math.cos(tt * 0.8 + i * 1.3) * 0.05);
-        q.setFromEuler(e);
-        m.compose(d.top, q, new THREE.Vector3(d.s, d.s, d.s));
-        crowns.setMatrixAt(i, m);
-      });
-      crowns.instanceMatrix.needsUpdate = true;
-    }
+    const sw = this.props;
+    sw.swayT = (sw.swayT || 0) + dt;
+    if (!sw.swayAcc || sw.swayT - sw.swayAcc > 0.1) { sw.swayAcc = sw.swayT; swayPalms(sw.crowns, sw.swayT); }
   }
 
   /** Signal time base shared with traffic AI. */

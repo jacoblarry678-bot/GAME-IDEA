@@ -287,8 +287,8 @@ function plan() {
     const off = roadHalfWidth(a.lanes) + 2.6;
     for (let z = STREETS[0].z + 20; z < STREETS[STREETS.length - 1].z; z += 17) {
       if (nearAnyStreet(z, 10)) continue;
-      if (a.id === 'coral') props.push({ type: 'palm', x: a.x + (rnd() < 0.5 ? -off : off), z, h: 7 + rnd() * 4, lean: rnd() * 0.5 });
-      else props.push({ type: 'palm', x: a.x - off, z: z + 6, h: 8 + rnd() * 4, lean: rnd() * 0.4 });
+      if (a.id === 'coral') props.push({ type: 'palm', x: a.x + (rnd() < 0.5 ? -off : off), z, h: 7 + rnd() * 4, lean: rnd() * 0.5, species: 'royal' });
+      else props.push({ type: 'palm', x: a.x - off, z: z + 6, h: 8 + rnd() * 4, lean: rnd() * 0.4, species: 'royal' });
     }
   }
   for (let z = STREETS[0].z + 10; z < STREETS[6].z; z += 22) if (!nearAnyStreet(z, 10)) props.push({ type: 'palm', x: ISLAND.west + 1.6, z, h: 7 + rnd() * 4, lean: rnd() * 0.5 });

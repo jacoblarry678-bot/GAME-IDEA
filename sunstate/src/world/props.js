@@ -8,6 +8,7 @@ import { DISTRICT, mulberry32 } from './district.js';
 import { ROAD_GRAPH, signalState, groundHeight, causewayDeck, CURB } from './layout.js';
 import { Batcher } from './geo.js';
 import * as T from './textures.js';
+import { buildPalms } from './palms.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -100,52 +101,8 @@ export function buildProps(collision, mats) {
   group.add(night.lamps);
   for (const p of sigs) collision.add({ type: 'circle', cx: p.x, cz: p.z, r: 0.16, y0: -1, y1: 5, material: 'metal', cameraBlock: false, tag: 'prop' });
 
-  // --- palms -----------------------------------------------------------------
-  const palms = by('palm');
-  const rnd = mulberry32(99);
-  const curve = new THREE.CatmullRomCurve3([V(0, 0, 0), V(0.02, 0.35, 0), V(0.08, 0.7, 0), V(0.18, 1, 0)]);
-  const trunkGeo = new THREE.TubeGeometry(curve, 10, 0.2, 7, false);
-  // taper: shrink the radius toward the top
-  {
-    const pos = trunkGeo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      const cx = curve.getPoint(Math.min(1, Math.max(0, y))).x;
-      const k = 1 - y * 0.45;
-      pos.setX(i, cx + (pos.getX(i) - cx) * k);
-      pos.setZ(i, pos.getZ(i) * k);
-    }
-    trunkGeo.computeVertexNormals();
-  }
-  const barkMat = new THREE.MeshStandardMaterial({ color: 0x8a7458, roughness: 1 });
-  const crownParts = [];
-  for (let i = 0; i < 11; i++) {
-    const g = new THREE.PlaneGeometry(1.7, 3.8, 1, 5);
-    const pos = g.attributes.position;
-    for (let k = 0; k < pos.count; k++) {
-      const y = pos.getY(k) + 1.9; // 0..3.8 from base to tip
-      pos.setY(k, y);
-      pos.setZ(k, -0.09 * y * y); // droop
-    }
-    g.rotateX(-Math.PI / 2 + 0.55 + (i % 3) * 0.12);
-    g.rotateY((i / 11) * Math.PI * 2 + (i % 2) * 0.2);
-    crownParts.push(g);
-  }
-  const crownGeo = mergeGeometries(crownParts.map((g) => g.toNonIndexed()), false);
-  const frondMat = new THREE.MeshStandardMaterial({ map: T.frond(), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.9, color: 0xd8e8b0 });
-  const palmData = palms.map((p) => {
-    const yaw = rnd() * Math.PI * 2;
-    const lean = (p.lean || 0) * 0.22;
-    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, -lean, 'YXZ'));
-    const base = V(p.x, groundHeight(p.x, p.z, 1), p.z);
-    const top = V(0.18, 1, 0).multiply(V(p.h, p.h, p.h)).applyQuaternion(q).add(base);
-    return { base, q, h: p.h, top, yaw: rnd() * 6.28, s: 0.85 + rnd() * 0.35 };
-  });
-  group.add(instanced(trunkGeo, barkMat, palmData, (d, m) => m.compose(d.base, d.q, V(1 + d.h * 0.02, d.h, 1 + d.h * 0.02))));
-  const crowns = instanced(crownGeo, frondMat, palmData, (d, m) => m.compose(d.top, new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), d.yaw), V(d.s, d.s, d.s)));
-  crowns.userData.sway = palmData;
-  group.add(crowns);
-  for (const d of palmData) collision.add({ type: 'circle', cx: d.base.x, cz: d.base.z, r: 0.28, y0: d.base.y - 1, y1: d.base.y + d.h, material: 'wood', cameraBlock: false, tag: 'prop' });
+  // --- palms (see palms.js) -------------------------------------------------------
+  const crowns = buildPalms(by('palm'), group, collision, groundHeight, instanced, mulberry32(99));
 
   // --- small street furniture -----------------------------------------------------
   const furniture = {
