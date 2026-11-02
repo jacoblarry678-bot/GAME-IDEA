@@ -27,7 +27,8 @@ async function boot() {
     const cap = settings.g.frameCap;
     if (cap > 0 && now - lastRender < 1000 / cap - 1) return;
     lastRender = now;
-    let dt = Math.min(0.1, (now - last) / 1000);
+    // (the first animation frame's timestamp can be earlier than `last`: never step backwards)
+    let dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
     last = now;
     input.pollGamepad();
     if (app.simulating) {

@@ -251,10 +251,14 @@ export class Menus {
     section('Graphics');
     const pd = h('div', 'seg');
     for (const p of Object.keys(PRESETS)) { const e = h('button', S.g.preset === p ? 'on' : '', p[0].toUpperCase() + p.slice(1)); e.onclick = () => { S.applyPreset(p); this.openPause('settings', this.fromTitle); }; pd.appendChild(e); }
-    row('Preset', pd, S.g.preset === 'custom' ? 'custom' : '', 'Sets render scale, shadows, bloom, draw distance and anti-aliasing together.');
+    row('Preset', pd, S.g.preset === 'custom' ? 'custom' : '', 'Sets render scale, shadows, effects, draw distance, texture detail and anti-aliasing together.');
     slider('graphics', 'renderScale', 0.4, 1.5, 0.05, pct, 'Internal resolution. Lower is faster.');
     seg('graphics', 'shadows', ['off', 'low', 'high', 'ultra'], 'Sun shadow map size and coverage.', ['Off', 'Low', 'High', 'Ultra']);
     toggle('graphics', 'bloom', 'Glow on neon, lights and the sun.');
+    toggle('graphics', 'ao', 'Ambient occlusion: soft contact shadows in corners, under cars and trees.');
+    toggle('graphics', 'postfx', 'Colour grading, vignette, film grain and the sun\'s glare.');
+    seg('graphics', 'textures', ['standard', 'high'], 'Detail of the generated materials (applies after reloading the page).', ['Standard', 'High']);
+    toggle('graphics', 'autoQuality', 'Lower the render scale, then the effects, if the frame rate drops.');
     seg('graphics', 'drawDistance', ['low', 'medium', 'high', 'ultra'], 'Fog and far-plane distance.', ['Low', 'Medium', 'High', 'Ultra']);
     toggle('graphics', 'antialias', 'Applies after reloading the page.');
     seg('graphics', 'frameCap', [0, 30, 60, 120], 'Limit the frame rate (Off = display refresh).', ['Off', '30', '60', '120']);
@@ -287,7 +291,7 @@ export class Menus {
 
   label(group, key) {
     return {
-      renderScale: 'Render scale', shadows: 'Shadows', bloom: 'Bloom', drawDistance: 'Draw distance', antialias: 'Anti-aliasing', frameCap: 'Frame cap', fov: 'Field of view', showFps: 'Show FPS / stats',
+      renderScale: 'Render scale', shadows: 'Shadows', bloom: 'Bloom', drawDistance: 'Draw distance', antialias: 'Anti-aliasing', frameCap: 'Frame cap', fov: 'Field of view', showFps: 'Show FPS / stats', ao: 'Ambient occlusion', postfx: 'Post effects', textures: 'Texture detail', autoQuality: 'Automatic quality',
       master: 'Master volume', music: 'Radio & music', sfx: 'Effects', ambient: 'Ambience', ui: 'Interface sounds',
       hudScale: 'HUD scale', subtitleSize: 'Subtitle size', cameraShake: 'Camera shake', minimapRotate: 'Rotate minimap', units: 'Speed units',
       traffic: 'Traffic density', peds: 'Pedestrian density', weather: 'Weather', sensitivity: 'Mouse sensitivity', aimSensitivity: 'Aiming sensitivity', invertY: 'Invert look Y', invertX: 'Invert look X', gamepad: 'Gamepad',

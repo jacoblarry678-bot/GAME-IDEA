@@ -14,7 +14,7 @@ export async function launch(url = process.env.URL || 'http://localhost:4190/', 
   if (lowGfx) await page.addInitScript(() => {
     try {
       const s = JSON.parse(localStorage.getItem('sunstate.settings.v1') || '{}');
-      s.graphics = { ...(s.graphics || {}), preset: 'custom', renderScale: 0.5, shadows: 'low', bloom: false, drawDistance: 'medium', antialias: false };
+      s.graphics = { ...(s.graphics || {}), preset: 'custom', renderScale: 0.5, shadows: 'low', bloom: false, drawDistance: 'medium', antialias: false, ao: false, postfx: false, textures: 'standard', autoQuality: false };
       localStorage.setItem('sunstate.settings.v1', JSON.stringify(s));
     } catch {}
   });

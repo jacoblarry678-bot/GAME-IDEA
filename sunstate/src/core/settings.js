@@ -62,15 +62,15 @@ export const BINDING_LABELS = {
 };
 
 export const PRESETS = {
-  low: { renderScale: 0.6, shadows: 'off', bloom: false, drawDistance: 'low', antialias: false },
-  medium: { renderScale: 0.8, shadows: 'low', bloom: true, drawDistance: 'medium', antialias: true },
-  high: { renderScale: 1, shadows: 'high', bloom: true, drawDistance: 'high', antialias: true },
-  ultra: { renderScale: 1, shadows: 'ultra', bloom: true, drawDistance: 'ultra', antialias: true },
+  low: { renderScale: 0.6, shadows: 'off', bloom: false, drawDistance: 'low', antialias: false, ao: false, postfx: false, textures: 'standard' },
+  medium: { renderScale: 0.8, shadows: 'low', bloom: true, drawDistance: 'medium', antialias: true, ao: false, postfx: true, textures: 'standard' },
+  high: { renderScale: 1, shadows: 'high', bloom: true, drawDistance: 'high', antialias: true, ao: true, postfx: true, textures: 'high' },
+  ultra: { renderScale: 1, shadows: 'ultra', bloom: true, drawDistance: 'ultra', antialias: true, ao: true, postfx: true, textures: 'high' },
 };
 
 export function defaultSettings() {
   return {
-    graphics: { preset: 'high', ...PRESETS.high, frameCap: 0, fov: 65, showFps: false },
+    graphics: { preset: 'high', ...PRESETS.high, frameCap: 0, fov: 65, showFps: false, autoQuality: true },
     controls: { sensitivity: 1, aimSensitivity: 0.65, invertY: false, invertX: false, gamepad: true, bindings: { ...DEFAULT_BINDINGS } },
     audio: { master: 0.8, music: 0.55, sfx: 0.8, ambient: 0.7, ui: 0.6 },
     interface: { hudScale: 1, subtitleSize: 'medium', subtitles: true, cameraShake: 1, minimapRotate: true, units: 'mph' },
@@ -83,6 +83,7 @@ const ENUMS = {
   'graphics.shadows': ['off', 'low', 'high', 'ultra'],
   'graphics.drawDistance': ['low', 'medium', 'high', 'ultra'],
   'graphics.frameCap': [0, 30, 60, 120],
+  'graphics.textures': ['standard', 'high'],
   'interface.subtitleSize': ['small', 'medium', 'large'],
   'interface.units': ['mph', 'kmh'],
   'gameplay.weather': ['dynamic', 'clear', 'rain'],

@@ -11,29 +11,32 @@ import {
   roadHalfWidth, segHalfWidth, roadAt, terrainHeight, causewayDeck, KEYS, TWIN, FLATS, twinDeck,
 } from './layout.js';
 import { DISTRICT, PLACES, mulberry32 } from './district.js';
+import { bakeSurfaces, surfaceMaterial } from './pbr.js';
 
 const col = (hex) => new THREE.Color(hex);
 
 export function makeMaterials(engine) {
   T.setAnisotropy(engine.maxAniso);
   const std = (o) => new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, ...o });
-  const asphalt = T.asphalt();
+  // the ground and the hard surfaces: PBR sets baked on the GPU (pbr.js)
+  const P = bakeSurfaces(engine.renderer, engine.settings?.g.textures === 'high' ? 1024 : 512);
+  const surf = (name, o = {}) => surfaceMaterial(P[name], o);
   const m = {
-    asphalt: std({ map: asphalt, roughness: 0.93 }),
-    lot: std({ map: asphalt, color: 0xc9c9c9, roughness: 0.93 }),
-    concrete: std({ map: T.concrete(), roughness: 0.9 }),
-    curb: std({ color: 0xb8b2a6, roughness: 0.9 }),
-    pavers: std({ map: T.pavers(), roughness: 0.9 }),
-    grass: std({ map: T.grass(), roughness: 1 }),
-    sand: std({ map: T.sand(), roughness: 1 }),
+    asphalt: surf('asphalt'),
+    lot: surf('asphalt', { color: 0xd8d8d8 }),
+    concrete: surf('concrete'),
+    curb: surf('castConcrete', { color: 0xe4e0d8 }),
+    pavers: surf('pavers'),
+    grass: surf('grass'),
+    sand: surf('sand'),
     seabed: std({ color: 0x6f6a55, roughness: 1 }),
-    flats: std({ map: T.sand(), color: 0xc9bd96, roughness: 1 }),
+    flats: surf('sand', { color: 0xd6cba8 }),
     keyrock: std({ color: 0xb9ad94, roughness: 1, flatShading: true }),
     mangrove: std({ color: 0x3f6b3a, roughness: 1, flatShading: true }),
     deepbed: std({ color: 0x2b4a52, roughness: 1 }),
-    seawall: std({ map: T.concrete(), color: 0x9b968a }),
-    wood: std({ map: T.wood(), roughness: 0.9 }),
-    roof: std({ map: T.concrete(), color: 0x8f8b84, roughness: 0.95 }),
+    seawall: surf('castConcrete', { color: 0xc8c2b4 }),
+    wood: surf('wood'),
+    roof: surf('roof'),
     trim: std({ vertexColors: true, roughness: 0.7 }),
     metal: std({ vertexColors: true, roughness: 0.45, metalness: 0.6 }),
     glass: std({ color: 0x6f8fa6, roughness: 0.08, metalness: 0.85, envMapIntensity: 1.2 }),
@@ -42,25 +45,36 @@ export function makeMaterials(engine) {
     marking_w: std({ color: 0xe8e6df, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     marking_y: std({ color: 0xe7b53a, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     neon: new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
-    tiles: std({ map: T.tiles(), roughness: 0.4 }),
+    tiles: surf('terrazzo'),
     shelf: std({ map: T.shelfGoods(), roughness: 0.7 }),
     ceiling: std({ color: 0xeeeeea, roughness: 0.9 }),
     lightpanel: new THREE.MeshBasicMaterial({ color: 0xfffaf0 }),
     fridge: new THREE.MeshStandardMaterial({ color: 0xbfe6ff, emissive: 0x9fd3ff, emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.3 }),
-    clubfloor: std({ map: T.tiles(), color: 0x2a1a33, roughness: 0.22, metalness: 0.35 }),
+    clubfloor: surf('terrazzo', { color: 0x2a1a33, metalness: 0.35 }),
     mirror: std({ color: 0x8a7f99, roughness: 0.04, metalness: 1, envMapIntensity: 1.4 }),
   };
-  m.lot.map = asphalt;
-  // facades share a texture per style; per-building colour comes from vertex colours
+  // facades share a texture per style; per-building colour comes from vertex colours, applied
+  // to the plaster only (the glass and the aluminium frames are metallic in the ORM map)
   for (const style of ['deco', 'shop', 'tower', 'motel', 'residential', 'civic', 'store']) {
     const f = T.facade(style === 'store' ? 'shop' : style);
-    m['fac:' + style] = std({ map: f.map, vertexColors: true, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 0, roughness: style === 'tower' ? 0.35 : 0.85, metalness: style === 'tower' ? 0.25 : 0 });
+    m['fac:' + style] = tintByMetal(std({ map: f.map, vertexColors: true, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 0, normalMap: f.normal, roughnessMap: f.orm, metalnessMap: f.orm, aoMap: f.orm, roughness: 1, metalness: 1 }));
   }
   for (const kind of ['shop', 'deco']) {
     const f = T.storefront(kind);
-    m['front:' + kind] = std({ map: f.map, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 0.05, roughness: 0.3, metalness: 0.2 });
+    m['front:' + kind] = std({ map: f.map, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 0.05, normalMap: f.normal, roughnessMap: f.orm, metalnessMap: f.orm, roughness: 1, metalness: 1 });
   }
   return m;
+}
+
+/** Vertex colour tints only the non-metallic parts of a texture (plaster yes, glass and metal no). */
+function tintByMetal(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <color_fragment>', '')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n#if defined( USE_COLOR )\n  diffuseColor.rgb *= mix( vColor.rgb, vec3( 1.0 ), clamp( metalnessFactor, 0.0, 1.0 ) );\n#endif');
+  };
+  mat.customProgramCacheKey = () => 'tint-by-metal';
+  return mat;
 }
 
 /** Build everything static. Returns { group, signs, nightMaterials }. */

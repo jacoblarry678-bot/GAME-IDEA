@@ -146,6 +146,67 @@ export const frond = () => cached('frond', () => {
   return tex(c, { repeat: false });
 });
 
+/**
+ * A coconut palm frond, seen from above: a midrib down the middle (v runs base → tip)
+ * with long, narrow leaflets angled toward the tip, gaps between them (alpha), lighter
+ * undersides toward the edges. The geometry folds it into a V along the midrib.
+ */
+export const frondLeaf = (dead = false) => cached('frondLeaf:' + dead, () => {
+  const W = 256, H = 512, c = canvas(W, H), x = c.getContext('2d'), r = mulberry32(dead ? 41 : 40);
+  const n = 64;
+  for (let i = 0; i < n; i++) {
+    const t = i / n, y = H - 6 - t * (H - 12);
+    for (const sd of [-1, 1]) {
+      const len = (W / 2 - 6) * (0.85 + r() * 0.15);
+      const g = x.createLinearGradient(W / 2, y, W / 2 + sd * len, y - 70);
+      if (dead) { g.addColorStop(0, '#7a6440'); g.addColorStop(1, '#a88a5c'); }
+      else { const k = r() * 18; g.addColorStop(0, `rgb(${46 + k | 0},${88 + k | 0},${32 + k * 0.5 | 0})`); g.addColorStop(0.7, `rgb(${70 + k | 0},${120 + k | 0},${44 + k * 0.5 | 0})`); g.addColorStop(1, `rgb(${92 + k | 0},${128 + k | 0},${58 | 0})`); }
+      x.fillStyle = g;
+      // a leaflet: narrow, pointed, reaching outward and toward the tip
+      x.beginPath();
+      x.moveTo(W / 2, y + 3);
+      x.quadraticCurveTo(W / 2 + sd * len * 0.5, y - 18 + r() * 6, W / 2 + sd * len, y - 62 - r() * 12);
+      x.quadraticCurveTo(W / 2 + sd * len * 0.5, y - 12, W / 2, y - 4);
+      x.closePath(); x.fill();
+      // the leaflet's own midvein
+      x.strokeStyle = dead ? 'rgba(80,60,30,0.6)' : 'rgba(150,170,90,0.45)'; x.lineWidth = 1;
+      x.beginPath(); x.moveTo(W / 2, y); x.quadraticCurveTo(W / 2 + sd * len * 0.5, y - 15, W / 2 + sd * len * 0.97, y - 60); x.stroke();
+    }
+  }
+  // the rachis
+  const g = x.createLinearGradient(W / 2 - 6, 0, W / 2 + 6, 0);
+  g.addColorStop(0, dead ? '#5c4a2c' : '#6d7a3a'); g.addColorStop(0.5, dead ? '#9a8458' : '#b8b870'); g.addColorStop(1, dead ? '#5c4a2c' : '#6d7a3a');
+  x.fillStyle = g;
+  x.beginPath(); x.moveTo(W / 2 - 7, H); x.lineTo(W / 2 + 7, H); x.lineTo(W / 2 + 1.5, 0); x.lineTo(W / 2 - 1.5, 0); x.closePath(); x.fill();
+  return tex(c, { repeat: false });
+});
+
+/** Palm bark: coconut palms have grey-brown trunks ringed with old leaf scars; royals are smooth pale grey. */
+export function palmBark(kind = 'coconut') {
+  return cached('palmBark:' + kind, () => {
+    const W = 128, H = 512;
+    const L = new Layers(W, H);
+    const r = mulberry32(kind === 'royal' ? 52 : 51);
+    if (kind === 'royal') {
+      L.rect(0, 0, W, H, '#b9b5ac', { rough: 0.8, height: 0.5 });
+      noise(L.x, W, H, r, 5000, (v) => `rgba(${v < 0.5 ? '90,88,84' : '230,228,220'},${0.05 + v * 0.08})`);
+      for (let i = 0; i < 30; i++) { const y = r() * H; L.rect(0, y, W, 1 + r() * 2, 'rgba(110,105,96,0.25)', { rough: 0.85, height: 0.42 }); }
+    } else {
+      L.rect(0, 0, W, H, '#8e8170', { rough: 0.92, height: 0.5 });
+      noise(L.x, W, H, r, 9000, (v) => `rgba(${v < 0.5 ? '60,52,44' : '190,180,165'},${0.08 + v * 0.14})`, [1, 3]);
+      const rings = 42;
+      for (let i = 0; i < rings; i++) {
+        const y = (i / rings) * H + r() * 3;
+        L.rect(0, y, W, 3 + r() * 2, 'rgba(58,50,42,0.65)', { rough: 0.95, height: 0.15, ao: 150 });
+        L.rect(0, y + 4, W, 2, 'rgba(200,190,175,0.35)', { rough: 0.9, height: 0.7 });
+      }
+      // vertical fissures between the rings
+      for (let i = 0; i < 70; i++) { const xx = r() * W, y = r() * H; L.rect(xx, y, 1, 6 + r() * 10, 'rgba(50,42,36,0.45)', { rough: 0.95, height: 0.3 }); }
+    }
+    return { map: tex(L.c), normal: tex(normalFromHeight(L.h, 4), { srgb: false }), orm: tex(L.o, { srgb: false }) };
+  });
+}
+
 /** Tileable ocean normal map. */
 export const waterNormal = () => cached('waterNormal', () => {
   const N = 256, c = canvas(N, N), x = c.getContext('2d');
@@ -170,96 +231,139 @@ export const waterNormal = () => cached('waterNormal', () => {
   return tex(c, { srgb: false });
 });
 
+/** Normal map (tangent space, +Y up) from a greyscale height canvas; wraps at the edges. */
+function normalFromHeight(hc, strength = 2) {
+  const W = hc.width, H = hc.height;
+  const src = hc.getContext('2d').getImageData(0, 0, W, H).data;
+  const out = canvas(W, H), ox = out.getContext('2d'), img = ox.createImageData(W, H), d = img.data;
+  const h = (x, y) => src[(((y + H) % H) * W + ((x + W) % W)) * 4] / 255;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    // canvas rows run top-down; texture v runs bottom-up, so "up" in v is y - 1
+    const dx = (h(x + 1, y) - h(x - 1, y)) * strength, dy = (h(x, y - 1) - h(x, y + 1)) * strength;
+    const l = Math.hypot(dx, dy, 1), k = (y * W + x) * 4;
+    d[k] = (-dx / l * 0.5 + 0.5) * 255; d[k + 1] = (-dy / l * 0.5 + 0.5) * 255; d[k + 2] = (1 / l * 0.5 + 0.5) * 255; d[k + 3] = 255;
+  }
+  ox.putImageData(img, 0, 0);
+  return out;
+}
+
+/**
+ * Paint on four layers at once: colour, ORM (R = AO, G = roughness, B = metalness),
+ * height (for the normal map) and emissive (lit windows at night).
+ */
+class Layers {
+  constructor(W, H) {
+    this.W = W; this.H = H;
+    this.c = canvas(W, H); this.o = canvas(W, H); this.h = canvas(W, H); this.e = canvas(W, H);
+    this.x = this.c.getContext('2d'); this.ox = this.o.getContext('2d'); this.hx = this.h.getContext('2d'); this.ex = this.e.getContext('2d');
+    this.ex.fillStyle = '#000'; this.ex.fillRect(0, 0, W, H);
+  }
+  /** fill a rect on the colour layer and, optionally, set its roughness/metal/height */
+  rect(x, y, w, h, color, { rough = null, metal = 0, height = null, ao = 255 } = {}) {
+    if (color) { this.x.fillStyle = color; this.x.fillRect(x, y, w, h); }
+    if (rough !== null) { this.ox.fillStyle = `rgb(${ao},${Math.round(rough * 255)},${Math.round(metal * 255)})`; this.ox.fillRect(x, y, w, h); }
+    if (height !== null) { const v = Math.round(height * 255); this.hx.fillStyle = `rgb(${v},${v},${v})`; this.hx.fillRect(x, y, w, h); }
+  }
+}
+
+/** Stucco: the base plaster with a fine trowelled relief (height) and grime. */
+function stucco(L, r, rough = 0.88) {
+  const { W, H } = L;
+  L.rect(0, 0, W, H, '#ffffff', { rough, height: 0.5 });
+  noise(L.x, W, H, r, 7000, (v) => `rgba(${v < 0.5 ? '150,140,130' : '255,255,255'},${v * 0.12})`);
+  noise(L.hx, W, H, r, 14000, (v) => `rgba(${v < 0.5 ? '0,0,0' : '255,255,255'},${0.05 + v * 0.08})`, [1, 4]);
+  L.hx.filter = 'blur(1px)'; L.hx.drawImage(L.h, 0, 0); L.hx.filter = 'none';
+  // rain streaks below sills and grime near the ground of each floor
+  for (let i = 0; i < 40; i++) { L.x.fillStyle = `rgba(120,110,100,${r() * 0.05})`; L.x.fillRect(r() * W, r() * H, 2 + r() * 6, 30 + r() * 120); }
+}
+
+/** A window: aluminium frame, reflective glass (low roughness, metallic so it mirrors the sky). */
+function glassPane(L, r, wx, wy, ww, wh, { tint = [52, 68, 84], frame = 4, mullion = true } = {}) {
+  L.rect(wx - frame, wy - frame, ww + frame * 2, wh + frame * 2, '#d9dde0', { rough: 0.35, metal: 0.85, height: 0.62 });
+  const [cr, cg, cb] = tint, v = r() * 14 - 7;
+  L.rect(wx, wy, ww, wh, `rgb(${cr + v | 0},${cg + v | 0},${cb + v | 0})`, { rough: 0.04 + r() * 0.04, metal: 0.92, height: 0.18, ao: 210 });
+  // drawn blinds or curtains behind some panes (they read through the reflection)
+  if (r() < 0.35) L.rect(wx + 1, wy + 1, ww - 2, wh * (0.2 + r() * 0.5), `rgba(${200 + r() * 55 | 0},${190 + r() * 50 | 0},${170 + r() * 60 | 0},0.45)`);
+  if (mullion && ww > 40) L.rect(wx + ww / 2 - 2, wy, 4, wh, '#d9dde0', { rough: 0.35, metal: 0.85, height: 0.6 });
+  // the sill casts a little contact shadow
+  L.rect(wx - frame - 2, wy + wh + frame, ww + frame * 2 + 4, 5, '#ece8e0', { rough: 0.7, height: 0.85 });
+}
+
 /**
  * Facade textures. One tile = 4 window bays (12 m) × 4 floors (13.6 m).
- * Returns {map, emissive}; the emissive map lights a random set of windows
- * so night-time facades don't repeat an obvious pattern.
+ * Returns {map, emissive, orm, normal}: reflective glass in aluminium frames set
+ * into stucco (the vertex colour tints only the plaster: see tintByMetal in build.js).
+ * The emissive map lights a random set of windows at night.
  */
 export const FACADE_TILE = [12, 13.6];
 export function facade(style) {
   return cached('facade:' + style, () => {
     const W = 512, H = 512, B = 128, F = 128;
-    const c = canvas(W, H), e = canvas(W, H);
-    const x = c.getContext('2d'), ex = e.getContext('2d');
+    const L = new Layers(W, H);
     const r = mulberry32(style.length * 977 + 3);
-    x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
-    noise(x, W, H, r, 7000, (v) => `rgba(${v < 0.5 ? '150,140,130' : '255,255,255'},${v * 0.12})`);
-    // subtle weathering streaks
-    for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(120,110,100,${r() * 0.05})`; x.fillRect(r() * W, r() * H, 2 + r() * 6, 30 + r() * 120); }
-    ex.fillStyle = '#000'; ex.fillRect(0, 0, W, H);
+    stucco(L, r);
+    const ex = L.ex;
     const lit = (wx, wy, ww, wh, p = 0.4) => {
       if (r() < p) {
         const warm = r() < 0.78;
         ex.fillStyle = warm ? `rgb(255,${190 + r() * 50 | 0},${120 + r() * 60 | 0})` : `rgb(${150 + r() * 60 | 0},${200 + r() * 40 | 0},255)`;
         ex.fillRect(wx, wy, ww, wh);
-        // blinds / curtains break up the rectangle
         if (r() < 0.5) { ex.fillStyle = 'rgba(0,0,0,0.55)'; ex.fillRect(wx, wy, ww, wh * (0.2 + r() * 0.5)); }
       }
-    };
-    const glass = (wx, wy, ww, wh) => {
-      const g = x.createLinearGradient(wx, wy, wx + ww, wy + wh);
-      g.addColorStop(0, '#6a879c'); g.addColorStop(0.5, '#2b3e52'); g.addColorStop(1, '#4b6a82');
-      x.fillStyle = g; x.fillRect(wx, wy, ww, wh);
-      x.fillStyle = 'rgba(255,255,255,0.14)'; x.fillRect(wx + 2, wy + 2, ww * 0.35, wh - 4);
-      if (r() < 0.35) { x.fillStyle = `rgba(${200 + r() * 55 | 0},${190 + r() * 50 | 0},${170 + r() * 60 | 0},0.55)`; x.fillRect(wx + 1, wy + 1, ww - 2, wh * (0.2 + r() * 0.5)); }
     };
     for (let fy = 0; fy < 4; fy++) for (let bxI = 0; bxI < 4; bxI++) {
       const bx = bxI * B, by = fy * F;
       if (style === 'tower') {
-        glass(bx + 3, by + 8, B - 6, 92); lit(bx + 3, by + 8, B - 6, 92, 0.38);
-        x.fillStyle = '#f4f4f0'; x.fillRect(bx, by + 104, B, 24);
-        x.fillStyle = 'rgba(180,200,210,0.85)'; x.fillRect(bx, by + 96, B, 8);
+        // curtain wall: tall tinted glass with slab edges
+        glassPane(L, r, bx + 4, by + 8, B - 8, 90, { tint: [44, 70, 86], frame: 3, mullion: false }); lit(bx + 4, by + 8, B - 8, 90, 0.38);
+        L.rect(bx, by + 104, B, 24, '#f4f4f0', { rough: 0.75, height: 0.7 });
+        L.rect(bx, by + 98, B, 6, 'rgba(180,200,210,0.85)', { rough: 0.2, metal: 0.8, height: 0.75 }); // balcony glass rail
       } else if (style === 'motel') {
         if (bxI % 2 === 0) {
-          x.fillStyle = '#2bb8c9'; x.fillRect(bx + 40, by + 34, 44, 94);
-          x.fillStyle = '#1b6c78'; x.fillRect(bx + 76, by + 80, 4, 8);
-          x.fillStyle = '#ffffff'; x.font = '700 14px Arial'; x.fillText(String(10 + fy * 4 + bxI), bx + 52, by + 52);
-        } else { glass(bx + 24, by + 42, 80, 44); lit(bx + 24, by + 42, 80, 44, 0.5); x.fillStyle = '#e7dcc0'; x.fillRect(bx + 20, by + 38, 88, 4); }
-        x.fillStyle = '#d8ccb0'; x.fillRect(bx, by + 120, B, 8);
+          L.rect(bx + 40, by + 34, 44, 94, '#2bb8c9', { rough: 0.45, metal: 0, height: 0.3 });
+          L.rect(bx + 76, by + 80, 4, 8, '#c9c9c9', { rough: 0.3, metal: 0.9, height: 0.6 });
+          L.x.fillStyle = '#ffffff'; L.x.font = '700 14px Arial'; L.x.fillText(String(10 + fy * 4 + bxI), bx + 52, by + 52);
+        } else { glassPane(L, r, bx + 24, by + 42, 80, 44); lit(bx + 24, by + 42, 80, 44, 0.5); }
+        L.rect(bx, by + 120, B, 8, '#d8ccb0', { rough: 0.8, height: 0.8 });
       } else if (style === 'residential') {
-        glass(bx + 26, by + 34, 76, 56); lit(bx + 26, by + 34, 76, 56, 0.42);
-        x.fillStyle = '#ffffff'; x.fillRect(bx + 62, by + 34, 4, 56);
-        x.fillStyle = 'rgba(60,60,60,0.25)'; x.fillRect(bx + 22, by + 90, 84, 5);
-        if (r() < 0.3) { x.fillStyle = '#9aa3a8'; x.fillRect(bx + 80, by + 92, 20, 12); }
+        glassPane(L, r, bx + 26, by + 34, 76, 56); lit(bx + 26, by + 34, 76, 56, 0.42);
+        L.rect(bx + 22, by + 90, 84, 5, 'rgba(60,60,60,0.25)');
+        if (r() < 0.3) L.rect(bx + 80, by + 96, 20, 12, '#9aa3a8', { rough: 0.5, metal: 0.6, height: 0.9 }); // a window AC unit
       } else if (style === 'civic') {
-        glass(bx + 10, by + 30, 108, 64); lit(bx + 10, by + 30, 108, 64, 0.62);
-        x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(bx, by + 100, B, 4);
+        glassPane(L, r, bx + 10, by + 30, 108, 64, { tint: [60, 80, 92] }); lit(bx + 10, by + 30, 108, 64, 0.62);
+        L.rect(bx, by + 100, B, 4, 'rgba(0,0,0,0.12)');
       } else {
         // deco / shop upper floors: paired windows under an "eyebrow" shade
-        glass(bx + 22, by + 36, 38, 56); glass(bx + 68, by + 36, 38, 56);
+        glassPane(L, r, bx + 22, by + 36, 38, 56, { mullion: false }); glassPane(L, r, bx + 68, by + 36, 38, 56, { mullion: false });
         lit(bx + 22, by + 36, 38, 56, 0.42); lit(bx + 68, by + 36, 38, 56, 0.42);
-        x.fillStyle = 'rgba(0,0,0,0.18)'; x.fillRect(bx + 14, by + 28, 100, 6);
-        x.fillStyle = 'rgba(255,255,255,0.75)'; x.fillRect(bx + 14, by + 24, 100, 4);
-        if (style === 'deco' && bxI % 2) { x.fillStyle = 'rgba(0,0,0,0.06)'; x.fillRect(bx + 60, by, 8, F); }
+        L.rect(bx + 14, by + 26, 100, 8, 'rgba(0,0,0,0.18)', { rough: 0.85, height: 0.95, ao: 170 });
+        L.rect(bx + 14, by + 22, 100, 4, 'rgba(255,255,255,0.75)', { rough: 0.8, height: 1 });
+        if (style === 'deco' && bxI % 2) L.rect(bx + 60, by, 8, F, 'rgba(0,0,0,0.06)', { rough: 0.85, height: 0.75 }); // a fluted pilaster
       }
     }
-    return { map: tex(c), emissive: tex(e) };
+    return { map: tex(L.c), emissive: tex(L.e), orm: tex(L.o, { srgb: false }), normal: tex(normalFromHeight(L.h, 3), { srgb: false }) };
   });
 }
 
-/** Ground-floor storefront: big glass, door, awning band. */
+/** Ground-floor storefront: big glass (reflective), a door, an awning band. Same layers as facades. */
 export function storefront(kind = 'shop') {
   return cached('storefront:' + kind, () => {
     const W = 256, H = 128;
-    const c = canvas(W, H), e = canvas(W, H);
-    const x = c.getContext('2d'), ex = e.getContext('2d');
+    const L = new Layers(W, H);
     const r = mulberry32(kind.length * 31 + 7);
-    x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
-    ex.fillStyle = '#000'; ex.fillRect(0, 0, W, H);
+    L.rect(0, 0, W, H, '#ffffff', { rough: 0.85, height: 0.55 });
     for (let i = 0; i < 2; i++) {
       const bx = i * 128;
-      const g = x.createLinearGradient(0, 30, 0, 124);
-      g.addColorStop(0, '#3a5266'); g.addColorStop(1, '#1d2a36');
-      x.fillStyle = g; x.fillRect(bx + 8, 30, 112, 94);
-      // goods / interior hints
-      for (let k = 0; k < 10; k++) { x.fillStyle = `hsla(${r() * 360},50%,60%,0.35)`; x.fillRect(bx + 12 + r() * 100, 80 + r() * 30, 6 + r() * 8, 8 + r() * 10); }
-      x.fillStyle = 'rgba(255,255,255,0.15)'; x.fillRect(bx + 12, 34, 30, 86);
-      x.fillStyle = '#2a2a2a'; x.fillRect(bx + 62, 30, 3, 94);
-      ex.fillStyle = kind === 'deco' ? 'rgb(255,214,170)' : 'rgb(255,236,200)';
-      ex.fillRect(bx + 8, 30, 112, 94);
+      L.rect(bx + 6, 28, 116, 98, '#2a2c2e', { rough: 0.4, metal: 0.8, height: 0.65 }); // dark aluminium shopfront frame
+      L.rect(bx + 10, 32, 108, 92, '#26394a', { rough: 0.04, metal: 0.9, height: 0.2, ao: 220 });
+      // goods and lights inside read through the glass
+      for (let k = 0; k < 10; k++) L.rect(bx + 14 + r() * 96, 80 + r() * 30, 6 + r() * 8, 8 + r() * 10, `hsla(${r() * 360},50%,60%,0.35)`);
+      L.rect(bx + 62, 32, 4, 92, '#2a2c2e', { rough: 0.4, metal: 0.8, height: 0.65 });
+      L.ex.fillStyle = kind === 'deco' ? 'rgb(255,214,170)' : 'rgb(255,236,200)';
+      L.ex.fillRect(bx + 10, 32, 108, 92);
     }
-    x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(0, 0, W, 6);
-    return { map: tex(c), emissive: tex(e) };
+    L.rect(0, 0, W, 6, 'rgba(0,0,0,0.25)');
+    return { map: tex(L.c), emissive: tex(L.e), orm: tex(L.o, { srgb: false }), normal: tex(normalFromHeight(L.h, 2.5), { srgb: false }) };
   });
 }
 

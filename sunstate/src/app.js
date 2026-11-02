@@ -255,6 +255,25 @@ export class App {
     }
     this.weatherFX.update(this.state === 'paused' ? 0 : dt, this.weather);
     this.engine.render();
+    this.governQuality(dt);
+  }
+
+  /**
+   * Automatic quality: if the frame rate stays under 40 for five seconds of real play, step
+   * down — render scale first (to 70%), then ambient occlusion, then shadows — and say so.
+   * Never in the headless tests (their clock isn't real time).
+   */
+  governQuality(dt) {
+    const g = this.settings.g;
+    if (!g.autoQuality || this.externalClock || this.state !== 'playing' || document.hidden) { this.slowT = 0; return; }
+    if (this.engine.fps < 40) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 2);
+    if (this.slowT < 5) return;
+    this.slowT = 0;
+    let what = null;
+    if (g.renderScale > 0.75) { this.settings.set('graphics', 'renderScale', Math.max(0.7, +(g.renderScale - 0.1).toFixed(2))); what = `render scale ${Math.round(this.settings.g.renderScale * 100)}%`; }
+    else if (g.ao) { this.settings.set('graphics', 'ao', false); what = 'ambient occlusion off'; }
+    else if (g.shadows === 'ultra' || g.shadows === 'high') { this.settings.set('graphics', 'shadows', 'low'); what = 'shadows low'; }
+    if (what) this.hud?.notify(`Frame rate was low, so: ${what}. (Settings → Graphics)`, 'Quality', '', 4);
   }
 
   /** Slow flyover along Ocean Blvd for the title screen. */

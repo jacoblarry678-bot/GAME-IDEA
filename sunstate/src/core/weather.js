@@ -46,6 +46,7 @@ export class Weather {
   }
 
   step(dt) {
+    if (!(dt > 0)) return; // (paused, or a bogus frame time: never run backwards)
     const mode = this.mode;
     if (mode === 'clear' && this.state !== 'clear') this.set('clear');
     else if (mode === 'rain' && this.state !== 'rain') this.set('rain');
@@ -60,7 +61,7 @@ export class Weather {
     const wetTarget = Math.min(1, this.rain * 1.4);
     this.wet += (wetTarget - this.wet) * (1 - Math.exp(-dt / (wetTarget > this.wet ? 8 : 70)));
     // the odd thunderclap in heavy rain
-    this.flash = Math.max(0, this.flash - dt * 4);
+    this.flash = Math.min(1, Math.max(0, this.flash - dt * 4));
     if (this.rain > 0.7) {
       this.thunderT -= dt;
       if (this.thunderT <= 0) { this.thunderT = 18 + this.rnd() * 40; this.flash = 1; this.onThunder?.(1.5 + this.rnd() * 3); }

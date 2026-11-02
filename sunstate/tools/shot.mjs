@@ -10,6 +10,7 @@ await sun.advance(2, 0);
 await sun.shot(`${out}/01-title.png`);
 await page.click('text=New Game');
 await sun.advance(0.5, 0);
+await page.waitForTimeout(1500); // the title screen fades out in real time
 const g = (fn, a) => sun.eval(fn, a);
 await g(() => { const G = window.__sun.game; G.cameraRig.yaw = Math.PI / 2 + 0.5; G.cameraRig.pitch = -0.1; });
 await sun.advance(3, 60);
