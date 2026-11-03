@@ -105,7 +105,21 @@ Asked for: "add where we can post and get likes and follows".
 
 ## Verification
 
-### Latest full run (final build after M3: memory, places, Velvet Palms inside, LOOP accounts)
+### Latest full run (the IRL revamp build: real places, PBR, palms, lofted cars, water, ambient life, people)
+
+| Suite | Result | Notes |
+|---|---|---|
+| `npm test` (Node) | **94/94** | Includes a new check that old saves keep their notoriety under the real area names. |
+| `tools/e2e.mjs` (M1/M2 playthrough) | **48/49** | "Drives through the streets to the store" timed out after 120 s. The autopilot car was held up on Washington Ave just before 3rd St, and the stage completed anyway. The same suite passed 49/49 earlier the same night on the new car models. No rerun yet. |
+| `tools/e2e-crew.mjs` | **17/17** | |
+| `tools/e2e-lowtide.mjs` | **15/18** | All three failures are the known return drive. After the chase, Sol's car never left Marathon's marina road (230, 686), so the payout, the save and the cleanup checks failed. Not yet diagnosed. The chase, the role swaps and the retry all passed. |
+| `tools/e2e-weather.mjs` | **10/10** | |
+| `tools/e2e-city.mjs` | **20/20** | The renamed places (Deco Auto Body, Sunray Gas, Seven Mile Bridge) are checked. |
+| `tools/e2e-loop.mjs` | **13/13** | |
+
+Visuals were checked in SwiftShader screenshots: palms, cars, the six-model lineup, faces, water at noon and sunset, the bay, the cruise ship, the banner plane and gulls. The screenshot tour (`npm run shots`) was still running at release.
+
+### Previous full run (final build after M3: memory, places, Velvet Palms inside, LOOP accounts)
 
 | Suite | Result | Notes |
 |---|---|---|
