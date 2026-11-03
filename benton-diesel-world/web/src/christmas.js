@@ -636,12 +636,15 @@ export function buildXmasSetup(data) {
   }
   for (const fb of [-4.6, 4.6]) for (const sd of [-2.6, 2.6]) add([0.8, 1.6, 1.6], [cx + Math.cos(yawC) * sd + Math.sin(yawC) * fb, G + 0.8, cz - Math.sin(yawC) * sd + Math.cos(yawC) * fb], 0x111111, 'Rubber', { shape: 2, collide: 0, yaw: yawC });
   box([3, 3, 3.4], [cx - Math.sin(yawC) * 4, G + 3.8, cz - Math.cos(yawC) * 4], 0xf2c818, 'SmoothPlastic', { collide: 0, yaw: yawC });
-  const top = [tx + (cx - tx) * 0.08, G + 4.1 * s + 22, tz + (cz - tz) * 0.08];
+  const top = [tx + (cx - tx) * 0.08, G + 4.1 * s + 27, tz + (cz - tz) * 0.08];
   const pivot = [cx, G + 5.4, cz];
   seg(pivot, top, 1.2, 0xf2c818, 'Metal');
-  seg([top[0], top[1] - 0.4, top[2]], [top[0], G + 4.1 * s + 12.6, top[2]], 0.12, 0x1a1a1a, 'Metal');
-  add([2.8 * s, 2 * s, 2.8 * s], [top[0], G + 4.1 * s + 7.5, top[2]], GREEN, 'Grass', { shape: 5, collide: 0 }); // the third tier, swinging in
-  for (const a of [0, 2.1, 4.2]) seg([top[0], G + 4.1 * s + 12.6, top[2]], [top[0] + Math.cos(a) * 3.4, G + 4.1 * s + 11.6, top[2] + Math.sin(a) * 3.4], 0.1, 0x1a1a1a, 'Metal');
+  // the third tier hangs well clear above the second, on slings from the hook
+  const tierY = G + 4.1 * s + 14, hookY = tierY + s + 2.4;
+  seg([top[0], top[1] - 0.4, top[2]], [top[0], hookY, top[2]], 0.12, 0x1a1a1a, 'Metal');
+  add([0.8, 1.2, 0.8], [top[0], hookY - 0.4, top[2]], 0xf2c818, 'Metal', { collide: 0 });
+  add([2.8 * s, 2 * s, 2.8 * s], [top[0], tierY, top[2]], GREEN, 'Grass', { shape: 5, collide: 0 }); // the third tier, swinging in
+  for (const a of [0, 2.1, 4.2]) seg([top[0], hookY - 1, top[2]], [top[0] + Math.cos(a) * 3.4, tierY + s, top[2] + Math.sin(a) * 3.4], 0.1, 0x1a1a1a, 'Metal');
   crew('work', cx - Math.sin(yawC) * 4, G + 2.4, cz - Math.cos(yawC) * 4, yawC);
   // the top tier and the star, waiting on a flatbed
   const fx = tx - 22, fz = tz - 8;
