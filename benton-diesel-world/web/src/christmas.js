@@ -43,15 +43,9 @@ function helpers(data) {
   return { add, box, sign, cf, mi };
 }
 
-export function buildChristmas(data) {
-  const { add, box, sign, cf } = helpers(data);
-  const find = makeFinder(data);
-  const lights = []; // [x, y, z, pattern] for the twinkling bulbs (0 chase, 1 twinkle)
-  data.tags.SteamVent = data.tags.SteamVent || [];
-  data.tags.ParkLamp = data.tags.ParkLamp || [];
-  data.staffSpots = data.staffSpots || [];
-
-  // ---- decorations
+// The decorations (shared by the event and its setup): a decorated tree
+// (its spiral of lights goes into `lights`), presents, candy canes, snowmen.
+function decorKit(add, box, lights) {
   const tree = (x, z, scale = 1, ground = 0) => {
     const y0 = ground + G;
     box([0.8 * scale, 1.4 * scale, 0.8 * scale], [x, y0, z], BROWN, 'Wood', { collide: 0 });
@@ -97,6 +91,18 @@ export function buildChristmas(data) {
     add([2, 0.4, 2], [x, G + 5, z], RED, 'Fabric', { shape: 5, collide: 0 });
     for (const s of [-0.3, 0.3]) add([0.18, 0.18, 0.18], [x + fx * 0.75 + Math.cos(yaw) * s, G + 6, z + fz * 0.75 - Math.sin(yaw) * s], 0x101012, 'SmoothPlastic', { shape: 3, collide: 0 });
   };
+  return { tree, presents, candyCane, snowman };
+}
+
+export function buildChristmas(data) {
+  const { add, box, sign, cf } = helpers(data);
+  const find = makeFinder(data);
+  const lights = []; // [x, y, z, pattern] for the twinkling bulbs (0 chase, 1 twinkle)
+  data.tags.SteamVent = data.tags.SteamVent || [];
+  data.tags.ParkLamp = data.tags.ParkLamp || [];
+  data.staffSpots = data.staffSpots || [];
+
+  const { tree, presents, candyCane, snowman } = decorKit(add, box, lights);
 
   // ---- along every walkway: something festive every so often, either side
   const lineDist = (px, pz, skip) => Math.min(...WALKWAYS.filter((l) => l !== skip).map(([a, b]) => {
@@ -486,15 +492,8 @@ export class Christmas {
   }
 }
 
-// ---- after the holidays: everything coming down. The giant tree is half
-// gone (its top tiers on a flatbed, a lift and a crew at work), crates of
-// decorations wait where the walkway decorations stood, the last light
-// strand is coming down over Main Street, and Santa's Workshop is being
-// packed up behind the locked backstage gate.
-export function buildXmasTeardown(data) {
-  const { add, box, sign, cf } = helpers(data);
-  const find = makeFinder(data);
-  data.staffSpots = data.staffSpots || [];
+// The work crews' kit: a crew member, a crate of decorations, a scissor lift.
+function crewKit(data, add, box, sign, cf) {
   const crew = (kind, x, y, z, yaw) => data.staffSpots.push({ role: 'construction', kind, land: 'Plaza', seed: 0, cf: cf(x, y, z, yaw) });
   const crate = (x, z, k = 0, label = false) => {
     box([3.2, 2.4, 2.4], [x, G, z], 0x8a6a3a, 'WoodPlanks', { yaw: k * 0.3 });
@@ -507,6 +506,19 @@ export function buildXmasTeardown(data) {
     box([4.4, 0.4, 7.4], [x, G + h, z], 0xf2c818, 'SmoothPlastic', { collide: 0, yaw });
     crew('work', x, G + h + 0.4, z, yaw);
   };
+  return { crew, crate, lift };
+}
+
+// ---- after the holidays: everything coming down. The giant tree is half
+// gone (its top tiers on a flatbed, a lift and a crew at work), crates of
+// decorations wait where the walkway decorations stood, the last light
+// strand is coming down over Main Street, and Santa's Workshop is being
+// packed up behind the locked backstage gate.
+export function buildXmasTeardown(data) {
+  const { add, box, sign, cf } = helpers(data);
+  const find = makeFinder(data);
+  data.staffSpots = data.staffSpots || [];
+  const { crew, crate, lift } = crewKit(data, add, box, sign, cf);
   // the Plaza tree, half taken down
   const [tx, tz] = find(0, 268, 11, [[-70, 230, 70, 290]]) || [24, 262];
   const s = 4.2;
@@ -552,4 +564,151 @@ export function buildXmasTeardown(data) {
     ...(data.staff.lines.construction || []),
     'The holidays are over - taking it all down!', 'Happy New Year!', 'See you next holiday season!', 'Careful, this box is full of ornaments.',
   ];
+}
+
+// ---- before the holidays: everything going up. Benton Haunt has just
+// ended, and the crews are already putting up Benton Holidays: the giant
+// Plaza tree is half built (its bottom tiers are up, a crane is lowering
+// the next one, the top and the star wait on a flatbed), the first light
+// strands are strung over Main Street, some of the walkway decorations are
+// already out and the rest wait in crates, and Santa's Workshop is being
+// framed up behind the locked backstage gate.
+export const XMAS_OPENING = 'NOVEMBER 21';
+export function buildXmasSetup(data) {
+  const { add, box, sign, cf } = helpers(data);
+  const find = makeFinder(data);
+  data.staffSpots = data.staffSpots || [];
+  const unlit = []; // strands not wired up yet: just colored bulbs
+  const { tree, presents, candyCane, snowman } = decorKit(add, box, unlit);
+  const { crew, crate, lift } = crewKit(data, add, box, sign, cf);
+  const seg = (a, b, w, color, mat) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], len = Math.hypot(dx, dy, dz);
+    const yaw = Math.atan2(dx, dz), pitch = Math.asin(dy / len);
+    const c = Math.cos(yaw), sn = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    add([w, w, len], [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2], color, mat, { collide: 0, rot: [c, -sn * sp, sn * cp, 0, cp, sp, -sn, -c * sp, c * cp] });
+  };
+
+  // ---- along the walkways: every third decoration is already out, and
+  // crates of decorations wait at the rest of the spots
+  const lineDist = (px, pz, skip) => Math.min(...WALKWAYS.filter((l) => l !== skip).map(([a, b]) => {
+    const ux = b.x - a.x, uz = b.z - a.z, l2 = ux * ux + uz * uz;
+    const u = Math.max(0, Math.min(1, ((px - a.x) * ux + (pz - a.z) * uz) / l2));
+    return Math.hypot(a.x + ux * u - px, a.z + uz * u - pz);
+  }));
+  let k = 0;
+  for (const line of WALKWAYS) {
+    const [a, b] = line;
+    const len = Math.hypot(b.x - a.x, b.z - a.z);
+    const dx = (b.x - a.x) / len, dz = (b.z - a.z) / len, nx = -dz, nz = dx;
+    for (let t = 10; t < len - 6; t += 26) {
+      const side = (Math.round(t / 26) + k) % 2 ? 1 : -1;
+      for (let s = 7.5; s <= 12; s += 1.5) {
+        const px = a.x + dx * t + nx * side * s, pz = a.z + dz * t + nz * side * s;
+        if (!find.clear(px, pz, 2.6) || lineDist(px, pz, line) < 6) continue;
+        const yawIn = Math.atan2(nx * side, nz * side);
+        if (k % 3 === 0) [() => tree(px, pz, 0.8), () => presents(px, pz, k), () => candyCane(px, pz, yawIn), () => snowman(px, pz, yawIn)][(k / 3) % 4]();
+        else crate(px, pz, k, k % 3 === 1);
+        k++;
+        break;
+      }
+    }
+  }
+
+  // ---- the giant Plaza tree, going up
+  const [tx, tz] = find(0, 268, 11, [[-70, 230, 70, 290]]) || [24, 262];
+  const s = 4.2;
+  box([0.8 * s, 1.4 * s, 0.8 * s], [tx, G, tz], BROWN, 'Wood');
+  for (const [d, h, y] of [[5, 2.4, 2.2], [3.9, 2.2, 4.1]]) add([d * s, h * s, d * s], [tx, G + y * s, tz], GREEN, 'Grass', { shape: 5, collide: 0 });
+  add([0.5, 16, 0.5], [tx, G + 4.1 * s + 8, tz], 0x6a4a30, 'Wood', { collide: 0 }); // the center pole, waiting
+  // the first strings of lights, round the bottom tiers (not lit yet)
+  for (let j = 0; j < 46; j++) {
+    const t = j / 46, a = t * Math.PI * 7, r = (2.6 - t * 0.8) * s;
+    add([0.32, 0.32, 0.32], [tx + Math.cos(a) * r, G + (1.6 + t * 3.6) * s, tz + Math.sin(a) * r], BULBS[j % 5], 'SmoothPlastic', { shape: 3, collide: 0 });
+  }
+  // a mobile crane lowering the third tier into place
+  const around = [0.6, 2.2, 3.8, 5.0, 1.4, 4.4].map((a) => [tx + Math.cos(a) * 22, tz + Math.sin(a) * 22]);
+  const [cx, cz] = around.find(([x, z]) => find.clear(x, z, 5)) || around[0];
+  const yawC = Math.atan2(tx - cx, tz - cz);
+  box([5, 2.6, 13], [cx, G + 1.2, cz], 0xf2c818, 'SmoothPlastic', { yaw: yawC });
+  for (const sd of [-1, 1]) for (const fb of [-1, 1]) {
+    const ox = cx + Math.cos(yawC) * sd * 4.2 + Math.sin(yawC) * fb * 5, oz = cz - Math.sin(yawC) * sd * 4.2 + Math.cos(yawC) * fb * 5;
+    box([0.8, 1.6, 0.8], [ox, G, oz], 0x2a2a2e, 'Metal', { collide: 0 });
+  }
+  for (const fb of [-4.6, 4.6]) for (const sd of [-2.6, 2.6]) add([0.8, 1.6, 1.6], [cx + Math.cos(yawC) * sd + Math.sin(yawC) * fb, G + 0.8, cz - Math.sin(yawC) * sd + Math.cos(yawC) * fb], 0x111111, 'Rubber', { shape: 2, collide: 0, yaw: yawC });
+  box([3, 3, 3.4], [cx - Math.sin(yawC) * 4, G + 3.8, cz - Math.cos(yawC) * 4], 0xf2c818, 'SmoothPlastic', { collide: 0, yaw: yawC });
+  const top = [tx + (cx - tx) * 0.08, G + 4.1 * s + 22, tz + (cz - tz) * 0.08];
+  const pivot = [cx, G + 5.4, cz];
+  seg(pivot, top, 1.2, 0xf2c818, 'Metal');
+  seg([top[0], top[1] - 0.4, top[2]], [top[0], G + 4.1 * s + 12.6, top[2]], 0.12, 0x1a1a1a, 'Metal');
+  add([2.8 * s, 2 * s, 2.8 * s], [top[0], G + 4.1 * s + 7.5, top[2]], GREEN, 'Grass', { shape: 5, collide: 0 }); // the third tier, swinging in
+  for (const a of [0, 2.1, 4.2]) seg([top[0], G + 4.1 * s + 12.6, top[2]], [top[0] + Math.cos(a) * 3.4, G + 4.1 * s + 11.6, top[2] + Math.sin(a) * 3.4], 0.1, 0x1a1a1a, 'Metal');
+  crew('work', cx - Math.sin(yawC) * 4, G + 2.4, cz - Math.cos(yawC) * 4, yawC);
+  // the top tier and the star, waiting on a flatbed
+  const fx = tx - 22, fz = tz - 8;
+  if (find.clear(fx, fz, 6)) {
+    box([18, 1.2, 7], [fx, G + 1.2, fz], 0x3a3a3e, 'Metal');
+    add([1.7 * s, 1.6 * s, 1.6 * s], [fx - 3, G + 2.4 + 0.8 * s, fz], GREEN, 'Grass', { shape: 2, collide: 0 });
+    add([0.9 * s, 0.9 * s, 0.9 * s], [fx + 5, G + 2.4 + 0.45 * s, fz], GOLD, 'Metal', { shape: 3, collide: 0 });
+  }
+  lift(tx + 8, tz - 12, 14, 0);
+  for (let j = 0; j < 4; j++) crate(tx - 10 + j * 4, tz + 15, j, j === 1);
+  for (let j = 0; j < 3; j++) presents(tx + 12 + (j % 2) * 4, tz + 12 + j * 1.5, j);
+  crew('idle', tx - 6, G, tz + 12, 0);
+  box([0.6, 18, 0.6], [tx - 15, G, tz + 13], 0x2a2a2e, 'Metal', { collide: 0 });
+  sign([16, 3.4, 0.3], [tx - 15, G + 17, tz + 13.2], RED, 'Back', [['BENTON HOLIDAYS', 0, 0, 1, 0.6, WHITE], [`COMING ${XMAS_OPENING}  ·  THE TREE IS GOING UP!`, 0, 0.62, 1, 0.38, GOLD, 'GothamBold']], { glow: true });
+
+  // ---- Main Street: the first three light strands are up
+  for (const z of [214, 192, 170]) {
+    for (let j = 0; j <= 20; j++) {
+      const x = -24 + j * 2.4, u = x / 24;
+      add([0.32, 0.32, 0.32], [x, 14.5 - 2.4 * (1 - u * u), z], BULBS[j % 5], 'SmoothPlastic', { shape: 3, collide: 0 });
+    }
+  }
+  lift(-12, 148, 12, 0);
+  add([1.4, 2.2, 2.2], [-6, G + 1.1, 150], 0x6a4a30, 'Wood', { shape: 2, collide: 0 }); // a reel of lights
+  for (let j = 0; j < 8; j++) add([0.3, 0.3, 0.3], [-6 + j * 1.6, G + 0.15, 152], BULBS[j % 5], 'SmoothPlastic', { shape: 3, collide: 0 });
+
+  // ---- Santa's Workshop, being framed up behind the locked backstage gate
+  const W = WORKSHOP, wz = W.front - 8.5;
+  box([42, 0.4, 19], [W.x, G, wz], 0x9a9690, 'Concrete');
+  for (let x = W.x - 20; x <= W.x + 20; x += 2) for (const z of [W.front, wz - 8.5]) box([0.4, 12, 0.4], [x, G + 0.4, z], 0xc8a46a, 'Wood', { collide: 0 });
+  for (let z = wz - 8.5; z <= W.front; z += 2) for (const x of [W.x - 20, W.x + 20]) box([0.4, 12, 0.4], [x, G + 0.4, z], 0xc8a46a, 'Wood', { collide: 0 });
+  box([41, 0.6, 0.6], [W.x, G + 12.4, W.front], 0xc8a46a, 'Wood', { collide: 0 });
+  box([41, 0.6, 0.6], [W.x, G + 12.4, wz - 8.5], 0xc8a46a, 'Wood', { collide: 0 });
+  box([16, 10, 0.5], [W.x - 11, G + 0.4, W.front + 0.3], 0x8a2a22, 'WoodPlanks', { collide: 0 }); // the first red boards
+  for (let x = W.x - 18; x <= W.x + 18; x += 4) {
+    seg([x, G + 13, W.front], [x, G + 19, wz], 0.5, 0xc8a46a, 'Wood');
+    seg([x, G + 13, wz - 8.5], [x, G + 19, wz], 0.5, 0xc8a46a, 'Wood');
+  }
+  for (const x of [W.x - 22, W.x + 22]) for (let y = 4; y <= 12; y += 4) box([0.3, 4, 0.3], [x, G + y - 4, W.front + 2], 0x9aa0a8, 'Metal', { collide: 0 });
+  box([0.5, 8, 0.5], [W.x + 8, G, W.front + 9], 0x2a2a2e, 'Metal');
+  sign([14, 3, 0.3], [W.x + 8, G + 8.6, W.front + 9.2], GREEN, 'Back', [["SANTA'S WORKSHOP", 0, 0, 1, 0.6, WHITE], [`OPENING ${XMAS_OPENING}`, 0, 0.6, 1, 0.4, GOLD, 'GothamBold']]);
+  for (let j = 0; j < 6; j++) crate(W.x - 12 + (j % 3) * 4, W.front + 14 + Math.floor(j / 3) * 4, j, j === 0);
+  lift(W.x + 14, W.front + 4, 10, 0);
+  crew('work', W.x - 8, G, W.front + 3, Math.PI);
+  crew('work', W.x + 2, G + 0.4, wz, 0);
+  data.staff.lines.construction = [
+    ...(data.staff.lines.construction || []),
+    `Benton Holidays opens ${XMAS_OPENING.toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}!`, 'Putting up the holiday lights!', 'Mind the crane - the tree is going up!',
+    'Haunt down, holidays up!', 'Careful, this box is full of ornaments.', "Santa's Workshop is coming along nicely!",
+  ];
+  return { tree: [tx, tz] };
+}
+
+// a toast the first time you walk up to the tree going up
+export class XmasSetupSite {
+  constructor(hooks, layout) {
+    this.hooks = hooks;
+    this.layout = layout;
+    this.told = false;
+  }
+
+  update(dt, pos, started) {
+    if (!started || this.told) return;
+    const [x, z] = this.layout.tree;
+    if (Math.hypot(pos.x - x, pos.z - z) < 60) {
+      this.told = true;
+      this.hooks.toast(`Benton Haunt is over - thanks for screaming! The crews are already putting up BENTON HOLIDAYS: the giant tree is going up, and Santa's Workshop opens ${XMAS_OPENING}.`, 'reward');
+    }
+  }
 }

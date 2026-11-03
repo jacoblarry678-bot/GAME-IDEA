@@ -4,7 +4,7 @@
 // food, Express), and your own photos: snap the view, add a caption and
 // watch the likes and comments roll in.
 import * as Clock from './clock.js';
-import { HAUNT_OVER } from './season.js';
+import { HAUNT_OVER, XMAS_SETUP } from './season.js';
 
 const STORE = 'bentonDieselWorld.social';
 const nowS = () => performance.now() / 1000;
@@ -13,7 +13,14 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const PARK = { handle: '@BentonDieselWorld', name: 'Benton Diesel World', color: 0xff6a1a, verified: true };
 
 // the park's own posts, newest first (each with a poster-style card)
+const SEASON_POSTS = HAUNT_OVER && XMAS_SETUP ? [
+  { when: 'Today', art: { title: 'BENTON HOLIDAYS', sub: 'COMING NOVEMBER 21', color: 0xc8102e, emoji: '🎄' },
+    text: "Haunt down, holidays up! The crews are already putting up Benton Holidays: the giant tree is going up in the Plaza, the lights are going up over Main Street, and Santa's Workshop is being built backstage. See you November 21! 🎅", likes: 9210 },
+  { when: '1d', art: { title: 'THANKS FOR SCREAMING!', sub: 'BENTON HAUNT HAS ENDED', color: 0xff7a1a, emoji: '🎃' },
+    text: 'That is a wrap on Benton Haunt! Thank you to everyone who screamed through all seven houses and seven scare zones. The houses are coming down... for now. See you next fall. #BentonHaunt', likes: 14022 },
+] : [];
 const OFFICIAL = [
+  ...SEASON_POSTS,
   { when: 'Today', art: { title: 'FRONT OF THE LINE', sub: 'NEW: EXPRESS LINES · EXTENDED QUEUES', color: 0xe02020, emoji: '🎟️' },
     text: 'NEW! Express now has its own short line, busy rides open extended queues, and Front of the Line tickets take you straight to the next train. Benton Haunt FOTL B$250 · Ride FOTL B$350 at every park shop.', likes: 4812 },
   { when: '2d', art: { title: 'FINAL DESTINATION', sub: "DEATH'S DESIGN · NOW OPEN", color: 0xc81e1e, emoji: '✈️' },

@@ -25,8 +25,8 @@ import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
-import { buildChristmas, buildXmasTeardown, Christmas } from './christmas.js';
-import { CHRISTMAS, XMAS_OVER, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
+import { buildChristmas, buildXmasTeardown, Christmas, buildXmasSetup, XmasSetupSite } from './christmas.js';
+import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
 import { buildMardiGras } from './mardigras.js';
 import { buildLineTickets, buildExtendedQueues } from './lanes.js';
@@ -115,6 +115,8 @@ async function main() {
   // Benton Holidays: decorations, ride lights and Santa's Workshop
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
   if (XMAS_OVER && !WOLVERINE_OPEN) buildXmasTeardown(data);
+  // Benton Holidays going up
+  const xmasSetup = XMAS_SETUP && !CHRISTMAS ? buildXmasSetup(data) : null;
   // Wolverine, open past Backwoods
   const wvLayout = WOLVERINE_OPEN ? buildWolverine(data) : null;
   // Mardi Gras: a temporary bar at the Grand
@@ -251,6 +253,7 @@ async function main() {
   game.entrance = entrance;
   game.scareZones = scareZones;
   game.houses = houses;
+  const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
   const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
   const bbSite = new BoomCoasterSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bbLayout);
   const ftSite = new FuelThrottleSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ftLayout);
@@ -286,6 +289,7 @@ async function main() {
   };
   game.clockNow = Clock.now;
   game.clock = Clock; // (for testing: skip to a time of day)
+  game.xmasSetup = xmasSetup;
   game.skipClock = (seconds) => Clock.skip(seconds); // handy for debugging
   game.skipTo = (show) => {
     const s = sim.showStatus(show);
@@ -461,6 +465,7 @@ async function main() {
     ftSite.update(dt, player.pos, started);
     bbSite.update(dt, player.pos, started);
     crSite.update(dt, player.pos, started);
+    xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
     bubbles.update(dt, camera.position);

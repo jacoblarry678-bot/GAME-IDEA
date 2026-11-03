@@ -12,6 +12,7 @@ import { helpers } from './wolverine.js';
 import { makeFinder } from './haunt.js';
 
 import { FOTL } from './queue.js';
+import { HAUNT_OVER } from './season.js';
 
 // the two Front of the Line tickets, sold beside the Express Pass
 export function buildLineTickets(data) {
@@ -30,7 +31,8 @@ export function buildLineTickets(data) {
     const recolor = (parts) => (parts || []).map((p) => { const q = p.slice(); q[16] = t.color; return q; });
     data.items.push({ id: t.id, preview: recolor(model?.preview), wear: recolor(model?.wear || model?.preview) });
   }
-  for (const v of data.config.Venues) if (v.items.includes('ExpressPass')) v.items.splice(v.items.indexOf('ExpressPass') + 1, 0, FOTL.ride, FOTL.haunt);
+  // (the haunt's ticket is off sale once Benton Haunt is over)
+  for (const v of data.config.Venues) if (v.items.includes('ExpressPass')) v.items.splice(v.items.indexOf('ExpressPass') + 1, 0, ...(HAUNT_OVER ? [FOTL.ride] : [FOTL.ride, FOTL.haunt]));
 }
 
 // Extended queues: for each ride, a switchback of stanchions and ropes on

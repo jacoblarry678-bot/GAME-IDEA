@@ -49,6 +49,28 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Haunt has ended, and Benton Holidays is being set up (browser
+  only):**
+  - The haunt is over: the houses (Final Destination included) and all
+    seven scare zones are closed, the backstage gate is locked again, and
+    crews are tearing down the house facades on the soundstages and the
+    Family Landing tent. The Benton Haunt Front of the Line ticket is off
+    sale.
+  - Christmas is going up, opening November 21. The giant Plaza tree is
+    half built: its bottom tiers are up with the first strings of lights
+    round them, a yellow mobile crane is lowering the third tier into
+    place, and the top tier and the star wait on a flatbed, next to a
+    COMING NOVEMBER 21 banner.
+  - The first three light strands are strung over Main Street, with a lift
+    and a reel of lights at the next one. Along the walkways, every third
+    decoration (trees, presents, candy canes, snowmen) is already out, and
+    crates of holiday decor wait at the rest.
+  - Behind the locked backstage gate, Santa's Workshop is being framed up:
+    a slab, timber studs, roof rafters, the first red boards, scaffolding
+    and an OPENING NOVEMBER 21 sign.
+  - The parkway billboards, the shuttle signs, the Grand's greeting and the
+    park's social feed all say it: thanks for screaming, and Benton
+    Holidays is coming.
 - **More realistic graphics, and more real-world detail (browser only):**
   - Light: stronger sunlight against the sky light, so shadows read the way
     they do outdoors. A clearer, bluer sky, and exposure tuned so pale

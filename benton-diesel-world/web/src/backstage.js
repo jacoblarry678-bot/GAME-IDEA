@@ -283,7 +283,7 @@ export function buildBackstage(data) {
   // stacked on carts
   function teardown(house, i, x) {
     const fz = STAGE_Z + 4;
-    const wallMat = { garage: 'CorrodedMetal', mine: 'Slate', film: 'SmoothPlastic', crash: 'SmoothPlastic', engine: 'DiamondPlate' }[house.theme];
+    const wallMat = { garage: 'CorrodedMetal', mine: 'Slate', film: 'SmoothPlastic', crash: 'SmoothPlastic', engine: 'DiamondPlate', destination: 'SmoothPlastic' }[house.theme];
     const r = (k) => ((i * 7 + k * 13) % 10) / 10;
     // what is left of the facade: one jagged stub and its frame
     box([12.5, 5 + (i % 3) * 2.5, 1.2], [x - 9.75, G, fz], house.color, wallMat);

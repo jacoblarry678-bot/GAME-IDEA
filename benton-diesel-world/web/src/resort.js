@@ -1,4 +1,4 @@
-import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, XMAS_SETUP, MARDI_GRAS } from './season.js';
 
 // The Benton resort district outside the gate: the Benton Parkway running
 // past the toll plaza, three hotels (the Benton Diesel Grand, the Haulers
@@ -163,7 +163,16 @@ const ADS_MARDI = [
 ];
 
 // the Benton Haunt ads on the billboards
-const ADS = MARDI_GRAS ? ADS_MARDI : CHRISTMAS ? ADS_XMAS : XMAS_OVER ? ADS_NEWYEAR : HAUNT_OVER ? ADS_OVER : [
+// Benton Haunt is over and the holidays are on their way
+const ADS_SETUP = [
+  { title: 'BENTON HOLIDAYS', sub: 'COMING NOVEMBER 21  ·  MEET SANTA', foot: 'BENTON DIESEL WORLD', art: 'moon', fg: 0xf0c040 },
+  { title: 'THANKS FOR SCREAMING!', sub: 'BENTON HAUNT RETURNS NEXT FALL', foot: 'BENTON DIESEL WORLD', art: 'pumpkin', fg: ORANGE },
+  { title: 'THE TREE IS GOING UP', sub: 'BENTON HOLIDAYS  ·  NOVEMBER 21 - JANUARY 1', foot: 'BENTON DIESEL WORLD', art: 'moon', fg: 0x5adc6e },
+  { title: 'CONSTRUCTION RUNAWAY', sub: 'RIG 3 IS LOOSE  ·  NOW OPEN', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xf2c818 },
+  { title: 'HOLIDAYS AT THE GRAND', sub: 'BOOK NOW FOR BENTON HOLIDAYS', foot: 'BENTON DIESEL GRAND HOTEL', art: 'pumpkin', fg: 0xf0c440 },
+  { title: 'BENTON BOOM COASTER', sub: 'MIND THE GAP  ·  NOW OPEN', foot: 'BENTON DIESEL WORLD', art: 'moon', fg: 0xffb020 },
+];
+const ADS = MARDI_GRAS ? ADS_MARDI : CHRISTMAS ? ADS_XMAS : XMAS_OVER ? ADS_NEWYEAR : XMAS_SETUP && HAUNT_OVER ? ADS_SETUP : HAUNT_OVER ? ADS_OVER : [
   { title: 'BENTON HAUNT IS BACK', sub: '7 HOUSES  ·  7 SCARE ZONES', foot: 'SELECT NIGHTS THROUGH NOV 2', art: 'moon', fg: ORANGE },
   { title: 'FORTNITEMARES', sub: 'THE STORM IS CLOSING IN', foot: 'NEW SCARE ZONE  ·  FAMILY LANDING', art: 'skull', fg: 0xb04aff },
   { title: 'WOLVERINE', sub: 'THE CLAWS ARE OUT  ·  NOW OPEN', foot: 'BACKWOODS  ·  BENTON DIESEL WORLD', art: 'skull', fg: 0xf2c818 },
@@ -199,7 +208,7 @@ export function buildResort(data) {
     }
   };
   Object.assign(data.staff.lines, {
-    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', MARDI_GRAS ? 'Happy Mardi Gras! Have you ridden Wolverine yet?' : CHRISTMAS ? 'Happy holidays! Santa is at his workshop in the park!' : XMAS_OVER ? 'Happy New Year! Have you seen Wolverine going up?' : HAUNT_OVER ? 'Benton Haunt is over - see you next fall!' : 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
+    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', MARDI_GRAS ? 'Happy Mardi Gras! Have you ridden Wolverine yet?' : CHRISTMAS ? 'Happy holidays! Santa is at his workshop in the park!' : XMAS_OVER ? 'Happy New Year! Have you seen Wolverine going up?' : XMAS_SETUP && HAUNT_OVER ? 'Benton Holidays opens November 21 - the tree is going up!' : HAUNT_OVER ? 'Benton Haunt is over - see you next fall!' : 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
     transit: ['Free shuttles to all three hotels!', 'Next bus is on its way!', 'Watch your step getting off!', 'Security is just this way!'],
   });
   const staff = (role, kind, x, y, z, yaw) => data.staffSpots.push({ role, kind, land: 'Plaza', seed: 0, cf: cf(x, y, z, yaw) });
