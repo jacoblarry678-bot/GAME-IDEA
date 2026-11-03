@@ -197,6 +197,60 @@ export function familyOf(matName) {
   return FAMILY[matName] || 'paint';
 }
 
+// Weathering, so nothing looks factory-fresh: large soft grime blotches
+// that break up flat colors and texture repeats, dirt and damp darkening
+// the bottom of every wall where it meets the ground, faint rain streaks
+// running down walls, and a little roughness variation. Worked out in the
+// mesh's own space, so it stays put on moving ride cars.
+const WEATHER = { paint: 0.8, metal: 1, wood: 1, planks: 1, stone: 1.1, brick: 1, fabric: 0.7, rubber: 0.5, foliage: 0.4 };
+function weather(m, family) {
+  const amount = { value: WEATHER[family] ?? 0.8 };
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uWeather = amount;
+    sh.uniforms.uGround = { value: family === 'stone' ? 0.8 : family === 'planks' ? 0.9 : 1 };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vObjPos;\nvarying vec3 vObjN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvObjPos = position;\nvObjN = normal;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>
+        varying vec3 vObjPos;
+        varying vec3 vObjN;
+        uniform float uWeather;
+        uniform float uGround;
+        float wHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+        float wNoise(vec3 x) {
+          vec3 i = floor(x), f = fract(x);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(mix(wHash(i), wHash(i + vec3(1, 0, 0)), f.x), mix(wHash(i + vec3(0, 1, 0)), wHash(i + vec3(1, 1, 0)), f.x), f.y),
+                     mix(mix(wHash(i + vec3(0, 0, 1)), wHash(i + vec3(1, 0, 1)), f.x), mix(wHash(i + vec3(0, 1, 1)), wHash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+        }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+        {
+          float n1 = wNoise(vObjPos * 0.07);
+          float n2 = wNoise(vObjPos * 0.31 + 7.1);
+          float blot = smoothstep(0.42, 0.88, n1 * 0.7 + n2 * 0.3);
+          vec3 c = diffuseColor.rgb;
+          c *= 1.0 - blot * 0.16 * uWeather;
+          c *= 0.95 + n2 * 0.1;
+          float wall = 1.0 - smoothstep(0.35, 0.75, abs(vObjN.y));
+          // real surfaces reflect less light than bright game colors:
+          // pull very pale colors (paving especially) down toward real albedos
+          float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+          c *= mix(1.0, 0.8, smoothstep(0.35, 0.9, lum)) * mix(1.0, uGround, smoothstep(0.7, 0.95, vObjN.y));
+          // dirt splashed up the bottom of walls
+          float low = (1.0 - smoothstep(0.0, 2.6, vObjPos.y)) * wall;
+          c = mix(c, c * vec3(0.64, 0.58, 0.5), low * 0.55 * uWeather);
+          // rain streaks down walls
+          float along = (vObjPos.x + vObjPos.z) * 1.7;
+          float streak = smoothstep(0.62, 0.95, wNoise(vec3(along, vObjPos.y * 0.09, 3.3))) * wall;
+          c *= 1.0 - streak * 0.1 * uWeather;
+          diffuseColor.rgb = c;
+        }`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+        roughnessFactor = clamp(roughnessFactor * (0.88 + wNoise(vObjPos * 0.19 + 3.0) * 0.24), 0.04, 1.0);`);
+  };
+}
+
 // Shared material for a family (vertex colors carry each part's color).
 export function material(family) {
   if (cache.has(family)) return cache.get(family);
@@ -220,6 +274,7 @@ export function material(family) {
     });
     m.color.setScalar(gain);
     m.normalScale.set(1, 1);
+    weather(m, family);
   }
   m.name = family;
   cache.set(family, m);

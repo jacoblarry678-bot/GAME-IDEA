@@ -114,20 +114,35 @@ void main() {
   float m = dot(direction, normalize(moonDir));
   nightCol += vec3(0.85, 0.88, 1.0) * (smoothstep(0.99955, 0.9997, m) * 3.0 + pow(max(m, 0.0), 60.0) * 0.06);
   col = mix(col, max(col, nightCol), night);
-  // clouds: a layer of drifting fractal noise
+  // clouds: high wispy cirrus, then a layer of puffy cumulus with shaded
+  // bases, bright sunlit tops and glowing edges when the sun is behind them
   if (direction.y > 0.0) {
-    vec2 p = direction.xz / (direction.y + 0.08) * 1.6 + vec2(time * 0.006, time * 0.0025);
-    float n = fbm(p);
-    float cover = smoothstep(1.0 - cloudCover, 1.0 - cloudCover + 0.32, n);
-    float thick = smoothstep(0.35, 0.95, n);
-    float sunSide = pow(max(dot(direction, vSunDirection), 0.0), 6.0);
     float dayL = (1.0 - night);
-    vec3 lit = mix(vec3(1.0, 0.96, 0.9), vec3(1.0, 0.72, 0.5), clamp(1.0 - vSunDirection.y * 4.0, 0.0, 1.0));
-    vec3 cloud = mix(lit * 1.25, vec3(0.62, 0.66, 0.74), thick * 0.7) * (0.25 + 1.2 * dayL) * gain * 0.55;
-    cloud += lit * sunSide * 0.8 * dayL * gain * 0.4;
-    cloud = mix(cloud, vec3(0.03, 0.035, 0.05), night * 0.85);
-    float fade = smoothstep(0.0, 0.18, direction.y);
-    col = mix(col, cloud, cover * fade * 0.92);
+    float fade = smoothstep(0.0, 0.16, direction.y);
+    vec3 lit = mix(vec3(1.0, 0.97, 0.92), vec3(1.0, 0.68, 0.45), clamp(1.0 - vSunDirection.y * 3.5, 0.0, 1.0));
+    float sunSide = max(dot(direction, vSunDirection), 0.0);
+    // cirrus: streaky and faint
+    vec2 pc = direction.xz / (direction.y + 0.05) * 0.5 + vec2(time * 0.004, time * 0.001);
+    float ci = fbm(vec2(pc.x * 3.0, pc.y * 0.7) + fbm(pc * 2.0) * 0.8);
+    float cirrus = smoothstep(0.55, 0.85, ci) * 0.35 * fade;
+    col = mix(col, lit * (0.35 + 0.9 * dayL) * gain * 0.55 + lit * pow(sunSide, 8.0) * 0.3 * dayL * gain, cirrus * (1.0 - night * 0.8));
+    // cumulus: warped noise; light marched a step toward the sun
+    vec2 p = direction.xz / (direction.y + 0.08) * 1.5 + vec2(time * 0.006, time * 0.0025);
+    vec2 w = vec2(fbm(p * 0.6 + 3.1), fbm(p * 0.6 + 7.7)) - 0.5;
+    p += w * 0.9;
+    float n = fbm(p);
+    float cover = smoothstep(1.0 - cloudCover, 1.0 - cloudCover + 0.26, n);
+    vec2 toSun = normalize(vSunDirection.xz + vec2(0.0001)) * 0.18;
+    float shade = clamp((fbm(p + toSun) - n) * 3.2 + 0.55, 0.0, 1.0);
+    float thick = smoothstep(0.45, 1.0, n);
+    vec3 base = vec3(0.5, 0.54, 0.62);
+    vec3 cloud = mix(base, lit * 1.35, shade) * mix(1.0, 0.72, thick);
+    cloud *= (0.18 + 1.1 * dayL) * gain * 0.62;
+    // silver lining: thin edges glow when the sun is behind the cloud
+    float edge = (1.0 - smoothstep(0.0, 0.45, cover)) * cover * 4.0;
+    cloud += lit * pow(sunSide, 5.0) * (0.35 + edge) * dayL * gain * 0.55;
+    cloud = mix(cloud, vec3(0.025, 0.03, 0.045) + vec3(0.06, 0.065, 0.08) * pow(max(dot(direction, normalize(moonDir)), 0.0), 4.0), night * 0.88);
+    col = mix(col, cloud, cover * fade * 0.95);
   }
   // below the horizon: the ground, so reflections are not black
   float below = smoothstep(0.0, -0.06, direction.y);
@@ -142,9 +157,9 @@ export class SkySystem {
     this.scene = scene;
     this.renderer = renderer;
     this.uniforms = {
-      turbidity: { value: 2.4 },
-      rayleigh: { value: 1.2 },
-      mieCoefficient: { value: 0.004 },
+      turbidity: { value: 2.0 },
+      rayleigh: { value: 1.7 },
+      mieCoefficient: { value: 0.0032 },
       mieDirectionalG: { value: 0.82 },
       sunPosition: { value: new THREE.Vector3(0, 1, 0) },
       gain: { value: 1 },
@@ -217,7 +232,7 @@ export class SkySystem {
     u.sunPosition.value.copy(this.sunDir).multiplyScalar(450000);
     u.night.value = 1 - day;
     u.time.value = t;
-    u.turbidity.value = 2.2 + dusk * 3.5;
+    u.turbidity.value = 1.9 + dusk * 3.5;
     u.gain.value = 0.3 + 0.12 * day;
     u.moonDir.value.set(-Math.cos(sunAngle) * 0.8, Math.max(0.25, -elev), -0.35).normalize();
     // ground color seen in reflections
@@ -226,10 +241,12 @@ export class SkySystem {
     // sunlight: warm and low at dusk, gone at night (the moon takes over)
     const sunUp = elev > 0;
     const light = sunUp ? this.sunDir : u.moonDir.value;
-    this.sun.intensity = sunUp ? 2.5 * THREE.MathUtils.smoothstep(elev, -0.02, 0.18) : 0.3 * (1 - day);
+    this.sun.intensity = sunUp ? 3.1 * THREE.MathUtils.smoothstep(elev, -0.02, 0.18) : 0.3 * (1 - day);
+    // sky light vs sunlight: real shadows are much darker than the sunlit side
+    this.scene.environmentIntensity = 0.62 + 0.25 * (1 - day);
     if (sunUp) this.sun.color.setRGB(1, 0.86 + 0.14 * (1 - dusk), 0.7 + 0.3 * (1 - dusk));
     else this.sun.color.setRGB(0.62, 0.72, 1.0);
-    this.fill.intensity = 0.12 + 0.45 * (1 - day);
+    this.fill.intensity = 0.08 + 0.45 * (1 - day);
     this.fill.color.setRGB(0.45 + 0.4 * day, 0.55 + 0.35 * day, 0.9);
     const f = focus;
     // snap the shadow camera to texels so shadows don't shimmer

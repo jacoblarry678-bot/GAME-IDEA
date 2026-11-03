@@ -67,6 +67,8 @@ export function buildBoomCoaster(data) {
   const showRails = new Set(); // show-track parts (the carts' fake wheels sit on these)
   const yawOf = (dx, dz) => Math.atan2(dx, dz);
   const seg = (a, b, size, color, mat, o = {}) => {
+    if (a.isVector3) a = [a.x, a.y, a.z];
+    if (b.isVector3) b = [b.x, b.y, b.z];
     const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], len = Math.hypot(dx, dy, dz);
     const Y = new THREE.Vector3(dx, dy, dz).normalize();
     let X = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), Y);
@@ -201,7 +203,7 @@ export function buildBoomCoaster(data) {
     }
     if (c.y > 6 && clearOf(c.clone().addScaledVector(r, -2.2), s, c.y) && clearOf(c.clone().addScaledVector(r, 2.2), s, c.y)) {
       const a = c.clone().addScaledVector(r, -2.2), b = c.clone().addScaledVector(r, 2.2);
-      seg(new THREE.Vector3(a.x, G + 1, a.z), new THREE.Vector3(b.x, c.y - 1, b.z), [0.3, 0.3], TIMBER, 'Wood');
+      seg(new THREE.Vector3(a.x, G + 1, a.z), new THREE.Vector3(b.x, c.y - 1.2 - 3 * bank, b.z), [0.3, 0.3], TIMBER, 'Wood');
     }
   }
 

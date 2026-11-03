@@ -49,6 +49,35 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **More realistic graphics, and more real-world detail (browser only):**
+  - Light: stronger sunlight against the sky light, so shadows read the way
+    they do outdoors. A clearer, bluer sky, and exposure tuned so pale
+    surfaces aren't blown out.
+  - Atmosphere: height fog, thick in the low air and thinning with
+    altitude, so tall rides and hills rise out of the haze. It glows with
+    sunlight when you look toward the sun, and big soft cloud shadows drift
+    across the whole park.
+  - Clouds: high wispy cirrus over puffy cumulus with shaded bases,
+    sunlit tops and silver linings.
+  - Surfaces: weathering on every building and ride. Grime blotches break
+    up flat colors, dirt and damp darken the bottom of every wall where it
+    meets the ground, faint rain streaks run down the walls, and the
+    roughness varies. Pale paving is toned down to a real stone albedo.
+  - Camera look (High and Ultra): a filmic contrast curve, warm highlights
+    and cool shadows (moonlit blue at night), a vignette, slight lens
+    fringing toward the corners and fine film grain.
+  - The world beyond the park: three ranges of hills and snow-capped
+    mountains fade into the haze on every horizon. Flocks of birds wheel
+    over the park by day, airliners cross high overhead leaving contrails,
+    and flags (the Stars and Stripes, the park flag and the Benton flag)
+    ripple on tall poles over the forecourt.
+  - Street details: litter and recycling bins, park benches, fire
+    hydrants, flower planters and drinking fountains along the edges of
+    the paths, with manhole covers and drain grates set into the paving.
+    Wooden utility poles strung with sagging power lines line the Benton
+    Parkway, and there are two roadside billboards.
+  - Fixes: the Boom Coaster's mine-track rails, trestle braces and Boom
+    Mountain's timber headers were missing (a geometry bug) and are back.
 - **Construction Runaway: a robot-arm ride with an elevator (browser
   only):** north of Throttle Works, through a yellow-and-black I-beam gate
   in its north wall (a path runs up the side of the refinery from the Boom

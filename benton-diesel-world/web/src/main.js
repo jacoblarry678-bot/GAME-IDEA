@@ -45,6 +45,9 @@ import { Thumbs } from './thumbs.js';
 import { UI } from './ui.js';
 import { configureMaterials } from './render/materials.js';
 import { Post } from './render/post.js';
+import { installAtmosphere, atmos } from './render/atmosphere.js';
+import { Life } from './render/life.js';
+import { buildStreetDetails } from './details.js';
 import { waterTime } from './render/water.js';
 
 const QUALITY_KEY = 'bentonDieselWorld.quality';
@@ -132,14 +135,17 @@ async function main() {
   buildLineTickets(data);
   const extended = buildExtendedQueues(data);
   console.log(`extended queues: ${extended}`);
+  // bins, benches, hydrants, planters, fountains and manholes along the paths
+  console.log(`street details: ${buildStreetDetails(data)}`);
   Clock.configure(cfg.Clock);
   Clock.start(540);
 
   const canvas = document.getElementById('view');
+  installAtmosphere(); // height fog and sunlit haze, before anything compiles
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.9;
+  renderer.toneMappingExposure = 0.8;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(65, 1, 0.3, 3200);
@@ -150,6 +156,7 @@ async function main() {
   geomOptions.maxLod = qualityName === 'low' ? 1 : 2;
   const world = new World(scene, data, PRESETS[qualityName], renderer);
   const post = new Post(renderer, scene, camera);
+  const life = new Life(scene, PRESETS[qualityName]); // the horizon, birds, planes, flags
   const collision = new Collision(data.static, world.terrain);
   const guests = new GuestFactory();
   const rideVis = new RideVisuals(scene, data, (seed, pose) => guests.make(seed, pose));
@@ -278,6 +285,7 @@ async function main() {
     location.reload();
   };
   game.clockNow = Clock.now;
+  game.clock = Clock; // (for testing: skip to a time of day)
   game.skipClock = (seconds) => Clock.skip(seconds); // handy for debugging
   game.skipTo = (show) => {
     const s = sim.showStatus(show);
@@ -423,6 +431,8 @@ async function main() {
     waterTime.value = time;
     world.updateGrass(time, camera.position);
     const daylight = world.updateLighting(started ? player.pos : new THREE.Vector3(0, 0, -40), time);
+    life.update(dt, time, daylight);
+    atmos.x = time; // drifting cloud shadows
     // inside a haunted house the daylight is shut out, and the rooms' own
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
