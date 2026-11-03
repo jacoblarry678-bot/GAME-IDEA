@@ -24,7 +24,7 @@ await g(() => {
 });
 await sun.setInput({ steer: { throttle: 0.6, brake: 0, steer: 0 } });
 await sun.advance(3, 30);
-await sun.shot(`${out}/03-drive-ocean-blvd.png`);
+await sun.shot(`${out}/03-drive-ocean-dr.png`);
 await sun.clearInput();
 // store interior
 await g(() => {
@@ -88,8 +88,8 @@ const place = async (file, hour, fn) => {
 };
 await g(() => { const G = window.__sun.game; if (G.player.vehicle) G.unseatCharacter(G.player.vehicle, G.player, null); });
 await place('12-flamingo-park.png', 16.5, (P) => [[P.park.bounds.x1 + 6, 14, P.park.bounds.z0 - 6], [P.park.x - 4, 0, P.park.z + 6], [P.park.x + 2, P.park.z - 4]]);
-await place('13-sunshine-gas.png', 17.2, (P) => [[P.gas.door.x + 34, 6, P.gas.door.z + 16], [P.gas.door.x + 4, 2, P.gas.door.z], [P.gas.door.x + 3, P.gas.door.z]]);
-await place('14-coral-auto-body.png', 15.5, (P) => [[P.autoshop.door.x + 16, 5, P.autoshop.door.z - 10], [P.autoshop.door.x - 6, 2.5, P.autoshop.door.z + 1], [P.autoshop.door.x + 3, P.autoshop.door.z + 7]]);
+await place('13-sunray-gas.png', 17.2, (P) => [[P.gas.door.x + 34, 6, P.gas.door.z + 16], [P.gas.door.x + 4, 2, P.gas.door.z], [P.gas.door.x + 3, P.gas.door.z]]);
+await place('14-deco-auto-body.png', 15.5, (P) => [[P.autoshop.door.x + 16, 5, P.autoshop.door.z - 10], [P.autoshop.door.x - 6, 2.5, P.autoshop.door.z + 1], [P.autoshop.door.x + 3, P.autoshop.door.z + 7]]);
 await place('15-velvet-palms-night.png', 22.3, (P) => [[P.club.layout.door.x - 15, 2.2, P.club.layout.door.z - 9], [P.club.layout.door.x, 3.5, P.club.layout.door.z + 1], [P.club.layout.door.x - 4, P.club.layout.door.z + 5, -Math.PI / 2]]);
 // inside Velvet Palms, from just inside the door
 await g(() => {

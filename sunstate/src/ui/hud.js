@@ -236,7 +236,8 @@ export class HUD {
     const inside = !v && g.world.interiorAt(pos.x, pos.z, pos.y);
     const area = inside ? inside.name : pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Seven Mile Bridge' : pos.x > ISLAND.sandStart ? 'Lummus Park Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Downtown Miami' : 'Biscayne Bay') : DISTRICT_NAME;
     const wl = g.weather?.label;
-    setHTML(this.street, `${road && !inside ? road.name : area}<small>${road && !inside ? area : ''} · ${g.engine.time.label()}${wl ? ' · ' + wl : ''}</small>`);
+    const onRoad = road && !inside, sub = onRoad && road.name !== area ? area + ' · ' : '';
+    setHTML(this.street, `${onRoad ? road.name : area}<small>${sub}${g.engine.time.label()}${wl ? ' · ' + wl : ''}</small>`);
     // fps
     this.fps.classList.toggle('show', s.g.showFps);
     if (s.g.showFps) {

@@ -117,7 +117,7 @@ Asked for: "add where we can post and get likes and follows".
 | `tools/e2e-city.mjs` | **20/20** | The renamed places (Deco Auto Body, Sunray Gas, Seven Mile Bridge) are checked. |
 | `tools/e2e-loop.mjs` | **13/13** | |
 
-Visuals were checked in SwiftShader screenshots: palms, cars, the six-model lineup, faces, water at noon and sunset, the bay, the cruise ship, the banner plane and gulls. The screenshot tour (`npm run shots`) was still running at release.
+Visuals were checked in SwiftShader screenshots: palms, cars, the six-model lineup, faces, water at noon and sunset, the bay, the cruise ship, the banner plane and gulls. The screenshot tour (`npm run shots`) completed: 16 shots, no page errors.
 
 ### Previous full run (final build after M3: memory, places, Velvet Palms inside, LOOP accounts)
 
