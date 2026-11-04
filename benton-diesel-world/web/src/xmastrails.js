@@ -289,10 +289,10 @@ export const XROOMS = {
 const alphabetWall = (R, t0, side) => {
   const rows = ['ABCDEFGH', 'IJKLMNOPQ', 'RSTUVWXYZ'];
   const lit = 'MERYXAS';
-  R.wall(t0, side, 20, 9, 0.3, 0xd8cca0, 'SmoothPlastic', { y0: 2 });
+  // (the letter signs are the wallpaper: nothing in front of them but the bulbs)
   rows.forEach((row, r) => {
     const y = 8.6 - r * 2.6;
-    R.sign(t0, side, row.split('').join('   '), 18, 1.6, y - 1, 0xd8cca0, 0x1a1a1a);
+    R.sign(t0, side, row.split('').join('   '), 18, 2.6, y - 1.1, 0xd8cca0, 0x1a1a1a);
     [...row].forEach((ch, i) => {
       const t = t0 - 9 + (i + 0.5) * (18 / row.length);
       const on = lit.includes(ch);
