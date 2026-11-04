@@ -640,7 +640,11 @@ export function buildFFRefurb(data, layout) {
     for (let y = 10; y < 42; y += 8) add([0.15, len, 0.15], [SX[1], G + y + 4, (bays[i] + bays[i + 1]) / 2], STEEL, 'Metal', { collide: 0, rot: [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)] });
   }
   add([0.15, 36, zB - zA], [SX[1] - 0.3, G + 28, zc], NET, 'Fabric', { collide: 0, trans: 0.35 });
-  sign([0.2, 7, 60], [SX[1] - 0.5, G + 38, zc], NET, 'Left', [['FAST & FURIOUS', 0, 0, 1, 0.55, ORANGE], ['REFURBISHMENT IN PROGRESS  ·  BACK SOON', 0, 0.58, 1, 0.38, WHITE, 'GothamBold']], { glow: true });
+  // the big banner on the warehouse no longer says NOW OPEN
+  for (const s of data.signs) {
+    if (!s.labels.some((l) => l.text === 'NOW OPEN') || !s.labels.some((l) => l.text === 'BENTON STREET RUN')) continue;
+    s.labels = s.labels.map((l) => (l.text === 'NOW OPEN' ? { ...l, text: 'CLOSED FOR REFURBISHMENT  ·  BACK SOON', color: 0xf2c818 } : l));
+  }
   for (const [y, z] of [[18, zA + 20], [26, zc + 30], [34, zc - 25], [42, zB - 30]]) crew('work', (SX[0] + SX[1]) / 2, G + y + 0.15, z, -Math.PI / 2);
 
   // ---- a scissor lift and crates in the courtyard's south corner
