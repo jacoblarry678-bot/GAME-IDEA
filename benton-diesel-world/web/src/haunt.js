@@ -6,7 +6,7 @@
 // the event's food stand on the backstage avenue with a Halloween menu.
 
 import { LINES as WALKWAYS } from './guests.js';
-import { HAUNT_OVER } from './season.js';
+import { HAUNT_OVER, CHRISTMAS } from './season.js';
 
 export const FB = { x0: 375, x1: 500, z0: 128, z1: 236 };
 const GATE = { z0: 161.4, z1: 197.1 }; // between the east wall pillars at z 159.1 and 199.4
@@ -67,14 +67,16 @@ export function buildFamilyBackstage(data) {
 
   // the gate arch, facing the park
   const gz = (GATE.z0 + GATE.z1) / 2, gw = GATE.z1 - GATE.z0;
-  if (HAUNT_OVER) return familyTeardown();
+  if (HAUNT_OVER && !CHRISTMAS) return familyTeardown();
+  // (at Christmas the tent is Gingerbread Lane, one of the Christmas trails)
+  const XM = HAUNT_OVER && CHRISTMAS;
   for (const z of [GATE.z0 + 1.5, GATE.z1 - 1.5]) {
     box([2.6, 16, 2.6], [379, G, z], BLACK, 'Metal');
-    for (let k = 0; k < 3; k++) add([1.6, 1.4, 1.6], [376.9, G + 0.7, z + (k - 1) * 1.8], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
+    for (let k = 0; k < 3; k++) add([1.6, 1.4, 1.6], [376.9, G + 0.7, z + (k - 1) * 1.8], (XM ? [0xc8102e, 0x1e5a2a, 0xf0c040][k] : PUMPKIN), 'SmoothPlastic', { shape: 3, collide: 0 });
   }
   add([2, 3, gw], [379, G + 17.5, gz], BLACK, 'Metal', { collide: 0 });
-  sign('BENTON HAUNT  ·  BACKSTAGE', [0.2, 2.2, gw - 3], [377.9, G + 17.6, gz], BLACK, ORANGE, 'Left', 'GothamBlack', true);
-  sign('HOUSE 6: LIGHTS OUT AT LAKESIDE  ·  NOW OPEN', [0.2, 1, gw - 6], [377.9, G + 15.3, gz], BLACK, WHITE, 'Left', 'GothamBold');
+  sign(XM ? 'BENTON HOLIDAYS  ·  FAMILY LANDING' : 'BENTON HAUNT  ·  BACKSTAGE', [0.2, 2.2, gw - 3], [377.9, G + 17.6, gz], BLACK, XM ? 0xf0c040 : ORANGE, 'Left', 'GothamBlack', true);
+  sign(XM ? 'CHRISTMAS TRAIL: GINGERBREAD LANE  ·  NOW OPEN' : 'HOUSE 6: LIGHTS OUT AT LAKESIDE  ·  NOW OPEN', [0.2, 1, gw - 6], [377.9, G + 15.3, gz], BLACK, WHITE, 'Left', 'GothamBold');
 
   // the clear-span tent for the sixth house: straight walls under a
   // rounded white roof, ribbed every few studs (hollow, with a way in at
@@ -121,24 +123,24 @@ export function buildFamilyBackstage(data) {
   // the finished facade at the tent's west end: a lakeside lodge with its
   // sign lit, lanterns either side and fog rolling out of the door
   const fx = HX0 - 0.8;
-  for (const [za, zb] of [[HZ - 12, HZ - 1.5], [HZ + 5.5, HZ + 12]]) box([1.2, 15, zb - za], [fx, G, (za + zb) / 2], 0x2a1c14, 'WoodPlanks');
-  box([1.2, 5.6, 7], [fx, G + 9.4, HZ + 2], 0x2a1c14, 'WoodPlanks');
+  for (const [za, zb] of [[HZ - 12, HZ - 1.5], [HZ + 5.5, HZ + 12]]) box([1.2, 15, zb - za], [fx, G, (za + zb) / 2], XM ? 0x9a6a32 : 0x2a1c14, XM ? 'SmoothPlastic' : 'WoodPlanks');
+  box([1.2, 5.6, 7], [fx, G + 9.4, HZ + 2], XM ? 0x9a6a32 : 0x2a1c14, XM ? 'SmoothPlastic' : 'WoodPlanks');
   for (const sz of [-1, 1]) box([4, 10, 0.6], [fx + 2, G, HZ + 2 + sz * 3.8], 0x101012, 'SmoothPlastic');
   for (let k = 0; k < 7; k++) {
-    add([1.2, 1.2, 10.5], [fx - 0.8, G + 0.6 + k * 1.25, HZ - 6.75], 0x6a4428, 'Wood', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
-    add([1.2, 1.2, 6.5], [fx - 0.8, G + 0.6 + k * 1.25, HZ + 8.75], 0x6a4428, 'Wood', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
+    add([1.2, 1.2, 10.5], [fx - 0.8, G + 0.6 + k * 1.25, HZ - 6.75], XM ? (k % 2 ? 0xf4f0e8 : 0xc8102e) : 0x6a4428, XM ? 'SmoothPlastic' : 'Wood', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
+    add([1.2, 1.2, 6.5], [fx - 0.8, G + 0.6 + k * 1.25, HZ + 8.75], XM ? (k % 2 ? 0xf4f0e8 : 0xc8102e) : 0x6a4428, XM ? 'SmoothPlastic' : 'Wood', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
   }
-  add([26, 3, 8], [fx - 2.2, G + 16.4, HZ], 0x3a2418, 'Wood', { shape: 1, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
-  sign('LIGHTS OUT AT LAKESIDE', [0.3, 2.4, 20], [fx - 0.9, G + 12.6, HZ], BLACK, 0xffb040, 'Left', 'GothamBlack', true);
-  for (const dz of [-9, 9]) add([1.2, 2.4, 0.8], [fx - 0.8, G + 7, HZ + 2 + dz * 0.8], 0xffb040, 'Neon', { collide: 0 });
-  for (let k = 0; k < 5; k++) add([0.8, 0.5, 0.6], [fx - 1.2, G + 0.25, HZ - 9 + k * 4.5], 0xffb040, 'Neon', { collide: 0 });
+  add([26, 3, 8], [fx - 2.2, G + 16.4, HZ], XM ? 0xf4f0e8 : 0x3a2418, XM ? 'SmoothPlastic' : 'Wood', { shape: 1, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
+  sign(XM ? 'GINGERBREAD LANE' : 'LIGHTS OUT AT LAKESIDE', [0.3, 2.4, 20], [fx - 0.9, G + 12.6, HZ], XM ? 0x5a3a20 : BLACK, XM ? 0xff7ab8 : 0xffb040, 'Left', 'GothamBlack', true);
+  for (const dz of [-9, 9]) add([1.2, 2.4, 0.8], [fx - 0.8, G + 7, HZ + 2 + dz * 0.8], XM ? 0xff2a2a : 0xffb040, 'Neon', { collide: 0 });
+  for (let k = 0; k < 5; k++) add([0.8, 0.5, 0.6], [fx - 1.2, G + 0.25, HZ - 9 + k * 4.5], XM ? [0xff2a2a, 0x2aff4a, 0xffc030][k % 3] : 0xffb040, 'Neon', { collide: 0 });
   data.tags.SteamVent = data.tags.SteamVent || [];
   data.tags.SteamVent.push([fx - 1.5, G + 0.6, HZ + 4, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
   sign('EXIT', [0.2, 1.2, 4], [HX1 + 0.4, G + 8, HZ - 6], BLACK, 0x5adc6e, 'Right', 'GothamBold', true);
 
   // a smaller tent for the scare actors and props
   tent(440, 472, 148, 18, 6);
-  sign('SCARE ACTORS ONLY', [0.2, 1.4, 8], [439.8, G + 4.4, 148], BLACK, ORANGE, 'Left', 'GothamBold');
+  sign(XM ? "ELVES' WORKSHOP" : 'SCARE ACTORS ONLY', [0.2, 1.4, 8], [439.8, G + 4.4, 148], BLACK, ORANGE, 'Left', 'GothamBold');
 
   // the queue: posts and white rope on the asphalt, all roped now
   const Q = FAMILY_QUEUE;
@@ -165,8 +167,8 @@ export function buildFamilyBackstage(data) {
     if (k % 2) ropeX(Q.x0, Q.x1 - 6, z); else ropeX(Q.x0 + 6, Q.x1, z);
   }
   box([0.4, 6, 0.4], [Q.x0 - 3, G, Q.z0 - 2], BLACK, 'Metal');
-  sign('LIGHTS OUT AT LAKESIDE', [9, 1.8, 0.2], [Q.x0 - 3, G + 5.6, Q.z0 - 2.2], BLACK, 0xffb040, 'Front', 'GothamBlack', true);
-  spot('haunt', 'idle', 'Family', Q.x0 + 3, G, Q.z0 - 4, 0);
+  sign(XM ? 'GINGERBREAD LANE' : 'LIGHTS OUT AT LAKESIDE', [9, 1.8, 0.2], [Q.x0 - 3, G + 5.6, Q.z0 - 2.2], BLACK, XM ? 0xff7ab8 : 0xffb040, 'Front', 'GothamBlack', true);
+  spot(XM ? 'elf' : 'haunt', 'idle', 'Family', Q.x0 + 3, G, Q.z0 - 4, 0);
 
   // lodge props by the door, the generator and lighting
   for (let k = 0; k < 3; k++) box([2, 0.9, 10], [452 + k * 2.4, G, 180], [0x8a3a22, 0x3a5a2a, 0x2a4a6a][k], 'Wood');
@@ -177,7 +179,7 @@ export function buildFamilyBackstage(data) {
   for (let k = 0; k < 4; k++) add([1, 1, 0.4], [406.5 + (k % 2) * 3, G + 14.5 + Math.floor(k / 2) * 1.2, 170.4], 0xfff6d8, 'Neon', { collide: 0 });
   data.tags.ParkLamp = data.tags.ParkLamp || [];
   data.tags.ParkLamp.push([408, G + 15, 170.4, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
-  spot('haunt', 'idle', 'Family', 384, G, gz + 6, -Math.PI / 2);
+  spot(XM ? 'elf' : 'haunt', 'idle', 'Family', 384, G, gz + 6, -Math.PI / 2);
   return { tent: { x0: HX0, x1: HX1, z: HZ, door: [fx - 2, HZ + 2], exit: [HX1 + 4, HZ - 6] } };
 
   // after the event: the gate locked, the tent coming down to its frame,

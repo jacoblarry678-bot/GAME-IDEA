@@ -105,15 +105,14 @@ async function main() {
   // (Benton Haunt is over: the houses, the food stand and the scare zones
   // are gone, and the backstages are being torn down)
   if (WOLVERINE_OPEN) addWolverineWalkway();
-  const houses = HAUNT_OVER ? [] : buildHouses(data, familyLayout);
+  // (at Christmas the same builder lays out the Christmas trails)
+  const houses = HAUNT_OVER ? (CHRISTMAS ? buildHouses(data, familyLayout, 'xmas') : []) : buildHouses(data, familyLayout);
   if (!HAUNT_OVER) buildHauntFood(data);
   const scareZones = HAUNT_OVER ? [] : buildScareZones(data);
   // the hotels, the Benton Parkway and the shuttle Transit Center
   const resort = buildResort(data);
   // Fast & Furious: Benton Street Run, open past Velocity City
   const ffLayout = buildFastFurious(data);
-  // Benton Holidays: decorations, ride lights and Santa's Workshop
-  const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
   if (XMAS_OVER && !WOLVERINE_OPEN) buildXmasTeardown(data);
   // Benton Holidays going up
   const xmasSetup = XMAS_SETUP && !CHRISTMAS ? buildXmasSetup(data) : null;
@@ -133,6 +132,9 @@ async function main() {
   const bbLayout = buildBoomCoaster(data);
   // Construction Runaway: the robot-arm ride with the elevator, north of Throttle Works
   const crLayout = buildConstructionRunaway(data);
+  // Benton Holidays: decorations, ride lights and Santa's Workshop (after
+  // every ride is in, so they all get lights and the decorations miss them)
+  const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
   // Express lines, Front of the Line tickets and extended queues
   buildLineTickets(data);
   const extended = buildExtendedQueues(data);
@@ -188,9 +190,11 @@ async function main() {
     sound: (kind) => audio.ui(kind),
     startRide: (id, car, seat) => {
       if (rideCfg.get(id).kind === 'walkthrough') {
-        // a haunted house: the group walks it
+        // a haunted house (or a Christmas trail): the group walks it
         game.walk = id;
-        audio.voice.say(`Welcome to ${rideCfg.get(id).name}. Stay with your group, keep moving, and do not touch the scare actors. Good luck...`, { interrupt: true });
+        audio.voice.say(rideCfg.get(id).category === 'Christmas Trail'
+          ? `Welcome to ${rideCfg.get(id).name}. Stay with your group, take your time, and enjoy the lights. Merry Christmas!`
+          : `Welcome to ${rideCfg.get(id).name}. Stay with your group, keep moving, and do not touch the scare actors. Good luck...`, { interrupt: true });
         return;
       }
       player.riding = { id, car, seat, matrix: rideVis.seatMatrix(id, car, seat) || new THREE.Matrix4() };

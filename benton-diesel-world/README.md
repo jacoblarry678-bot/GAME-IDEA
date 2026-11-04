@@ -49,6 +49,34 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Holidays is open, with new Christmas trails (browser only):**
+  - The event is open: the giant Plaza tree is lit, walkway decorations
+    and snowmen line the paths, light strands hang over Main Street, it
+    snows, Santa roams the park, and Santa's Workshop is open behind the
+    festive backstage gate. Every coaster gets Christmas lights now,
+    including Wolverine, the Boom Coaster and the other new rides.
+  - New this year, Christmas trails: walk-through light trails that run
+    like the haunt houses did (a line, posted waits, groups walking
+    through, Front of the Line), but all twinkle and no scares:
+    - Inside the soundstages:
+      - The Northern Lights (Stage 21): aurora ribbons, ice caves,
+        polar bears and penguins of light.
+      - Santa's Toy Factory (Stage 22): a conveyor of presents, toy
+        soldiers, Candy Cane Alley and the wrapping room.
+      - The Enchanted Forest of Lights (Stage 24): light trees, glowing
+        deer, giant mushrooms and fireflies.
+      - Winter Wonderland (Stage 6): a snowflake canopy, a frozen
+        skating pond, giant snow globes and Santa's sleigh flying
+        overhead.
+    - Gingerbread Lane, in the Family Landing show tent: the old lodge
+      facade is now a gingerbread house, and inside is a gingerbread
+      village, Candy Land and Mrs. Claus' cookie kitchen.
+    - The Twinkle Trail, outdoors through the snowy backstage yard:
+      arches of lights, a meadow of glowing reindeer, giant ornaments
+      and a light tunnel.
+  - Each soundstage trail has its name over the door in a portal of
+    lights and a red-velvet-rope line on the lawn. A directory at the
+    backstage gate lists them all, and the park's feed announces it all.
 - **Benton Haunt has ended, and Benton Holidays is being set up (browser
   only):**
   - The haunt is over: the houses (Final Destination included) and all

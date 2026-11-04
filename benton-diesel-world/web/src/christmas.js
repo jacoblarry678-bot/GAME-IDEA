@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { makeFinder } from './haunt.js';
 import { LINES as WALKWAYS } from './guests.js';
 import { BS, STAGE_Z, QUEUE, stageX } from './backstage.js';
+import { TRAIL_STAGES } from './xmastrails.js';
 import { Figure } from './people/figure.js';
 import { buildModel } from './geom.js';
 
@@ -151,7 +152,7 @@ export function buildChristmas(data) {
   // and a ring round the flat rides
   const P = new THREE.Vector3(), T = new THREE.Vector3(), U = new THREE.Vector3(), S = new THREE.Vector3();
   for (const r of data.rides) {
-    if (r.track) {
+    if (r.track && r.kind !== 'motionsim') { // (not the dark rides' floor tracks)
       const { cum, pos, tan, up } = r.track;
       let i = 0;
       for (let s = 0; s < r.track.length; s += 3.2) {
@@ -162,7 +163,7 @@ export function buildChristmas(data) {
         S.crossVectors(T, U).normalize();
         for (const sd of [-1, 1]) lights.push([P.x + S.x * sd * 1.9 - U.x * 0.6, P.y + S.y * sd * 1.9 - U.y * 0.6, P.z + S.z * sd * 1.9 - U.z * 0.6, 0]);
       }
-    } else if (r.cars && r.cars.length && r.origin) {
+    } else if (r.kind !== 'motionsim' && r.cars && r.cars.length && r.origin) {
       const [ox, , oz] = r.origin;
       let R = 6;
       for (const c of r.cars) if (c.pivot) R = Math.max(R, Math.hypot(c.pivot[0] - ox, c.pivot[2] - oz));
@@ -190,8 +191,10 @@ export function buildChristmas(data) {
   for (let i = 0; i < 5; i++) {
     const x = stageX(i);
     add([72, 0.16, QUEUE.z1 - QUEUE.z0], [x, G + 0.08, (QUEUE.z0 + QUEUE.z1) / 2], SNOW, 'SmoothPlastic', { collide: 0 });
-    tree(x - 22, -540, 1.3);
-    tree(x + 22, -560, 1.1);
+    if (!TRAIL_STAGES.includes(i)) { // (a trail's line winds over the others)
+      tree(x - 22, -540, 1.3);
+      tree(x + 22, -560, 1.1);
+    }
     for (let j = 0; j < 14; j++) {
       const a = (j / 14) * Math.PI * 2;
       add([1.6, 1.6, 1.2], [x + Math.cos(a) * 3.4, G + 26 + Math.sin(a) * 3.4, STAGE_Z + 0.9], GREEN, 'Grass', { shape: 3, collide: 0 });

@@ -1,11 +1,14 @@
 // The Benton Haunt houses, open for the event: walk-through mazes inside
-// the five backstage soundstages and the tent at Family Landing. Each one
+// the five backstage soundstages and the tent at Family Landing. (At
+// Christmas the same builder lays out the Christmas trails instead: see
+// xmastrails.js.) Each one
 // joins the park like a ride (posted waits, a line, a passport stamp), but
 // guests walk it in groups: the corridors snake back and forth through
 // the dark under strings of colored light, past themed scenes where scare
 // actors lunge out as you pass.
 import { HOUSES, STAGE_Z, QUEUE, STAGE, stageX } from './backstage.js';
 import { FAMILY_QUEUE } from './haunt.js';
+import { XROOMS, XSTAGES, XDESC, XOUTDOOR, buildTrailFronts } from './xmastrails.js';
 
 export const WALK = 6; // how fast a group walks a house (studs/s)
 const G = 0.1;
@@ -416,16 +419,18 @@ const ROOMS = {
 };
 const W2 = HALF * 2 - 0.8;
 
-export function buildHouses(data, familyLayout) {
+export function buildHouses(data, familyLayout, season = 'haunt') {
+  const xmas = season === 'xmas';
+  const ROOMSET = xmas ? XROOMS : ROOMS;
   const mats = data.materials;
   const mi = (name) => {
     let i = mats.indexOf(name);
     if (i < 0) { mats.push(name); i = mats.length - 1; }
     return i;
   };
-  const add = (size, pos, color, mat, { yaw = 0, collide = 1, shape = 0 } = {}) => {
+  const add = (size, pos, color, mat, { yaw = 0, collide = 1, shape = 0, rot = null } = {}) => {
     const c = Math.cos(yaw), s = Math.sin(yaw);
-    data.static.push([shape, size[0], size[1], size[2], pos[0], pos[1], pos[2], c, 0, s, 0, 1, 0, -s, 0, c, color, mi(mat), 0, collide]);
+    data.static.push([shape, size[0], size[1], size[2], pos[0], pos[1], pos[2], ...(rot || [c, 0, s, 0, 1, 0, -s, 0, c]), color, mi(mat), 0, collide]);
     return data.static.length - 1;
   };
   const box = (size, base, color, mat, opts) => add(size, [base[0], base[1] + size[1] / 2, base[2]], color, mat, opts);
@@ -435,13 +440,14 @@ export function buildHouses(data, familyLayout) {
   // Corridor walls both sides of a right-angled polyline (mitred corners),
   // each segment in its room's wall finish, a blackout ceiling over it and
   // a dark floor.
-  const corridor = (pts, styleOf) => {
+  // (an open trail outdoors has no walls or ceiling, just a wider path)
+  const corridor = (pts, styleOf, open = false) => {
     const n = pts.length;
     const normal = (a, b) => {
       const l = dist(a, b) || 1;
       return [-(b[1] - a[1]) / l, (b[0] - a[0]) / l];
     };
-    for (const side of [-1, 1]) {
+    for (const side of open ? [] : [-1, 1]) {
       const off = pts.map((p, i) => {
         const n1 = i > 0 ? normal(pts[i - 1], p) : normal(p, pts[i + 1]);
         const n2 = i < n - 1 ? normal(p, pts[i + 1]) : n1;
@@ -459,8 +465,8 @@ export function buildHouses(data, familyLayout) {
       const a = pts[i], b = pts[i + 1];
       const len = dist(a, b) + HALF * 2;
       const yaw = Math.atan2(b[0] - a[0], b[1] - a[1]);
-      add([HALF * 2 + 0.6, 0.3, len], [(a[0] + b[0]) / 2, G + CORRIDOR_H + 0.15, (a[1] + b[1]) / 2], 0x0a0a0c, 'SmoothPlastic', { yaw, collide: 0 });
-      add([HALF * 2, 0.04, len], [(a[0] + b[0]) / 2, G + 0.03, (a[1] + b[1]) / 2], styleOf(i).floor || 0x141216, 'SmoothPlastic', { yaw, collide: 0 });
+      if (!open) add([HALF * 2 + 0.6, 0.3, len], [(a[0] + b[0]) / 2, G + CORRIDOR_H + 0.15, (a[1] + b[1]) / 2], 0x0a0a0c, 'SmoothPlastic', { yaw, collide: 0 });
+      add([HALF * 2 + (open ? 1.6 : 0), 0.04, len], [(a[0] + b[0]) / 2, G + 0.03, (a[1] + b[1]) / 2], styleOf(i).floor || 0x141216, 'SmoothPlastic', { yaw, collide: 0 });
     }
   };
 
@@ -483,8 +489,19 @@ export function buildHouses(data, familyLayout) {
         const [x, z] = at(t, s);
         return add(size, [x, G + y, z], color, mat, { yaw: yaw + turn, shape, collide: 0 });
       },
+      // a box turned in the plane of the walls (snowflakes, lollipops)
+      spin: (t, s, size, y, color, mat, a, shape = 0) => {
+        const [x, z] = at(t, s);
+        const c = Math.cos(yaw), sn = Math.sin(yaw), ca = Math.cos(a), sa = Math.sin(a);
+        return add(size, [x, G + y, z], color, mat, { collide: 0, shape, rot: [c, sn * sa, sn * ca, 0, ca, -sa, -sn, c * sa, c * ca] });
+      },
       // across the corridor overhead
       over: (t, along, h, y, color, mat) => R.put(t, 0, [W * 2, h, along], y, color, mat),
+      // a light that only lights (for open trails)
+      glow: (t, color, y = 5) => {
+        const [x, z] = at(t, 0);
+        (data.hauntLights = data.hauntLights || []).push([x, G + y, z, color]);
+      },
       light: (t, color, y = CORRIDOR_H - 0.7) => {
         const [x, z] = at(t, 0);
         (data.hauntLights = data.hauntLights || []).push([x, G + y - 1.5, z, color]);
@@ -517,22 +534,22 @@ export function buildHouses(data, familyLayout) {
     return R;
   };
 
-  const addHouse = ({ id, name, land, theme, glow, interior, outsideIn, outsideOut, queueFwd, signIndex, entrance, origin, baseWait, description, speed = WALK }) => {
+  const addHouse = ({ id, name, land, theme, glow, interior, outsideIn, outsideOut, queueFwd, signIndex, entrance, origin, baseWait, description, speed = WALK, open = false, category = 'Haunted House', thrill = 4 }) => {
     // long segments become rooms in turn; the short joins between them
     // borrow the next room's finish
-    const rooms = ROOMS[theme];
+    const rooms = ROOMSET[theme];
     const segRoom = [];
     let r = 0;
     for (let i = 0; i < interior.length - 1; i++) {
       const long = dist(interior[i], interior[i + 1]) >= 25;
       segRoom.push(long ? { k: r++ % rooms.length, long: true } : { k: r % rooms.length, long: false });
     }
-    corridor(interior, (i) => rooms[segRoom[i].k]);
+    corridor(interior, (i) => rooms[segRoom[i].k], open);
     for (let i = 0; i < interior.length - 1; i++) {
       if (!segRoom[i].long) continue;
       const def = rooms[segRoom[i].k];
       const R = room(interior[i], interior[i + 1], land);
-      for (let t = 4; t < R.len - 2; t += 9) R.light(t, def.light);
+      for (let t = 4; t < R.len - 2; t += 9) (open ? R.glow : R.light)(t, def.light);
       R.glowStrip(1, R.len - 1, 1, def.light);
       R.glowStrip(1, R.len - 1, -1, def.light);
       def.dress(R);
@@ -548,11 +565,12 @@ export function buildHouses(data, familyLayout) {
       cars: [], seats, capacity: 12, queue: queueData(queueFwd, signIndex, G + 0.2), extras: {}, extrasNames: [], crew: null,
     });
     data.config.Rides.push({
-      id, name, land, category: 'Haunted House', thrill: 4, kind: 'walkthrough', carStyle: 'none', description,
+      id, name, land, category, thrill, kind: 'walkthrough', carStyle: 'none', description,
       baseWait, origin, entrance: [entrance[0], 0, entrance[1]], exit: [end[0], 0, end[1]], yaw: 0, layout: id, cars: 0, carSpacing: 0, colors: [glow],
     });
     const xs = interior.map((p) => p[0]), zs = interior.map((p) => p[1]);
-    const rect = { x0: Math.min(...xs) - HALF - 1, x1: Math.max(...xs) + HALF + 1, z0: Math.min(...zs) - HALF - 1, z1: Math.max(...zs) + HALF + 1 };
+    // (indoors, it is dark inside; an open trail is just outside)
+    const rect = open ? { x0: 0, x1: 0, z0: 0, z1: 0 } : { x0: Math.min(...xs) - HALF - 1, x1: Math.max(...xs) + HALF + 1, z0: Math.min(...zs) - HALF - 1, z1: Math.max(...zs) + HALF + 1 };
     houses.push({ id, name, path, length, glow, speed, rect });
   };
 
@@ -566,8 +584,13 @@ export function buildHouses(data, familyLayout) {
     destination: "Your flight is delayed... permanently. Walk through Death's design: Flight 180, Route 23, Devil's Flight, the tanning salon, North Bay Bridge and the List. You can't cheat Death.",
   };
 
-  // the five soundstage houses
-  HOUSES.forEach((h, i) => {
+  // the soundstage houses (or, at Christmas, the soundstage trails)
+  const TRAIL = { category: 'Christmas Trail', thrill: 1 };
+  const stageList = xmas
+    ? XSTAGES.map((t) => ({ i: t.stage, theme: t.theme, title: t.title, glow: t.glow, baseWait: t.baseWait, speed: WALK * t.speed, description: XDESC[t.theme], id: `Trail${t.theme[0].toUpperCase()}${t.theme.slice(1)}`, ...TRAIL }))
+    : HOUSES.map((h, i) => ({ i, theme: h.theme, title: h.title, glow: h.glow, baseWait: [80, 65, 95, 70, 85, 110][i], speed: WALK * [1, 0.92, 0.85, 0.96, 0.88, 0.84][i], description: DESCRIPTIONS[h.theme], id: `Haunt${h.theme[0].toUpperCase()}${h.theme.slice(1)}` }));
+  stageList.forEach((h) => {
+    const i = h.i;
     const x = stageX(i), F = STAGE_Z;
     const L = (dx, dz) => [x + dx, F + dz];
     const interior = [L(0, -1.3), L(0, -12), L(-30, -12), L(-30, -84), L(-18, -84), L(-18, -24), L(-6, -24), L(-6, -84),
@@ -582,13 +605,12 @@ export function buildHouses(data, familyLayout) {
       fwd.push([ex, rowZ(k)], [ex, rowZ(k + 1)]);
     }
     fwd.push([x, rowZ(12)], [x, F + 6.5]);
-    const id = `Haunt${h.theme[0].toUpperCase()}${h.theme.slice(1)}`;
     addHouse({
-      id, name: h.title,
+      id: h.id, name: h.title,
       land: 'Studios', theme: h.theme, glow: h.glow, interior,
       outsideIn: [L(0, 6.5), L(0, 2)], outsideOut: [L(STAGE.W / 2 + 4, -6)],
       queueFwd: fwd, signIndex: 1, entrance: [qx0 + 4, QUEUE.z1 + 2.5], origin: [x, 0, F - STAGE.D / 2],
-      baseWait: [80, 65, 95, 70, 85, 110][i], description: DESCRIPTIONS[h.theme], speed: WALK * [1, 0.92, 0.85, 0.96, 0.88, 0.84][i],
+      baseWait: h.baseWait, description: h.description, speed: h.speed, category: h.category, thrill: h.thrill,
     });
   });
 
@@ -604,12 +626,24 @@ export function buildHouses(data, familyLayout) {
     }
     fwd.push([Q.x1 + 3, strip(Q.rows - 1)], [Q.x1 + 3, 214], [T.door[0], T.door[1]]);
     addHouse({
-      id: 'HauntLodge', name: 'Lights Out at Lakeside', land: 'Family', theme: 'lodge', glow: 0xffb040,
-      interior,
+      ...(xmas
+        ? { id: 'TrailGingerbread', name: 'Gingerbread Lane', theme: 'gingerbread', glow: 0xff7ab8, baseWait: 35, description: XDESC.gingerbread, speed: WALK * 0.8, ...TRAIL }
+        : { id: 'HauntLodge', name: 'Lights Out at Lakeside', theme: 'lodge', glow: 0xffb040, baseWait: 60, description: DESCRIPTIONS.lodge }),
+      land: 'Family', interior,
       outsideIn: [[T.door[0], T.door[1]]], outsideOut: [[T.x1 + 5, 206]],
       queueFwd: fwd, signIndex: 1, entrance: [Q.x0 + 3, Q.z0 - 2], origin: [(T.x0 + T.x1) / 2, 0, T.z],
-      baseWait: 60, description: DESCRIPTIONS.lodge,
     });
+  }
+  // at Christmas: the outdoor trail through the backstage yard, and the
+  // trails' fronts and queues
+  if (xmas) {
+    const O = XOUTDOOR;
+    addHouse({
+      id: O.id, name: O.title, land: 'Studios', theme: O.theme, glow: O.glow, interior: O.interior,
+      outsideIn: O.outsideIn, outsideOut: O.outsideOut, queueFwd: O.queueFwd, signIndex: 1, entrance: O.entrance, origin: O.origin,
+      baseWait: O.baseWait, description: XDESC[O.theme], speed: WALK * 0.75, open: true, ...TRAIL,
+    });
+    buildTrailFronts(data);
   }
   return houses;
 }

@@ -693,7 +693,7 @@ export class UI {
       pill.hidden = false;
       pill.classList.add('riding');
       const rc = sim.rides.get(sim.ridingRide).cfg;
-      $('span', pill).textContent = rc.kind === 'walkthrough' ? `👻 ${rc.name}: stay with your group and keep moving...` : `🎢 Enjoy ${rc.name}! Keep your hands inside.`;
+      $('span', pill).textContent = rc.category === 'Christmas Trail' ? `🎄 ${rc.name}: stay with your group and enjoy the lights!` : rc.kind === 'walkthrough' ? `👻 ${rc.name}: stay with your group and keep moving...` : `🎢 Enjoy ${rc.name}! Keep your hands inside.`;
     } else if (q) {
       pill.hidden = false;
       pill.classList.remove('riding');

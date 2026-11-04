@@ -4,7 +4,7 @@
 // food, Express), and your own photos: snap the view, add a caption and
 // watch the likes and comments roll in.
 import * as Clock from './clock.js';
-import { HAUNT_OVER, XMAS_SETUP } from './season.js';
+import { HAUNT_OVER, XMAS_SETUP, CHRISTMAS } from './season.js';
 
 const STORE = 'bentonDieselWorld.social';
 const nowS = () => performance.now() / 1000;
@@ -13,7 +13,12 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const PARK = { handle: '@BentonDieselWorld', name: 'Benton Diesel World', color: 0xff6a1a, verified: true };
 
 // the park's own posts, newest first (each with a poster-style card)
-const SEASON_POSTS = HAUNT_OVER && XMAS_SETUP ? [
+const SEASON_POSTS = CHRISTMAS ? [
+  { when: 'Today', art: { title: 'CHRISTMAS TRAILS', sub: 'NEW AT BENTON HOLIDAYS', color: 0x1e5a2a, emoji: '✨' },
+    text: "NEW: Christmas Trails! Six walk-through light trails: The Northern Lights, Santa's Toy Factory, The Enchanted Forest of Lights and Winter Wonderland inside the soundstages, Gingerbread Lane in the Family Landing tent, and The Twinkle Trail out in the snowy backstage yard. ✨🎄", likes: 18340 },
+  { when: '1d', art: { title: 'BENTON HOLIDAYS', sub: 'NOW OPEN  ·  THROUGH JANUARY 1', color: 0xc8102e, emoji: '🎅' },
+    text: "Benton Holidays is OPEN! The giant tree is lit, every coaster is strung with lights, it's snowing, and Santa is waiting at his Workshop backstage. Merry Christmas from all of us at Benton Diesel World! 🎄", likes: 21456 },
+] : HAUNT_OVER && XMAS_SETUP ? [
   { when: 'Today', art: { title: 'BENTON HOLIDAYS', sub: 'COMING NOVEMBER 21', color: 0xc8102e, emoji: '🎄' },
     text: "Haunt down, holidays up! The crews are already putting up Benton Holidays: the giant tree is going up in the Plaza, the lights are going up over Main Street, and Santa's Workshop is being built backstage. See you November 21! 🎅", likes: 9210 },
   { when: '1d', art: { title: 'THANKS FOR SCREAMING!', sub: 'BENTON HAUNT HAS ENDED', color: 0xff7a1a, emoji: '🎃' },
