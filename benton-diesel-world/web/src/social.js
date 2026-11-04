@@ -14,6 +14,8 @@ export const PARK = { handle: '@BentonDieselWorld', name: 'Benton Diesel World',
 
 // the park's own posts, newest first (each with a poster-style card)
 const SEASON_POSTS = CHRISTMAS ? [
+  { when: 'Now', art: { title: 'RV VAN RUN', sub: 'NOW OPEN  ·  PAST CONSTRUCTION RUNAWAY', color: 0xd8641e, emoji: '🚐' },
+    text: "NEW RIDE: RV Van Run is OPEN! Hop in the Benton family's 1974 motorhome just as the handbrake slips: the desert highway, a red-rock canyon, Bigfoot, a storm on the pass and a bear in the cooler, on a full motion base, all indoors. Heads up: Fast & Furious is closed for a refurbishment - it'll be back soon! 🏕️", likes: 16702 },
   { when: 'Today', art: { title: 'CHRISTMAS TRAILS', sub: 'NEW AT BENTON HOLIDAYS', color: 0x1e5a2a, emoji: '✨' },
     text: "NEW: Christmas Trails! Six walk-through light trails: The Northern Lights, Santa's Toy Factory, The Enchanted Forest of Lights and Winter Wonderland inside the soundstages, Gingerbread Lane in the Family Landing tent, and The Twinkle Trail out in the snowy backstage yard. ✨🎄", likes: 18340 },
   { when: '1d', art: { title: 'BENTON HOLIDAYS', sub: 'NOW OPEN  ·  THROUGH JANUARY 1', color: 0xc8102e, emoji: '🎅' },

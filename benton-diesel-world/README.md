@@ -49,6 +49,46 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: RV Van Run, and Fast & Furious closed for a refurbishment
+  (browser only):**
+  - **RV Van Run** is a new indoor motion-simulator ride in Velocity City.
+    Walk east across the Construction Runaway plaza and through a log
+    campground arch in its east wall into the Benton RV Park &
+    Campground. There you'll find:
+    - pines, a parked retro motorhome and picnic tables;
+    - a lodge-style show building with a fieldstone base, cabin windows,
+      a 70s stripe of orange, mustard and brown, and a big RV VAN RUN sign
+      over a timber porch.
+  - Inside, the line winds through a ranger station:
+    - road-condition and wildlife-advisory boards ("BIGFOOT SIGHTED
+      (PROBABLY)");
+    - LEAVE NO TRACE and DO NOT FEED THE BEARS signs;
+    - a wall of license plates from every state;
+    - string lights over the rows;
+    - a 1974 Benton Cruiser on display at the end of the hall.
+  - You board a cream motorhome with orange and mustard stripes (with a
+    roof air conditioner, a ladder, headlights and a spare tire) on a
+    motion base, just as its handbrake slips. The ride then runs through:
+    - the desert highway past a giant roadside dinosaur and a 99¢ gas
+      sign, with a tumbleweed rolling by;
+    - a red-rock canyon with rocks coming down;
+    - Bigfoot's forest, where he steps out of the pines;
+    - a thunderstorm on the mountain pass, with a road sign swinging in
+      the wind;
+    - a wobbly rope bridge over Devil's Gorge as planks fall away;
+    - a bear raiding the cooler at a campsite;
+    - a runaway plunge down the switchbacks;
+    - back at the RV park: "WELCOME BACK, HAPPY CAMPERS".
+  - **Fast & Furious is closed for a refurbishment:**
+    - The ride is down: no line, no crew, CLOSED FOR REFURBISHMENT on its
+      wait sign, and REFURB in the app.
+    - A construction hoarding closes the arch in the Velocity City wall,
+      with orange-and-white barricades in front of it.
+    - Scaffolding with green debris netting climbs the warehouse's front.
+    - A mobile crane swings steel up onto the roof, and crews are at work
+      on the scaffold, the roof and a scissor lift.
+    - The holiday billboards and the park's posts now advertise RV Van Run
+      instead.
 - **A late Christmas trail: Stranger Things: Christmas in Hawkins (browser
   only):**
   - A new wing has gone up on the north side of the Stranger Things

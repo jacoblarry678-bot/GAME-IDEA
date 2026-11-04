@@ -576,7 +576,108 @@ export class FastFuriousSite {
     const { gate } = this.layout;
     if (Math.hypot(pos.x - gate.x, pos.z - gate.z) < 50) {
       this.told = true;
-      this.hooks.toast('Fast & Furious: Benton Street Run is now open! Walk through the arch, grab a car and ride with the family.', 'reward');
+      if (this.layout.refurb) this.hooks.toast('Fast & Furious is closed for a refurbishment - the crews are tuning it up. It will be back soon!', 'warn');
+      else this.hooks.toast('Fast & Furious: Benton Street Run is now open! Walk through the arch, grab a car and ride with the family.', 'reward');
     }
   }
+}
+
+// Fast & Furious, closed for a refurbishment: the ride goes down (no line,
+// no crew, CLOSED FOR REFURBISHMENT on the wait sign and in the app), a
+// construction hoarding closes the arch in the park wall, barricades stand
+// in front of it, scaffolding with debris netting climbs the warehouse's
+// front, a mobile crane swings materials up onto the roof, and the crews
+// are at work. It is called after buildFastFurious, before the extended
+// queues are laid out (they skip a ride under refurbishment).
+export function buildFFRefurb(data, layout) {
+  const cfg = data.config.Rides.find((r) => r.id === RIDE_ID);
+  if (!cfg) return;
+  cfg.refurb = true;
+  if (layout) layout.refurb = true;
+  const { add, box, sign, cf } = helpers(data);
+  const G = 0.1, FLOOR = 0.5;
+  const ORANGE = 0xff6a1a, WHITE = 0xf4f4f0, STRIPE = 0xe8641e, HOARD = 0x1a1a1c, STEEL = 0x8a8e94, NET = 0x2a6a3a;
+  data.staffSpots = data.staffSpots || [];
+  data.hauntLights = data.hauntLights || [];
+  const crew = (kind, x, y, z, yaw) => data.staffSpots.push({ role: 'construction', kind, land: 'Velocity', seed: 0, cf: cf(x, y, z, yaw) });
+  // the greeter at the arch has gone (the arch is shut)
+  data.staffSpots = data.staffSpots.filter((s) => !(s.role === 'greeter' && Math.abs(s.cf[0] - 370) < 0.5 && Math.abs(s.cf[2] + 218) < 4));
+  const gz = (GATE.z0 + GATE.z1) / 2, span = GATE.z1 - GATE.z0;
+
+  // ---- the hoarding across the arch, its graphics facing the park
+  box([0.8, 16, span + 1], [373.4, G, gz], HOARD, 'SmoothPlastic');
+  sign([0.2, 9, span - 2], [372.9, G + 10.6, gz], HOARD, 'Left', [
+    ['FAST & FURIOUS', 0, 0.02, 1, 0.3, ORANGE], ['CLOSED FOR REFURBISHMENT', 0, 0.36, 1, 0.24, WHITE],
+    ["WE'RE TUNING UP THE CARS  ·  BACK SOON", 0, 0.66, 1, 0.14, 0x9ad8ff, 'GothamBold'], ['RIDE RV VAN RUN WHILE YOU WAIT', 0, 0.84, 1, 0.12, 0xf2c818, 'GothamBold'],
+  ], { glow: true });
+  for (let k = 0; k < 8; k++) add([0.1, 1.2, span / 8 - 0.3], [372.95, G + 3.2, GATE.z0 + (k + 0.5) * (span / 8)], k % 2 ? WHITE : STRIPE, 'SmoothPlastic', { collide: 0 });
+  sign([0.2, 2.2, 14], [372.95, G + 0.9 + 0.2, gz], HOARD, 'Left', [['NO ENTRY  ·  HARD HAT AREA', 0, 0, 1, 1, 0xf2c818, 'GothamBold']]);
+  sign([0.2, 6, span - 2], [373.9, G + 10, gz], HOARD, 'Right', [['REFURBISHMENT IN PROGRESS', 0, 0.2, 1, 0.6, ORANGE, 'GothamBold']]);
+  // orange-and-white barricades in front of it, with warning lamps
+  for (let k = 0; k < 4; k++) {
+    const z = GATE.z0 + 2.5 + k * ((span - 5) / 3);
+    for (const dz of [-3, 3]) box([0.5, 3.2, 0.5], [369.6, G, z + dz], WHITE, 'SmoothPlastic', { collide: 0 });
+    for (const [y, c] of [[1.4, STRIPE], [2.5, WHITE]]) add([0.3, 0.7, 6.4], [369.6, G + y, z], c, 'SmoothPlastic');
+    add([0.5, 0.5, 0.5], [369.6, G + 3.5, z], 0xffa020, 'Neon', { shape: 3, collide: 0 });
+  }
+  for (const dz of [-span / 2 - 3, span / 2 + 3]) for (let j = 0; j < 3; j++) add([1, 1.6, 1], [369.6, G + 0.8, gz + dz + (dz < 0 ? -j * 1.8 : j * 1.8)], STRIPE, 'SmoothPlastic', { shape: 5 });
+  data.hauntLights.push([368, 6, gz, 0xffb060]);
+
+  // ---- scaffolding up the warehouse's front, with green debris netting
+  const SX = [WH.x0 - 1.4, WH.x0 - 3.2], LEVELS = [10, 18, 26, 34, 42];
+  const bays = [];
+  for (let z = WH.z0 + 4; z <= WH.z1 - 4; z += 6) bays.push(z);
+  for (const z of bays) for (const x of SX) if (Math.abs(z + 262) > 5 && Math.abs(z + 244) > 5) add([0.25, 46, 0.25], [x, G + 23, z], STEEL, 'Metal', { collide: 0 });
+  const zA = bays[0], zB = bays[bays.length - 1], zc = (zA + zB) / 2;
+  for (const y of LEVELS) {
+    add([2.2, 0.25, zB - zA + 1], [(SX[0] + SX[1]) / 2, G + y, zc], 0x8a6a3a, 'WoodPlanks', { collide: 0 });
+    add([0.15, 0.15, zB - zA], [SX[1], G + y + 1.2, zc], STEEL, 'Metal', { collide: 0 });
+    add([0.15, 0.15, zB - zA], [SX[1], G + y + 0.6, zc], 0xf2c818, 'Metal', { collide: 0 });
+  }
+  // diagonal braces, every other bay
+  for (let i = 0; i < bays.length - 1; i += 2) {
+    const a = Math.atan2(8, 6), len = Math.hypot(8, 6);
+    for (let y = 10; y < 42; y += 8) add([0.15, len, 0.15], [SX[1], G + y + 4, (bays[i] + bays[i + 1]) / 2], STEEL, 'Metal', { collide: 0, rot: [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)] });
+  }
+  add([0.15, 36, zB - zA], [SX[1] - 0.3, G + 28, zc], NET, 'Fabric', { collide: 0, trans: 0.35 });
+  sign([0.2, 7, 60], [SX[1] - 0.5, G + 38, zc], NET, 'Left', [['FAST & FURIOUS', 0, 0, 1, 0.55, ORANGE], ['REFURBISHMENT IN PROGRESS  ·  BACK SOON', 0, 0.58, 1, 0.38, WHITE, 'GothamBold']], { glow: true });
+  for (const [y, z] of [[18, zA + 20], [26, zc + 30], [34, zc - 25], [42, zB - 30]]) crew('work', (SX[0] + SX[1]) / 2, G + y + 0.15, z, -Math.PI / 2);
+
+  // ---- a scissor lift and crates in the courtyard's south corner
+  const lx = 384, lz = COURT.z0 + 8, lh = 14;
+  box([4, 1.2, 7], [lx, FLOOR, lz], 0xf2c818, 'SmoothPlastic');
+  for (const s of [-1, 1]) add([0.3, lh - 1.6, 0.3], [lx, FLOOR + lh / 2, lz], 0x2a2a2e, 'Metal', { collide: 0, rot: [1, 0, 0, 0, Math.cos(s * 0.55), -Math.sin(s * 0.55), 0, Math.sin(s * 0.55), Math.cos(s * 0.55)] });
+  box([4.4, 0.4, 7.4], [lx, FLOOR + lh, lz], 0xf2c818, 'SmoothPlastic', { collide: 0 });
+  crew('work', lx, FLOOR + lh + 0.4, lz, Math.PI / 2);
+  for (const [x, z, k] of [[380, COURT.z0 + 18, 0], [380, COURT.z0 + 22, 1], [383.5, COURT.z0 + 20, 2]]) {
+    box([3.2, 2.4, 2.4], [x, FLOOR, z], 0x8a6a3a, 'WoodPlanks', { yaw: k * 0.3 });
+    if (k % 2 === 0) box([2.6, 2, 2], [x + 0.3, FLOOR + 2.4, z], 0x8a6a3a, 'WoodPlanks', { collide: 0, yaw: k * 0.3 + 0.2 });
+  }
+  crew('idle', 386, FLOOR, COURT.z0 + 24, Math.PI);
+
+  // ---- a mobile crane south of the warehouse, its boom over the roof
+  const cx = 492, cz = FF_SITE.z0 + 14;
+  box([10, 3, 20], [cx, G + 1, cz], 0xf2c818, 'Metal');
+  for (const dz of [-7, 0, 7]) for (const dx of [-5.2, 5.2]) add([0.9, 2.4, 2.4], [cx + dx, G + 1.2, cz + dz], 0x111111, 'Rubber', { shape: 2 });
+  for (const [dx, dz] of [[-7, -8], [7, -8], [-7, 8], [7, 8]]) { add([4, 0.4, 0.6], [cx + dx / 1.6, G + 1.4, cz + dz], 0x2a2a2e, 'Metal', { collide: 0 }); box([1.6, 0.4, 1.6], [cx + dx, G, cz + dz], 0x2a2a2e, 'Metal'); }
+  box([7, 4, 8], [cx, G + 4, cz + 2], 0xf2c818, 'Metal');
+  add([2.6, 2.6, 3], [cx - 3.6, G + 6.5, cz - 1], 0x2a3a4a, 'Glass', { collide: 0 });
+  // the boom: from the turntable up and over the warehouse roof
+  const b0 = [cx, G + 8.5, cz + 2], b1 = [cx - 10, WH.H + 26, WH.z0 + 46];
+  const dx = b1[0] - b0[0], dy = b1[1] - b0[1], dz = b1[2] - b0[2], L = Math.hypot(dx, dy, dz);
+  const yaw = Math.atan2(dx, dz), pitch = Math.asin(dy / L), c = Math.cos(yaw), s = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  add([1.8, 1.8, L], [(b0[0] + b1[0]) / 2, (b0[1] + b1[1]) / 2, (b0[2] + b1[2]) / 2], 0xf2c818, 'Metal', { collide: 0, rot: [c, -s * sp, s * cp, 0, cp, sp, -s, -c * sp, c * cp] });
+  add([0.15, b1[1] - (WH.H + 6), 0.15], [b1[0], (b1[1] + WH.H + 6) / 2, b1[2]], 0x2a2a2e, 'Metal', { collide: 0 }); // the cable
+  box([1.2, 1, 1.2], [b1[0], WH.H + 5, b1[2]], 0x2a2a2e, 'Metal', { collide: 0 }); // the hook block
+  box([3, 1.6, 6], [b1[0], WH.H + 2.4, b1[2]], 0x5a5e66, 'Metal', { collide: 0 }); // a load of steel going up
+  add([0.6, 0.6, 0.6], [b1[0], b1[1] + 0.6, b1[2]], 0xff3020, 'Neon', { shape: 3, collide: 0 });
+  // on the roof: a skip of old panels, the crew guiding the load in
+  box([6, 2.4, 3.4], [WH.x0 + 40, G + WH.H + 1.4, WH.z0 + 40], 0x2a6ad8, 'Metal', { collide: 0 });
+  crew('work', b1[0] + 3, G + WH.H + 1.4, b1[2] - 3, Math.PI);
+  crew('idle', WH.x0 + 36, G + WH.H + 1.4, WH.z0 + 34, 0);
+  // a site office and a dumpster by the crane
+  box([8, 3.6, 3], [cx + 26, G, FF_SITE.z0 + 10], 0xe8e4dc, 'SmoothPlastic');
+  sign([5, 1, 0.1], [cx + 26, G + 2.6, FF_SITE.z0 + 11.6], 0xe8e4dc, 'Back', [['SITE OFFICE', 0, 0, 1, 1, 0x1a1a1c, 'GothamBold']]);
+  box([7, 3, 3.6], [cx - 24, G, FF_SITE.z0 + 10], 0x2a6a3a, 'Metal');
+  crew('idle', cx + 20, G, FF_SITE.z0 + 16, Math.PI);
 }

@@ -24,7 +24,7 @@ import { buildHouses, HouseWalks } from './houses.js';
 import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
-import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
+import { buildFastFurious, buildFFRefurb, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas, buildXmasSetup, XmasSetupSite } from './christmas.js';
 import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
@@ -36,6 +36,7 @@ import { buildStrangerThings, StrangerThingsSite } from './strangerthings.js';
 import { buildFuelThrottle, FuelThrottleSite } from './fuelthrottle.js';
 import { buildBoomCoaster, BoomCoasterSite } from './boomcoaster.js';
 import { buildConstructionRunaway, ConstructionRunawaySite } from './constructionrunaway.js';
+import { buildRVVanRun, RVVanRunSite } from './rvvanrun.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -113,6 +114,8 @@ async function main() {
   const resort = buildResort(data);
   // Fast & Furious: Benton Street Run, open past Velocity City
   const ffLayout = buildFastFurious(data);
+  // ... and now closed for a refurbishment
+  buildFFRefurb(data, ffLayout);
   if (XMAS_OVER && !WOLVERINE_OPEN) buildXmasTeardown(data);
   // Benton Holidays going up
   const xmasSetup = XMAS_SETUP && !CHRISTMAS ? buildXmasSetup(data) : null;
@@ -132,6 +135,8 @@ async function main() {
   const bbLayout = buildBoomCoaster(data);
   // Construction Runaway: the robot-arm ride with the elevator, north of Throttle Works
   const crLayout = buildConstructionRunaway(data);
+  // RV Van Run: an indoor motion-simulator road trip, past Construction Runaway
+  const rvLayout = buildRVVanRun(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -259,6 +264,7 @@ async function main() {
   game.houses = houses;
   const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
   const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
+  const rvSite = new RVVanRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rvLayout);
   const bbSite = new BoomCoasterSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bbLayout);
   const ftSite = new FuelThrottleSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ftLayout);
   const stSite = new StrangerThingsSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, stLayout);
@@ -445,7 +451,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -469,6 +475,7 @@ async function main() {
     ftSite.update(dt, player.pos, started);
     bbSite.update(dt, player.pos, started);
     crSite.update(dt, player.pos, started);
+    rvSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
