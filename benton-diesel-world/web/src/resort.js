@@ -155,12 +155,12 @@ const ADS_NEWYEAR = [
 
 // Wolverine is open, and Mardi Gras at the Grand
 const ADS_MARDI = [
-  { title: 'WOLVERINE', sub: 'THE CLAWS ARE OUT  ·  NOW OPEN', foot: 'BACKWOODS  ·  BENTON DIESEL WORLD', art: 'skull', fg: 0xf2c818 },
-  { title: 'FINAL DESTINATION', sub: "DEATH'S DESIGN  ·  COMING TO BENTON HAUNT", foot: 'CONSTRUCTION NOW UNDERWAY  ·  NEXT FALL', art: 'skull', fg: 0xe02020 },
-  { title: 'MARDI GRAS AT THE GRAND', sub: "KING CAKE · BEIGNETS · PO'BOYS", foot: 'LIMITED TIME  ·  BENTON DIESEL GRAND HOTEL', art: 'moon', fg: 0xb070ff },
-  { title: 'AN 80-STUD TOP HAT', sub: 'RIDE WOLVERINE TODAY', foot: 'NOW OPEN AT BENTON DIESEL WORLD', art: 'moon', fg: 0x3a6aff },
-  { title: 'LAISSEZ LES BONS TEMPS ROULER', sub: 'MARDI GRAS BAR  ·  HURRICANE PUNCH', foot: 'BENTON DIESEL GRAND HOTEL', art: 'moon', fg: 0xf0c030 },
-  { title: 'FAST & FURIOUS', sub: 'BENTON STREET RUN  ·  NOW OPEN', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xff6a1a },
+  { title: 'HAPPY MARDI GRAS!', sub: 'NEW SHOW: KREWE OF BENTON  ·  STAGE 23', foot: 'BACKSTAGE  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xb070ff },
+  { title: 'THE MARDI GRAS BAR IS BACK', sub: "KING CAKE · BEIGNETS · PO'BOYS", foot: 'BACKSTAGE  ·  LIMITED TIME', art: 'moon', fg: 0xf0c030 },
+  { title: 'HAPPY NEW YEAR!', sub: "NEW YEAR'S EVE FIREWORKS NIGHTLY", foot: 'OVER THE BENTON GLOBE  ·  9:15 PM', art: 'moon', fg: 0xf0c040 },
+  { title: 'LAISSEZ LES BONS TEMPS ROULER', sub: 'CATCH THE BEADS  ·  STAGE 23', foot: 'BENTON DIESEL WORLD', art: 'moon', fg: 0x5adc6e },
+  { title: 'FAST & FURIOUS', sub: 'NOW WITH A ZERO-G ROLL', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xff6a1a },
+  { title: 'RV VAN RUN', sub: 'THE ROAD TRIP OF A LIFETIME', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xe8a820 },
 ];
 
 // the Benton Haunt ads on the billboards

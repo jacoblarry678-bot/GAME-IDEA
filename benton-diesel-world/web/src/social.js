@@ -4,7 +4,7 @@
 // food, Express), and your own photos: snap the view, add a caption and
 // watch the likes and comments roll in.
 import * as Clock from './clock.js';
-import { HAUNT_OVER, XMAS_SETUP, CHRISTMAS } from './season.js';
+import { HAUNT_OVER, XMAS_SETUP, CHRISTMAS, MARDI_GRAS } from './season.js';
 
 const STORE = 'bentonDieselWorld.social';
 const nowS = () => performance.now() / 1000;
@@ -13,7 +13,12 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const PARK = { handle: '@BentonDieselWorld', name: 'Benton Diesel World', color: 0xff6a1a, verified: true };
 
 // the park's own posts, newest first (each with a poster-style card)
-const SEASON_POSTS = CHRISTMAS ? [
+const SEASON_POSTS = MARDI_GRAS ? [
+  { when: 'Now', art: { title: 'MARDI GRAS SPECTACULAR', sub: 'NEW SHOW  ·  STAGE 23', color: 0x6a2a9a, emoji: '🎭' },
+    text: "NEW SHOW: Krewe of Benton: Mardi Gras Spectacular is on in Stage 23 backstage! Line up, grab a seat in the grandstand and catch the beads: the King's float, a snapping gator, the big-head brass band and a confetti finale. Plus the Mardi Gras Bar is BACK - king cake, beignets and Hurricane punch in the backstage yard. 💜💚💛", likes: 19804 },
+  { when: '1d', art: { title: 'HAPPY NEW YEAR!', sub: "NEW YEAR'S EVE FIREWORKS", color: 0x1e3a8a, emoji: '🎆' },
+    text: "That's a wrap on Benton Holidays - thank you for walking our Christmas Trails! Ring in the New Year with us: the nightly fireworks now count down from ten and open with a huge volley of gold and silver. 🎆", likes: 15620 },
+] : CHRISTMAS ? [
   { when: 'Now', art: { title: 'FAST & FURIOUS', sub: 'REOPENED  ·  NEW ZERO-G ROLL', color: 0xff6a1a, emoji: '🏁' },
     text: "Fast & Furious: Benton Street Run has REOPENED! The family got to work: a brand-new zero-g roll over the docks (yes, upside down in a street car), LED light strips along the whole track, rings of light through both launches and new lighting rigs in the warehouse. Ride or die. 🚗💨", likes: 24118 },
   { when: '1d', art: { title: 'RV VAN RUN', sub: 'NOW OPEN  ·  PAST CONSTRUCTION RUNAWAY', color: 0xd8641e, emoji: '🚐' },

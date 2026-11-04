@@ -228,8 +228,7 @@ export class Effects {
   }
 
   // -------------------------------------------------------------- bursts
-  confetti(at, area, count = 300) {
-    const palette = [0xff5050, 0xffdc3c, 0x50a0ff, 0x78e678, 0xff8c1a, 0xffffff];
+  confetti(at, area, count = 300, palette = [0xff5050, 0xffdc3c, 0x50a0ff, 0x78e678, 0xff8c1a, 0xffffff]) {
     for (let i = 0; i < count; i++) {
       tmpColor.setHex(palette[i % palette.length]);
       this.soft.spawn(
@@ -336,6 +335,9 @@ export class Effects {
       }
     } else if (kind === 'explosion') {
       this.explosion(new THREE.Vector3(at.x, at.y + 6, at.z), 1);
+    } else if (kind === 'mardi') {
+      // a confetti cannon in purple, green and gold
+      this.confetti(new THREE.Vector3(at.x, at.y, at.z), new THREE.Vector3(10, 3, 8), 420, [0x8a3ac8, 0x2aa04a, 0xf0c030, 0xffe070]);
     } else {
       this.emit('sparks', new THREE.Vector3(at.x, at.y + 8, at.z), { duration: 3 });
     }

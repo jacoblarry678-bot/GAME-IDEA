@@ -28,7 +28,8 @@ import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas, buildXmasSetup, XmasSetupSite } from './christmas.js';
 import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
-import { buildMardiGras } from './mardigras.js';
+import { buildMardiGras, AT_BACKSTAGE } from './mardigras.js';
+import { buildMardiShow, MardiShowSite } from './mardishow.js';
 import { buildLineTickets, buildExtendedQueues } from './lanes.js';
 import { Social } from './social.js';
 import { buildDieselRun, DieselRunSite } from './dieselrun.js';
@@ -119,8 +120,15 @@ async function main() {
   const xmasSetup = XMAS_SETUP && !CHRISTMAS ? buildXmasSetup(data) : null;
   // Wolverine, open past Backwoods
   const wvLayout = WOLVERINE_OPEN ? buildWolverine(data) : null;
-  // Mardi Gras: a temporary bar at the Grand
-  if (MARDI_GRAS) buildMardiGras(data);
+  // Mardi Gras: the bar is back (in the backstage yard), and a new live show
+  // in Stage 23 with its own line
+  if (MARDI_GRAS) buildMardiGras(data, AT_BACKSTAGE);
+  const msLayout = MARDI_GRAS ? buildMardiShow(data) : null;
+  // the New Year: Benton Nights becomes the New Year's Eve fireworks
+  if (XMAS_OVER) {
+    const bn = data.config.Shows.find((s) => s.id === 'BentonNights');
+    if (bn) Object.assign(bn, { name: "New Year's Eve Fireworks", newYear: true, duration: 120, description: 'A countdown from ten, then a huge volley of gold and silver over the Benton Globe, twice the shells and a long finale. Happy New Year!' });
+  }
   // Final Destination, going up on Stage 6 for next fall's Benton Haunt
   const fdLayout = FD_BUILDING ? buildFinalDestination(data) : null;
   // Diesel Run: the motion-simulator dark ride past Diesel District
@@ -268,6 +276,7 @@ async function main() {
   const stSite = new StrangerThingsSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, stLayout);
   const drSite = new DieselRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, drLayout);
   const fdSite = fdLayout ? new FinalDestinationSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, fdLayout) : null;
+  const msSite = msLayout ? new MardiShowSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, msLayout) : null;
   const wvSite = wvLayout ? new WolverineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wvLayout) : null;
   const ffSite = new FastFuriousSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout);
   const backstage = new Backstage({ family: FB, sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) });
@@ -449,7 +458,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || (msLayout && inBox(msLayout.indoor)));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -467,6 +476,7 @@ async function main() {
     backstage.update(dt, player.pos, started);
     ffSite.update(dt, player.pos, started);
     wvSite?.update(dt, player.pos, started);
+    msSite?.update(dt, player.pos, started);
     fdSite?.update(dt, player.pos, started);
     drSite.update(dt, player.pos, started);
     stSite.update(dt, player.pos, started);

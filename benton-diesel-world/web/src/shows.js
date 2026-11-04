@@ -318,7 +318,10 @@ function parade(ctx) {
 }
 
 // -------------------------------------------------------- Benton Nights
-function fireworks(ctx) {
+// (on New Year's, a countdown from ten, a huge opening volley of gold and
+// silver, twice the shells and a longer finale)
+function fireworks(ctx, show = {}) {
+  const ny = !!show.newYear;
   let seed = 2024;
   const rnd = (a = 0, b = 1) => {
     seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -326,25 +329,38 @@ function fireworks(ctx) {
   };
   const sites = [[-60, -230], [0, -250], [60, -230], [-30, -300], [30, -300]].map(([x, z]) => new THREE.Vector3(x, 2, z));
   const schedule = [];
-  let t = 2;
-  while (t < 92) {
-    const finale = t > 76;
+  let t = ny ? 10.6 : 2;
+  const end = (show.duration || 95) - 3, fin = end - (ny ? 22 : 16);
+  const GOLDS = [[0.12, 1, 0.6], [0.13, 0.3, 0.85], [0.1, 1, 0.55]];
+  if (ny) {
+    // midnight: everything at once
+    for (let k = 0; k < 28; k++) {
+      const site = sites[k % sites.length];
+      const [h, s, l] = GOLDS[k % 3];
+      schedule.push({ at: 10 + rnd(0, 0.6), from: site, to: site.clone().add(new THREE.Vector3(rnd(-60, 60), rnd(120, 230), rnd(-30, 60))), color: new THREE.Color().setHSL(h, s, l), size: rnd(1.1, 1.7), fired: false, burst: false });
+    }
+  }
+  while (t < end) {
+    const finale = t > fin;
+    const gold = ny && rnd() < 0.35;
     const site = sites[Math.floor(rnd(0, sites.length))];
     schedule.push({
       at: t,
       from: site,
       to: site.clone().add(new THREE.Vector3(rnd(-40, 40), rnd(130, 220), rnd(-30, 60))),
-      color: new THREE.Color().setHSL(rnd(), rnd(0.75, 1), 0.6),
-      size: rnd(0.8, 1.4),
+      color: gold ? new THREE.Color().setHSL(...GOLDS[Math.floor(rnd(0, 3))]) : new THREE.Color().setHSL(rnd(), rnd(0.75, 1), 0.6),
+      size: rnd(0.8, 1.4) * (ny ? 1.15 : 1),
       fired: false,
       burst: false,
     });
-    t += finale ? rnd(0.12, 0.3) : rnd(0.5, 1.4);
+    t += finale ? rnd(0.12, 0.3) * (ny ? 0.7 : 1) : rnd(0.5, 1.4) * (ny ? 0.55 : 1);
   }
   const trail = new THREE.Color(1, 0.8, 0.5);
   const p = new THREE.Vector3();
   return {
-    caption: captions([[0, 'BENTON NIGHTS'], [10, ''], [76, 'GOODNIGHT FROM BENTON DIESEL WORLD!']]),
+    caption: ny
+      ? captions([[0, '10...'], [1, '9...'], [2, '8...'], [3, '7...'], [4, '6...'], [5, '5...'], [6, '4...'], [7, '3...'], [8, '2...'], [9, '1...'], [10, 'HAPPY NEW YEAR!'], [18, ''], [fin, 'HAPPY NEW YEAR FROM BENTON DIESEL WORLD!']])
+      : captions([[0, 'BENTON NIGHTS'], [10, ''], [76, 'GOODNIGHT FROM BENTON DIESEL WORLD!']]),
     update(time) {
       for (const item of schedule) {
         if (item.burst || time < item.at) continue;
@@ -384,7 +400,7 @@ export class ShowRunner {
       let a = this.active.get(show.id);
       if (show.running && t >= 0 && t <= show.duration) {
         if (!a) {
-          a = IMPLS[show.id](this.ctx);
+          a = IMPLS[show.id](this.ctx, show);
           this.active.set(show.id, a);
         }
         a.update(t);

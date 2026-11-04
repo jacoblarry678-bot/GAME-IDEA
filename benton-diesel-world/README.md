@@ -49,6 +49,39 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Holidays has closed, there are New Year's fireworks, and Mardi
+  Gras is back with a new show (browser only):**
+  - **Benton Holidays has closed for the year.** The Christmas trails, the
+    snow, the decorations and Santa's Workshop are gone.
+  - **New Year's Eve fireworks:** the nightly Benton Nights fireworks
+    (9:15 PM) become New Year's Eve Fireworks.
+    - On-screen captions count down from 10, and at "HAPPY NEW YEAR!" a
+      volley of 28 gold and silver shells goes up at once.
+    - Shells then go up about twice as often, with a longer finale.
+  - **The Mardi Gras Bar is back,** this time in the backstage yard facing
+    the gate. It has the same purple, green and gold tent, giant mask and
+    beads, and the same king cake, beignets, po'boys and zero-proof
+    Hurricane punch.
+    - The backstage gate is open again under a purple and gold
+      MARDI GRAS · BACKSTAGE arch hung with beads.
+  - **New show: Krewe of Benton: Mardi Gras Spectacular** in Stage 23 (the
+    middle soundstage). It has a real line: switchbacks on purple carpet
+    in front of the stage under bead strands and lanterns, with a live
+    wait time and an entrance sign. Inside, you take a seat in a 32-seat
+    tiered grandstand facing a French Quarter street with wrought-iron
+    balconies, gas lamps and a LAISSEZ LES BONS TEMPS ROULER proscenium.
+    During the 110-second show:
+    - the King's float turns on its turntable;
+    - the jester's float rolls out to the footlights and back;
+    - a gator float snaps its jaws;
+    - the big-head brass band bounces along the front, and dancers spin
+      on the wings;
+    - beads rain down from the fly loft;
+    - confetti cannons in purple, green and gold fire for the finale.
+  - It runs as a ride, so Express, Front of the Line, the crew and the
+    app's wait times all work.
+  - The billboards, the shuttle signs and the park's posts all announce
+    Mardi Gras and the New Year.
 - **Fast & Furious has reopened, with a new inversion and better lights
   (browser only):**
   - **The new inversion:** after the second launch at the docks, the

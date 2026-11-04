@@ -1,5 +1,5 @@
-// Mardi Gras at the Grand: a temporary bar beside the Benton Diesel Grand
-// Hotel's drive. A purple, green and gold striped tent over a long bar, bead
+// Mardi Gras: a temporary bar, first beside the Benton Diesel Grand
+// Hotel's drive and now back again in the backstage yard. A purple, green and gold striped tent over a long bar, bead
 // strands strung between the poles, a giant mask over the front, high-top
 // tables, and a limited-time menu (king cake, beignets, po'boys and
 // zero-proof Hurricane punch). It is an ordinary restaurant venue, so the
@@ -7,8 +7,9 @@
 import { helpers } from './wolverine.js';
 
 export const BAR_ID = 'MardiGrasBar';
-const X = 523, Z = 522, W = 16, D = 16, H = 10; // the tent, its open side facing west
-const BASE = 0.34; // the hotel's ground
+const W = 16, D = 16, H = 10; // the tent, its open side facing west
+export const AT_GRAND = { x: 523, z: 522, base: 0.34 }; // beside the hotel's drive
+export const AT_BACKSTAGE = { x: -14, z: -446, base: 0.1, backstage: true }; // in the backstage yard, facing the gate
 const PURPLE = 0x6a2a9a, GREEN = 0x1e8a3a, GOLD = 0xf0c030, WHITE = 0xf4f4f0, BLACK = 0x101012;
 const BEADS = [PURPLE, GREEN, GOLD];
 
@@ -21,8 +22,9 @@ const MENU = [
   { id: 'GoldenFizz', base: 'NitroSoda', name: 'Golden Fizz', description: 'Sparkling ginger and pineapple, gold as a doubloon.', price: 9, hunger: 8, bites: 2, colors: [0xf0c030, 0xfff4c8] },
 ];
 
-export function buildMardiGras(data) {
+export function buildMardiGras(data, at = AT_GRAND) {
   const { add, box, sign, cf } = helpers(data);
+  const X = at.x, Z = at.z, BASE = at.base, back = !!at.backstage;
   data.tags.ParkLamp = data.tags.ParkLamp || [];
   data.hauntLights = data.hauntLights || [];
   data.staffSpots = data.staffSpots || [];
@@ -98,7 +100,7 @@ export function buildMardiGras(data) {
     const a = k * 0.28;
     add([0.2, 6, 1], [mx + 0.3, my + 4.2, Z + 4.6 + k * 0.6], BEADS[(k + 3) % 3], 'Fabric', { collide: 0, rot: [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)] });
   }
-  sign([0.3, 2.6, 15], [x0 - 0.5, BASE + H - 2.2, Z], 0x1a0a24, 'Left', [['MARDI GRAS AT THE GRAND', 0, 0, 1, 0.6, GOLD], ['LIMITED TIME  ·  ALL AGES', 0, 0.6, 1, 0.4, WHITE, 'GothamBold']], { glow: true });
+  sign([0.3, 2.6, 15], [x0 - 0.5, BASE + H - 2.2, Z], 0x1a0a24, 'Left', [[back ? 'MARDI GRAS BAR' : 'MARDI GRAS AT THE GRAND', 0, 0, 1, 0.6, GOLD], [back ? 'BACKSTAGE  ·  ALL AGES  ·  IT\'S BACK!' : 'LIMITED TIME  ·  ALL AGES', 0, 0.6, 1, 0.4, WHITE, 'GothamBold']], { glow: true });
   // the menu board on a stand by the counter
   box([0.3, 7, 0.3], [x0 - 8, BASE + 0.4, z0 - 1], 0x2a2a2e, 'Metal');
   sign([0.3, 4.4, 6], [x0 - 8, BASE + 5.4, z0 - 1], 0x1a0a24, 'Left', [
@@ -138,11 +140,12 @@ export function buildMardiGras(data) {
   light(x0 - 2, BASE + 12, Z, GREEN);
 
   data.config.Venues.push({
-    id: BAR_ID, name: 'Mardi Gras Bar at the Grand', kind: 'restaurant', land: 'Plaza', facing: 'W',
-    description: "Limited time at the Benton Diesel Grand: king cake, beignets, shrimp po'boys and zero-proof Hurricane punch under the beads.",
+    id: BAR_ID, name: back ? 'Mardi Gras Bar (Backstage)' : 'Mardi Gras Bar at the Grand', kind: 'restaurant', land: back ? 'Studios' : 'Plaza', facing: 'W',
+    description: back ? "It's back! In the backstage yard, by the Mardi Gras show: king cake, beignets, shrimp po'boys and zero-proof Hurricane punch under the beads." : "Limited time at the Benton Diesel Grand: king cake, beignets, shrimp po'boys and zero-proof Hurricane punch under the beads.",
     items: MENU.map((m) => m.id), color: PURPLE, position: [X, 0, Z], size: [W, H, D],
   });
-  data.staffSpots.push({ role: 'cashier', kind: 'restaurant', venue: BAR_ID, land: 'Plaza', seed: 4, cf: cf(cx + 1.6, BASE + 0.4, Z, Math.PI / 2) });
-  data.staff.lines.hotel = [...(data.staff.lines.hotel || []), 'Happy Mardi Gras! The bar is by the drive!', 'Laissez les bons temps rouler!'];
+  data.staffSpots.push({ role: 'cashier', kind: 'restaurant', venue: BAR_ID, land: back ? 'Studios' : 'Plaza', seed: 4, cf: cf(cx + 1.6, BASE + 0.4, Z, Math.PI / 2) });
+  if (back) data.staff.lines.greeter = [...(data.staff.lines.greeter || []), 'The Mardi Gras Bar is back - backstage, through the gate!'];
+  else data.staff.lines.hotel = [...(data.staff.lines.hotel || []), 'Happy Mardi Gras! The bar is by the drive!', 'Laissez les bons temps rouler!'];
   return { x: X, z: Z };
 }

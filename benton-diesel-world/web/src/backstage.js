@@ -82,7 +82,8 @@ export function buildBackstage(data) {
   const gx = (GATE.x0 + GATE.x1) / 2, gw = GATE.x1 - GATE.x0;
   data.tags.Searchlight = data.tags.Searchlight || [];
   data.tags.SteamVent = data.tags.SteamVent || [];
-  if (HAUNT_OVER && !CHRISTMAS) closedGate(); // (at Christmas the gate is open: christmas.js)
+  if (HAUNT_OVER && !CHRISTMAS && !MARDI_GRAS) closedGate(); // (at Christmas the gate is open: christmas.js)
+  else if (MARDI_GRAS) mardiGate();
   else for (const x of [GATE.x0 + 1.5, GATE.x1 - 1.5]) {
     box([3, 19, 3], [x, G, -409], BLACK, 'Metal');
     for (let k = 0; k < 3; k++) add([1.6, 1.4, 1.6], [x + (k - 1) * 1.8, G + 0.7, -406.9], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
@@ -100,6 +101,27 @@ export function buildBackstage(data) {
       box([1.4, 1, 2], [x, G, -414], 0x2a2a2e, 'Metal');
       data.tags.SteamVent.push([x, G + 1, -414, 1, 0, 0, 0, 1, 0, 0, 0, 1]); // fog machines being tested
     }
+  }
+  // Mardi Gras: the gate is open, under a purple and gold arch hung with beads
+  function mardiGate() {
+    const PURPLE = 0x6a2a9a, GREEN = 0x1e8a3a, GOLD = 0xf0c030;
+    for (const x of [GATE.x0 + 1.5, GATE.x1 - 1.5]) {
+      box([3, 19, 3], [x, G, -409], PURPLE, 'SmoothPlastic');
+      add([3.4, 0.6, 3.4], [x, G + 19.2, -409], GOLD, 'Metal', { collide: 0 });
+      add([1.6, 1.6, 1.6], [x, G + 20.4, -409], GOLD, 'Neon', { shape: 3, collide: 0 });
+    }
+    add([gw, 3.4, 2], [gx, G + 20.6, -409], PURPLE, 'SmoothPlastic', { collide: 0 });
+    for (const [z, face] of [[-407.9, 'Back'], [-410.1, 'Front']]) sign('MARDI GRAS  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, z], PURPLE, GOLD, face, 'GothamBlack', true);
+    sign('THE MARDI GRAS BAR IS BACK  ·  NEW SHOW IN STAGE 23', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -410.1], PURPLE, 0xffffff, 'Front', 'GothamBold');
+    sign('KREWE OF BENTON: MARDI GRAS SPECTACULAR  ·  STAGE 23', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], PURPLE, 0xffffff, 'Back', 'GothamBold');
+    // bead strands sagging under the arch
+    [GOLD, PURPLE, GREEN].forEach((c, j) => {
+      const n = 30;
+      for (let k = 0; k <= n; k++) {
+        const u = k / n;
+        add([0.5, 0.5, 0.5], [GATE.x0 + 1.5 + (gw - 3) * u, G + 18.4 - j * 0.7 - (2.2 + j * 0.6) * 4 * u * (1 - u), -409 + (j - 1) * 0.6], c, 'Neon', { shape: 3, collide: 0 });
+      }
+    });
   }
   // a locked gate: chain-link panels between steel posts, closed signs
   function closedGate() {
@@ -418,13 +440,17 @@ export class Backstage {
     const family = R && playerPos.x > R.x0 && playerPos.x < R.x1 && playerPos.z > R.z0 && playerPos.z < R.z1;
     if (family && !this.toldFamily && HAUNT_OVER) {
       this.toldFamily = true;
-      this.hooks.toast('Backstage is closed: the crews are taking down the Lights Out at Lakeside tent. Benton Haunt returns next fall!', 'info');
+      this.hooks.toast(XMAS_OVER ? 'Backstage is closed: the Gingerbread Lane tent has been packed away. See you next holiday season!' : 'Backstage is closed: the crews are taking down the Lights Out at Lakeside tent. Benton Haunt returns next fall!', 'info');
     }
     if (family && !this.toldFamily) {
       this.toldFamily = true;
       this.hooks.toast("Family Landing backstage: Benton Haunt's sixth house, Lights Out at Lakeside, is open in this tent. Lights out...", 'info');
     }
     const inside = family || (playerPos.x > BS.x0 && playerPos.x < BS.x1 && playerPos.z > BS.z0 && playerPos.z < BS.z1);
+    if (inside && !family && !this.told && MARDI_GRAS) {
+      this.told = true;
+      this.hooks.toast('Happy Mardi Gras! The Mardi Gras Bar is back in the yard, and the new Krewe of Benton: Mardi Gras Spectacular is showing in Stage 23. Laissez les bons temps rouler!', 'reward');
+    }
     if (inside && !family && !this.told && CHRISTMAS) {
       this.told = true;
       this.hooks.toast("Welcome to Santa's Workshop! Join the line by the porch and press E to meet Santa. Ho ho ho!", 'reward');
