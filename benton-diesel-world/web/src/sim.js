@@ -71,6 +71,8 @@ export class Sim {
       };
       // closed for a refurbishment: no line, no running
       if (cfg.refurb) Object.assign(st, { refurb: true, status: 'Closed', downUntil: Infinity });
+      // a late attraction (opensAt: a park minute) is closed until then
+      this.lateCheck(st);
       this.rides.set(r.id, st);
       this.order.push(st);
     }
@@ -147,7 +149,7 @@ export class Sim {
   rideState(id) {
     const st = this.rides.get(id);
     return {
-      status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, lastWait: st.lastWait ?? null,
+      status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, late: !!st.late, opensAt: st.cfg.opensAt ?? null, lastWait: st.lastWait ?? null,
       express: this.expressWait(st), fotl: this.fotlWait(st), extended: this.extendedOpen(st),
     };
   }
@@ -390,11 +392,22 @@ export class Sim {
     });
   }
 
+  // Late attractions open after dark: closed each morning until `opensAt`,
+  // then open through the night (the usual "reopened" logic opens them).
+  lateCheck(st) {
+    const at = st.cfg.opensAt;
+    if (!at || st.refurb || st.status !== 'Open') return;
+    const m = Clock.minutes();
+    if (m >= 300 && m < at) Object.assign(st, { status: 'Closed', late: true, downUntil: Clock.now() + Clock.secondsUntil(at) });
+  }
+
   updateRides(now) {
     for (const st of this.order) {
+      this.lateCheck(st);
       if (st.status === 'Closed') {
         if (now >= st.downUntil) {
           st.status = 'Open';
+          st.late = false;
           if (this.queueRide === st.id) this.hooks.toast(`${st.cfg.name} has reopened!`, 'info');
         }
         continue;

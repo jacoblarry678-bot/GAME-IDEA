@@ -8,7 +8,9 @@
 // its set dressing, drawn with the room helper R from houses.js), which
 // stage each one is in, and the trail fronts and queues.
 import { STAGE_Z, QUEUE, stageX, BS } from './backstage.js';
+import * as THREE from 'three';
 import { helpers } from './wolverine.js';
+import { LINES } from './guests.js';
 
 const G = 0.1;
 const RED = 0xc8102e, GREEN = 0x1e5a2a, GOLD = 0xf0c040, WHITE = 0xf4f4f0, ICE = 0x9ad8ff, WARM = 0xffd890, PINK = 0xff7ab8, BLUE = 0x3a6aff;
@@ -280,12 +282,81 @@ export const XROOMS = {
   ],
 };
 
+// Stranger Things: Christmas in Hawkins (the late trail, in a new wing of the
+// Stranger Things building): the Byers' living room with the alphabet
+// wall, the Hawkins Lab holiday party, the Upside Down at Christmas, and the
+// Snow Ball.
+const alphabetWall = (R, t0, side) => {
+  const rows = ['ABCDEFGH', 'IJKLMNOPQ', 'RSTUVWXYZ'];
+  const lit = 'MERYXAS';
+  R.wall(t0, side, 20, 9, 0.3, 0xd8cca0, 'SmoothPlastic', { y0: 2 });
+  rows.forEach((row, r) => {
+    const y = 8.6 - r * 2.6;
+    R.sign(t0, side, row.split('').join('   '), 18, 1.6, y - 1, 0xd8cca0, 0x1a1a1a);
+    [...row].forEach((ch, i) => {
+      const t = t0 - 9 + (i + 0.5) * (18 / row.length);
+      const on = lit.includes(ch);
+      R.put(t, side * (W - 0.45), [on ? 0.55 : 0.36, on ? 0.55 : 0.36, on ? 0.55 : 0.36], y + 0.2, BULBS[(i + r) % 5], on ? 'Neon' : 'SmoothPlastic', { shape: 3 });
+    });
+  });
+  for (let i = 0; i < 24; i++) R.put(t0 - 10 + i * 0.85, side * (W - 0.4), [0.08, 0.08, 0.9], 9.3 + Math.sin(i) * 0.15, 0x1a1a1a, 'Rubber');
+};
+const demogorgon = (R, t, s) => {
+  const P = (dt, ds, size, y, c, mat = 'SmoothPlastic', o = {}) => R.put(t + dt, s + ds, size, y, c, mat, o);
+  P(0, 0, [1.1, 2.4, 0.8], 4.2, 0x6a5a54);
+  for (const ds of [-0.35, 0.35]) P(0, ds, [0.35, 3, 0.35], 1.5, 0x5a4a44);
+  for (const ds of [-0.9, 0.9]) P(-0.5, ds, [0.3, 2.8, 0.3], 4.4, 0x5a4a44);
+  for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; R.spin(t - 0.3, s + Math.cos(a) * 0.5, [0.15, 1.3, 0.7], 6.2 + Math.sin(a) * 0.5, 0x8a6a62, 'SmoothPlastic', a); }
+  P(-0.2, 0, [0.7, 0.7, 0.7], 6.2, 0xc81e1e, 'Neon', { shape: 3 });
+  P(0, 0, [1.2, 1.6, 1.2], 7.6, RED, 'Fabric', { shape: 5 }); // a Santa hat
+  P(0, 0, [1.4, 0.35, 1.4], 6.9, WHITE, 'Fabric', { shape: 5 });
+  P(0.3, 0, [0.45, 0.45, 0.45], 8.5, WHITE, 'Fabric', { shape: 3 });
+};
+XROOMS.hawkins = [
+  { wall: [0x6a4a2a, 'WoodPlanks'], floor: 0x5a4a3a, light: WARM, dress: (R) => {
+    alphabetWall(R, R.len * 0.3, 1);
+    alphabetWall(R, R.len * 0.72, 1);
+    R.wall(R.len * 0.5, -1, 8, 2.4, 2.6, 0x7a5a3a, 'Fabric');
+    lightTree(R, R.len * 0.2, -1.6, 7, BULBS, { solid: true });
+    R.put(R.len * 0.85, -2, [0.3, 5, 0.3], 2.5, 0x2a2a2a, 'Metal');
+    R.put(R.len * 0.85, -2, [1.4, 1.2, 1.4], 5.4, 0xffe8a0, 'Neon', { shape: 5 });
+    garland(R, 10, BULBS);
+    R.sign(R.len * 0.62, -1, 'THE BYERS HOUSE  ·  CHRISTMAS 1983', 12, 1.4, 7, 0x3a2a1a, WARM, true);
+  } },
+  { wall: [0xc8ccc8, 'Concrete'], floor: 0xb8bcb4, light: 0xd8ecff, dress: (R) => {
+    every(R, 1.2, (t, k) => { for (const side of [-1, 1]) R.put(t, side * (W - 0.25), [0.15, 0.15, 1.3], 9.6 - Math.abs(Math.sin(t / 3)) * 0.8, k % 2 ? 0xc8d0dc : 0xd8b040, 'Metal', { shape: 2, turn: Math.PI / 2 }); }, 0.6);
+    every(R, 26, (t) => { R.wall(t, 1, 10, 6, 0.3, 0x0a0c10, 'Metal', { y0: 3 }); R.sign(t, 1, "SEASON'S GREETINGS FROM HAWKINS LAB", 9.4, 1.6, 6, 0x1a0404, 0xff4a4a, true); }, 10);
+    every(R, 18, (t) => { R.put(t, -2, [3, 1.2, 1.6], 2.4, WHITE, 'SmoothPlastic'); R.put(t, -2, [0.5, 0.6, 0.5], 3.3, 0xc81e1e, 'Glass', { shape: 5 }); }, 6);
+    lightTree(R, R.len * 0.55, -1.8, 6, [RED, WHITE], { solid: true, star: RED });
+    R.sign(R.len * 0.3, -1, 'HOLIDAY PARTY  ·  LEVEL 4  ·  NO HAZMAT SUITS', 13, 1.4, 7, 0x0a0c10, WHITE, true);
+  } },
+  { wall: [0x1a0a0e, 'SmoothPlastic'], floor: 0x2a1414, light: 0xff3a3a, dress: (R) => {
+    // vines wrapped in Christmas lights, spores drifting like snow
+    for (let k = 0; k < 40; k++) {
+      const t = ((k * 37) % 100) / 100 * R.len, side = k % 2 ? 1 : -1, a = ((k * 13) % 10) / 10 - 0.5, h = 3 + (k % 4) * 1.5;
+      R.spin(t, side * (W - 0.3), [0.3, h, 0.3], 2 + ((k * 7) % 6), 0x3a1414, 'SmoothPlastic', a);
+      R.put(t, side * (W - 0.5), [0.3, 0.3, 0.3], 2.4 + ((k * 7) % 6), BULBS[k % 5], 'Neon', { shape: 3 });
+    }
+    fireflies(R, 50, 0xe8e0d0);
+    demogorgon(R, R.len * 0.6, 1.4);
+    R.sign(R.len * 0.3, -1, 'IT KNOWS IT IS CHRISTMAS', 12, 1.4, 7, 0x1a0a0e, 0xff4a4a, true);
+  } },
+  { wall: [0x2a3a6a, 'SmoothPlastic'], floor: 0x8a6a40, light: 0x9ad8ff, dress: (R) => {
+    R.sign(R.len * 0.5, 1, 'SNOW BALL 1984', 14, 2.4, 7.6, 0x2a3a6a, WHITE, true);
+    every(R, 3, (t, k) => snowflake(R, t, ((k % 3) - 1) * 1.6, 9.4 + (k % 2) * 0.6, 0.7, WHITE, true), 2);
+    every(R, 4, (t, k) => { for (const side of [-1, 1]) R.put(t, side * (W - 0.6), [0.9, 1.1, 0.9], 1 + ((k * 7) % 3) * 0.7, k % 2 ? WHITE : 0x6ab4ff, 'SmoothPlastic', { shape: 3 }); }, 2);
+    R.put(R.len * 0.5, 0, [1.6, 1.6, 1.6], 9, 0xd8dce2, 'Metal', { shape: 3 }); // the disco ball
+    every(R, 1.4, (t, k) => R.put(t, Math.sin(k * 2.3) * 2.5, [0.15, 0.04, 0.15], 0.06, 0xffffff, 'Neon'), 1);
+    garland(R, 8.8, [WHITE, 0x9ad8ff]);
+  } },
+];
 export const XDESC = {
   northpole: 'Walk through the Northern Lights: an aurora overhead, glittering ice caves, polar bears and penguins made of light, and a tunnel of blue and white.',
   toyfactory: "Tour Santa's Toy Factory on Stage 22: the assembly line, the toy soldiers, Candy Cane Alley and the wrapping room (no peeking).",
   forest: 'An enchanted forest of lights: twinkling trees, glowing deer, giant glowing mushrooms, fireflies and a warm tunnel of light.',
   snowglobe: 'Winter Wonderland on Stage 6: a snowflake canopy, a frozen skating pond, giant snow globes and Santa and his team flying overhead.',
   gingerbread: "Gingerbread Lane, in the Family Landing tent: a gingerbread village, Candy Land's giant lollipops and gumdrops, and Mrs. Claus' cookie kitchen.",
+  hawkins: "LATE TRAIL - opens after dark. A Stranger Things Christmas, in a new wing of the Stranger Things building: the Byers' living room with the alphabet-wall lights, the Hawkins Lab holiday party, the Upside Down at Christmas (yes, the Demogorgon has a Santa hat) and the Snow Ball.",
   twinkle: 'The outdoor trail through the snowy backstage yard: arches of lights, a meadow of glowing reindeer, giant ornaments, candy canes and a sparkling light tunnel.',
 };
 
@@ -306,6 +377,20 @@ export const XOUTDOOR = {
   outsideIn: [[150, -422]], outsideOut: [[150, -496]],
   queueFwd: [[114, -446], [118, -446], [118, -440], [146, -440], [146, -434], [118, -434], [118, -428], [146, -428], [146, -422], [150, -422]],
   entrance: [114, -446], origin: [244, 0, -458],
+};
+
+// Christmas in Hawkins: a new wing on the north side of the Stranger Things
+// building, with an indoor line and four rooms; open after dark only
+const HW = { x0: 612, x1: 798, z0: -153, z1: -64, H: 24, door: -108, exitX: 656 };
+const hq = [[600, HW.door], [616, HW.door], [616, -72]];
+for (const [k, x] of [622, 628, 634, 640, 646].entries()) hq.push([x, k % 2 ? -148 : -72], [x, k % 2 ? -72 : -148]);
+hq[hq.length - 1] = [646, -142];
+hq.push([652, -142]);
+export const XHAWKINS = {
+  id: 'TrailHawkins', title: 'Stranger Things: Christmas in Hawkins', theme: 'hawkins', glow: 0xff3a3a, baseWait: 60, opensAt: 1050,
+  interior: [[652, -142], [792, -142], [792, -122], [656, -122], [656, -102], [792, -102], [792, -82], [HW.exitX, -82], [HW.exitX, -66]],
+  outsideIn: [[652, -142]], outsideOut: [[HW.exitX, -58], [606, -58], [606, -100]],
+  queueFwd: hq, entrance: [604, HW.door], origin: [705, 0, -110], wing: HW,
 };
 
 // The trails' fronts and queues: a name board and a portal of lights at
@@ -350,6 +435,52 @@ export function buildTrailFronts(data) {
   }
   box([0.4, 7, 0.4], [O.entrance[0] - 3, G, O.entrance[1]], 0x2a2a2e, 'Metal');
   sign([12, 2.4, 0.2], [O.entrance[0] - 3, G + 6.4, O.entrance[1] - 0.2], 0x0a1a2a, 'Front', [['THE TWINKLE TRAIL', 0, 0, 1, 1, WARM]], { glow: true });
+  // ---- Christmas in Hawkins: the wing (lab white, a red stripe, Joyce's
+  // lights along the roof), its indoor line and its doors
+  const H = XHAWKINS.wing, LAB = 0xc8ccc8, LABDARK = 0x3a3e44;
+  const hx = (H.x0 + H.x1) / 2, hz = (H.z0 + H.z1) / 2;
+  add([H.x1 - H.x0, 0.4, H.z1 - H.z0], [hx, G + 0.2, hz], 0x2a2c30, 'Concrete');
+  const wallZ = (x, za, zb) => box([1.4, H.H, zb - za], [x, G, (za + zb) / 2], LAB, 'Concrete');
+  const wallX = (z, xa, xb) => box([xb - xa, H.H, 1.4], [(xa + xb) / 2, G, z], LAB, 'Concrete');
+  wallZ(H.x0, H.z0, H.door - 3.5); wallZ(H.x0, H.door + 3.5, H.z1);
+  box([1.4, H.H - 9, 7], [H.x0, G + 9, H.door], LAB, 'Concrete');
+  wallX(H.z1, H.x0, H.exitX - 3.5); wallX(H.z1, H.exitX + 3.5, H.x1);
+  box([7, H.H - 9, 1.4], [H.exitX, G + 9, H.z1], LAB, 'Concrete');
+  wallZ(H.x1, H.z0, H.z1);
+  add([H.x1 - H.x0 + 2, 1.2, H.z1 - H.z0 + 2], [hx, G + H.H + 0.6, hz], 0x8a8e94, 'Concrete', { collide: 0 });
+  for (const [w, d, x, z] of [[0.3, H.z1 - H.z0, H.x0 - 0.8, hz], [H.x1 - H.x0, 0.3, hx, H.z1 + 0.8], [0.3, H.z1 - H.z0, H.x1 + 0.8, hz]]) {
+    add([w, 3.6, d], [x, G + 1.8, z], LABDARK, 'Concrete', { collide: 0 });
+    add([w, 0.6, d], [x, G + 19, z], RED, 'Neon', { collide: 0 });
+  }
+  // Joyce's Christmas lights, strung all along the roofline
+  for (let x = H.x0 + 1; x < H.x1; x += 1.6) add([0.45, 0.45, 0.45], [x, G + H.H - 1 - Math.abs(Math.sin(x * 0.2)) * 0.8, H.z1 + 1.1], BULBS[Math.round(x) % 5], 'Neon', { shape: 3, collide: 0 });
+  for (let z = H.z0 + 1; z < H.z1; z += 1.6) add([0.45, 0.45, 0.45], [H.x0 - 1.1, G + H.H - 1 - Math.abs(Math.sin(z * 0.2)) * 0.8, z], BULBS[Math.round(-z) % 5], 'Neon', { shape: 3, collide: 0 });
+  sign([0.4, 6, 40], [H.x0 - 1.2, G + 15, H.door], 0x050506, 'Left', [['CHRISTMAS IN HAWKINS', 0, 0.05, 1, 0.55, RED], ['A STRANGER THINGS CHRISTMAS TRAIL  ·  OPENS AFTER DARK', 0, 0.66, 1, 0.3, WHITE, 'GothamBold']], { glow: true });
+  sign([0.2, 1.4, 8], [H.x0 - 0.9, G + 10.4, H.door], 0x050506, 'Left', [['LATE TRAIL  ·  5:30 PM', 0, 0, 1, 1, 0x8a5aff, 'GothamBold']], { glow: true });
+  sign([7, 1.4, 0.2], [H.exitX, G + 10.4, H.z1 + 0.9], 0x050506, 'Back', [['EXIT', 0, 0, 1, 1, 0x5adc6e, 'GothamBold']], { glow: true });
+  // inside the line: velvet ropes, lab posters, a tree and lights overhead
+  const hqp = XHAWKINS.queueFwd;
+  for (const [k, x] of [619, 625, 631, 637, 643].entries()) {
+    const north = k % 2 === 0; // the turn is at the north end: leave it open
+    rope(x, north ? -150 : -69, x, north ? -75 : -145);
+  }
+  for (let x = H.x0 + 3; x < 650; x += 3) for (let z = H.z0 + 4; z < H.z1 - 2; z += 8) add([0.3, 0.3, 0.3], [x, G + 12 - ((x + z) % 3) * 0.4, z], BULBS[Math.round(x + z) % 5], 'Neon', { shape: 3, collide: 0 });
+  [['HAWKINS POWER & LIGHT', 'HAPPY HOLIDAYS  ·  SORRY ABOUT THE OUTAGES'], ['HAWKINS MIDDLE SCHOOL', 'SNOW BALL  ·  SATURDAY'], ['MISSING: WILL BYERS', 'FOUND SAFE  ·  MERRY CHRISTMAS']].forEach(([a, b], k) => {
+    sign([0.2, 3, 8], [H.x0 + 0.9, G + 6, -140 + k * 14], 0x101114, 'Right', [[a, 0, 0.1, 1, 0.45, RED], [b, 0, 0.6, 1, 0.3, WHITE, 'GothamBold']], { glow: true });
+  });
+  box([1.2, 1.4, 1.2], [648, G, -70], 0x5a3a20, 'Wood', { collide: 0 });
+  add([3, 6, 3], [648, G + 4.2, -70], GREEN, 'Grass', { shape: 5, collide: 0 });
+  add([0.8, 0.8, 0.8], [648, G + 7.6, -70], GOLD, 'Neon', { shape: 3, collide: 0 });
+  void hqp;
+  // the walks: from the Mirkwood path to the door, and from the exit back
+  for (const r of [[[603, -112], [600, H.door]], [[H.exitX, H.z1 - 1], [H.exitX, -58], [606, -58], [606, -104], [603, -112]]]) {
+    for (let i = 0; i < r.length - 1; i++) {
+      const [xa, za] = r[i], [xb, zb] = r[i + 1];
+      add([7, 0.4, Math.hypot(xb - xa, zb - za) + 7], [(xa + xb) / 2, 0.23, (za + zb) / 2], 0x6a5a48, 'Pavement', { yaw: Math.atan2(xb - xa, zb - za), collide: 0 });
+      LINES.push([new THREE.Vector3(xa, 0, za), new THREE.Vector3(xb, 0, zb)]);
+    }
+  }
+
   // a directory at the backstage gate
   box([0.5, 9, 0.5], [-34, G, -414], 0x2a2a2e, 'Metal');
   sign([14, 6, 0.3], [-34, G + 8.5, -413.8], 0x0a1a2a, 'Back', [

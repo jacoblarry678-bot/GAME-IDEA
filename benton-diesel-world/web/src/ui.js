@@ -208,6 +208,7 @@ export class UI {
         const s = sim.rideState(ride.id);
         last.textContent = s.refurb || s.status === 'Closed' ? '' : [`⚡ ${s.express <= 0 ? 'no wait' : `${s.express} min`}`, s.lastWait !== null ? `last ${s.lastWait}` : '', s.extended ? 'extended queue open' : ''].filter(Boolean).join(' · ');
         if (s.refurb) { wait.textContent = 'REFURB'; wait.style.color = '#f0a040'; }
+        else if (s.late) { wait.textContent = `OPENS ${Clock.format(s.opensAt)}`; wait.style.color = '#8a5aff'; }
         else if (s.status === 'Closed') { wait.textContent = 'CLOSED'; wait.style.color = '#f04636'; }
         else { wait.textContent = s.wait <= 0 ? 'No wait' : `${s.wait} min`; wait.style.color = waitColor(s.wait); }
       });
@@ -631,7 +632,7 @@ export class UI {
       const s = sim.rideState(p.ride.id);
       const inLine = sim.queueRide === p.ride.id;
       const lane = inLine ? sim.playerEntry()?.lane : null;
-      this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}  ·  ⚡ Express ${s.express <= 0 ? 'no wait' : `${s.express} min`}${s.extended ? '  ·  extended queue open' : ''}`;
+      this.promptSub.textContent = s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.late ? `Opens after dark, at ${Clock.format(s.opensAt)} - you can wait in line` : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}  ·  ⚡ Express ${s.express <= 0 ? 'no wait' : `${s.express} min`}${s.extended ? '  ·  extended queue open' : ''}`;
       this.promptJoin.replaceChildren(h('kbd', {}, 'E'), lane === 'standby' ? ' In line ✓' : ' Join Line');
       this.promptJoin.disabled = lane === 'standby' || s.refurb;
       this.promptExpress.replaceChildren(h('kbd', {}, 'F'), lane === 'express' ? ' Express ✓' : ` Express (${UNLIMITED_EXPRESS ? '∞' : sim.profile.passes})`);

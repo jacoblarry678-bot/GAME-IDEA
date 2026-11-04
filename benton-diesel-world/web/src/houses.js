@@ -8,7 +8,7 @@
 // actors lunge out as you pass.
 import { HOUSES, STAGE_Z, QUEUE, STAGE, stageX } from './backstage.js';
 import { FAMILY_QUEUE } from './haunt.js';
-import { XROOMS, XSTAGES, XDESC, XOUTDOOR, buildTrailFronts } from './xmastrails.js';
+import { XROOMS, XSTAGES, XDESC, XOUTDOOR, XHAWKINS, buildTrailFronts } from './xmastrails.js';
 
 export const WALK = 6; // how fast a group walks a house (studs/s)
 const G = 0.1;
@@ -534,7 +534,7 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
     return R;
   };
 
-  const addHouse = ({ id, name, land, theme, glow, interior, outsideIn, outsideOut, queueFwd, signIndex, entrance, origin, baseWait, description, speed = WALK, open = false, category = 'Haunted House', thrill = 4 }) => {
+  const addHouse = ({ id, name, land, theme, glow, interior, outsideIn, outsideOut, queueFwd, signIndex, entrance, origin, baseWait, description, speed = WALK, open = false, category = 'Haunted House', thrill = 4, opensAt = null }) => {
     // long segments become rooms in turn; the short joins between them
     // borrow the next room's finish
     const rooms = ROOMSET[theme];
@@ -565,7 +565,7 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
       cars: [], seats, capacity: 12, queue: queueData(queueFwd, signIndex, G + 0.2), extras: {}, extrasNames: [], crew: null,
     });
     data.config.Rides.push({
-      id, name, land, category, thrill, kind: 'walkthrough', carStyle: 'none', description,
+      id, name, land, category, thrill, kind: 'walkthrough', carStyle: 'none', description, ...(opensAt ? { opensAt } : {}),
       baseWait, origin, entrance: [entrance[0], 0, entrance[1]], exit: [end[0], 0, end[1]], yaw: 0, layout: id, cars: 0, carSpacing: 0, colors: [glow],
     });
     const xs = interior.map((p) => p[0]), zs = interior.map((p) => p[1]);
@@ -642,6 +642,13 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
       id: O.id, name: O.title, land: 'Studios', theme: O.theme, glow: O.glow, interior: O.interior,
       outsideIn: O.outsideIn, outsideOut: O.outsideOut, queueFwd: O.queueFwd, signIndex: 1, entrance: O.entrance, origin: O.origin,
       baseWait: O.baseWait, description: XDESC[O.theme], speed: WALK * 0.75, open: true, ...TRAIL,
+    });
+    // and the late trail, in the new wing of the Stranger Things building
+    const K = XHAWKINS;
+    addHouse({
+      id: K.id, name: K.title, land: 'Velocity', theme: K.theme, glow: K.glow, interior: K.interior,
+      outsideIn: K.outsideIn, outsideOut: K.outsideOut, queueFwd: K.queueFwd, signIndex: 1, entrance: K.entrance, origin: K.origin,
+      baseWait: K.baseWait, description: XDESC[K.theme], speed: WALK * 0.8, opensAt: K.opensAt, ...TRAIL,
     });
     buildTrailFronts(data);
   }

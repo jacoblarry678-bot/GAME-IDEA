@@ -49,6 +49,25 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **A late Christmas trail: Stranger Things: Christmas in Hawkins (browser
+  only):**
+  - A new wing has gone up on the north side of the Stranger Things
+    building, in the same Hawkins Lab white with a red stripe and Joyce's
+    Christmas lights strung all along the roofline. It's reached by a short
+    walk off the Mirkwood path.
+  - It's a late trail: closed by day and open after dark, from 5:30 PM.
+    The app shows OPENS 5:30 PM until then, and you can still join the
+    line early. Attractions can now have opening hours like this.
+  - Inside, an indoor line winds past Hawkins posters ("MISSING: WILL
+    BYERS - FOUND SAFE · MERRY CHRISTMAS") under strings of lights. Then
+    the trail runs through four rooms:
+    - the Byers' living room, where the alphabet-wall lights spell out
+      MERRY XMAS
+    - the Hawkins Lab holiday party, with tinsel and SEASON'S GREETINGS
+      on the monitors
+    - the Upside Down at Christmas, with vines wrapped in blinking lights,
+      spores drifting like snow, and a Demogorgon in a Santa hat
+    - the Snow Ball, with paper snowflakes, balloons and a disco ball
 - **Benton Holidays is open, with new Christmas trails (browser only):**
   - The event is open: the giant Plaza tree is lit, walkway decorations
     and snowmen line the paths, light strands hang over Main Street, it
