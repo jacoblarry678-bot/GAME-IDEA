@@ -409,7 +409,7 @@ async function main() {
     people.begin(camera.position);
     // shuttles, parkway traffic and your car
     transit.update(dt, camera.position);
-    christmas?.update(dt, camera.position);
+    christmas?.update(dt, camera.position, indoor);
     if (player.riding?.transit) {
       const m = transit.seatMatrix();
       if (m) player.riding.matrix = m;

@@ -434,7 +434,10 @@ export class Christmas {
     }
   }
 
-  update(dt, cam) {
+  update(dt, cam, indoor = 0) {
+    // no snow inside the show buildings and the trails
+    this.snow.material.opacity = 0.85 * (1 - indoor);
+    this.snow.visible = indoor < 0.98;
     this.t += dt;
     // twinkle: the ride lights chase, the tree lights sparkle
     const step = Math.floor(this.t * 3);
