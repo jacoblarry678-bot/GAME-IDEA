@@ -1,5 +1,7 @@
-// Fast & Furious: Benton Street Run, now open beyond Velocity City's east
-// wall. Guests walk through a new arch in the wall into a courtyard, wind
+// Fast & Furious: Benton Street Run, beyond Velocity City's east wall,
+// reopened after its refurbishment with a zero-g roll over the docks and
+// all-new lights (LED strips along the track, rings of light through the
+// launches and the roll, lighting rigs under the roof). Guests walk through a new arch in the wall into a courtyard, wind
 // through the queue and board street cars inside a huge warehouse, where
 // the ride is a night-time chase through a city: a nitrous launch up the
 // street, a drift onto the main drag past neon storefronts, up the ramps of
@@ -44,7 +46,9 @@ const CIRCUIT = [
   // left onto the elevated highway
   [448, 18, -266, 22], [446, 17, -252, 23], [446, 17, -236, 24], [446, 17, -218, 24],
   // down the off-ramp and left into the docks: launch 2
-  [449, 13, -201, 22], [460, 7, -189, 20], [478, 5, -186, 22], [503, 5, -186, 32], [528, 5, -186, 32],
+  [449, 13, -201, 22], [460, 7, -189, 20], [476, 5, -186, 24], [490, 5.5, -186, 30],
+  // the zero-g roll: over a hump, all the way round, past the containers
+  [502, 10, -186, 24], [512, 12, -186, 21], [522, 10, -186, 23], [534, 5.5, -187, 28],
   // left past the containers
   [547, 5, -190, 27], [556, 6, -204, 25], [553, 6, -220, 22], [542, 6, -229, 20],
   // west through the family garage, under the highway, home
@@ -54,11 +58,12 @@ const CIRCUIT = [
 
 // Closed centripetal Catmull-Rom spline through the circuit, with the
 // speeds given at each point (launches and all), banking from the speed,
-// and the time to get round.
-export function makeTrack(pts) {
+// and the time to get round. Optional rolls turn the track all the way
+// round its riders' heartline (h above the rails) between two knots.
+export function makeTrack(pts, { rolls = [] } = {}) {
   const n = pts.length;
   const V = pts.map((p) => new THREE.Vector3(p[0], p[1], p[2]));
-  const pos = [], knotSpeed = [];
+  const pos = [], knotSpeed = [], seg = [];
   for (let i = 0; i < n; i++) {
     const p0 = V[(i - 1 + n) % n], p1 = V[i], p2 = V[(i + 1) % n], p3 = V[(i + 2) % n];
     const t1 = Math.sqrt(p0.distanceTo(p1)), t2 = t1 + Math.sqrt(p1.distanceTo(p2)), t3 = t2 + Math.sqrt(p2.distanceTo(p3));
@@ -73,10 +78,12 @@ export function makeTrack(pts) {
       pos.push(b1.multiplyScalar((t2 - t) / (t2 - t1)).addScaledVector(b2, (t - t1) / (t2 - t1)));
       const u = k / steps;
       knotSpeed.push(pts[i][3] + (pts[(i + 1) % n][3] - pts[i][3]) * u);
+      seg.push(i);
     }
   }
   pos.push(pos[0].clone());
   knotSpeed.push(knotSpeed[0]);
+  seg.push(0);
   const m = pos.length;
   const cum = [0];
   for (let i = 1; i < m; i++) cum.push(cum[i - 1] + pos[i].distanceTo(pos[i - 1]));
@@ -113,8 +120,34 @@ export function makeTrack(pts) {
     const r0 = new THREE.Vector3().crossVectors(t, u0);
     return u0.multiplyScalar(Math.cos(smooth[i])).addScaledVector(r0, Math.sin(smooth[i]));
   });
+  let length = L;
+  const rollIdx = [];
+  if (rolls.length) {
+    // eased all the way round; the rails swing round the heartline, so the
+    // riders' heads stay on a smooth line
+    for (const R of rolls) {
+      const idx = [];
+      for (let i = 0; i < m; i++) if (seg[i] >= R.from && seg[i] < R.to) idx.push(i);
+      if (idx.length < 2) continue;
+      rollIdx.push([idx[0], idx[idx.length - 1]]);
+      const s0 = cum[idx[0]], s1 = cum[idx[idx.length - 1]];
+      for (const i of idx) {
+        const u = (cum[i] - s0) / (s1 - s0), e = u * u * u * (u * (u * 6 - 15) + 10);
+        const u0 = up[i].clone();
+        up[i].applyAxisAngle(tan[i], (R.dir ?? 1) * Math.PI * 2 * (R.turns ?? 1) * e);
+        pos[i].addScaledVector(u0, R.h).addScaledVector(up[i], -R.h);
+      }
+    }
+    // the rails moved: measure again
+    for (let i = 1; i < m; i++) cum[i] = cum[i - 1] + pos[i].distanceTo(pos[i - 1]);
+    length = cum[m - 1];
+    for (let i = 0; i < m; i++) tan[i].copy(pos[i === m - 1 ? 1 : i + 1]).sub(pos[i === 0 ? m - 2 : i - 1]).normalize();
+    for (let i = 1; i < m; i++) times[i] = times[i - 1] + (cum[i] - cum[i - 1]) / ((v[i] + v[i - 1]) / 2);
+  }
   const flatArr = (vs) => vs.flatMap((p) => [p.x, p.y, p.z]);
-  return { length: L, cum, pos: flatArr(pos), tan: flatArr(tan), up: flatArr(up), times };
+  const out = { length, cum, pos: flatArr(pos), tan: flatArr(tan), up: flatArr(up), times };
+  if (rollIdx.length) out.rolls = rollIdx.map(([a, b]) => [cum[a], cum[b]]); // where each roll starts and ends
+  return out;
 }
 
 // A queue path from the boarding gate (s = 0) back out past the entrance sign.
@@ -204,6 +237,9 @@ export function buildFastFurious(data) {
   add([4, 6, GATE.z1 - GATE.z0 + 2], [ax, G + 23, gz], 0x1a1a1c, 'Metal', { collide: 0 });
   sign([0.3, 4.2, 30], [ax - 2.2, G + 23.6, gz], 0x1a1a1c, 'Left', [['FAST & FURIOUS', 0, 0, 1, 0.62, ORANGE], ['BENTON STREET RUN', 0, 0.62, 1, 0.38, ICE, 'GothamBold']], { glow: true });
   sign([0.3, 4.2, 30], [ax + 2.2, G + 23.6, gz], 0x1a1a1c, 'Right', [['FAST & FURIOUS', 0, 0, 1, 0.62, ORANGE], ['BENTON STREET RUN', 0, 0.62, 1, 0.38, ICE, 'GothamBold']], { glow: true });
+  // reopened: a banner under the arch, and chase bulbs along the beam
+  sign([0.3, 2.2, GATE.z1 - GATE.z0 - 9], [ax - 2.2, G + 18.6, gz], 0x1a1a1c, 'Left', [['REOPENED  ·  NEW ZERO-G ROLL', 0, 0, 1, 1, 0xff4aa0, 'GothamBold']], { glow: true });
+  for (let z = GATE.z0 + 3.4; z < GATE.z1 - 3.2; z += 1.3) for (const dx of [-2.15, 2.15]) add([0.36, 0.36, 0.36], [ax + dx, G + 20.3, z], Math.round((z - GATE.z0) / 1.3) % 2 ? 0xfff0c8 : ORANGE, 'Neon', { shape: 3, collide: 0 });
   // a checkered strip under the arch
   for (let k = 0; k < 12; k++) for (let j = 0; j < 2; j++) add([1.4, 0.05, 2.9], [ax - 0.7 + j * 1.4, FLOOR + 0.02, GATE.z0 + 1.5 + k * 2.95], (k + j) % 2 ? WHITE : BLACK, 'SmoothPlastic', { collide: 0 });
   // the live wait sign in the park, and a greeter
@@ -231,10 +267,18 @@ export function buildFastFurious(data) {
   for (let z = W.z0 + 4; z < W.z1; z += 4) if (Math.abs(z - doorQ) > 4 && Math.abs(z - doorX) > 4) add([0.4, H, 0.5], [W.x0 - 0.5, G + H / 2, z], 0x3a3e46, 'Metal', { collide: 0 });
   // the banner and a neon stripe along the top
   sign([0.3, 22, 120], [W.x0 - 1, G + 32, (W.z0 + W.z1) / 2], BLACK, 'Left', [
-    ['FAST & FURIOUS', 0, 0.04, 1, 0.52, ORANGE], ['BENTON STREET RUN', 0, 0.56, 1, 0.24, WHITE], ['NOW OPEN', 0, 0.8, 1, 0.16, ICE, 'GothamBold'],
+    ['FAST & FURIOUS', 0, 0.04, 1, 0.52, ORANGE], ['BENTON STREET RUN', 0, 0.56, 1, 0.24, WHITE], ['NOW WITH A ZERO-G ROLL', 0, 0.8, 1, 0.16, ICE, 'GothamBold'],
   ], { glow: true });
   add([0.3, 0.6, W.z1 - W.z0], [W.x0 - 0.9, G + H - 1.5, (W.z0 + W.z1) / 2], ORANGE, 'Neon', { collide: 0 });
   add([0.3, 0.6, W.z1 - W.z0], [W.x0 - 0.9, G + 18.5, (W.z0 + W.z1) / 2], ICE, 'Neon', { collide: 0 });
+  // colored uplights washing the front, and a light at each
+  for (let z = W.z0 + 10, k = 0; z < W.z1 - 4; z += 16, k++) {
+    if (Math.abs(z - doorQ) < 6 || Math.abs(z - doorX) < 6) continue;
+    const c = [ORANGE, ICE, 0xff4aa0, 0xb08aff][k % 4];
+    add([0.9, 0.7, 0.9], [W.x0 - 1.2, G + 0.35, z], 0x1a1a1c, 'Metal', { shape: 5, collide: 0 });
+    add([0.25, 16, 2.4], [W.x0 - 0.75, G + 8.4, z], c, 'Neon', { collide: 0, trans: 0.55 });
+    light(W.x0 - 3, 5, z, c);
+  }
   // canopies over the doors
   for (const [z, text] of [[doorQ, 'TO THE CARS'], [doorX, 'EXIT']]) {
     add([5, 0.5, 9], [W.x0 - 2.5, G + 9.6, z], 0x1a1a1c, 'Metal', { collide: 0 });
@@ -247,8 +291,9 @@ export function buildFastFurious(data) {
   add([12.4, 0.2, 12.4], [hx, FLOOR + 1.05, hz], ORANGE, 'Neon', { shape: 5, collide: 0 });
   heroCar(hx, FLOOR + 1.2, hz, ORANGE, 0.6);
 
-  // ---- the track and its supports
-  const track = makeTrack(CIRCUIT);
+  // ---- the track and its supports (and the new zero-g roll at the docks)
+  const ROLL = { from: CIRCUIT.findIndex((p) => p[0] === 490 && p[2] === -186), to: CIRCUIT.findIndex((p) => p[0] === 534 && p[2] === -187), h: 2 };
+  const track = makeTrack(CIRCUIT, { rolls: [ROLL] });
   const sampler = new Sampler(track);
   const m4 = new THREE.Matrix4();
   const P = new THREE.Vector3(), U = new THREE.Vector3();
@@ -264,12 +309,111 @@ export function buildFastFurious(data) {
     P.setFromMatrixPosition(m4);
     U.setFromMatrixColumn(m4, 1);
     const foot = P.clone().addScaledVector(U, -1.6);
-    if (foot.y < 3) continue;
+    if (foot.y < 3 || U.y < 0.9) continue; // (the roll has its own)
     if (decks.some((d) => inRect(foot.x, foot.z, d) && foot.y > d.top - 1)) continue;
     const blocked = pts.some(([x, y, z, c]) => Math.abs(c - s) > 14 && y < foot.y - 1 && Math.hypot(x - foot.x, z - foot.z) < 5);
     if (blocked) continue;
     const h = foot.y - G;
     add([1.2, h, 1.2], [foot.x, G + h / 2, foot.z], 0x3a3e46, 'Metal', { shape: 5, collide: 0 });
+  }
+
+  // is a point clear of the cars as they pass (front to back, round the roll)?
+  const CM = new THREE.Matrix4(), CP = new THREE.Vector3(), CX = new THREE.Vector3(), CY = new THREE.Vector3(), CZ = new THREE.Vector3();
+  const carClear = (q, s0) => {
+    for (let ds = -10; ds <= 10; ds += 0.5) {
+      sampler.matrixAt(s0 + ds, CM);
+      CP.setFromMatrixPosition(CM);
+      CX.setFromMatrixColumn(CM, 0); CY.setFromMatrixColumn(CM, 1); CZ.setFromMatrixColumn(CM, 2);
+      const dx = q.x - CP.x, dy = q.y - CP.y, dz = q.z - CP.z;
+      const lx = CX.x * dx + CX.y * dy + CX.z * dz, ly = CY.x * dx + CY.y * dy + CY.z * dz, lz = CZ.x * dx + CZ.y * dy + CZ.z * dz;
+      if (Math.abs(lx) < 3.8 && ly > -0.9 && ly < 4.5 && lz > -5 && lz < 3.8) return false;
+    }
+    return true;
+  };
+  // (struts are tested from a meter out: right at the spine only the
+  // corners of the test box, not the cars' noses, would graze them)
+  const strutClear = (a, b, s0, skip = 0) => {
+    const len = a.distanceTo(b), n = Math.ceil(len / 0.5);
+    for (let k = 0; k <= n; k++) if ((k / n) * len >= skip && !carClear(a.clone().lerp(b, k / n), s0)) return false;
+    return true;
+  };
+  // the roll's supports leave from the spine, on the far side of the track
+  // from the cars: straight down, hung from the roof trusses, or out
+  // sideways on an arm to a column
+  const strut = (a, b, w, color) => {
+    const d = b.clone().sub(a), len = d.length();
+    const yaw = Math.atan2(d.x, d.z), pitch = Math.asin(THREE.MathUtils.clamp(d.y / len, -1, 1));
+    const c = Math.cos(yaw), s = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    add([w, w, len], [(a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2], color, 'Metal', { collide: 0, rot: [c, -s * sp, s * cp, 0, cp, sp, -s, -c * sp, c * cp] });
+  };
+  const rollS = track.rolls[0];
+  for (let s = rollS[0] + 3; s < rollS[1]; s += 5) {
+    sampler.matrixAt(s, m4);
+    P.setFromMatrixPosition(m4);
+    U.setFromMatrixColumn(m4, 1);
+    const spine = P.clone().addScaledVector(U, -1.4);
+    const down = new THREE.Vector3(spine.x, G, spine.z), upTo = new THREE.Vector3(spine.x, W.H - 1, spine.z);
+    const arm = spine.clone().addScaledVector(U, -3.6), armDown = new THREE.Vector3(arm.x, G, arm.z);
+    if (U.y > 0.5 && strutClear(spine, down, s)) strut(spine, down, 1.1, 0x3a3e46);
+    else if (U.y < -0.3 && strutClear(spine, upTo, s, 1)) strut(spine, upTo, 0.7, 0x3a3e46);
+    else if (strutClear(spine, arm, s, 1) && strutClear(arm, armDown, s)) { strut(spine, arm, 0.8, 0x3a3e46); strut(arm, armDown, 1.1, 0x3a3e46); }
+  }
+  sign([0.3, 3, 16], [571, 20, -186], 0x101012, 'Left', [['ZERO-G ROLL', 0, 0, 1, 0.6, 0xff4aa0], ['HOLD ON TO YOUR FAMILY', 0, 0.6, 1, 0.4, WHITE, 'GothamBold']], { glow: true });
+
+  // ---- the new lights. LED strips along both sides of the whole track,
+  // changing color with each part of the chase
+  const sectionColor = (x, y, z) => (z < -350 ? 0xff4aa0 : x > 540 && z < -280 ? YELLOW : y > 30 ? ORANGE : z < -260 && x < 460 ? ICE : z > -195 && x > 470 ? 0xb08aff : x < 440 ? ICE : ORANGE);
+  const R = new THREE.Vector3();
+  for (let s = 14; s < track.length - 10; s += 2.4) {
+    sampler.matrixAt(s, m4);
+    P.setFromMatrixPosition(m4);
+    U.setFromMatrixColumn(m4, 1);
+    R.setFromMatrixColumn(m4, 0);
+    const c = P.x > 488 && P.x < 536 && P.z > -190 ? [0xff3a3a, 0xffa020, 0xf2e020, 0x40ff80, 0x40c8ff, 0xb08aff][Math.floor(s / 2.4) % 6] : sectionColor(P.x, P.y, P.z);
+    for (const side of [-1, 1]) {
+      const q = P.clone().addScaledVector(R, side * 1.5).addScaledVector(U, -1.1);
+      if (carClear(q, s)) add([0.34, 0.34, 0.34], [q.x, q.y, q.z], c, 'Neon', { shape: 3, collide: 0 });
+    }
+  }
+  // rings of light round the riders: through both launches and the roll
+  const ring = (s, radius, color, n = 30) => {
+    sampler.matrixAt(s, m4);
+    P.setFromMatrixPosition(m4);
+    U.setFromMatrixColumn(m4, 1);
+    R.setFromMatrixColumn(m4, 0);
+    const C = P.clone().addScaledVector(U, ROLL.h);
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const q = C.clone().addScaledVector(R, Math.cos(a) * radius).addScaledVector(U, Math.sin(a) * radius);
+      if (q.y < G + 0.4 || !carClear(q, s)) continue;
+      add([0.45, 0.45, 0.45], [q.x, q.y, q.z], color, 'Neon', { shape: 3, collide: 0 });
+    }
+  };
+  const near = (x, z) => {
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < track.cum.length; i++) {
+      const d = (track.pos[i * 3] - x) ** 2 + (track.pos[i * 3 + 2] - z) ** 2;
+      if (d < bd) { bd = d; best = i; }
+    }
+    return track.cum[best];
+  };
+  for (const [x, z, c] of [[426, -296, ICE], [426, -308, BLUE], [426, -320, ICE], [426, -330, BLUE], [470, -187, 0xb08aff], [482, -186, 0xff4aa0]]) ring(near(x, z), 5.4, c);
+  for (let s = rollS[0]; s <= rollS[1] + 1; s += 7) ring(s, 6, [0xff3a3a, 0xffa020, 0xf2e020, 0x40ff80, 0x40c8ff, 0xb08aff][Math.round((s - rollS[0]) / 7) % 6], 34);
+  // show lights all the way round: the four nearest light the cars
+  for (let s = 10; s < track.length - 10; s += 16) {
+    sampler.matrixAt(s, m4);
+    P.setFromMatrixPosition(m4);
+    light(P.x, Math.min(W.H - 4, P.y + 7), P.z, sectionColor(P.x, P.y, P.z));
+  }
+  for (let s = rollS[0]; s < rollS[1]; s += 9) { sampler.matrixAt(s, m4); P.setFromMatrixPosition(m4); light(P.x, P.y + 9, P.z + 3, [0xff4aa0, 0x40c8ff, 0xffa020][Math.round(s / 9) % 3]); }
+  // concert-style lighting rigs under the roof: trusses of colored cans
+  for (let x = W.x0 + 20; x < W.x1 - 10; x += 30) {
+    add([1.2, 1.2, W.z1 - W.z0 - 6], [x, W.H - 3, (W.z0 + W.z1) / 2], 0x2a2c30, 'Metal', { collide: 0 });
+    for (let z = W.z0 + 8; z < W.z1 - 6; z += 8) {
+      const col = [ORANGE, ICE, 0xff4aa0, 0xb08aff, YELLOW][Math.round((x + z) / 8) % 5];
+      add([0.9, 1.4, 0.9], [x, W.H - 4.3, z], 0x1a1a1c, 'Metal', { shape: 5, collide: 0 });
+      add([0.8, 0.12, 0.8], [x, W.H - 5.05, z], col, 'Neon', { shape: 5, collide: 0 });
+    }
   }
 
   // ---- inside: the station (the family garage)
@@ -322,6 +466,9 @@ export function buildFastFurious(data) {
     add([10, 3, 0.2], [sx, G + 3, -351.1], 0x1a2a3a, 'Glass', { collide: 0 });
     add([11, 0.5, 0.2], [sx, G + 6.8, -351.2], [ICE, 0xff4aa0, YELLOW][k % 3], 'Neon', { collide: 0 });
   });
+
+  // neon trim along the main drag's rooflines
+  fronts.forEach(([, glow], k) => add([15, 0.4, 0.3], [444 + k * 16, G + 16 + (k % 3) * 7 - 0.6, -362.8], glow, 'Neon', { collide: 0 }));
 
   // ---- the parking garage ramps, then the rooftops and the skyline
   for (let lvl = 1; lvl <= 3; lvl++) {
@@ -536,7 +683,7 @@ export function buildFastFurious(data) {
   rides.forEach((r, i) => { if (r.land === 'Velocity') insertAt = i + 1; });
   rides.splice(insertAt, 0, {
     id: RIDE_ID, name: 'Fast & Furious: Benton Street Run', land: 'Velocity', category: 'Thrill', thrill: 4, kind: 'coaster', carStyle: 'coaster',
-    description: 'Jump in a street car for a night-time chase: a nitrous launch, a drift onto the main drag, up a parking garage, a jump between rooftops, the highway and a second launch through the docks. It\'s all about family.',
+    description: 'Reopened with a new inversion and all-new lights! Jump in a street car for a night-time chase: a nitrous launch, a drift onto the main drag, up a parking garage, a jump between rooftops, the highway, a second launch through the docks and a zero-g roll over the containers. It\'s all about family.',
     baseWait: 75, origin, entrance: [entrance[0], 0, entrance[1]], exit: [400, 0, -232], yaw: 0, layout: RIDE_ID,
     cars: CARS, carSpacing: SPACING, colors: [TRACK_COLOR, ORANGE, BLUE], cues,
   });
@@ -576,112 +723,7 @@ export class FastFuriousSite {
     const { gate } = this.layout;
     if (Math.hypot(pos.x - gate.x, pos.z - gate.z) < 50) {
       this.told = true;
-      if (this.layout.refurb) this.hooks.toast('Fast & Furious is closed for a refurbishment - the crews are tuning it up. It will be back soon!', 'warn');
-      else this.hooks.toast('Fast & Furious: Benton Street Run is now open! Walk through the arch, grab a car and ride with the family.', 'reward');
+      this.hooks.toast('Fast & Furious has REOPENED! A brand-new zero-g roll over the docks and all-new lights - walk through the arch and ride with the family.', 'reward');
     }
   }
-}
-
-// Fast & Furious, closed for a refurbishment: the ride goes down (no line,
-// no crew, CLOSED FOR REFURBISHMENT on the wait sign and in the app), a
-// construction hoarding closes the arch in the park wall, barricades stand
-// in front of it, scaffolding with debris netting climbs the warehouse's
-// front, a mobile crane swings materials up onto the roof, and the crews
-// are at work. It is called after buildFastFurious, before the extended
-// queues are laid out (they skip a ride under refurbishment).
-export function buildFFRefurb(data, layout) {
-  const cfg = data.config.Rides.find((r) => r.id === RIDE_ID);
-  if (!cfg) return;
-  cfg.refurb = true;
-  if (layout) layout.refurb = true;
-  const { add, box, sign, cf } = helpers(data);
-  const G = 0.1, FLOOR = 0.5;
-  const ORANGE = 0xff6a1a, WHITE = 0xf4f4f0, STRIPE = 0xe8641e, HOARD = 0x1a1a1c, STEEL = 0x8a8e94, NET = 0x2a6a3a;
-  data.staffSpots = data.staffSpots || [];
-  data.hauntLights = data.hauntLights || [];
-  const crew = (kind, x, y, z, yaw) => data.staffSpots.push({ role: 'construction', kind, land: 'Velocity', seed: 0, cf: cf(x, y, z, yaw) });
-  // the greeter at the arch has gone (the arch is shut)
-  data.staffSpots = data.staffSpots.filter((s) => !(s.role === 'greeter' && Math.abs(s.cf[0] - 370) < 0.5 && Math.abs(s.cf[2] + 218) < 4));
-  const gz = (GATE.z0 + GATE.z1) / 2, span = GATE.z1 - GATE.z0;
-
-  // ---- the hoarding across the arch, its graphics facing the park
-  box([0.8, 16, span + 1], [373.4, G, gz], HOARD, 'SmoothPlastic');
-  sign([0.2, 9, span - 2], [372.9, G + 10.6, gz], HOARD, 'Left', [
-    ['FAST & FURIOUS', 0, 0.02, 1, 0.3, ORANGE], ['CLOSED FOR REFURBISHMENT', 0, 0.36, 1, 0.24, WHITE],
-    ["WE'RE TUNING UP THE CARS  ·  BACK SOON", 0, 0.66, 1, 0.14, 0x9ad8ff, 'GothamBold'], ['RIDE RV VAN RUN WHILE YOU WAIT', 0, 0.84, 1, 0.12, 0xf2c818, 'GothamBold'],
-  ], { glow: true });
-  for (let k = 0; k < 8; k++) add([0.1, 1.2, span / 8 - 0.3], [372.95, G + 3.2, GATE.z0 + (k + 0.5) * (span / 8)], k % 2 ? WHITE : STRIPE, 'SmoothPlastic', { collide: 0 });
-  sign([0.2, 2.2, 14], [372.95, G + 0.9 + 0.2, gz], HOARD, 'Left', [['NO ENTRY  ·  HARD HAT AREA', 0, 0, 1, 1, 0xf2c818, 'GothamBold']]);
-  sign([0.2, 6, span - 2], [373.9, G + 10, gz], HOARD, 'Right', [['REFURBISHMENT IN PROGRESS', 0, 0.2, 1, 0.6, ORANGE, 'GothamBold']]);
-  // orange-and-white barricades in front of it, with warning lamps
-  for (let k = 0; k < 4; k++) {
-    const z = GATE.z0 + 2.5 + k * ((span - 5) / 3);
-    for (const dz of [-3, 3]) box([0.5, 3.2, 0.5], [369.6, G, z + dz], WHITE, 'SmoothPlastic', { collide: 0 });
-    for (const [y, c] of [[1.4, STRIPE], [2.5, WHITE]]) add([0.3, 0.7, 6.4], [369.6, G + y, z], c, 'SmoothPlastic');
-    add([0.5, 0.5, 0.5], [369.6, G + 3.5, z], 0xffa020, 'Neon', { shape: 3, collide: 0 });
-  }
-  for (const dz of [-span / 2 - 3, span / 2 + 3]) for (let j = 0; j < 3; j++) add([1, 1.6, 1], [369.6, G + 0.8, gz + dz + (dz < 0 ? -j * 1.8 : j * 1.8)], STRIPE, 'SmoothPlastic', { shape: 5 });
-  data.hauntLights.push([368, 6, gz, 0xffb060]);
-
-  // ---- scaffolding up the warehouse's front, with green debris netting
-  const SX = [WH.x0 - 1.4, WH.x0 - 3.2], LEVELS = [10, 18, 26, 34, 42];
-  const bays = [];
-  for (let z = WH.z0 + 4; z <= WH.z1 - 4; z += 6) bays.push(z);
-  for (const z of bays) for (const x of SX) if (Math.abs(z + 262) > 5 && Math.abs(z + 244) > 5) add([0.25, 46, 0.25], [x, G + 23, z], STEEL, 'Metal', { collide: 0 });
-  const zA = bays[0], zB = bays[bays.length - 1], zc = (zA + zB) / 2;
-  for (const y of LEVELS) {
-    add([2.2, 0.25, zB - zA + 1], [(SX[0] + SX[1]) / 2, G + y, zc], 0x8a6a3a, 'WoodPlanks', { collide: 0 });
-    add([0.15, 0.15, zB - zA], [SX[1], G + y + 1.2, zc], STEEL, 'Metal', { collide: 0 });
-    add([0.15, 0.15, zB - zA], [SX[1], G + y + 0.6, zc], 0xf2c818, 'Metal', { collide: 0 });
-  }
-  // diagonal braces, every other bay
-  for (let i = 0; i < bays.length - 1; i += 2) {
-    const a = Math.atan2(8, 6), len = Math.hypot(8, 6);
-    for (let y = 10; y < 42; y += 8) add([0.15, len, 0.15], [SX[1], G + y + 4, (bays[i] + bays[i + 1]) / 2], STEEL, 'Metal', { collide: 0, rot: [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)] });
-  }
-  add([0.15, 36, zB - zA], [SX[1] - 0.3, G + 28, zc], NET, 'Fabric', { collide: 0, trans: 0.35 });
-  // the big banner on the warehouse no longer says NOW OPEN
-  for (const s of data.signs) {
-    if (!s.labels.some((l) => l.text === 'NOW OPEN') || !s.labels.some((l) => l.text === 'BENTON STREET RUN')) continue;
-    s.labels = s.labels.map((l) => (l.text === 'NOW OPEN' ? { ...l, text: 'CLOSED FOR REFURBISHMENT  ·  BACK SOON', color: 0xf2c818 } : l));
-  }
-  for (const [y, z] of [[18, zA + 20], [26, zc + 30], [34, zc - 25], [42, zB - 30]]) crew('work', (SX[0] + SX[1]) / 2, G + y + 0.15, z, -Math.PI / 2);
-
-  // ---- a scissor lift and crates in the courtyard's south corner
-  const lx = 384, lz = COURT.z0 + 8, lh = 14;
-  box([4, 1.2, 7], [lx, FLOOR, lz], 0xf2c818, 'SmoothPlastic');
-  for (const s of [-1, 1]) add([0.3, lh - 1.6, 0.3], [lx, FLOOR + lh / 2, lz], 0x2a2a2e, 'Metal', { collide: 0, rot: [1, 0, 0, 0, Math.cos(s * 0.55), -Math.sin(s * 0.55), 0, Math.sin(s * 0.55), Math.cos(s * 0.55)] });
-  box([4.4, 0.4, 7.4], [lx, FLOOR + lh, lz], 0xf2c818, 'SmoothPlastic', { collide: 0 });
-  crew('work', lx, FLOOR + lh + 0.4, lz, Math.PI / 2);
-  for (const [x, z, k] of [[380, COURT.z0 + 18, 0], [380, COURT.z0 + 22, 1], [383.5, COURT.z0 + 20, 2]]) {
-    box([3.2, 2.4, 2.4], [x, FLOOR, z], 0x8a6a3a, 'WoodPlanks', { yaw: k * 0.3 });
-    if (k % 2 === 0) box([2.6, 2, 2], [x + 0.3, FLOOR + 2.4, z], 0x8a6a3a, 'WoodPlanks', { collide: 0, yaw: k * 0.3 + 0.2 });
-  }
-  crew('idle', 386, FLOOR, COURT.z0 + 24, Math.PI);
-
-  // ---- a mobile crane south of the warehouse, its boom over the roof
-  const cx = 492, cz = FF_SITE.z0 + 14;
-  box([10, 3, 20], [cx, G + 1, cz], 0xf2c818, 'Metal');
-  for (const dz of [-7, 0, 7]) for (const dx of [-5.2, 5.2]) add([0.9, 2.4, 2.4], [cx + dx, G + 1.2, cz + dz], 0x111111, 'Rubber', { shape: 2 });
-  for (const [dx, dz] of [[-7, -8], [7, -8], [-7, 8], [7, 8]]) { add([4, 0.4, 0.6], [cx + dx / 1.6, G + 1.4, cz + dz], 0x2a2a2e, 'Metal', { collide: 0 }); box([1.6, 0.4, 1.6], [cx + dx, G, cz + dz], 0x2a2a2e, 'Metal'); }
-  box([7, 4, 8], [cx, G + 4, cz + 2], 0xf2c818, 'Metal');
-  add([2.6, 2.6, 3], [cx - 3.6, G + 6.5, cz - 1], 0x2a3a4a, 'Glass', { collide: 0 });
-  // the boom: from the turntable up and over the warehouse roof
-  const b0 = [cx, G + 8.5, cz + 2], b1 = [cx - 10, WH.H + 26, WH.z0 + 46];
-  const dx = b1[0] - b0[0], dy = b1[1] - b0[1], dz = b1[2] - b0[2], L = Math.hypot(dx, dy, dz);
-  const yaw = Math.atan2(dx, dz), pitch = Math.asin(dy / L), c = Math.cos(yaw), s = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
-  add([1.8, 1.8, L], [(b0[0] + b1[0]) / 2, (b0[1] + b1[1]) / 2, (b0[2] + b1[2]) / 2], 0xf2c818, 'Metal', { collide: 0, rot: [c, -s * sp, s * cp, 0, cp, sp, -s, -c * sp, c * cp] });
-  add([0.15, b1[1] - (WH.H + 6), 0.15], [b1[0], (b1[1] + WH.H + 6) / 2, b1[2]], 0x2a2a2e, 'Metal', { collide: 0 }); // the cable
-  box([1.2, 1, 1.2], [b1[0], WH.H + 5, b1[2]], 0x2a2a2e, 'Metal', { collide: 0 }); // the hook block
-  box([3, 1.6, 6], [b1[0], WH.H + 2.4, b1[2]], 0x5a5e66, 'Metal', { collide: 0 }); // a load of steel going up
-  add([0.6, 0.6, 0.6], [b1[0], b1[1] + 0.6, b1[2]], 0xff3020, 'Neon', { shape: 3, collide: 0 });
-  // on the roof: a skip of old panels, the crew guiding the load in
-  box([6, 2.4, 3.4], [WH.x0 + 40, G + WH.H + 1.4, WH.z0 + 40], 0x2a6ad8, 'Metal', { collide: 0 });
-  crew('work', b1[0] + 3, G + WH.H + 1.4, b1[2] - 3, Math.PI);
-  crew('idle', WH.x0 + 36, G + WH.H + 1.4, WH.z0 + 34, 0);
-  // a site office and a dumpster by the crane
-  box([8, 3.6, 3], [cx + 26, G, FF_SITE.z0 + 10], 0xe8e4dc, 'SmoothPlastic');
-  sign([5, 1, 0.1], [cx + 26, G + 2.6, FF_SITE.z0 + 11.6], 0xe8e4dc, 'Back', [['SITE OFFICE', 0, 0, 1, 1, 0x1a1a1c, 'GothamBold']]);
-  box([7, 3, 3.6], [cx - 24, G, FF_SITE.z0 + 10], 0x2a6a3a, 'Metal');
-  crew('idle', cx + 20, G, FF_SITE.z0 + 16, Math.PI);
 }

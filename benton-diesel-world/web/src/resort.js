@@ -139,6 +139,7 @@ const ADS_XMAS = [
   { title: 'HAPPY HOLIDAYS!', sub: 'BENTON HOLIDAYS  ·  THROUGH JANUARY 1', foot: 'BENTON DIESEL WORLD', art: 'moon', fg: 0xff3a3a },
   { title: 'MEET SANTA', sub: "SANTA'S WORKSHOP IS OPEN", foot: 'BENTON HOLIDAYS  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xf0c040 },
   { title: 'RV VAN RUN', sub: 'THE ROAD TRIP OF A LIFETIME  ·  NOW OPEN', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xe8a820 },
+  { title: 'FAST & FURIOUS', sub: 'REOPENED  ·  NEW ZERO-G ROLL', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xff6a1a },
   { title: 'LIGHTS ON EVERY RIDE', sub: 'SEE THE PARK SPARKLE AFTER DARK', foot: 'BENTON HOLIDAYS  ·  THROUGH JAN 1', art: 'moon', fg: 0x40ff60 },
   { title: 'STAY FOR THE HOLIDAYS', sub: 'FREE SHUTTLE TO THE PARK', foot: 'BENTON DIESEL GRAND HOTEL', art: 'moon', fg: 0xf0c040 },
 ];

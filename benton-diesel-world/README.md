@@ -49,6 +49,37 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Fast & Furious has reopened, with a new inversion and better lights
+  (browser only):**
+  - **The new inversion:** after the second launch at the docks, the
+    track climbs a hump between the stacked containers and the street
+    cars roll all the way over in a zero-g roll. The roll turns around
+    the riders' heartline, about 21 m/s upside down at the top.
+    - It has its own supports: columns from below, hangers from the roof
+      trusses while it's upside down, and side arms to columns in between.
+    - Each support is placed only where the passing cars can't touch it.
+    - A ZERO-G ROLL sign hangs at the end of the docks.
+  - **All-new lights:**
+    - LED strips run along both sides of the whole track and change
+      color with each part of the chase (pink on the main drag, yellow up
+      the garage, orange over the roofs, ice blue on the highway, purple
+      at the docks, and a rainbow through the roll).
+    - Rings of light circle the riders through both launches and all the
+      way round the roll.
+    - Concert-style lighting rigs of colored cans hang from trusses under
+      the warehouse roof.
+    - Neon trims the main drag's rooflines.
+    - About 40 more show lights follow the track, so the cars are lit
+      wherever they are.
+  - **Outside:**
+    - Colored uplights wash the warehouse front, and its banner now
+      reads NOW WITH A ZERO-G ROLL.
+    - The arch has chase bulbs and a REOPENED · NEW ZERO-G ROLL banner.
+    - The refurbishment hoarding, barricades, scaffolding and crane are
+      gone.
+  - The line, crew and wait times are back. Walking up gives a "Fast &
+    Furious has REOPENED!" message, and the billboards and the park's
+    posts announce the reopening.
 - **New ride: RV Van Run, and Fast & Furious closed for a refurbishment
   (browser only):**
   - **RV Van Run** is a new indoor motion-simulator ride in Velocity City.

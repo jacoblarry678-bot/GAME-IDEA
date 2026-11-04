@@ -14,7 +14,9 @@ export const PARK = { handle: '@BentonDieselWorld', name: 'Benton Diesel World',
 
 // the park's own posts, newest first (each with a poster-style card)
 const SEASON_POSTS = CHRISTMAS ? [
-  { when: 'Now', art: { title: 'RV VAN RUN', sub: 'NOW OPEN  ·  PAST CONSTRUCTION RUNAWAY', color: 0xd8641e, emoji: '🚐' },
+  { when: 'Now', art: { title: 'FAST & FURIOUS', sub: 'REOPENED  ·  NEW ZERO-G ROLL', color: 0xff6a1a, emoji: '🏁' },
+    text: "Fast & Furious: Benton Street Run has REOPENED! The family got to work: a brand-new zero-g roll over the docks (yes, upside down in a street car), LED light strips along the whole track, rings of light through both launches and new lighting rigs in the warehouse. Ride or die. 🚗💨", likes: 24118 },
+  { when: '1d', art: { title: 'RV VAN RUN', sub: 'NOW OPEN  ·  PAST CONSTRUCTION RUNAWAY', color: 0xd8641e, emoji: '🚐' },
     text: "NEW RIDE: RV Van Run is OPEN! Hop in the Benton family's 1974 motorhome just as the handbrake slips: the desert highway, a red-rock canyon, Bigfoot, a storm on the pass and a bear in the cooler, on a full motion base, all indoors. Heads up: Fast & Furious is closed for a refurbishment - it'll be back soon! 🏕️", likes: 16702 },
   { when: 'Today', art: { title: 'CHRISTMAS TRAILS', sub: 'NEW AT BENTON HOLIDAYS', color: 0x1e5a2a, emoji: '✨' },
     text: "NEW: Christmas Trails! Six walk-through light trails: The Northern Lights, Santa's Toy Factory, The Enchanted Forest of Lights and Winter Wonderland inside the soundstages, Gingerbread Lane in the Family Landing tent, and The Twinkle Trail out in the snowy backstage yard. ✨🎄", likes: 18340 },

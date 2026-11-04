@@ -24,7 +24,7 @@ import { buildHouses, HouseWalks } from './houses.js';
 import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
-import { buildFastFurious, buildFFRefurb, FastFuriousSite } from './fastfurious.js';
+import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas, buildXmasSetup, XmasSetupSite } from './christmas.js';
 import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
@@ -112,10 +112,8 @@ async function main() {
   const scareZones = HAUNT_OVER ? [] : buildScareZones(data);
   // the hotels, the Benton Parkway and the shuttle Transit Center
   const resort = buildResort(data);
-  // Fast & Furious: Benton Street Run, open past Velocity City
+  // Fast & Furious: Benton Street Run, past Velocity City (reopened with a zero-g roll)
   const ffLayout = buildFastFurious(data);
-  // ... and now closed for a refurbishment
-  buildFFRefurb(data, ffLayout);
   if (XMAS_OVER && !WOLVERINE_OPEN) buildXmasTeardown(data);
   // Benton Holidays going up
   const xmasSetup = XMAS_SETUP && !CHRISTMAS ? buildXmasSetup(data) : null;
