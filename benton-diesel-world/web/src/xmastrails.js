@@ -438,6 +438,9 @@ export function buildTrailFronts(data) {
   // ---- Christmas in Hawkins: the wing (lab white, a red stripe, Joyce's
   // lights along the roof), its indoor line and its doors
   const H = XHAWKINS.wing, LAB = 0xc8ccc8, LABDARK = 0x3a3e44;
+  // (the strip between the Stranger Things and Throttle Works sites was
+  // countryside, with a hill on it: level it for the wing and its walks)
+  data.flatZones = [...(data.flatZones || []), { x0: 598, x1: 808, z0: -112, z1: -38, margin: 24 }];
   const hx = (H.x0 + H.x1) / 2, hz = (H.z0 + H.z1) / 2;
   add([H.x1 - H.x0, 0.4, H.z1 - H.z0], [hx, G + 0.2, hz], 0x2a2c30, 'Concrete');
   const wallZ = (x, za, zb) => box([1.4, H.H, zb - za], [x, G, (za + zb) / 2], LAB, 'Concrete');
