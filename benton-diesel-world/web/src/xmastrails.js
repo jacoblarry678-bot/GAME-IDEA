@@ -130,7 +130,14 @@ export const XROOMS = {
     } },
     { wall: [0x4a7aa8, 'SmoothPlastic'], floor: 0xeef4f8, light: ICE, dress: (R) => {
       icicles(R, 1.1);
-      every(R, 7, (t, k) => { for (const side of [-1, 1]) R.wall(t + side, side, 1.6, 3 + (k % 3), 1.4, ICE, 'Neon', { y0: (k % 2) * 3 }); });
+      // ice crystals: clusters of translucent prisms, each with a faint glowing core
+      every(R, 6, (t, k) => {
+        for (const side of [-1, 1]) for (let j = 0; j < 3; j++) {
+          const h = 1.6 + ((k + j) % 3) * 0.9, s = side * (W - 0.7 - j * 0.3);
+          R.spin(t + (j - 1) * 0.7, s, [0.7, h, 0.7], h / 2 + (k % 2) * 0.2, 0xb8e4ff, 'Glass', (j - 1) * 0.35);
+          R.spin(t + (j - 1) * 0.7, s, [0.18, h * 0.7, 0.18], h / 2, ICE, 'Neon', (j - 1) * 0.35);
+        }
+      });
       every(R, 9, (t) => snowflake(R, t, (Math.round(t) % 2 ? 1 : -1) * (W - 0.1), 6.5, 1.3, WHITE), 4);
     } },
     { wall: [0x0e1424, 'SmoothPlastic'], floor: 0xdfe8f0, light: WHITE, dress: (R) => {
