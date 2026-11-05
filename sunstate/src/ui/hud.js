@@ -43,6 +43,7 @@ export class HUD {
     // LOOP: the social feed, on the phone
     this.loop = h('div', 'loopfeed');
     this.shop = h('div', 'shopmenu');
+    this.phoneEl = h('div', 'phone');
     this.loopBadge = h('div', 'loop-badge');
     bl.appendChild(this.street);
     r.appendChild(bl);
@@ -75,7 +76,7 @@ export class HUD {
     this.bigEl = h('div', 'big');
     this.vignette = h('div', 'vignette');
     this.fps = h('div', 'fps');
-    r.append(this.loop, this.shop);
+    r.append(this.loop, this.shop, this.phoneEl);
     r.append(this.vignette, this.objective, this.progress, this.prompt, this.subtitleEl, this.crosshair, this.hitmarker, this.bigEl, this.fps);
 
     this.sub = null;
@@ -169,6 +170,7 @@ export class HUD {
     this.drawCrew();
     this.drawLoop();
     this.drawShop();
+    this.drawPhone();
     // wanted
     const W = g.wanted;
     let stars = '';
@@ -267,6 +269,30 @@ export class HUD {
     setHTML(this.crewEl, html);
   }
 
+  /** The phone: home screen, messages, contacts, bank. */
+  drawPhone() {
+    const g = this.game, ph = g.phone;
+    const show = !!ph?.open && !g.social?.open;
+    this.phoneEl.classList.toggle('show', show);
+    if (!show) return;
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    const key = Input.label(this.app.settings.c.bindings.phone);
+    const hh = g.engine.time.hour, clock = `${Math.floor(hh) % 12 || 12}:${String(Math.floor((hh % 1) * 60)).padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
+    const list = (rows) => `<ol>${rows.map(([k, label, note]) => `<li><span class="key">${k}</span>${label}${note ? `<small>${note}</small>` : ''}</li>`).join('')}</ol>`;
+    let body = '', title = 'Phone';
+    if (ph.app === 'home') body = list(ph.apps().map(([, label], i) => [i + 1, esc(label)]));
+    else if (ph.app === 'messages') {
+      title = 'Messages';
+      body = ph.messages.length ? `<div class="msgs">${ph.messages.slice(0, 8).map((m) => `<p><b>${esc(PROTAGONISTS[m.from]?.name || m.from)}</b> ${esc(m.text)}</p>`).join('')}</div>` : '<p class="empty">No messages.</p>';
+    } else if (ph.app === 'contacts') { title = 'Contacts'; body = list(ph.contacts().map((c, i) => [i + 1, esc(c.name), esc(c.note)])); }
+    else if (ph.app === 'bank') {
+      title = 'Bank';
+      const L = g.economy.ledger || [];
+      body = `<p class="bal">$${g.economy.money.toLocaleString()}</p><div class="msgs">${L.slice(0, 7).map((e) => `<p><b class="${e.amount < 0 ? 'out' : 'in'}">${e.amount < 0 ? '−' : '+'}$${Math.abs(e.amount).toLocaleString()}</b> ${esc(e.reason || '')}</p>`).join('') || '<p class="empty">No transactions yet.</p>'}</div>`;
+    }
+    setHTML(this.phoneEl, `<header><span>${clock}</span><b>${title}</b></header>${body}${ph.msg ? `<p class="pmsg">${esc(ph.msg)}</p>` : ''}<footer><span class="key">0</span>${ph.app === 'home' ? 'put away' : 'back'} · <span class="key">${key}</span>close</footer>`);
+  }
+
   /** An open shop: who's talking, what they said, and what's for sale. */
   drawShop() {
     const P = this.game.places, o = P?.openShop;
@@ -282,8 +308,9 @@ export class HUD {
   drawLoop() {
     const g = this.game, so = g.social, key = Input.label(this.app.settings.c.bindings.phone);
     this.loop.classList.toggle('show', so.open);
-    setHTML(this.loopBadge, so.unread ? `<span class="key">${key}</span>LOOP <b>${so.unread}</b>` : `<span class="key">${key}</span>LOOP`);
-    this.loopBadge.classList.toggle('hot', so.unread > 0);
+    const unread = so.unread + (g.phone?.unread || 0);
+    setHTML(this.loopBadge, unread ? `<span class="key">${key}</span>Phone <b>${unread}</b>` : `<span class="key">${key}</span>Phone`);
+    this.loopBadge.classList.toggle('hot', unread > 0);
     if (!so.open) return;
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + 'k' : Math.floor(n));

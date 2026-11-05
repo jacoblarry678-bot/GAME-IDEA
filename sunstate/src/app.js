@@ -126,7 +126,7 @@ export class App {
     this.begin();
     if (!quick) {
       this.menus.showCard('South Beach', 'Miami Beach', 3.5);
-      setTimeout(() => this.game === g && g.events.emit('phoneMessage', { from: 'sol', text: 'You up? I\'m out by the motel lot — blue marker by your door. We need to talk about Teo.' }), 2500);
+      setTimeout(() => this.game === g && g.events.emit('phoneMessage', { from: 'sol', text: this.world.real ? 'You up? I\'m outside your place on Ocean Drive, blue marker by the door. We need to talk about Teo.' : 'You up? I\'m out by the motel lot — blue marker by your door. We need to talk about Teo.' }), 2500);
       setTimeout(() => this.game === g && this.hud.notify(`<span class="key">${this.keyLabel('switchCharacter')}</span> switches between Cal and Sol · <span class="key">${this.keyLabel('partner')}</span> tells your partner to follow or wait.`, 'Tip', '', 10), 9000);
     }
     g.hud.setObjective(this.world.real ? 'Free roam: the real Miami, 1:1. Walk up to any shop and press E. Your apartment (⌂) is across Ocean Drive.' : 'Explore South Beach, or start the mission at the blue <span class="hl">S</span> marker by the motel.');

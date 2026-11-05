@@ -23,6 +23,7 @@ import { MissionManager, Markers } from './missions.js';
 import { Director } from '../ai/director.js';
 import { snapshot, writeSave } from './save.js';
 import { Social } from './social.js';
+import { Phone } from './phone.js';
 import { Memory } from './memory.js';
 import { Places } from './places.js';
 import { Club } from './club.js';
@@ -69,6 +70,7 @@ export class Game {
     this.director = new Director(this);
     this.memory = new Memory(this);
     this.social = new Social(this);
+    this.phone = new Phone(this);
     this.places = new Places(this);
     this.club = new Club(this);
     if (world.real) this.realMapMode();
@@ -282,7 +284,8 @@ export class Game {
     this.weather?.step(dt);
     this.memory.step(dt);
     this.social.step(dt);
-    if (this.input.pressed('phone')) { this.social.toggle(); this.audio?.ui('select'); }
+    this.phone.step(dt);
+    if (this.input.pressed('phone')) this.phone.toggle();
     this.input.endStep();
   }
 

@@ -245,14 +245,16 @@ export class RealWorld {
   /** Stream everything near (x, z) before play starts there (async: the page stays responsive). */
   async ready(x, z, r = 300, onProgress = null) {
     this.focus.set(x, 0, z);
+    this.holdFocus = { x, z };
     for (let guard = 0; guard < 3000; guard++) {
       this.stream(30);
       const want = this.wanted(x, z, r);
       const missing = want.filter((w) => !this.tiles.has(w.key)).length;
       onProgress?.(1 - missing / Math.max(1, want.length));
-      if (!missing) { for (const rec of this.tiles.values()) this.setColliders(rec, Math.hypot(rec.cx - x, rec.cz - z) - this.index.sub * 0.71 < COLLIDE_R); return; }
+      if (!missing) { this.holdFocus = null; for (const rec of this.tiles.values()) this.setColliders(rec, Math.hypot(rec.cx - x, rec.cz - z) - this.index.sub * 0.71 < COLLIDE_R); return; }
       await new Promise((res) => setTimeout(res, 16));
     }
+    this.holdFocus = null;
   }
 
   // ---------------------------------------------------------------------------------------
@@ -337,7 +339,7 @@ export class RealWorld {
   update(dt) {
     this.signalClock += dt;
     const cam = this.engine.camera.position;
-    this.focus.copy(cam);
+    if (this.holdFocus) this.focus.set(this.holdFocus.x, 0, this.holdFocus.z); else this.focus.copy(cam); // (ready() streams somewhere else: a cab ride)
     this.radius = DETAIL[this.engine.settings?.g?.drawDistance] || this.radius;
     this.stream(this.engine.externalClock ? 50 : 4);
     this.roads.update(cam.x, cam.z);

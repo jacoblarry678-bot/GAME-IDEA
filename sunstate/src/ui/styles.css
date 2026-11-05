@@ -244,3 +244,21 @@ kbd, .key { display: inline-block; min-width: 24px; padding: 2px 7px; margin-rig
 .loopfeed .deal { margin: 6px 2px; padding: 6px 8px; border-radius: 8px; background: rgba(255,210,63,0.14); font-size: 12px; line-height: 1.35; }
 .loopfeed .post.mine { background: rgba(41,230,255,0.08); border-radius: 10px; }
 .loopfeed canvas.reel.mine { width: 135px; height: 240px; box-shadow: 0 0 0 2px rgba(41,230,255,0.7); }
+
+/* the phone */
+.phone { position: absolute; right: 22px; top: 230px; width: 270px; display: none; background: linear-gradient(180deg, rgba(18, 22, 40, 0.95), rgba(10, 12, 22, 0.95)); border: 2px solid rgba(255,255,255,0.16); border-radius: 26px; padding: 12px 14px 10px; font: 13px Inter, Arial, sans-serif; color: #eef; box-shadow: 0 14px 34px rgba(0,0,0,0.55); }
+.phone.show { display: block; }
+.phone header { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 6px; }
+.phone header span { font: 600 11px Inter, Arial; color: rgba(255,255,255,0.55); }
+.phone header b { font: 900 17px 'Archivo Black', Inter, sans-serif; letter-spacing: 0.03em; color: #29e6ff; }
+.phone ol { list-style: none; margin: 0; padding: 0; }
+.phone li { padding: 7px 4px; border-bottom: 1px solid rgba(255,255,255,0.06); font-weight: 700; }
+.phone li small { display: block; margin: 2px 0 0 26px; font-weight: 500; font-size: 11px; color: rgba(255,255,255,0.55); }
+.phone .msgs p { margin: 6px 2px; line-height: 1.35; }
+.phone .msgs b { color: #ff6fa8; margin-right: 4px; }
+.phone .msgs b.in { color: #80ed99; }
+.phone .msgs b.out { color: #ff8a8a; }
+.phone .bal { font: 900 26px 'Archivo Black', Inter, sans-serif; color: #80ed99; margin: 6px 2px; }
+.phone .empty { color: rgba(255,255,255,0.5); }
+.phone .pmsg { margin: 8px 2px 2px; padding: 7px 9px; border-radius: 10px; background: rgba(41, 230, 255, 0.1); line-height: 1.35; }
+.phone footer { margin-top: 8px; font: 600 11px Inter, Arial; color: rgba(255,255,255,0.5); }
