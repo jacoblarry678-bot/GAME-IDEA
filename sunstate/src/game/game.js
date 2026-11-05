@@ -28,7 +28,7 @@ import { Places } from './places.js';
 import { Club } from './club.js';
 
 /** Where a new game starts on the real map: Ocean Drive at 10th Street, South Beach (game metres). */
-export const REAL_SPAWN = { x: 6372, z: -708, rot: Math.PI / 2 };
+export const REAL_SPAWN = { x: 6330.5, z: -700, rot: Math.PI };
 
 export const PROTAGONIST_LOOK = PROTAGONISTS.cal.look;
 
@@ -79,14 +79,23 @@ export class Game {
    * ported to the real road network.
    */
   realMapMode() {
-    this.traffic = null; this.peds_ = null; this.police = null; this.director = null;
-    this.store = null; this.places = null; this.club = null;
-    this.missions.available = [];
+    // anyone the classic systems placed (clerk, staff, dancers) stood on the old map: remove them
+    this.club?.dispose?.();
+    for (const list of [this.peds, this.extras]) { for (const ch of list) ch.dispose?.(); list.length = 0; }
+    this.traffic = null; this.peds_ = null; this.places = null;
+    // neutral stand-ins for systems other code reads every frame
+    const noop = () => {};
+    this.store = { holdup: null, inside: false, bag: 0, alarmT: 0, clerk: null, reset: noop, step: noop };
+    this.police = { seeT: 0, seesPlayer: false, units: [], clearAll: noop, copSees: () => false, canSeePlayer: () => false, step: noop, dispatch: noop };
+    this.director = { clearAll: noop, step: noop };
+    this.club = { dispose: noop, step: noop };
+    this.missions.disabled = true; // the story missions still live on the classic map
     this.interactables = [];
     const S = REAL_SPAWN;
     this.respawnPlayer(S.x, S.z, S.rot);
     if (this.partner) { this.partner.pos.set(S.x + 1.5, this.world.ground(S.x + 1.5, S.z + 1), S.z + 1); }
-    for (const [model, dx, dz, color] of [['ironhorse', 4.5, -6, 0xb5332e], ['kestrel', 4.5, 2, 0x8fb7c9]]) {
+    // two cars at the kerb of Ocean Drive's northbound lane
+    for (const [model, dx, dz, color] of [['ironhorse', -4.5, -8, 0xb5332e], ['kestrel', -4.5, 6, 0x8fb7c9]]) {
       const v = this.addVehicle(model, S.x + dx, S.z + dz, Math.PI, color);
       v.owner = 'player';
     }

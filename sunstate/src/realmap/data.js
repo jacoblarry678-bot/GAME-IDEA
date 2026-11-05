@@ -11,15 +11,21 @@ const BASE = new URL('map/', document.baseURI).href;
 
 let indexPromise = null;
 export function loadIndex() {
-  if (!indexPromise) indexPromise = fetch(BASE + 'index.json').then((r) => { if (!r.ok) throw new Error('map index ' + r.status); return r.json(); });
+  if (!indexPromise) indexPromise = fetch(BASE + 'index.json').then((r) => { if (!r.ok) throw new Error('map index ' + r.status); return r.json(); }).then((ix) => { encoding = ix.enc || null; return ix; });
   return indexPromise;
 }
 
+let encoding = null; // 'b64gz' when the packs are base64 text (the artifact host serves .txt, not .gz)
 async function gunzipJSON(url) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  let buf;
+  if (encoding === 'b64gz') {
+    const bin = atob((await r.text()).trim());
+    buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  } else buf = new Uint8Array(await r.arrayBuffer());
   // the server may already have decoded it (Content-Encoding); otherwise inflate here
-  const buf = new Uint8Array(await r.arrayBuffer());
   if (buf[0] === 0x1f && buf[1] === 0x8b) {
     const ds = new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'));
     return JSON.parse(await new Response(ds).text());

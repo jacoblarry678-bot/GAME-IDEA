@@ -62,6 +62,7 @@ export class Menus {
     if (real) {
       add('Explore Real Miami', () => this.app.startNew(), false, 'BETA · the real city at 1:1, streamed from open map data · free roam for now');
       add('Back to classic South Beach', () => switchMap('classic'), false, 'the story, missions, traffic and police');
+      m.appendChild(h('div', 'sub', 'Map data © OpenStreetMap contributors (ODbL) and the Overture Maps Foundation'));
     } else {
       add('Continue', () => this.app.continueGame(), !hasSave, save ? `Saved ${new Date(save.savedAt).toLocaleString()} · $${save.money.toLocaleString()}` : '');
       add('New Game', () => this.app.startNew());

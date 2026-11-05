@@ -260,7 +260,7 @@ export class MissionManager {
     return st?.partnerDrive ? st.partnerDrive(this.game) : null;
   }
 
-  get available() { return Object.values(MISSIONS).filter((m) => !this.completed.has(m.id)); }
+  get available() { return this.disabled ? [] : Object.values(MISSIONS).filter((m) => !this.completed.has(m.id)); }
 
   start(id, fromCheckpoint = null) {
     const def = MISSIONS[id];
