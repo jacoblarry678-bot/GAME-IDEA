@@ -3,6 +3,7 @@
  * shows roads, the GPS route to the current objective (or waypoint), blips,
  * police, witness calls and the police search area.
  */
+import { areaName } from '../realmap/areas.js';
 import { Input } from '../core/input.js';
 import { staticMap, toMap, routeBetween, STATIC_BLIPS, ICONS, MAP } from './mapdraw.js';
 import { roadAt, ISLAND, KEYS } from '../world/layout.js';
@@ -232,9 +233,10 @@ export class HUD {
     if (this.radioT > 0) { this.radioT -= dt; this.radio.classList.add('show'); } else this.radio.classList.remove('show');
     // street name
     const pos = v ? v.pos : p.pos;
-    const road = roadAt(pos.x, pos.z);
+    const real = g.world.real;
+    const road = real ? g.world.roadAt(pos.x, pos.z) : roadAt(pos.x, pos.z);
     const inside = !v && g.world.interiorAt(pos.x, pos.z, pos.y);
-    const area = inside ? inside.name : pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Seven Mile Bridge' : pos.x > ISLAND.sandStart ? 'Lummus Park Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Downtown Miami' : 'Biscayne Bay') : DISTRICT_NAME;
+    const area = inside ? inside.name : real ? areaName(g.world.index, pos.x, pos.z) : pos.z > KEYS.z0 - 8 ? KEYS.name : pos.z > ISLAND.south ? 'Seven Mile Bridge' : pos.x > ISLAND.sandStart ? 'Lummus Park Beach' : pos.x < ISLAND.west ? (pos.x < -290 ? 'Downtown Miami' : 'Biscayne Bay') : DISTRICT_NAME;
     const wl = g.weather?.label;
     const onRoad = road && !inside, sub = onRoad && road.name !== area ? area + ' · ' : '';
     setHTML(this.street, `${onRoad ? road.name : area}<small>${sub}${g.engine.time.label()}${wl ? ' · ' + wl : ''}</small>`);
@@ -316,6 +318,8 @@ export class HUD {
     return this.waypoint;
   }
 
+  tm(x, z) { return this.game?.world.real ? [x * 2, z * 2] : toMap(x, z); }
+
   drawMinimap(dt) {
     const g = this.game, ctx = this.mmCtx, s = this.app.settings;
     const W = this.mmCanvas.width;
@@ -325,15 +329,18 @@ export class HUD {
     const speed = p.vehicle ? p.vehicle.speed : 0;
     const zoom = (W / 440) * (p.vehicle ? Math.max(0.55, 1 - speed * 0.012) : 1.05);
     const rot = s.i.minimapRotate ? -Math.PI / 2 - Math.atan2(Math.cos(yaw), Math.sin(yaw)) : 0;
-    const [mx, my] = toMap(pos.x, pos.z);
+    const [mx, my] = this.tm(pos.x, pos.z);
     ctx.save();
     ctx.clearRect(0, 0, W, W);
     ctx.translate(W / 2, W / 2 + W * 0.12);
     ctx.rotate(rot);
     ctx.scale(zoom, zoom);
     ctx.translate(-mx, -my);
-    ctx.drawImage(this.mapImg, 0, 0);
-    const P = (x, z) => toMap(x, z);
+    if (g.world.real) {
+      // the real map: each streamed tile's surface raster, 2 px per metre like the classic map
+      for (const rec of g.world.tiles.values()) if (rec.mini) ctx.drawImage(rec.mini, rec.raster.x0 * 2, rec.raster.z0 * 2, 1000, 1000);
+    } else ctx.drawImage(this.mapImg, 0, 0);
+    const P = (x, z) => this.tm(x, z);
     // police search area
     const Wn = g.wanted;
     if (Wn.level > 0 && Wn.lastKnown && Wn.state !== 'pursuit') {

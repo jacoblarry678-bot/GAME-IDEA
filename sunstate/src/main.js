@@ -6,6 +6,7 @@ import { Settings } from './core/settings.js';
 import { Engine } from './core/engine.js';
 import { Input } from './core/input.js';
 import { World } from './world/world.js';
+import { RealWorld } from './realmap/realworld.js';
 import { App } from './app.js';
 import { attachDriver } from './ai/driver.js';
 
@@ -16,7 +17,9 @@ async function boot() {
   const canvas = document.getElementById('game');
   const engine = new Engine(canvas, settings);
   const input = new Input(canvas, settings);
-  const world = new World(engine);
+  // ?map=real streams the real Miami (in progress); the classic compact South Beach is the default for now
+  const params = new URLSearchParams(location.search);
+  const world = params.get('map') === 'real' ? await RealWorld.create(engine) : new World(engine);
   const app = new App({ engine, world, input, settings, canvas });
   await app.init();
 

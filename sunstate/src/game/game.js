@@ -27,6 +27,9 @@ import { Memory } from './memory.js';
 import { Places } from './places.js';
 import { Club } from './club.js';
 
+/** Where a new game starts on the real map: Ocean Drive at 10th Street, South Beach (game metres). */
+export const REAL_SPAWN = { x: 6372, z: -708, rot: Math.PI / 2 };
+
 export const PROTAGONIST_LOOK = PROTAGONISTS.cal.look;
 
 export class Game {
@@ -65,8 +68,28 @@ export class Game {
     this.social = new Social(this);
     this.places = new Places(this);
     this.club = new Club(this);
-    this.spawnParked();
+    if (world.real) this.realMapMode();
+    else this.spawnParked();
     this.bindEvents();
+  }
+
+  /**
+   * The real-map build so far: free roam on streamed Miami. Systems still tied to the old
+   * compact map (traffic, pedestrians, police, missions, shops) stay off until they are
+   * ported to the real road network.
+   */
+  realMapMode() {
+    this.traffic = null; this.peds_ = null; this.police = null; this.director = null;
+    this.store = null; this.places = null; this.club = null;
+    this.missions.available = [];
+    this.interactables = [];
+    const S = REAL_SPAWN;
+    this.respawnPlayer(S.x, S.z, S.rot);
+    if (this.partner) { this.partner.pos.set(S.x + 1.5, this.world.ground(S.x + 1.5, S.z + 1), S.z + 1); }
+    for (const [model, dx, dz, color] of [['ironhorse', 4.5, -6, 0xb5332e], ['kestrel', 4.5, 2, 0x8fb7c9]]) {
+      const v = this.addVehicle(model, S.x + dx, S.z + dz, Math.PI, color);
+      v.owner = 'player';
+    }
   }
 
   bindEvents() {

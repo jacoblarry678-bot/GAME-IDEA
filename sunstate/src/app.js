@@ -6,7 +6,7 @@
  * pointer lock and the title-screen flyover.
  */
 import * as THREE from 'three';
-import { Game } from './game/game.js';
+import { Game, REAL_SPAWN } from './game/game.js';
 import { Audio } from './audio/audio.js';
 import { HUD } from './ui/hud.js';
 import { Menus } from './ui/menus.js';
@@ -94,7 +94,8 @@ export class App {
     return this.game;
   }
 
-  startNew(quick = false) {
+  async startNew(quick = false) {
+    if (this.world.real) await this.world.ready(REAL_SPAWN.x, REAL_SPAWN.z); // stream the streets around the spawn first
     const g = this.createGame();
     this.engine.time.hour = 17.6;
     this.begin();
@@ -103,7 +104,7 @@ export class App {
       setTimeout(() => this.game === g && g.events.emit('phoneMessage', { from: 'sol', text: 'You up? I\'m out by the motel lot — blue marker by your door. We need to talk about Teo.' }), 2500);
       setTimeout(() => this.game === g && this.hud.notify(`<span class="key">${this.keyLabel('switchCharacter')}</span> switches between Cal and Sol · <span class="key">${this.keyLabel('partner')}</span> tells your partner to follow or wait.`, 'Tip', '', 10), 9000);
     }
-    g.hud.setObjective('Explore South Beach, or start the mission at the blue <span class="hl">S</span> marker by the motel.');
+    g.hud.setObjective(this.world.real ? 'Free roam: the real Miami, 1:1. Traffic, people and missions are on their way.' : 'Explore South Beach, or start the mission at the blue <span class="hl">S</span> marker by the motel.');
   }
 
   continueGame() {

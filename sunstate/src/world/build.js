@@ -962,8 +962,9 @@ function depthTexture() {
   return { tex: t, x0, size };
 }
 
-function buildWater(engine) {
-  const dt = depthTexture();
+export function buildWater(engine, { depth = 'terrain', size = 2400 } = {}) {
+  // depth: the old map bakes a depth texture from its terrain; the real map passes null for open water
+  const dt = depth === 'terrain' ? depthTexture() : (() => { const t = new THREE.DataTexture(new Uint8Array([180, 0, 0, 255]), 1, 1, THREE.RGBAFormat); t.needsUpdate = true; return { tex: t, x0: -1e6, size: 2e6 }; })();
   const mat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
@@ -1067,7 +1068,7 @@ function buildWater(engine) {
         #include <colorspace_fragment>
       }`,
   });
-  const geo = new THREE.PlaneGeometry(2400, 2400, 1, 1);
+  const geo = new THREE.PlaneGeometry(size, size, 1, 1);
   geo.rotateX(-Math.PI / 2);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.y = WATER_Y;

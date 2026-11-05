@@ -44,25 +44,37 @@ export class CollisionWorld {
 
   add(o) {
     const col = o instanceof Collider ? o : new Collider(o);
+    col._ai = this.all.length;
     this.all.push(col);
     const x0 = Math.floor((col.cx - col.bound) / CELL), x1 = Math.floor((col.cx + col.bound) / CELL);
     const z0 = Math.floor((col.cz - col.boundZ) / CELL), z1 = Math.floor((col.cz + col.boundZ) / CELL);
+    col._cells = [];
     for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) {
       const k = this.key(ix, iz);
       let list = this.grid.get(k);
       if (!list) { list = []; this.grid.set(k, list); }
       list.push(col);
+      col._cells.push(k);
     }
     return col;
   }
 
+  /** Remove a collider (O(cells it covers), so the streamed map can swap thousands per tile). */
   remove(col) {
-    const i = this.all.indexOf(col);
-    if (i >= 0) this.all.splice(i, 1);
-    for (const list of this.grid.values()) {
-      const j = list.indexOf(col);
-      if (j >= 0) list.splice(j, 1);
+    const i = col._ai;
+    if (i !== undefined && this.all[i] === col) {
+      const last = this.all.pop();
+      if (last !== col) { this.all[i] = last; last._ai = i; }
+      col._ai = undefined;
     }
+    for (const k of col._cells || []) {
+      const list = this.grid.get(k);
+      if (!list) continue;
+      const j = list.indexOf(col);
+      if (j >= 0) { list[j] = list[list.length - 1]; list.pop(); }
+      if (!list.length) this.grid.delete(k);
+    }
+    col._cells = null;
   }
 
   /** Colliders whose cells overlap the square around (x, z). */

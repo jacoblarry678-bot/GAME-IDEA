@@ -4,3 +4,6 @@ dist-dev/
 build/
 shots/
 *.log
+
+# generated real-map packs (rebuild with tools/mapdata/extract.py + build_packs.py)
+public/map/
