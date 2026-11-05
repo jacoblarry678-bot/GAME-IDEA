@@ -28,6 +28,7 @@ import { Places } from './places.js';
 import { Club } from './club.js';
 import { RealTraffic, RealPeds, RealPolice } from '../realmap/realai.js';
 import { REAL_SPAWN, REAL_PLACES } from '../realmap/spots.js';
+import { RealShops } from '../realmap/realshops.js';
 
 export { REAL_SPAWN, REAL_PLACES };
 
@@ -76,30 +77,30 @@ export class Game {
   }
 
   /**
-   * The real-map build so far: free roam on streamed Miami with traffic, pedestrians and
-   * police on the real streets. Systems still tied to the old compact map (missions, shops,
-   * the club) stay off until they are ported.
+   * The real map: streamed Miami with traffic, pedestrians and police on the real streets,
+   * every shop in the map data, and a safehouse on Ocean Drive. The classic map's club and
+   * its scripted places are not here.
    */
   realMapMode() {
     // anyone the classic systems placed (clerk, staff, dancers) stood on the old map: remove them
     this.club?.dispose?.();
     for (const list of [this.peds, this.extras]) { for (const ch of list) ch.dispose?.(); list.length = 0; }
-    this.places = null;
+    this.places = new RealShops(this); // every shop in the map data, under invented names
     // neutral stand-ins for systems other code reads every frame
     const noop = () => {};
     this.store = { holdup: null, inside: false, bag: 0, alarmT: 0, clerk: null, reset: noop, step: noop };
     this.blips = Object.entries(REAL_PLACES).map(([k, p]) => ({ x: p.x, z: p.z, icon: k, color: k === 'hospital' ? '#ff5566' : '#6ea0ff', label: p.name }));
     this.director = { clearAll: noop, step: noop };
     this.club = { beat: 0, isOpen: false, items: [], people: [], playerInside: false, tipsy: 0, musicFor: () => null, dispose: noop, step: noop };
-    this.missions.disabled = true; // the story missions still live on the classic map
-    this.interactables = [];
+    // the mission start markers stay; everything else that was set up for the classic map goes
+    this.interactables = this.interactables.filter((it) => String(it.id).startsWith('mission:'));
     const S = REAL_SPAWN;
     this.respawnPlayer(S.x, S.z, S.rot);
     if (this.partner) { this.partner.pos.set(S.x + 1.5, this.world.ground(S.x + 1.5, S.z + 1), S.z + 1); }
     // two cars at the kerb of Ocean Drive's northbound lane
     for (const [model, dx, dz, color] of [['ironhorse', -4.5, -8, 0xb5332e], ['kestrel', -4.5, 6, 0x8fb7c9]]) {
       const v = this.addVehicle(model, S.x + dx, S.z + dz, Math.PI, color);
-      v.owner = 'player';
+      v.owner = 'player'; v.persistentId = 'real-' + model;
     }
   }
 

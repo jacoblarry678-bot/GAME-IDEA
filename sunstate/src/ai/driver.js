@@ -415,7 +415,12 @@ export class DriverAI {
  * (with a destination) route along the road segment nearest that point so the
  * car drives past it. Used by the partner when they drive, and by test tools.
  */
+let realAttach = null;
+/** The real map registers its own attachDriver (realmap/realai.js). */
+export function setRealAttach(fn) { realAttach = fn; }
+
 export function attachDriver(v, game, dest = null) {
+  if (game.world.real && realAttach) return realAttach(v, game, dest);
   let rp = null;
   for (const e of edges) {
     const A = nodes[e.a], B = nodes[e.b];

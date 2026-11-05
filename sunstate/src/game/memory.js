@@ -17,6 +17,7 @@
  * All of it is saved. These are this prototype's own rules.
  */
 import { roadAt, KEYS, ISLAND } from '../world/layout.js';
+import { areaName } from '../realmap/areas.js';
 import { spawnRivalCar } from '../ai/rivals.js';
 import { laneLine } from '../ai/driver.js';
 import { ROAD_GRAPH } from '../world/layout.js';
@@ -52,8 +53,8 @@ export class Memory {
   }
 
   /** Area name for notoriety. */
-  area(x, z) { return z > KEYS.z0 - 40 ? 'Marathon' : 'South Beach'; }
-  street(x, z) { const r = roadAt(x, z); return r ? r.name : z > KEYS.z0 - 8 ? KEYS.name : x > ISLAND.sandStart ? 'the beach' : 'South Beach'; }
+  area(x, z) { const w = this.game.world; if (w?.real) return areaName(w.index, x, z); return z > KEYS.z0 - 40 ? 'Marathon' : 'South Beach'; }
+  street(x, z) { const w = this.game.world; if (w?.real) return w.roadAt(x, z)?.name || this.area(x, z); const r = roadAt(x, z); return r ? r.name : z > KEYS.z0 - 8 ? KEYS.name : x > ISLAND.sandStart ? 'the beach' : 'South Beach'; }
   notoriety(x, z) { return this.state.notoriety[this.area(x, z)] || 0; }
   bump(x, z, amount) { const a = this.area(x, z); this.state.notoriety[a] = Math.min(100, (this.state.notoriety[a] || 0) + amount); }
 

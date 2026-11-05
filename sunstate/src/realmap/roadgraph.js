@@ -272,7 +272,7 @@ export class RoadGraph {
     // the streets to follow, in order, without repeats
     const names = [];
     for (const e of edges) { const s = this.names[this.eName[e]]; if (s && names[names.length - 1] !== s) names.push(s); }
-    return { pts: Float32Array.from(pts), len, eta: eta ?? len / 12, names: names.slice(0, 12) };
+    return { pts: Float32Array.from(pts), len, eta: eta ?? len / 12, names: names.slice(0, 12), edges: Int32Array.from(edges) };
   }
 }
 

@@ -16,19 +16,21 @@ import { Character } from '../entities/character.js';
 import { PlayerController } from './player.js';
 import { PartnerController } from '../ai/partner.js';
 import { PLACES } from '../world/district.js';
-import { REAL_PLACES } from '../realmap/spots.js';
+import { REAL_PLACES, REAL_SAFEHOUSE } from '../realmap/spots.js';
+
+let REAL = false; // homes are on the real map (set per game)
 
 export const PROTAGONISTS = {
   cal: {
     id: 'cal', name: 'Cal', full: 'Cal Reyes', color: '#4fd1c5', car: 'start-sedan',
     look: { female: false, height: 1.83, build: 1.08, skin: 0xc68642, hair: 0x1b1410, top: 0xe9e2d0, bottom: 0x2e3b55, shoes: 0xf0f0f0, hairStyle: 'long', shorts: false, sleeveless: false, hat: null, beard: true },
-    home: () => PLACES.safehouse.spawn,
+    home: () => (REAL ? REAL_SAFEHOUSE.spawn : PLACES.safehouse.spawn),
   },
   sol: {
     id: 'sol', name: 'Sol', full: 'Marisol "Sol" Vega', color: '#ff6fa8', car: 'start-muscle',
     look: { female: true, height: 1.69, build: 0.94, skin: 0xa86b4a, hair: 0x241510, top: 0xd94f70, bottom: 0x34405e, shoes: 0x1c1c1c, hairStyle: 'long', shorts: true, sleeveless: true, hat: null, beard: false },
     // leaning on the rail by the motel lot, next to the blue mission marker
-    home: () => ({ x: PLACES.safehouse.door.x + 5.6, z: PLACES.safehouse.door.z + 3.4, rot: -Math.PI / 2 }),
+    home: () => (REAL ? { x: REAL_SAFEHOUSE.door.x + 2.5, z: REAL_SAFEHOUSE.door.z + 3.5, rot: Math.PI / 2 } : { x: PLACES.safehouse.door.x + 5.6, z: PLACES.safehouse.door.z + 3.4, rot: -Math.PI / 2 }),
   },
 };
 
@@ -38,6 +40,7 @@ export class Crew {
 
   constructor(game) {
     this.game = game;
+    REAL = !!game.world.real;
     this.members = {};
     for (const def of Object.values(PROTAGONISTS)) {
       const h = def.home();

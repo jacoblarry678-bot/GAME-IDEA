@@ -4,7 +4,7 @@
  * pursuit) and replace only what was tied to the old grid: lanes come from the real road
  * polylines (RoadNet), people walk the sidewalks alongside them.
  */
-import { DriverAI } from '../ai/driver.js';
+import { DriverAI, setRealAttach } from '../ai/driver.js';
 import { TrafficManager } from '../ai/traffic.js';
 import { PedController, PedManager } from '../ai/peds.js';
 import { PoliceManager, CopController, COP_LOOK } from '../ai/police.js';
@@ -91,14 +91,26 @@ export class RealDriverAI extends DriverAI {
   /** Pick the edge to take at node `at`, arriving along e (null: nowhere to go). */
   chooseNext(e, at) {
     const net = this.net, n = net.nodes.get(at);
-    if (!n) return e.oneway ? null : e;
+    if (!n) return e; // the edge of the loaded network: turn around
     let opts = n.edges.filter((o) => o !== e && drivable(o) && net.canDrive(o, at));
-    if (!opts.length) return e.oneway ? null : e; // dead end: turn around
+    if (!opts.length) {
+      if (!e.oneway) return e; // dead end: turn around
+      // nowhere legal to go (a parking-lot loop drawn as one-ways): the wrong way beats waiting forever
+      opts = n.edges.filter((o) => o !== e && drivable(o));
+      if (!opts.length) return e;
+    }
     // keep off service roads (parking aisles, alleys) unless that's all there is
     const streets = opts.filter((o) => o.cls !== CLS.service);
     if (streets.length && (e.cls !== CLS.service || Math.random() < 0.9)) opts = streets;
     const inDir = this.endDir();
     const turnCos = (o) => { const p = net.dirPts(o, at); const dx = p[2] - p[0], dz = p[3] - p[1], l = Math.hypot(dx, dz) || 1; return (inDir.dx * dx + inDir.dz * dz) / l; };
+    // a planned route (edge ids in order, from the road-graph worker): take the next edge on it
+    if (this.mode === 'route' && this.routeIds) {
+      const here = this.routeIds.get(e.id) ?? -1;
+      let best = null, bo = Infinity;
+      for (const o of opts) { const k = this.routeIds.get(o.id); if (k !== undefined && k > here && k < bo) { bo = k; best = o; } }
+      if (best) return best;
+    }
     if (this.mode === 'route' && this.goal) {
       // head for the goal: the option whose far end is closest to it
       let best = null, bd = Infinity;
@@ -175,6 +187,46 @@ export class RealDriverAI extends DriverAI {
     this.pushLane(nPts, next, tOut, this.trimAt(this.endNode(next, at), next));
   }
 }
+
+/**
+ * Point a real-map driver at (x, z): head that way at once (at each junction, the way that
+ * closes the distance) and follow the proper route as soon as the road-graph worker has it.
+ */
+export function routeAI(ai, x, z) {
+  ai.goal = { x, z };
+  ai.mode = 'route';
+  const net = ai.game.world.roads, v = ai.v;
+  const key = Math.round(x / 20) + ',' + Math.round(z / 20);
+  if (ai.routeKey === key && ai.routeIds) return;
+  ai.routeKey = key;
+  net?.route(v.pos.x, v.pos.z, x, z).then((r) => {
+    if (!r || ai.routeKey !== key) return;
+    ai.routeIds = new Map();
+    r.edges.forEach((id, i) => { if (!ai.routeIds.has(id)) ai.routeIds.set(id, i); });
+  });
+}
+
+/** Hand a car to a RealDriverAI from wherever it is (the partner at the wheel, rival crews). */
+export function attachRealDriver(v, game, dest = null) {
+  const net = game.world.roads;
+  const q = net?.nearest(v.pos.x, v.pos.z, drivable, 150);
+  if (!q) {
+    // no road in reach (the network is still loading): stay put
+    return { v, game, mode: 'hold', speedScale: 1, cautious: 1, offroad: false, step() { v.input.throttle = 0; v.input.brake = v.vLong > 0.3 ? 1 : 0; v.input.steer = 0; } };
+  }
+  const e = q.e, p = e.pts, i = q.seg * 2;
+  const [fx, fz] = v.forward;
+  // the way the car already faces, even against a one-way: a three-point turn in a narrow
+  // street goes worse than driving on to the next junction
+  const from = ((p[i + 2] - p[i]) * fx + (p[i + 3] - p[i + 1]) * fz) >= 0 ? e.a : e.b;
+  const lane = e.oneway ? e.lanes - 1 : 0;
+  const s = Math.min(e.len - 1, (from === e.a ? q.s : e.len - q.s) + 6);
+  const ai = new RealDriverAI(v, game, { edge: e, from, lane, s: Math.max(0, s) });
+  ai.offroad = q.d > 7; // in a lot: feel the way out first
+  if (dest) routeAI(ai, dest.x, dest.z);
+  return ai;
+}
+setRealAttach(attachRealDriver);
 
 /** Ambient traffic on the real streets. */
 export class RealTraffic extends TrafficManager {
@@ -418,9 +470,8 @@ export class RealPolice extends PoliceManager {
   /** Head along the streets toward (x, z): at each junction, the way that closes the distance. */
   routeTo(u, x, z) {
     const ai = u.vehicle.ai;
-    if (!ai) return;
-    ai.goal = { x, z };
-    ai.mode = 'route';
+    if (!ai?.net) return;
+    routeAI(ai, x, z);
     u.routeT = 6;
   }
 }

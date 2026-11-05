@@ -15,6 +15,7 @@ import { VEHICLES } from '../data/vehicles.js';
 import { WEAPONS } from '../data/weapons.js';
 import { MISSIONS } from './missions.js';
 import { PLACES } from '../world/district.js';
+import { REAL_SAFEHOUSE } from '../realmap/spots.js';
 import { sanitizeMemory, defaultMemory } from './memory.js';
 import { sanitizeAccounts, defaultAccounts } from './creator.js';
 
@@ -44,7 +45,7 @@ export function defaultSave() {
   };
 }
 
-function sanitizeMember(p) {
+function sanitizeMember(p, lim = 2000) {
   const d = defaultMember();
   if (!p || typeof p !== 'object') return d;
   d.health = num(p.health, 100, 1, 100);
@@ -60,8 +61,8 @@ function sanitizeMember(p) {
     const a = p.ammo?.[id] || {};
     d.ammo[id] = { mag: Math.round(num(a.mag, WEAPONS[id].mag, 0, WEAPONS[id].mag)), reserve: Math.round(num(a.reserve, 24, 0, WEAPONS[id].maxReserve)) };
   }
-  d.x = num(p.x, null, -2000, 2000);
-  d.z = num(p.z, null, -2000, 2000);
+  d.x = num(p.x, null, -lim, lim);
+  d.z = num(p.z, null, -lim, lim);
   if (d.x === null || d.z === null) { d.x = null; d.z = null; }
   d.yaw = num(p.yaw, 0, -100, 100);
   d.mode = ['follow', 'wait', 'player'].includes(p.mode) ? p.mode : 'wait';
@@ -78,7 +79,8 @@ export function sanitizeSave(raw) {
   d.money = Math.round(num(migrated.money, d.money, 0, 1e9));
   d.hour = num(migrated.hour, d.hour, 0, 23.99);
   d.active = CREW_IDS.includes(migrated.active) ? migrated.active : 'cal';
-  for (const id of CREW_IDS) d.crew[id] = sanitizeMember(migrated.crew?.[id]);
+  d.map = migrated.map === 'real' ? 'real' : 'classic'; // the real Miami map is ~100 km across
+  for (const id of CREW_IDS) d.crew[id] = sanitizeMember(migrated.crew?.[id], d.map === 'real' ? 200000 : 2000);
   d.memory = sanitizeMemory(migrated.memory);
   d.loop = sanitizeAccounts(migrated.loop);
   if (Array.isArray(migrated.missions?.completed)) d.missions.completed = [...new Set(migrated.missions.completed.filter((id) => MISSIONS[id]))];
@@ -131,6 +133,7 @@ export function snapshot(game) {
   for (const id of CREW_IDS) members[id] = crew.snapshotMember(crew.members[id]);
   const walked = crew.list.reduce((a, ch) => a + ch.pc.stats.distanceDriven, 0);
   return {
+    map: game.world.real ? 'real' : 'classic',
     money: game.economy.money,
     hour: game.engine.time.hour,
     active: crew.activeId,
@@ -158,13 +161,15 @@ export function applySave(game, s) {
   game.engine.time.hour = s.hour;
   const crew = game.crew;
   crew.setActive(s.active);
-  const sp = PLACES.safehouse.spawn;
+  const real = !!game.world.real;
+  const sameMap = (s.map === 'real') === real; // a save from the other map: positions don't carry over
+  const sp = real ? REAL_SAFEHOUSE.spawn : PLACES.safehouse.spawn;
   for (const id of CREW_IDS) {
     const ch = crew.members[id], m = s.crew[id];
     let place = null;
     if (ch === game.player) place = { x: sp.x, z: sp.z, yaw: sp.rot };
     else if (m.mode === 'follow') place = { x: sp.x - Math.sin(sp.rot) * 1.6 + 1.0, z: sp.z - Math.cos(sp.rot) * 1.6, yaw: sp.rot };
-    else if (usableSpot(game, m.x, m.z)) place = { x: m.x, z: m.z, yaw: m.yaw };
+    else if (sameMap && usableSpot(game, m.x, m.z)) place = { x: m.x, z: m.z, yaw: m.yaw };
     crew.applyMember(ch, m, place);
     if (ch !== game.player) ch.partnerAI.setMode(m.mode === 'follow' ? 'follow' : 'wait');
   }
@@ -173,8 +178,14 @@ export function applySave(game, s) {
   game.memory.apply(s.memory);
   game.social.me.apply(s.loop);
   Object.assign(game.stats, s.stats);
+  let kerb = 0;
   for (const sv of s.vehicles) {
     let v = game.vehicles.find((x) => x.persistentId === sv.id);
+    if (!sameMap) {
+      // cars from the other map: on the real map they wait in a row at the Ocean Drive kerb
+      if (!real) continue;
+      sv.x = 6326; sv.z = -684 + 7 * kerb++; sv.yaw = Math.PI;
+    }
     const inWorld = sv.x !== null && sv.z !== null && !game.world.isWater(sv.x, sv.z);
     if (!v) {
       v = game.addVehicle(sv.model, inWorld ? sv.x : 0, inWorld ? sv.z : 0, sv.yaw, sv.color);

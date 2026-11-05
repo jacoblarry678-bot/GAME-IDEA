@@ -153,7 +153,7 @@ export class Menus {
     const g = this.app.game;
     const b = this.body;
     const W = g.wanted;
-    const missions = Object.values(MISSIONS).map((m) => `<li><b>${m.title}</b> — ${g.missions.completed.has(m.id) ? 'complete' : g.missions.active?.def.id === m.id ? 'in progress' : 'available'}. ${m.summary}</li>`).join('');
+    const missions = Object.values(g.missions.defs || MISSIONS).map((m) => `<li><b>${m.title}</b> — ${g.missions.completed.has(m.id) ? 'complete' : g.missions.active?.def.id === m.id ? 'in progress' : 'available'}. ${m.summary}</li>`).join('');
     const log = W.log.map((l) => `<li>${l.text}</li>`).join('') || '<li>Nothing yet.</li>';
     const ledger = g.economy.ledger.slice(0, 8).map((l) => `<li>${l.amount >= 0 ? '+' : '−'}$${Math.abs(l.amount).toLocaleString()} — ${l.reason}</li>`).join('') || '<li>No transactions yet.</li>';
     const crimes = Object.values(CRIMES).map((c) => `<li>${c.label}: ${c.level}★${c.civilians === false ? ' (only if an officer sees it)' : ''}</li>`).join('');

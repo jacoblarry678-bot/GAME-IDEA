@@ -29,6 +29,6 @@ self.onmessage = async (e) => {
   } else if (m.type === 'route') {
     const r = G.route(m.x0, m.z0, m.x1, m.z1);
     if (!r) self.postMessage({ type: 'route', id: m.id, none: true });
-    else self.postMessage({ type: 'route', id: m.id, ...r }, [r.pts.buffer]);
+    else self.postMessage({ type: 'route', id: m.id, ...r }, [r.pts.buffer, r.edges.buffer]);
   }
 };

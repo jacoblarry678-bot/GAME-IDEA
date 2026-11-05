@@ -272,7 +272,7 @@ export class HUD {
     const P = this.game.places, o = P?.openShop;
     this.shop.classList.toggle('show', !!o);
     if (!o) return;
-    const def = SHOPS[o.id];
+    const def = o.def || SHOPS[o.id];
     const money = this.game.economy.money, ik = Input.label(this.app.settings.c.bindings.interact);
     const rows = P.items().map((it, i) => `<li class="${it.disabled || it.owned ? 'off' : it.price > money ? 'poor' : ''}"><span class="key">${i + 1}</span>${it.label}${it.owned ? ' <em>wearing</em>' : ''}<b>${it.price ? '$' + it.price.toLocaleString() : '—'}</b>${it.note ? `<small>${it.note}</small>` : ''}</li>`).join('');
     setHTML(this.shop, `<header>${def.title}</header><p class="greet">${def.staff ? `<b>${def.staff}:</b> “${o.greeting}”` : `<i>${o.greeting}</i>`}</p><ul>${rows}</ul>${o.msg ? `<p class="msg">${o.msg}</p>` : ''}<footer><span class="key">${ik}</span>leave · $${money.toLocaleString()}</footer>`);

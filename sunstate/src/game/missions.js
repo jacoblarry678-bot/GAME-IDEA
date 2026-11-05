@@ -6,6 +6,7 @@
  * Story and dialogue are original to this prototype.
  */
 import * as THREE from 'three';
+import { REAL_MISSIONS } from '../realmap/realmissions.js';
 import { PLACES } from '../world/district.js';
 import { Input } from '../core/input.js';
 import { Character } from '../entities/character.js';
@@ -209,6 +210,7 @@ export class MissionManager {
   constructor(game) {
     this.game = game;
     gameRef = game;
+    this.defs = game.world.real ? REAL_MISSIONS : MISSIONS; // the real map has its own versions
     this.completed = new Set();
     this.active = null;
     this.failed = null; // {id, reason, checkpoint}
@@ -224,7 +226,7 @@ export class MissionManager {
     });
     this.markerMat = new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide });
     this.startMat = new THREE.MeshBasicMaterial({ color: 0x29e6ff, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide });
-    for (const def of Object.values(MISSIONS)) {
+    for (const def of Object.values(this.defs)) {
       game.interactables.push({
         id: 'mission:' + def.id, x: def.start.x, z: def.start.z, radius: 2.2,
         label: () => {
@@ -239,7 +241,7 @@ export class MissionManager {
   }
 
   canStart(id) {
-    const def = MISSIONS[id];
+    const def = this.defs[id];
     return !this.active && !this.completed.has(id) && !this.cutscene && this.game.wanted.level === 0 && this.unlocked(def) && !this.castProblem(def);
   }
 
@@ -260,10 +262,10 @@ export class MissionManager {
     return st?.partnerDrive ? st.partnerDrive(this.game) : null;
   }
 
-  get available() { return this.disabled ? [] : Object.values(MISSIONS).filter((m) => !this.completed.has(m.id)); }
+  get available() { return this.disabled ? [] : Object.values(this.defs).filter((m) => !this.completed.has(m.id)); }
 
   start(id, fromCheckpoint = null) {
-    const def = MISSIONS[id];
+    const def = this.defs[id];
     const g = this.game;
     this.cleanup();
     this.failed = null;
@@ -485,7 +487,7 @@ export class Markers {
     this.obj.renderOrder = 5;
     game.engine.scene.add(this.obj);
     this.starts = [];
-    for (const def of Object.values(MISSIONS)) {
+    for (const def of Object.values(game.missions.defs)) {
       const m = new THREE.Mesh(geo, game.missions.startMat);
       m.position.set(def.start.x, game.world.ground(def.start.x, def.start.z, 2), def.start.z);
       m.renderOrder = 5;

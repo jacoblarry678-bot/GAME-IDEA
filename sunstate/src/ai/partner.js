@@ -15,7 +15,18 @@ import * as THREE from 'three';
 import { attachDriver } from './driver.js';
 import { WEAPONS } from '../data/weapons.js';
 import { doorApproachPoint } from '../game/player.js';
-import { roadAt, nearestRoadPoint } from '../world/layout.js';
+import { roadAt as classicRoadAt, nearestRoadPoint } from '../world/layout.js';
+
+/** Distance from (x, z) to a real-map road's centre line. */
+function distToRoad(r, x, z) {
+  let best = Infinity;
+  for (let i = 0; i < r.pts.length - 2; i += 2) {
+    const ax = r.pts[i], az = r.pts[i + 1], dx = r.pts[i + 2] - ax, dz = r.pts[i + 3] - az, l2 = dx * dx + dz * dz || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2));
+    best = Math.min(best, Math.hypot(ax + dx * t - x, az + dz * t - z));
+  }
+  return best;
+}
 
 const SPEED = { walk: 1.7, run: 4.1, sprint: 6.6 };
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -57,8 +68,9 @@ export class PartnerController {
 
   /** Nobody waits in the traffic lane: the nearest clear spot off the road. */
   offRoad(x, z) {
-    if (!roadAt(x, z)) return { x, z };
     const w = this.game.world;
+    const roadAt = w.real ? (px, pz) => { const r = w.roadAt(px, pz); return r && r.cls <= 8 && distToRoad(r, px, pz) < r.half; } : classicRoadAt;
+    if (!roadAt(x, z)) return { x, z };
     const y0 = w.ground(x, z, this.ch.pos.y + 1);
     for (let r = 1.5; r <= 14; r += 1) {
       for (let k = 0; k < 16; k++) {
@@ -331,7 +343,7 @@ export class PartnerController {
       this.arriveR = undefined;
     }
     // a destination off the road (a lot, a door) counts as reached from the nearest road point
-    if (dest && this.aiKey === key && this.arriveR === undefined) this.arriveR = Math.max(dest.arrive || 18, nearestRoadPoint(dest.x, dest.z).dist + 8);
+    if (dest && this.aiKey === key && this.arriveR === undefined) this.arriveR = Math.max(dest.arrive || 18, (g.world.real ? g.world.roads?.nearest(dest.x, dest.z, null, 150)?.d ?? 30 : nearestRoadPoint(dest.x, dest.z).dist) + 8);
     if (dest && Math.hypot(v.pos.x - dest.x, v.pos.z - dest.z) < this.arriveR) {
       if (!this.arrived) { this.arrived = true; g.hud?.subtitle(this.name, dest.line || 'We\'re here.', 2.5); }
       this.park(v);

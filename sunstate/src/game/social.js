@@ -21,6 +21,7 @@
  */
 import * as THREE from 'three';
 import { roadAt, KEYS, ISLAND } from '../world/layout.js';
+import { areaName } from '../realmap/areas.js';
 import { Creator } from './creator.js';
 
 const NEWS = { handle: 'SoBeNow', name: 'SoBe Now', color: '#ff4d6d', verified: true };
@@ -152,6 +153,8 @@ export class Social {
   get memory() { return this.game.memory; }
 
   where(x, z) {
+    const w = this.game.world;
+    if (w?.real) return w.roadAt(x, z)?.name || areaName(w.index, x, z);
     const r = roadAt(x, z);
     if (r) return r.name;
     if (z > KEYS.z0 - 8) return KEYS.name;
