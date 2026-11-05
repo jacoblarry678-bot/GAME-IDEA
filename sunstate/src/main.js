@@ -17,11 +17,15 @@ async function boot() {
   const canvas = document.getElementById('game');
   const engine = new Engine(canvas, settings);
   const input = new Input(canvas, settings);
-  // ?map=real streams the real Miami (in progress); the classic compact South Beach is the default for now
+  // the real Miami (streamed map data) is the game; ?map=classic (or the title menu) gives the compact South Beach
   const params = new URLSearchParams(location.search);
   let mapChoice = params.get('map');
   if (!mapChoice) { try { mapChoice = localStorage.getItem('sunstate.map'); } catch {} }
-  const world = mapChoice === 'real' ? await RealWorld.create(engine) : new World(engine);
+  let world = null;
+  if (mapChoice !== 'classic') {
+    try { world = await RealWorld.create(engine); } catch (err) { console.warn('real map unavailable, using the classic map', err); }
+  }
+  if (!world) world = new World(engine);
   const app = new App({ engine, world, input, settings, canvas });
   await app.init();
 

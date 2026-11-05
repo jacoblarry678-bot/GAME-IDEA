@@ -57,7 +57,7 @@ export const BINDING_LABELS = {
   skip: 'Skip dialogue',
   switchCharacter: 'Switch character (Cal / Sol)',
   partner: 'Partner: follow / wait (pull over / drive)',
-  phone: 'LOOP (social feed) on the phone',
+  phone: 'Phone (messages, contacts, map, LOOP, bank)',
   loopAI: 'LOOP: ask Claude for fresh posts (claude.ai only)',
 };
 

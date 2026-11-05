@@ -25,6 +25,10 @@ Every asset is made in code when the game starts. There are no image, model, aud
 | UI fonts | Google Fonts: *Archivo Black*, *Inter* (falls back to system fonts offline) | SIL Open Font License 1.1 | `index.html` |
 | Rendering library and post-processing passes (GTAO, bloom, output) | three.js 0.169 | MIT | `package.json` |
 
+| Real Miami map: road geometry and names, building footprints and heights, land use, water, places of interest | Overture Maps Foundation release 2026-10-21.0 (themes: transportation, buildings, places, base). This includes OpenStreetMap data | ODbL 1.0 (OpenStreetMap-derived parts) and CDLA Permissive 2.0 (other Overture data). Attribution: "Map data © OpenStreetMap contributors (ODbL) and the Overture Maps Foundation", shown on the title screen and the map | `tools/mapdata/`, packed into `public/map/` at build time |
+
+Business names in the map data are not used. Each business gets an invented name from its kind (`src/realmap/realshops.js`). Street and neighbourhood names are kept as public geography.
+
 Nothing was extracted from Rockstar games or trailers: no models, textures, voices, music or animations.
 
 **Real vs invented.**

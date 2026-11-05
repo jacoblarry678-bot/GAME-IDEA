@@ -10,6 +10,31 @@ A playable browser prototype of a third-person, open-world crime game set in a s
 
 > **Fan prototype, original content.** This was built as an homage to the *atmosphere* of Rockstar's Grand Theft Auto VI reveals: a Florida-style coast, a criminal couple, neon nights. It is **not** Rockstar's game. It uses no Rockstar code, assets, characters, music or story, and it is not affiliated with or endorsed by Rockstar Games or Take-Two. Every model, texture, sound and line of dialogue is generated in code or written for this project (see [docs/ASSETS.md](docs/ASSETS.md)). For what was referenced and how reliable each source is, see [docs/REFERENCES.md](docs/REFERENCES.md).
 
+## Real Miami (the default map)
+
+The game now runs on the real city at 1:1, streamed from open map data. The map covers Greater Miami (Miami Beach, Downtown, Brickell, Wynwood, Little Havana, Coconut Grove, Coral Gables, Hialeah, the airport) and the US-1 corridor down the Keys to Marathon. That is about 290,000 road segments and every building footprint in the data. The classic compact South Beach is still on the title screen ("Classic South Beach", or `?map=classic`).
+
+- **Streets and buildings** come from Overture Maps (which includes OpenStreetMap). Real footprints and heights are extruded with facades styled by neighbourhood: deco in South Beach, Mediterranean in Coral Gables, glass towers downtown. Bridges and overpasses are raised decks. Tiles stream around you in a worker.
+- **Traffic** drives in lanes along the real road polylines. It gives way at bigger roads, keeps off alleys and parking aisles, and slows for bends.
+- **People** walk the sidewalks of real streets. Crowds gather on the beach and in the parks.
+- **Police** respond along real routes, then chase you with the usual pursuit AI.
+- **GPS.** Set a waypoint on the map (M) and the minimap draws the fastest route over the real network, with distance, ETA and the streets to follow. A* runs in a worker over the whole graph.
+- **Shops at real locations, under invented names.** Every business in the data of a kind the game knows is a walk-up counter (E):
+  - food and drink: corner stores, gas stations, groceries, restaurants, fast food, cafés, bars, casinos
+  - shopping: clothes, jewellers, phone shops, pharmacies, gun and pawn shops, car dealers (buy a car; it's parked out front)
+  - services: clinics, auto body (drive in: repair or respray), banks and ATMs, hotels and motels (sleep and save), gyms, barbers, salons, tattoo studios, cinemas, a police desk (pay your fines)
+
+  Hold a gun at a till to rob it. A silent alarm calls it in a few seconds later.
+- **Your apartment** is on Ocean Drive (⌂): save, sleep, wardrobe. Saves remember which map they belong to.
+- **Missions on real streets:**
+  - *Small Change*: a corner store a few blocks from home.
+  - *Low Tide*: the Dinner Key marina in Coconut Grove, then the Calderas chase you back across the bay.
+- **The phone** (P):
+  - Messages and Contacts. Call your partner, a cab (Sunstate Cab: a paid ride to your waypoint), or the mechanic, who brings your car to the kerb.
+  - Map, LOOP, Bank (balance and recent transactions) and Settings.
+
+Map data © OpenStreetMap contributors (ODbL) and the Overture Maps Foundation. Businesses, people, brands and the police are fictional; street and place names are real public geography. Rebuilding the map data is covered in `tools/mapdata/` (`extract.py` → `build_packs.py` → `graph_bin.mjs`).
+
 ## Run it
 
 ```bash

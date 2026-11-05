@@ -18,7 +18,8 @@ export async function launch(url = process.env.URL || 'http://localhost:4190/', 
       localStorage.setItem('sunstate.settings.v1', JSON.stringify(s));
     } catch {}
   });
-  await page.goto(url + query, { waitUntil: 'load', timeout: 120000 });
+  // (the real map is the default; the existing tests play the classic map unless they ask)
+  await page.goto(url + (query || '?map=classic'), { waitUntil: 'load', timeout: 120000 });
   await page.waitForFunction(() => window.__sun && (window.__sun.app || window.__sun.fatal), null, { timeout: 120000 });
   const fatal = await page.evaluate(() => window.__sun.fatal);
   if (fatal) throw new Error('boot failed: ' + fatal);

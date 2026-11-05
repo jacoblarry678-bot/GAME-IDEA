@@ -45,6 +45,12 @@ What this prototype draws on, where it came from, how sure we are, and what we d
 | 23 | OUR DESIGN ADDITION | User request ("fully revamp the game with irl graphics and more irl places") | The map now uses real public geography by name: South Beach's street grid (Alton Rd, Washington Ave, Collins Ave, Ocean Dr; 17th St to South Pointe Dr), Lummus Park and Muscle Beach, Flamingo Park, Biscayne Bay and the MacArthur Causeway, the Seven Mile Bridge, and Marathon with Boot Key Harbor. The layout is compressed from memory of public maps and is **not surveyed**. Businesses, people, police and brands stay invented, and there is no real agency or trademark. | — | Built: names in `src/world/layout.js` and `district.js`. Old saves migrate their per-area notoriety. |
 | 24 | OUR DESIGN ADDITION | Same | "IRL graphics" taken as photoreal-leaning rendering within three.js and a CPU-only test machine: a physically based sky (Preetham), image-based light, GTAO, filmic grade, GPU-baked PBR ground materials, real-geometry palms, lofted car bodies, sky-reflecting water, and ambient boats, a cruise ship, a banner plane and gulls (the plane and banner are from still #6). | — | Built: `src/core/engine.js`, `src/world/pbr.js`, `palms.js`, `ambient.js`, `src/entities/vehicleModel.js`. Not profiled on a real GPU: an automatic quality governor steps down if fps < 40. |
 
+## Map data (Real Miami)
+
+| Source | What was used | How |
+|---|---|---|
+| Overture Maps, release 2026-10-21.0 (S3 GeoParquet, `overturemaps-us-west-2`) | Road segments and connectors, buildings, places, land, land use, water, infrastructure, for Greater Miami and the US-1 corridor to Marathon | Read with HTTP range requests (`tools/mapdata/extract.py`). Projected to game metres around Bayfront Park (`build_packs.py`). Road graph packed by `graph_bin.mjs`. ODbL/CDLA attribution as in docs/ASSETS.md. |
+
 ## Not used as requirements
 - Leaked material, datamined details and fan map reconstructions. None of these was consulted.
 - Exact trailer shots, music and UI. We never recreate them.

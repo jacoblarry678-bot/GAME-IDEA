@@ -103,6 +103,41 @@ Asked for: "add where we can post and get likes and follows".
 - **Water:** environment-map sky reflections, swell, sun glitter.
 - **Ambient life:** boats with wakes, a jet ski, sailboats, a cruise ship, a banner plane with fictional ads, and gulls.
 
+## After the IRL revamp: Real Miami at 1:1 (complete, beta)
+
+1. **Data pipeline** (`tools/mapdata/`):
+   - Overture Maps GeoParquet read by HTTP range requests.
+   - Packed into 2 km gzip packs of 500 m sub-tiles, with buildings, roads, ground cover, places and piers.
+   - The drivable graph is a compact binary: 227k nodes, 290k edges.
+2. **Streaming world** (`src/realmap/`):
+   - Tiles are built in a worker; colliders and shadows only near you.
+   - Surface raster for ground, water and minimap.
+   - Raised decks for bridges and ramps; neighbourhood facade styles.
+3. **Road network AI:**
+   - The graph is held in a second worker (nearest road, A* routes, the region map).
+   - The main thread keeps the ~800 m of edges around you.
+   - Traffic, pedestrians, police, the partner's driving and the Caldera crews all use real lanes and routes.
+4. **Shops:** every known business kind at its real location under an invented name, with menus, robbery, car buying, hotels.
+5. **Safehouse, saves and missions:**
+   - Apartment on Ocean Drive.
+   - Map-aware saves.
+   - Small Change and Low Tide rebuilt on real streets.
+6. **Phone:** messages, contacts (partner, cab rides, mechanic), map, LOOP, bank, settings.
+7. **Real Miami is the default map;** the classic map stays on the title screen.
+
+Verified headless (SwiftShader, no screenshots):
+- Boot and spawn.
+- Traffic: 16 cars, all moving, none stalled over 10 s, median 90 m travelled.
+- Pedestrians: 30, about half walking at any moment.
+- Police: dispatch and arrival.
+- GPS: a 5.3 km route to the hospital.
+- Shops: about 890 found around South Beach; walk-up menu, purchase.
+- Small Change: start to finish.
+- Save and continue on the real map.
+- Low Tide: Rudy and the Caldera ambush at Dinner Key.
+- Phone: apps, cab ride, mechanic.
+- Classic map still boots, and the unit tests pass.
+
 ## Verification
 
 ### Latest full run (the IRL revamp build: real places, PBR, palms, lofted cars, water, ambient life, people)
@@ -245,6 +280,13 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
 - Long sessions of real-time play by a human.
 
 ## Known issues / limits
+- **Real Miami (beta):**
+  - Facades are styled per neighbourhood, not modelled per building. Shops have walk-up counters, not interiors.
+  - The map data has no traffic signals, so junctions are give-way only. Cross traffic can still meet in the middle.
+  - Tunnels (PortMiami) are not built. Traffic avoids them.
+  - Not yet profiled on a real GPU; the quality governor steps detail down below 40 fps.
+  - Sketchfab models are not used: the session has no network access to Sketchfab and no API token.
+  - The pause-menu region map draws roads only (no coastline) until you zoom in close enough to see the streamed tiles.
 - **Still not photoreal.**
   - People are the weakest part: primitive bodies, no IK.
   - Cars have lofted bodies but no opening doors or deformation.
@@ -259,7 +301,7 @@ Container: 4 CPU cores, no GPU. Chromium renders through SwiftShader on the CPU,
 - The partner drives with the traffic AI: lane-following, so it's no stunt driver. In a getaway it ignores red lights.
 - How a chase goes varies run to run. Sometimes the Calderas catch up and trade shots on the Seven Mile Bridge. Sometimes they get boxed in by traffic and fall behind (the "200 m away for 6 s" rule then ends the chase). If you get out near them, they get out and fight.
 - Rain has no puddle reflections or splashes, the water surface doesn't react to it, and there are no umbrellas. Wet roads are a darker, glossier material using the sky reflection.
-- No phone UI yet (messages appear in the feed). The cooler in "Low Tide" isn't shown as an object.
+- The cooler in "Low Tide" isn't shown as an object.
 - **City memory and places:**
   - "AI" here means scripted rules that remember things, not a learning model.
   - Recognition needs an officer close by with a clear view. Fame sightings need a nickname and high notoriety, so they take a while to show up in normal play.

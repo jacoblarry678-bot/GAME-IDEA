@@ -66,15 +66,11 @@ export class Menus {
       m.appendChild(note);
       this.app.switchMap(to).catch((e) => { note.textContent = 'Could not load the map: ' + (e.message || e); for (const b of m.querySelectorAll('button')) b.disabled = false; });
     };
-    if (real) {
-      add('Explore Real Miami', () => this.app.startNew(), false, 'BETA · the real city at 1:1, streamed from open map data · free roam for now');
-      add('Back to classic South Beach', () => switchMap('classic'), false, 'the story, missions, traffic and police');
-      m.appendChild(h('div', 'sub', 'Map data © OpenStreetMap contributors (ODbL) and the Overture Maps Foundation'));
-    } else {
-      add('Continue', () => this.app.continueGame(), !hasSave, save ? `Saved ${new Date(save.savedAt).toLocaleString()} · $${save.money.toLocaleString()}` : '');
-      add('New Game', () => this.app.startNew());
-      add('Real Miami (beta)', () => switchMap('real'), false, 'the real city at 1:1: Miami Beach, Downtown, the Keys');
-    }
+    add('Continue', () => this.app.continueGame(), !hasSave, save ? `Saved ${new Date(save.savedAt).toLocaleString()} · $${save.money.toLocaleString()}` : '');
+    add('New Game', () => this.app.startNew(), false, real ? 'Miami at 1:1: South Beach, Downtown, Brickell, the Grove, the Keys' : 'the compact South Beach');
+    if (real) add('Classic South Beach', () => switchMap('classic'), false, 'the original compact map');
+    else add('Real Miami', () => switchMap('real'), false, 'the real city at 1:1, streamed from open map data');
+    if (real) m.appendChild(h('div', 'sub', 'Map data © OpenStreetMap contributors (ODbL) and the Overture Maps Foundation'));
     add('Settings', () => this.openPause('settings', true));
     add('Controls', () => this.openPause('controls', true));
     if (window.matchMedia?.('(pointer: coarse)').matches && !navigator.getGamepads?.()?.some(Boolean)) {
