@@ -1,67 +1,83 @@
 /**
  * RealWorld: the real Miami, streamed. Same interface the game uses on the old World
  * (ground, isWater, surface, interiorAt, collision, update, …), backed by the packs in
- * public/map. Sub-tiles (500 m) within the detail radius are built a few per frame, with a
- * time budget, nearest first; tiles that fall out of range are dropped with their colliders.
+ * public/map.
+ *
+ * Sub-tiles (500 m) are built in a Web Worker (tileworker.js): fetching, decoding, geometry,
+ * rasters and minimap images all happen off the main thread. The main thread only uploads
+ * the finished arrays, a little each frame. Colliders exist only near the player and only
+ * nearby tiles cast shadows, so the far city costs draw calls and nothing else.
  */
 import * as THREE from 'three';
 import { CollisionWorld } from '../world/collision.js';
 import { makeMaterials, buildWater } from '../world/build.js';
 import * as T from '../world/textures.js';
-import { loadIndex, loadPack, dropPack } from './data.js';
-import { buildTile, SURF, RASTER } from './tilemesh.js';
+import { loadIndex, loadPack, mapBase } from './data.js';
+import { buildTileData, meshesFromArrays, SURF, RASTER } from './tilemesh.js';
+import TileWorker from './tileworker.js?worker&inline';
 
 export const WATER_Y = -0.45;
 const SEABED = -3.5;
 const SURF_NAME = ['water', 'grass', 'grass', 'sand', 'asphalt', 'concrete', 'concrete', 'grass', 'wood'];
-const DETAIL = { low: 450, medium: 600, high: 800, ultra: 1000 };
+const DETAIL = { low: 380, medium: 500, high: 650, ultra: 850 };
+const COLLIDE_R = 260, SHADOW_R = 220, IN_FLIGHT = 3;
+const COLLIDERS_PER_FRAME = 700; // walls added per frame as tiles come into range (no spikes)
 
 // the Art Deco district: Ocean Dr / Collins / Washington between 5th and 23rd St (game metres)
 const DECO = { x0: 5600, x1: 7000, z0: -2600, z1: 300 };
 
-const MINI = [[26, 90, 114], [217, 210, 195], [143, 179, 106], [239, 220, 174], [58, 61, 68], [232, 228, 220], [158, 148, 131], [130, 172, 96], [176, 138, 90]];
-/** A minimap image of a tile: one pixel per 2 m surface cell. */
-function miniCanvas(r) {
-  const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(r.N, r.N) : Object.assign(document.createElement('canvas'), { width: r.N, height: r.N });
-  const x = c.getContext('2d'), img = x.createImageData(r.N, r.N), d = img.data;
-  for (let i = 0; i < r.codes.length; i++) { const k = MINI[r.codes[i]] || MINI[1]; d[i * 4] = k[0]; d[i * 4 + 1] = k[1]; d[i * 4 + 2] = k[2]; d[i * 4 + 3] = 255; }
-  x.putImageData(img, 0, 0);
-  return c;
-}
-
 export class RealWorld {
-  static async create(engine) {
-    const index = await loadIndex();
-    return new RealWorld(engine, index);
+  /** Create the world; `mats` can be shared with the classic world (no second texture bake). */
+  static async create(engine, { mats = null } = {}) {
+    const w = new RealWorld(engine, mats);
+    await w.start();
+    return w;
   }
 
-  constructor(engine, index) {
+  constructor(engine, mats) {
     this.engine = engine;
-    this.index = index;
     this.real = true;
     this.collision = new CollisionWorld();
-    this.mats = makeMaterials(engine);
+    this.mats = mats || makeMaterials(engine);
     this.extraMats = new Map();
     this.group = new THREE.Group();
     this.group.name = 'realmap';
     engine.scene.add(this.group);
-    this.tiles = new Map(); // "i_j_u_v" → { state, mesh group, colliders, raster, decks }
-    this.packs = new Map(); // "i_j" → decoded pack | 'loading'
-    this.queue = [];
-    this.deckCells = new Map(); // 32 m cells → raised road segments
+    this.tiles = new Map(); // key → tile record (see integrate)
+    this.pending = new Map(); // key → requested at
+    this.results = [];
+    this.deckCells = new Map();
     this.waterY = WATER_Y;
     this.water = buildWater(engine, { depth: null, size: 4000 });
     this.water.position.y = WATER_Y;
     engine.scene.add(this.water);
-    this.signs = [];
-    this.places = {};
-    this.interiors = [];
-    this.signalClock = 0;
-    this.clubPulse = 0;
+    this.signs = []; this.places = {}; this.interiors = [];
+    this.signalClock = 0; this.clubPulse = 0;
     this.facades = Object.entries(this.mats).filter(([k]) => k.startsWith('fac:')).map(([, m]) => m);
-    this.focus = new THREE.Vector3(6386, 0, -708);
-    this.radius = DETAIL[engine.settings?.g?.drawDistance] || 800;
-    this._t = 0;
+    this.focus = new THREE.Vector3(6330, 0, -700);
+    this.radius = DETAIL[engine.settings?.g?.drawDistance] || 750;
+    this._lod = 0;
+  }
+
+  async start() {
+    try {
+      this.worker = new TileWorker();
+      this.worker.onmessage = (e) => this.onWorker(e.data);
+      this.worker.onerror = (e) => { console.warn('map worker failed, building on the main thread', e.message); this.worker = null; };
+      this.index = await new Promise((res, rej) => {
+        this._ready = (m) => (m.error ? rej(new Error(m.error)) : res(m.index));
+        this.worker.postMessage({ type: 'init', base: mapBase(), deco: DECO, facadeTile: T.FACADE_TILE });
+      });
+    } catch (err) {
+      console.warn('map worker unavailable:', err.message || err);
+      this.worker = null;
+      this.index = await loadIndex();
+    }
+  }
+
+  onWorker(m) {
+    if (m.type === 'ready') return this._ready?.(m);
+    if (m.type === 'tile') { this.pending.delete(m.key); this.results.push(m); }
   }
 
   /** Material for a bin key from the tile builder. */
@@ -91,16 +107,12 @@ export class RealWorld {
     return { i, j, u, v, key: `${i}_${j}_${u}_${v}` };
   }
 
-  ensurePack(i, j) {
-    const k = `${i}_${j}`;
-    if (this.packs.has(k)) return this.packs.get(k);
-    if (!this.index.packs[k]) { this.packs.set(k, null); return null; }
-    this.packs.set(k, 'loading');
-    loadPack(this.index, i, j).then((p) => { this.packs.set(k, p); }, (e) => { console.warn('map pack', k, e); this.packs.set(k, null); });
-    return 'loading';
+  tileCenter(key) {
+    const [i, j, u, v] = key.split('_').map(Number), S = this.index.sub;
+    return [i * this.index.pack + (u + 0.5) * S, j * this.index.pack + (v + 0.5) * S];
   }
 
-  /** Which sub-tiles should be built around the focus, nearest first. */
+  /** Sub-tiles to have built around (fx, fz), nearest first; skips tiles with no pack. */
   wanted(fx, fz, R) {
     const S = this.index.sub, out = [];
     const s0x = Math.floor((fx - R) / S), s1x = Math.floor((fx + R) / S), s0z = Math.floor((fz - R) / S), s1z = Math.floor((fz + R) / S);
@@ -109,32 +121,44 @@ export class RealWorld {
       const d = Math.max(0, Math.hypot(cx - fx, cz - fz) - S * 0.71);
       if (d > R) continue;
       const k = this.subKey(cx, cz);
+      if (!this.index.packs[`${k.i}_${k.j}`]) continue;
       out.push({ ...k, d });
     }
     return out.sort((a, b) => a.d - b.d);
   }
 
-  buildOne(w) {
-    const pack = this.packs.get(`${w.i}_${w.j}`);
-    const tileData = pack?.tiles.get(`${w.u}_${w.v}`);
-    const rec = { state: 'built', group: null, colliders: [], raster: null, decks: [], places: [], roads: [] };
-    if (tileData) {
+  request(w) {
+    this.pending.set(w.key, performance.now());
+    if (this.worker) { this.worker.postMessage({ type: 'build', key: w.key, i: w.i, j: w.j, u: w.u, v: w.v }); return; }
+    // no worker: build here (slower, but still nearest first and one at a time)
+    loadPack(this.index, w.i, w.j).then((pack) => {
+      const tile = pack?.tiles.get(`${w.u}_${w.v}`);
+      this.pending.delete(w.key);
+      if (!tile) { this.results.push({ key: w.key, empty: true }); return; }
       const deco = (x, z) => x > DECO.x0 && x < DECO.x1 && z > DECO.z0 && z < DECO.z1;
-      const built = buildTile(tileData, this.index, (k) => this.material(k), { deco, FACADE_TILE: T.FACADE_TILE });
+      this.results.push({ key: w.key, ...buildTileData(tile, this.index, { deco, FACADE_TILE: T.FACADE_TILE }) });
+    });
+  }
+
+  /** Put a finished tile into the scene (geometry upload, deck index; colliders come later). */
+  integrate(m) {
+    const [cx, cz] = this.tileCenter(m.key);
+    const f = this.focus;
+    // dropped while it was being built
+    if (Math.hypot(cx - f.x, cz - f.z) - this.index.sub * 0.71 > this.radius + 350) return;
+    const rec = { key: m.key, cx, cz, group: null, colliderDefs: m.colliders || [], colliders: null, raster: m.raster || null, decks: m.decks || [], places: m.places || [], roads: m.roads || [], mini: m.mini || null, shadows: false };
+    if (m.error) console.warn('map tile', m.key, m.error);
+    if (m.bins && m.bins.length) {
       const g = new THREE.Group();
-      g.name = 'tile ' + w.key;
-      for (const m of built.meshes) g.add(m);
+      g.name = 'tile ' + m.key;
+      const near = Math.hypot(cx - f.x, cz - f.z) < SHADOW_R;
+      for (const mesh of meshesFromArrays(m.bins, (k) => this.material(k), near)) g.add(mesh);
+      rec.shadows = near;
       this.group.add(g);
       rec.group = g;
-      for (const c of built.colliders) rec.colliders.push(this.collision.add(c));
-      rec.raster = built.raster;
-      rec.mini = miniCanvas(built.raster);
-      rec.decks = built.decks;
-      rec.places = built.places;
-      rec.roads = built.roads;
-      for (const d of rec.decks) this.indexDeck(d, w.key);
     }
-    this.tiles.set(w.key, rec);
+    for (const d of rec.decks) this.indexDeck(d, m.key);
+    this.tiles.set(m.key, rec);
   }
 
   dropTile(key) {
@@ -144,12 +168,26 @@ export class RealWorld {
       this.group.remove(rec.group);
       rec.group.traverse((o) => { if (o.isMesh) o.geometry.dispose(); });
     }
-    for (const c of rec.colliders) this.collision.remove(c);
+    this.setColliders(rec, false);
+    rec.mini?.close?.();
     for (const [ck, list] of this.deckCells) {
       const keep = list.filter((s) => s.tile !== key);
       if (keep.length !== list.length) { if (keep.length) this.deckCells.set(ck, keep); else this.deckCells.delete(ck); }
     }
     this.tiles.delete(key);
+  }
+
+  /** Add (a budgeted slice of) a tile's colliders, or remove them all. Returns colliders added. */
+  setColliders(rec, on, budget = Infinity) {
+    if (on) {
+      if (!rec.colliders) rec.colliders = [];
+      const defs = rec.colliderDefs;
+      let n = 0;
+      while (rec.colliders.length < defs.length && n < budget) { rec.colliders.push(this.collision.add(defs[rec.colliders.length])); n++; }
+      return n;
+    }
+    if (rec.colliders) { for (const c of rec.colliders) this.collision.remove(c); rec.colliders = null; }
+    return 0;
   }
 
   indexDeck(d, tile) {
@@ -167,43 +205,45 @@ export class RealWorld {
     }
   }
 
-  /** Step the streamer: request packs, build within a time budget, drop far tiles. */
-  stream(budgetMs = 6) {
+  /** One streaming step: request nearby tiles, integrate finished ones within a budget, drop far ones. */
+  stream(budgetMs = 4) {
     const f = this.focus, R = this.radius;
     const want = this.wanted(f.x, f.z, R);
-    const t0 = performance.now();
     for (const w of want) {
-      if (this.tiles.has(w.key)) continue;
-      const p = this.ensurePack(w.i, w.j);
-      if (p === 'loading') continue;
-      this.buildOne(w);
-      if (performance.now() - t0 > budgetMs) break;
+      if (this.pending.size >= IN_FLIGHT) break;
+      if (!this.tiles.has(w.key) && !this.pending.has(w.key)) this.request(w);
     }
-    // drop tiles well outside the radius, and packs nobody needs
-    const keepR = R + 350, S = this.index.sub;
-    for (const key of [...this.tiles.keys()]) {
-      const [i, j, u, v] = key.split('_').map(Number);
-      const cx = i * this.index.pack + (u + 0.5) * S, cz = j * this.index.pack + (v + 0.5) * S;
-      if (Math.hypot(cx - f.x, cz - f.z) - S * 0.71 > keepR) this.dropTile(key);
+    const t0 = performance.now();
+    while (this.results.length && performance.now() - t0 < budgetMs) {
+      // integrate the nearest finished tile first
+      let bi = 0, bd = Infinity;
+      this.results.forEach((r, i) => { const [cx, cz] = this.tileCenter(r.key); const d = Math.hypot(cx - f.x, cz - f.z); if (d < bd) { bd = d; bi = i; } });
+      this.integrate(this.results.splice(bi, 1)[0]);
     }
-    for (const [k, p] of this.packs) {
-      if (p === 'loading' || p === null) continue;
-      const [i, j] = k.split('_').map(Number);
-      const cx = (i + 0.5) * this.index.pack, cz = (j + 0.5) * this.index.pack;
-      if (Math.hypot(cx - f.x, cz - f.z) > keepR + this.index.pack) { this.packs.delete(k); dropPack(i, j); }
+    // colliders near the player (nearest tiles first, a slice per frame), shadows from nearby
+    // tiles; drop what is far behind
+    const keepR = R + 350;
+    let budget = COLLIDERS_PER_FRAME;
+    const recs = [...this.tiles.values()].map((rec) => [rec, Math.hypot(rec.cx - f.x, rec.cz - f.z) - this.index.sub * 0.71]).sort((a, b) => a[1] - b[1]);
+    for (const [rec, d] of recs) {
+      if (d > keepR) { this.dropTile(rec.key); continue; }
+      if (d < COLLIDE_R) budget -= this.setColliders(rec, true, Math.max(0, budget));
+      else if (d > COLLIDE_R + 120) this.setColliders(rec, false);
+      const sh = d < SHADOW_R - this.index.sub * 0.3;
+      if (rec.group && sh !== rec.shadows) { rec.shadows = sh; for (const m of rec.group.children) m.castShadow = sh && m.userData.caster; }
     }
   }
 
-  /** Load and build everything near (x, z) before play starts there. */
-  async ready(x, z, r = 350) {
+  /** Stream everything near (x, z) before play starts there (async: the page stays responsive). */
+  async ready(x, z, r = 300, onProgress = null) {
     this.focus.set(x, 0, z);
-    for (let guard = 0; guard < 400; guard++) {
+    for (let guard = 0; guard < 3000; guard++) {
+      this.stream(30);
       const want = this.wanted(x, z, r);
-      const missing = want.filter((w) => !this.tiles.has(w.key));
-      if (!missing.length) return;
-      for (const w of missing) this.ensurePack(w.i, w.j);
-      if (missing.some((w) => this.packs.get(`${w.i}_${w.j}`) === 'loading')) await new Promise((res) => setTimeout(res, 30));
-      for (const w of missing) if (this.packs.get(`${w.i}_${w.j}`) !== 'loading' && !this.tiles.has(w.key)) this.buildOne(w);
+      const missing = want.filter((w) => !this.tiles.has(w.key)).length;
+      onProgress?.(1 - missing / Math.max(1, want.length));
+      if (!missing) { for (const rec of this.tiles.values()) this.setColliders(rec, Math.hypot(rec.cx - x, rec.cz - z) - this.index.sub * 0.71 < COLLIDE_R); return; }
+      await new Promise((res) => setTimeout(res, 16));
     }
   }
 
@@ -213,8 +253,9 @@ export class RealWorld {
   rasterAt(x, z) {
     const k = this.subKey(x, z);
     const rec = this.tiles.get(k.key);
-    if (!rec || !rec.raster) return rec ? SURF.water : -1; // -1: not built yet
+    if (!rec) return -1; // not built yet
     const r = rec.raster;
+    if (!r) return SURF.water; // a tile with no data at all is open water
     const cx = Math.floor((x - r.x0) / RASTER), cz = Math.floor((z - r.z0) / RASTER);
     if (cx < 0 || cz < 0 || cx >= r.N || cz >= r.N) return SURF.land;
     return r.codes[cz * r.N + cx];
@@ -261,20 +302,16 @@ export class RealWorld {
 
   /** The named road at a point, if any (for the HUD). */
   roadAt(x, z) {
-    const k = this.subKey(x, z);
-    const keys = [k.key];
+    const rec = this.tiles.get(this.subKey(x, z).key);
+    if (!rec) return null;
     let best = null, bd = 1e9;
-    for (const key of keys) {
-      const rec = this.tiles.get(key);
-      if (!rec) continue;
-      for (const r of rec.roads) {
-        const n = r.pts.length / 2;
-        for (let i = 0; i < n - 1; i++) {
-          const ax = r.pts[i * 2], az = r.pts[i * 2 + 1], dx = r.pts[i * 2 + 2] - ax, dz = r.pts[i * 2 + 3] - az;
-          const L2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2));
-          const d = Math.hypot(ax + dx * t - x, az + dz * t - z);
-          if (d < r.half + 3 && d < bd) { bd = d; best = r; }
-        }
+    for (const r of rec.roads) {
+      const n = r.pts.length / 2;
+      for (let i = 0; i < n - 1; i++) {
+        const ax = r.pts[i * 2], az = r.pts[i * 2 + 1], dx = r.pts[i * 2 + 2] - ax, dz = r.pts[i * 2 + 3] - az;
+        const L2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2));
+        const d = Math.hypot(ax + dx * t - x, az + dz * t - z);
+        if (d < r.half + 3 && d < bd) { bd = d; best = r; }
       }
     }
     return best;
@@ -286,12 +323,15 @@ export class RealWorld {
   restoreProps() {}
   placeInteriorLight() {}
 
+  /** Show or hide everything this world put in the scene (when switching maps). */
+  setVisible(v) { this.group.visible = v; this.water.visible = v; }
+
   update(dt) {
     this.signalClock += dt;
     const cam = this.engine.camera.position;
     this.focus.copy(cam);
-    this._t += dt;
-    this.stream(this.engine.externalClock ? 50 : 6);
+    this.radius = DETAIL[this.engine.settings?.g?.drawDistance] || this.radius;
+    this.stream(this.engine.externalClock ? 50 : 4);
     // the sea follows the camera (its shader works in world space, so it never swims)
     this.water.position.x = Math.round(cam.x / 64) * 64;
     this.water.position.z = Math.round(cam.z / 64) * 64;

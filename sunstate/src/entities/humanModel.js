@@ -79,9 +79,9 @@ function buildGeometry(look) {
   for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.075 * b, 8, 6), 'chest', look.sleeveless ? skin : top, s * (sh - 0.02), 1.42, 0);
   // neck and head
   add(new THREE.CylinderGeometry(0.048, 0.055, 0.12, 8), 'neck', skin, 0, 1.53, 0);
-  add(new THREE.SphereGeometry(0.105, 18, 14).scale(0.92, 1.12, 1.02), 'head', skin, 0, 1.66, 0.005);
+  add(new THREE.SphereGeometry(0.105, 14, 10).scale(0.92, 1.12, 1.02), 'head', skin, 0, 1.66, 0.005);
   // jaw and chin, cheekbones
-  add(new THREE.SphereGeometry(0.075, 14, 10).scale(f ? 0.95 : 1.05, 0.8, 0.95), 'head', skin, 0, 1.6, 0.03);
+  add(new THREE.SphereGeometry(0.075, 10, 8).scale(f ? 0.95 : 1.05, 0.8, 0.95), 'head', skin, 0, 1.6, 0.03);
   for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.022, 8, 6), 'head', skin, s * 0.05, 1.645, 0.068);
   // nose: bridge and tip
   add(new THREE.CylinderGeometry(0.009, 0.016, 0.045, 8).rotateX(-0.35), 'head', skin, 0, 1.66, 0.1);
@@ -89,10 +89,10 @@ function buildGeometry(look) {
   const tint = (hex, k, r = 0) => { const c = new THREE.Color(hex); c.r = Math.min(1, c.r * k + r); c.g *= k; c.b *= k; return c.getHex(); };
   for (const s of [-1, 1]) {
     // eyes: sclera, iris, pupil, and an upper lid that shades them
-    add(new THREE.SphereGeometry(0.0145, 10, 8), 'head', 0xefe9e0, s * 0.037, 1.682, 0.091, 0, 0, 0, 'eye');
-    add(new THREE.SphereGeometry(0.0085, 10, 8).scale(1, 1, 0.5), 'head', look.eyes ?? 0x3b2414, s * 0.037, 1.682, 0.1035, 0, 0, 0, 'eye');
-    add(new THREE.SphereGeometry(0.0042, 8, 6).scale(1, 1, 0.5), 'head', 0x050505, s * 0.037, 1.682, 0.1078, 0, 0, 0, 'eye');
-    add(new THREE.SphereGeometry(0.0165, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.42), 'head', tint(skin, 0.92), s * 0.037, 1.684, 0.0905, -0.3, 0, 0, 'skin');
+    add(new THREE.SphereGeometry(0.0145, 8, 6), 'head', 0xefe9e0, s * 0.037, 1.682, 0.091, 0, 0, 0, 'eye');
+    add(new THREE.SphereGeometry(0.0085, 8, 4).scale(1, 1, 0.5), 'head', look.eyes ?? 0x3b2414, s * 0.037, 1.682, 0.1035, 0, 0, 0, 'eye');
+    add(new THREE.SphereGeometry(0.0042, 6, 3).scale(1, 1, 0.5), 'head', 0x050505, s * 0.037, 1.682, 0.1078, 0, 0, 0, 'eye');
+    add(new THREE.SphereGeometry(0.0165, 8, 3, 0, Math.PI * 2, 0, Math.PI * 0.42), 'head', tint(skin, 0.92), s * 0.037, 1.684, 0.0905, -0.3, 0, 0, 'skin');
     add(new THREE.BoxGeometry(0.04, 0.009, 0.012), 'head', look.hair, s * 0.038, 1.708, 0.099, 0, 0, s * -0.12, 'hair'); // brows
     add(new THREE.SphereGeometry(0.022, 8, 6).scale(0.6, 1, 0.8), 'head', skin, s * 0.098, 1.66, 0); // ears
   }
@@ -108,7 +108,7 @@ function buildGeometry(look) {
   // hair
   const hs = look.hairStyle;
   if (hs !== 'bald') {
-    const cap = new THREE.SphereGeometry(0.113, 18, 10, 0, Math.PI * 2, 0, hs === 'buzz' ? Math.PI * 0.42 : Math.PI * 0.55);
+    const cap = new THREE.SphereGeometry(0.113, 14, 8, 0, Math.PI * 2, 0, hs === 'buzz' ? Math.PI * 0.42 : Math.PI * 0.55);
     cap.scale(0.95, 1.1, 1.06);
     add(cap, 'head', look.hair, 0, 1.675, -0.006, -0.25);
     if (hs === 'long') { add(capsule(0.085, 0.16, 1.25, 0.55), 'head', look.hair, 0, 1.55, -0.07); for (const s of [-1, 1]) add(capsule(0.03, 0.14, 1, 0.8), 'head', look.hair, s * 0.085, 1.58, 0.0); }
@@ -197,7 +197,9 @@ export class HumanModel {
     this.mesh.bind(new THREE.Skeleton(list));
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
-    this.mesh.frustumCulled = false;
+    this.mesh.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9 * scale, 0), 1.6 * scale);
+    this.mesh.boundingSphere = this.mesh.geometry.boundingSphere.clone(); // SkinnedMesh culls with its own sphere
+    this.mesh.frustumCulled = true; // people behind the camera are no longer drawn
     this.group = new THREE.Group();
     this.group.add(this.mesh);
     this.rest = {};

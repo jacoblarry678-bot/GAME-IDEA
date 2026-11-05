@@ -28,7 +28,7 @@ const { Character } = await import('../src/entities/character.js');
 const { Events } = await import('../src/core/events.js');
 const { Wanted, WANTED_CONFIG } = await import('../src/game/wanted.js');
 const { sanitizeSave, defaultSave, writeSave, loadSave, SAVE_KEY } = await import('../src/game/save.js');
-const { sanitizeSettings, Settings } = await import('../src/core/settings.js');
+const { sanitizeSettings, Settings, defaultSettings } = await import('../src/core/settings.js');
 const { laneLine } = await import('../src/ai/driver.js');
 const { Weather, WEATHER_CONFIG } = await import('../src/core/weather.js');
 const { Social } = await import('../src/game/social.js');
@@ -276,7 +276,7 @@ Object.assign(world, realWorld, { ground: (x, z, y) => L.groundHeight(x, z, y), 
   localStorage.setItem(SAVE_KEY, '{not json');
   check('unreadable save does not crash loading', loadSave() === null);
   const st = sanitizeSettings({ graphics: { fov: 500, shadows: 'insane', renderScale: 'x' }, controls: { bindings: { jump: 'KeyJ', bogus: 'KeyB' } } });
-  check('settings validation clamps and rejects bad values', st.graphics.fov === 90 && st.graphics.shadows === 'high' && st.graphics.renderScale === 1 && st.controls.bindings.jump === 'KeyJ' && !st.controls.bindings.bogus);
+  check('settings validation clamps and rejects bad values', st.graphics.fov === 90 && st.graphics.shadows === defaultSettings().graphics.shadows && st.graphics.renderScale === defaultSettings().graphics.renderScale && st.controls.bindings.jump === 'KeyJ' && !st.controls.bindings.bogus);
   const S = new Settings();
   S.bind('jump', 'KeyE');
   check('rebinding swaps keys so no action is left unbound', S.c.bindings.jump === 'KeyE' && S.c.bindings.interact === 'Space');

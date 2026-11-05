@@ -337,7 +337,7 @@ export class Engine {
     this.drawDistance = DRAW[g.drawDistance];
     this.camera.far = this.drawDistance + 900;
     this.baseFov = g.fov;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2) * g.renderScale);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5) * g.renderScale); // 1.5 cap: Retina at 2× costs 4× the pixels
     this.setupComposer();
     this.resize();
     // materials need recompiling when shadows toggle

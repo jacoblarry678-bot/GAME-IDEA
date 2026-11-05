@@ -86,9 +86,9 @@ export class Game {
     // neutral stand-ins for systems other code reads every frame
     const noop = () => {};
     this.store = { holdup: null, inside: false, bag: 0, alarmT: 0, clerk: null, reset: noop, step: noop };
-    this.police = { seeT: 0, seesPlayer: false, units: [], clearAll: noop, copSees: () => false, canSeePlayer: () => false, step: noop, dispatch: noop };
+    this.police = { seeT: 0, seesPlayer: false, arrestProgress: 0, units: [], clearAll: noop, copSees: () => false, canSeePlayer: () => false, reenter: noop, step: noop, dispatch: noop };
     this.director = { clearAll: noop, step: noop };
-    this.club = { dispose: noop, step: noop };
+    this.club = { beat: 0, isOpen: false, items: [], people: [], playerInside: false, tipsy: 0, musicFor: () => null, dispose: noop, step: noop };
     this.missions.disabled = true; // the story missions still live on the classic map
     this.interactables = [];
     const S = REAL_SPAWN;

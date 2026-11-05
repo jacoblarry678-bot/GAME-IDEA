@@ -40,6 +40,12 @@ export class World {
     this.ambient = new Ambient(engine); // boats, the banner plane, gulls (decorative)
   }
 
+  /** Show or hide this world's meshes (when switching to the real map and back). */
+  setVisible(v) {
+    this.group.visible = v; this.props.group.visible = v;
+    if (this.ambient) this.ambient.group.visible = v;
+  }
+
   placeInteriorLight(id) {
     if (this.lightRig === id) return;
     const r = this.lightRigs[id], l = this.engine.interiorLight;

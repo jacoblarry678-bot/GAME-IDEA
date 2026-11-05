@@ -58,7 +58,12 @@ export class Menus {
     };
     const save = this.app.saveInfo();
     const real = !!this.app.world.real;
-    const switchMap = (to) => { try { localStorage.setItem('sunstate.map', to); } catch {} location.reload(); };
+    const switchMap = (to) => {
+      for (const b of m.querySelectorAll('button')) b.disabled = true;
+      const note = h('div', 'sub', to === 'real' ? 'Loading the real Miami…' : 'Loading South Beach…');
+      m.appendChild(note);
+      this.app.switchMap(to).catch((e) => { note.textContent = 'Could not load the map: ' + (e.message || e); for (const b of m.querySelectorAll('button')) b.disabled = false; });
+    };
     if (real) {
       add('Explore Real Miami', () => this.app.startNew(), false, 'BETA · the real city at 1:1, streamed from open map data · free roam for now');
       add('Back to classic South Beach', () => switchMap('classic'), false, 'the story, missions, traffic and police');

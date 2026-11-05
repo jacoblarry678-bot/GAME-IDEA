@@ -14,6 +14,8 @@ import { loadSave, applySave } from './game/save.js';
 import { Input } from './core/input.js';
 import { Weather, WeatherFX } from './core/weather.js';
 import { PLACES } from './world/district.js';
+import { World } from './world/world.js';
+import { RealWorld } from './realmap/realworld.js';
 import './ui/styles.css';
 
 export class App {
@@ -66,6 +68,28 @@ export class App {
   get simulating() { return this.state === 'playing' && !!this.game; }
 
   hasSave() { return !!loadSave(); }
+
+  /**
+   * Switch between the classic South Beach and the real Miami without reloading the page
+   * (the artifact viewer may block reloads and storage). Each world is built once and kept.
+   */
+  async switchMap(to) {
+    const cur = this.world;
+    if ((to === 'real') === !!cur.real || this.switching) return;
+    this.switching = true;
+    try {
+      try { localStorage.setItem('sunstate.map', to); } catch {}
+      this.worlds = this.worlds || {};
+      this.worlds[cur.real ? 'real' : 'classic'] = cur;
+      let next = this.worlds[to];
+      if (!next) next = to === 'real' ? await RealWorld.create(this.engine, { mats: cur.mats }) : new World(this.engine);
+      cur.setVisible?.(false);
+      next.setVisible?.(true);
+      this.world = next;
+      this.weatherFX.water = next.water;
+    } finally { this.switching = false; }
+    if (this.state === 'title') this.menus.showTitle(this.hasSave());
+  }
   keyLabel(action) { return Input.label(this.settings.c.bindings[action]); }
   saveInfo() { return loadSave(); }
 
@@ -268,12 +292,17 @@ export class App {
     const g = this.settings.g;
     if (!g.autoQuality || this.externalClock || this.state !== 'playing' || document.hidden) { this.slowT = 0; return; }
     if (this.engine.fps < 40) this.slowT = (this.slowT || 0) + dt; else this.slowT = Math.max(0, (this.slowT || 0) - dt * 2);
-    if (this.slowT < 5) return;
+    if (this.slowT < 3) return;
     this.slowT = 0;
     let what = null;
-    if (g.renderScale > 0.75) { this.settings.set('graphics', 'renderScale', Math.max(0.7, +(g.renderScale - 0.1).toFixed(2))); what = `render scale ${Math.round(this.settings.g.renderScale * 100)}%`; }
-    else if (g.ao) { this.settings.set('graphics', 'ao', false); what = 'ambient occlusion off'; }
-    else if (g.shadows === 'ultra' || g.shadows === 'high') { this.settings.set('graphics', 'shadows', 'low'); what = 'shadows low'; }
+    const S = this.settings, down = { ultra: 'high', high: 'medium', medium: 'low' };
+    if (g.renderScale > 0.65) { S.set('graphics', 'renderScale', Math.max(0.6, +(g.renderScale - 0.1).toFixed(2))); what = `render scale ${Math.round(S.g.renderScale * 100)}%`; }
+    else if (g.ao) { S.set('graphics', 'ao', false); what = 'ambient occlusion off'; }
+    else if (g.shadows === 'ultra' || g.shadows === 'high') { S.set('graphics', 'shadows', 'low'); what = 'shadows low'; }
+    else if (g.bloom) { S.set('graphics', 'bloom', false); what = 'bloom off'; }
+    else if (g.postfx) { S.set('graphics', 'postfx', false); what = 'post effects off'; }
+    else if (down[g.drawDistance]) { S.set('graphics', 'drawDistance', down[g.drawDistance]); what = `draw distance ${S.g.drawDistance}`; }
+    else if (g.shadows === 'low') { S.set('graphics', 'shadows', 'off'); what = 'shadows off'; }
     if (what) this.hud?.notify(`Frame rate was low, so: ${what}. (Settings → Graphics)`, 'Quality', '', 4);
   }
 
@@ -281,11 +310,18 @@ export class App {
   titleCamera(dt) {
     const t = this.titleT * 0.035;
     const cam = this.engine.camera;
-    const z = -170 + ((t * 60) % 340);
-    cam.position.set(205 + Math.sin(t) * 12, 34 + Math.sin(t * 0.7) * 6, z);
-    cam.lookAt(130, 12, z + 60);
+    if (this.world.real) {
+      // the real map: up Ocean Drive over Lummus Park, Miami Beach
+      const z = -400 - ((t * 60) % 1400);
+      cam.position.set(6420 + Math.sin(t) * 15, 45 + Math.sin(t * 0.7) * 8, z);
+      cam.lookAt(6300, 10, z - 90);
+    } else {
+      const z = -170 + ((t * 60) % 340);
+      cam.position.set(205 + Math.sin(t) * 12, 34 + Math.sin(t * 0.7) * 6, z);
+      cam.lookAt(130, 12, z + 60);
+    }
     if (cam.fov !== 55) { cam.fov = 55; cam.updateProjectionMatrix(); }
     this.world.update(dt);
-    this.engine.updateLighting(dt, new THREE.Vector3(cam.position.x - 40, 0, z + 40));
+    this.engine.updateLighting(dt, new THREE.Vector3(cam.position.x - 40, 0, cam.position.z + 40));
   }
 }

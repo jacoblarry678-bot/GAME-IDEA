@@ -70,7 +70,7 @@ export const PRESETS = {
 
 export function defaultSettings() {
   return {
-    graphics: { preset: 'high', ...PRESETS.high, frameCap: 0, fov: 65, showFps: false, autoQuality: true },
+    graphics: { preset: 'medium', ...PRESETS.medium, frameCap: 0, fov: 65, showFps: false, autoQuality: true }, // light by default; Settings → Graphics for more
     controls: { sensitivity: 1, aimSensitivity: 0.65, invertY: false, invertX: false, gamepad: true, bindings: { ...DEFAULT_BINDINGS } },
     audio: { master: 0.8, music: 0.55, sfx: 0.8, ambient: 0.7, ui: 0.6 },
     interface: { hudScale: 1, subtitleSize: 'medium', subtitles: true, cameraShake: 1, minimapRotate: true, units: 'mph' },

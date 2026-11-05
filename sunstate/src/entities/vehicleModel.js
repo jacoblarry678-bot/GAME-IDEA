@@ -17,7 +17,9 @@ import { signTexture, plateTexture } from '../world/textures.js';
 const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x04070a, roughness: 0.03, metalness: 0.15, transparent: true, opacity: 0.86, depthWrite: false, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.5 });
 const tireMat = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.88 });
 const rimMat = new THREE.MeshStandardMaterial({ color: 0xc3c7cc, roughness: 0.22, metalness: 0.95 });
-const discMat = new THREE.MeshStandardMaterial({ color: 0x5c5f63, roughness: 0.45, metalness: 0.8 });
+const wheelDarkMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide });
+// the matte dark parts of a car (trim, seats, dash) share one vertex-coloured material: one draw call
+const darkVC = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0.1 });
 const trimMat = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.55, metalness: 0.1 });
 const wellMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0b, roughness: 1, side: THREE.DoubleSide });
 const chromeMat = new THREE.MeshStandardMaterial({ color: 0xe2e6ea, roughness: 0.1, metalness: 1 });
@@ -114,7 +116,7 @@ function cap(sec, x, dir) {
 const WHEEL = (() => {
   // tyre: lathe around y, then turned so the axle is x
   const prof = [[0.64, -0.37], [0.9, -0.37], [0.97, -0.33], [1.0, -0.26], [1.0, 0.26], [0.97, 0.33], [0.9, 0.37], [0.64, 0.37]];
-  const tire = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 28);
+  const tire = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 18);
   tire.rotateZ(Math.PI / 2);
   // alloy face: a disc with five windows between the spokes, on both sides of the wheel
   const face = new THREE.Shape();
@@ -127,7 +129,7 @@ const WHEEL = (() => {
     hole.closePath();
     face.holes.push(hole);
   }
-  const disc = new THREE.ExtrudeGeometry(face, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.015, bevelSegments: 2, curveSegments: 20 });
+  const disc = new THREE.ExtrudeGeometry(face, { depth: 0.06, bevelEnabled: false, curveSegments: 9 });
   const faces = [];
   for (const s of [-1, 1]) {
     const g = disc.clone();
@@ -138,10 +140,13 @@ const WHEEL = (() => {
   const hub = new THREE.CylinderGeometry(0.12, 0.14, 0.62, 12).rotateZ(Math.PI / 2);
   const rim = mergeGeometries([...faces, hub].map((g) => { g = g.index ? g.toNonIndexed() : g; g.deleteAttribute('uv'); return g; }), false);
   // barrel and brake disc seen through the spokes
-  const barrel = new THREE.CylinderGeometry(0.64, 0.64, 0.6, 24, 1, true).rotateZ(Math.PI / 2);
-  const brake = new THREE.CylinderGeometry(0.48, 0.48, 0.05, 24).rotateZ(Math.PI / 2);
-  for (const g of [tire, rim, barrel, brake]) g.userData.shared = true;
-  return { tire, rim, barrel, brake };
+  const barrel = new THREE.CylinderGeometry(0.64, 0.64, 0.6, 12, 1, true).rotateZ(Math.PI / 2);
+  const brake = new THREE.CylinderGeometry(0.48, 0.48, 0.05, 12).rotateZ(Math.PI / 2);
+  // one draw call for the dark parts: tyre, barrel (seen through the spokes) and brake disc
+  const colourOf = (g, hex) => { g = g.index ? g.toNonIndexed() : g; if (g.attributes.uv) g.deleteAttribute('uv'); const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
+  const dark = mergeGeometries([colourOf(tire, 0x161616), colourOf(barrel, 0x0a0a0b), colourOf(brake, 0x5c5f63)], false);
+  for (const g of [dark, rim]) g.userData.shared = true;
+  return { dark, rim };
 })();
 
 // ---------------------------------------------------------------------------------------
@@ -174,8 +179,15 @@ export function buildCarModel(def, color, opts = {}) {
       let g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
       if (g.attributes.uv) g.deleteAttribute('uv');
       g.applyMatrix4(m.matrix);
-      if (!bins.has(m.material)) bins.set(m.material, []);
-      bins.get(m.material).push(g);
+      let mat = m.material;
+      if (mat === trimMat || mat === interiorMat || mat === dashMat) {
+        const c = mat.color, n = g.attributes.position.count, a = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+        g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+        mat = darkVC;
+      }
+      if (!bins.has(mat)) bins.set(mat, []);
+      bins.get(mat).push(g);
     }
   };
   const paint = new THREE.MeshPhysicalMaterial({ color, roughness: 0.34, metalness: 0.5, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.1 });
@@ -211,7 +223,7 @@ export function buildCarModel(def, color, opts = {}) {
     const right = r.slice(0, -1).reverse().map(([u, y]) => [-u, y]);
     return [...left, [0, r[r.length - 1][1]], ...right];
   };
-  const N = 84, stations = [];
+  const N = 60, stations = [];
   for (let i = 0; i <= N; i++) { const t = i / N; stations.push(L * (0.3 * t + 0.7 * (0.5 - 0.5 * Math.cos(Math.PI * t)))); }
   const nHalf = BODY_SEC.length + 2; // segments per side before the centre
   const bodySlots = [paint, trimMat, def.stripes ? stripeMat : paint];
@@ -287,7 +299,7 @@ export function buildCarModel(def, color, opts = {}) {
     return [...half, mid, ...half.slice().reverse().map(([u, y]) => [-u, y])];
   };
   const cabStations = [];
-  const NC = 44;
+  const NC = 30;
   for (let i = 0; i <= NC; i++) cabStations.push(xr + (xw - xr) * (i / NC));
   const xb = look.cabin.b ?? (xrr + (xrf - xrr) * 0.45);
   const cPillar = look.cabin.cPillar ?? true;
@@ -409,7 +421,7 @@ export function buildCarModel(def, color, opts = {}) {
 
   for (const [mat, list] of bins) {
     const mesh = new THREE.Mesh(mergeGeometries(list, false), mat);
-    mesh.castShadow = !mat.transparent;
+    mesh.castShadow = false; // small details: the body, cabin and tyres cast the car's shadow
     mesh.receiveShadow = true;
     body.add(mesh);
   }
@@ -422,13 +434,11 @@ export function buildCarModel(def, color, opts = {}) {
       const pivot = new THREE.Group();
       pivot.position.set(s * (def.track / 2), R, ox + ax);
       const spin = new THREE.Group();
-      const tire = new THREE.Mesh(WHEEL.tire, tireMat);
+      const tire = new THREE.Mesh(WHEEL.dark, wheelDarkMat);
       tire.castShadow = true;
       const rim = new THREE.Mesh(WHEEL.rim, rimMat);
-      const barrel = new THREE.Mesh(WHEEL.barrel, wellMat);
-      const brake = new THREE.Mesh(WHEEL.brake, discMat);
-      for (const m of [tire, rim, barrel, brake]) m.scale.set(R, R, R);
-      spin.add(tire, rim, barrel, brake);
+      for (const m of [tire, rim]) m.scale.set(R, R, R);
+      spin.add(tire, rim);
       pivot.add(spin);
       root.add(pivot);
       wheels.push({ pivot, spin, front: isFront, side: s, z: ox + ax });

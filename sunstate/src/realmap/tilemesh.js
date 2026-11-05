@@ -32,6 +32,15 @@ class Bins {
       if (col) B.col.push(col.r, col.g, col.b);
     }
   }
+  /** Plain typed arrays per material key (transferable from a worker). */
+  arrays() {
+    const out = [];
+    for (const [key, B] of this.b) {
+      if (!B.pos.length) continue;
+      out.push({ key, pos: new Float32Array(B.pos), nrm: new Float32Array(B.nrm), uv: new Float32Array(B.uv), col: B.col.length ? new Float32Array(B.col) : null });
+    }
+    return out;
+  }
   build(materials) {
     const out = [];
     for (const [key, B] of this.b) {
@@ -243,7 +252,34 @@ const GREENS = { park: 0xb8d8a0, grass: 0xc4dca8, golf: 0xa8d890, forest: 0x8fb8
  * shared materials, `deco(x, z)` says whether a point is in the Art Deco district.
  * Returns { meshes, colliders, raster, decks, places, roads }.
  */
-export function buildTile(tile, index, materials, { deco = () => false, FACADE_TILE = [12, 13.6] } = {}) {
+export function buildTile(tile, index, materials, opts = {}) {
+  const r = buildTileData(tile, index, opts);
+  return { ...r, meshes: meshesFromArrays(r.bins, materials) };
+}
+
+/** Meshes (one per material key) from the typed arrays a tile build produced. */
+export function meshesFromArrays(bins, materials, castShadow = true) {
+  const out = [];
+  for (const b of bins) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(b.pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(b.nrm, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(b.uv, 2));
+    if (b.col) g.setAttribute('color', new THREE.BufferAttribute(b.col, 3));
+    g.computeBoundingSphere();
+    const m = new THREE.Mesh(g, materials(b.key));
+    m.receiveShadow = true;
+    m.userData.caster = b.key.startsWith('fac:') || b.key === 'roof' || b.key === 'deck' || b.key === 'pier';
+    m.castShadow = castShadow && m.userData.caster;
+    m.matrixAutoUpdate = false;
+    m.userData.key = b.key;
+    out.push(m);
+  }
+  return out;
+}
+
+/** The pure part of a tile build: geometry arrays, colliders, raster — no THREE objects, worker-safe. */
+export function buildTileData(tile, index, { deco = () => false, FACADE_TILE = [12, 13.6] } = {}) {
   const B = new Bins();
   const groundKinds = index.ground, classes = index.roadClasses;
   const colliders = [];
@@ -375,5 +411,5 @@ export function buildTile(tile, index, materials, { deco = () => false, FACADE_T
   const codes = new Uint8Array(N * N);
   // codes are drawn ×30 so an anti-aliased edge rounds to one side or the other
   for (let i = 0; i < N * N; i++) codes[i] = Math.round(raster[i * 4] / 30);
-  return { meshes: B.build(materials), colliders, raster: { codes, N, x0: tile.x0, z0: tile.z0 }, decks, places: tile.places, roads };
+  return { bins: B.arrays(), colliders, raster: { codes, N, x0: tile.x0, z0: tile.z0 }, decks, places: tile.places, roads };
 }

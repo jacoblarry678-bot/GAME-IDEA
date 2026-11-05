@@ -47,7 +47,8 @@ async function boot() {
   requestAnimationFrame(frame);
 
   window.__sun = {
-    app, engine, world, settings, input,
+    app, engine, settings, input,
+    get world() { return app.world; },
     get game() { return app.game; },
     get state() { return app.state; },
     /** Run `seconds` of simulation synchronously, rendering every `renderEvery` steps. */

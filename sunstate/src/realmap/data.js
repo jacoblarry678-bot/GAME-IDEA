@@ -7,7 +7,10 @@
  * 0.1 m relative to its corner and delta-encoded (see the builder for the record layouts).
  */
 
-const BASE = new URL('map/', document.baseURI).href;
+// where the map files live; a worker has no document, so it is told (setMapBase)
+let BASE = typeof document !== 'undefined' ? new URL('map/', document.baseURI).href : null;
+export function setMapBase(b) { BASE = b; }
+export function mapBase() { return BASE; }
 
 let indexPromise = null;
 export function loadIndex() {
@@ -34,10 +37,16 @@ async function gunzipJSON(url) {
 }
 
 const packCache = new Map();
+const PACK_CAP = 24;
 /** Load one pack (i, j) → { tiles: Map("u_v" → decoded sub-tile), names } or null if empty. */
 export function loadPack(index, i, j) {
   const key = `${i}_${j}`;
-  if (packCache.has(key)) return packCache.get(key);
+  if (packCache.has(key)) {
+    // most recently used goes to the back; the oldest beyond the cap are forgotten
+    const p = packCache.get(key); packCache.delete(key); packCache.set(key, p);
+    return p;
+  }
+  while (packCache.size >= PACK_CAP) packCache.delete(packCache.keys().next().value);
   const meta = index.packs[key];
   const p = meta ? gunzipJSON(BASE + meta.f).then((raw) => decodePack(index, i, j, raw)) : Promise.resolve(null);
   packCache.set(key, p);

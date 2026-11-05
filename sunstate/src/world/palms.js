@@ -21,7 +21,7 @@ const UP = V(0, 1, 0);
  * around the trunk, v along it in units of `texLen` meters so the bark rings stay
  * the same size whatever the height.
  */
-function trunkGeometry({ height, bend, r0, r1, flare = 0, swell = 0, radial = 10, segs = 16, texLen = 3 }) {
+function trunkGeometry({ height, bend, r0, r1, flare = 0, swell = 0, radial = 8, segs = 11, texLen = 3 }) {
   const pos = [], nor = [], uv = [], idx = [];
   for (let i = 0; i <= segs; i++) {
     const t = i / segs, y = height * t, x = bend * t * t;
@@ -56,7 +56,7 @@ function trunkGeometry({ height, bend, r0, r1, flare = 0, swell = 0, radial = 10
  * One frond: starts at the crown centre, leaves at `elev` radians above horizontal toward
  * azimuth `az`, and bends down by `droop` radians along its length (more toward the tip).
  */
-function frond({ len, width, elev, droop, az, dead = false, fold = 0.55, segs = 7, twist = 0 }) {
+function frond({ len, width, elev, droop, az, dead = false, fold = 0.55, segs = 5, twist = 0 }) {
   const dir = V(Math.cos(az), 0, Math.sin(az));
   const side = V(-Math.sin(az), 0, Math.cos(az));
   const pos = [], nor = [], uv = [], idx = [];
@@ -107,9 +107,9 @@ function coconutCrown(seed) {
   let az = r() * 6.28;
   const add = (o) => { parts.push(frond({ ...o, az })); az += GOLDEN + (r() - 0.5) * 0.3; };
   for (let i = 0; i < 3; i++) add({ len: 2.4 + r() * 0.6, width: 0.7, elev: 1.05 + r() * 0.25, droop: 0.4, twist: 0.2 });
-  for (let i = 0; i < 9; i++) add({ len: 4 + r() * 0.8, width: 1.0, elev: 0.35 + r() * 0.4, droop: 1.25 + r() * 0.35, twist: (r() - 0.5) * 0.8 });
+  for (let i = 0; i < 8; i++) add({ len: 4 + r() * 0.8, width: 1.05, elev: 0.35 + r() * 0.4, droop: 1.25 + r() * 0.35, twist: (r() - 0.5) * 0.8 });
   for (let i = 0; i < 5; i++) add({ len: 3.8 + r() * 0.6, width: 0.95, elev: -0.05 + r() * 0.25, droop: 1.3 + r() * 0.3, twist: (r() - 0.5) * 0.8 });
-  for (let i = 0; i < 3; i++) add({ len: 3 + r() * 0.5, width: 0.7, elev: -1.05 - r() * 0.25, droop: 0.25, dead: true, fold: 0.8 });
+  for (let i = 0; i < 2; i++) add({ len: 3 + r() * 0.5, width: 0.7, elev: -1.05 - r() * 0.25, droop: 0.25, dead: true, fold: 0.8 });
   return mergeGeometries(parts, false);
 }
 
@@ -118,8 +118,8 @@ function royalCrown(seed) {
   const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
   const parts = [];
   let az = r() * 6.28;
-  for (let i = 0; i < 15; i++) {
-    const upper = i < 5;
+  for (let i = 0; i < 13; i++) {
+    const upper = i < 4;
     parts.push(frond({ len: upper ? 3.4 + r() * 0.6 : 4.4 + r() * 0.7, width: 1.05, elev: upper ? 1.0 + r() * 0.3 : 0.25 + r() * 0.45, droop: upper ? 0.7 : 1.45 + r() * 0.3, az, fold: 0.7, twist: (r() - 0.5) * 1.2 }));
     az += GOLDEN + (r() - 0.5) * 0.3;
   }
