@@ -6,7 +6,7 @@
  * pointer lock and the title-screen flyover.
  */
 import * as THREE from 'three';
-import { Game, REAL_SPAWN } from './game/game.js';
+import { Game, REAL_SPAWN, REAL_PLACES } from './game/game.js';
 import { Audio } from './audio/audio.js';
 import { HUD } from './ui/hud.js';
 import { Menus } from './ui/menus.js';
@@ -198,7 +198,8 @@ export class App {
 
   respawnAfter(kind) {
     const g = this.game;
-    const place = kind === 'wasted' ? PLACES.hospital : PLACES.police;
+    const real = g.world.real ? REAL_PLACES : null;
+    const place = kind === 'wasted' ? (real?.hospital || PLACES.hospital) : (real?.police || PLACES.police);
     const partnerWasWith = g.crew.partnerWithPlayer();
     g.wanted.clear(true);
     g.police.clearAll();

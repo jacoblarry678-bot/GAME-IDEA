@@ -56,6 +56,11 @@ export class DriverAI {
     this.avoidPlayer = true;
     this.emergency = false; // responding police ignore signals
     this.turning = false;
+    this.seed(edge, from, lane, t);
+  }
+
+  /** The first waypoints: the rest of the starting lane. */
+  seed(edge, from, lane, t) {
     const l = laneLine(edges[edge], from, lane);
     this.wp.push({ x: l.x0 + (l.x1 - l.x0) * t, z: l.z0 + (l.z1 - l.z0) * t, speed: speedLimit(edges[edge]) });
     this.wp.push({ x: l.x1, z: l.z1, speed: speedLimit(edges[edge]), stop: { node: l.b, axis: l.axis } });
@@ -148,7 +153,8 @@ export class DriverAI {
     const v = this.v, w = this.game.world;
     if (v.sunk || v.pos.y > 2 || !(this.offroad || this.turning || this.reverseT > 0 || v.speed < 5)) return;
     // open water: no road, and nothing to drive on above the water there (bridge decks, ramps, piers)
-    const wet = (lz) => { const [x, z] = v.localToWorld(0, lz); return w.isWater(x, z) && !roadAt(x, z) && w.ground(x, z, v.pos.y + 0.6) < w.waterY + 0.2; };
+    const onRoad = w.real ? (x, z) => !!w.roadAt(x, z) : roadAt;
+    const wet = (lz) => { const [x, z] = v.localToWorld(0, lz); return w.isWater(x, z) && !onRoad(x, z) && w.ground(x, z, v.pos.y + 0.6) < w.waterY + 0.2; };
     const forward = v.input.throttle > 0 && v.vLong > -0.5;
     const backward = v.input.throttle === 0 && v.input.brake > 0 && v.vLong < 0.5; // brake at rest = reverse
     if ((forward && wet(v.hz + 2.5)) || (backward && wet(-v.hz - 2.5))) { v.holdStill(); this.reverseT = 0; this.wetT = (this.wetT || 0) + 1; }
@@ -293,7 +299,7 @@ export class DriverAI {
    */
   stepOffroad(dt) {
     const v = this.v, g = this.game, w = this.wp[0];
-    const onRoad = roadAt(v.pos.x, v.pos.z) && Math.hypot(w.x - v.pos.x, w.z - v.pos.z) < 9;
+    const onRoad = (g.world.real ? !!g.world.roadAt(v.pos.x, v.pos.z) : roadAt(v.pos.x, v.pos.z)) && Math.hypot(w.x - v.pos.x, w.z - v.pos.z) < 9;
     this.offT = (this.offT || 0) + dt;
     if (onRoad || this.offT > 25) { this.offroad = false; return false; }
     if (this.reverseT > 0) {

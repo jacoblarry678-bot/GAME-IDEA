@@ -26,9 +26,10 @@ import { Social } from './social.js';
 import { Memory } from './memory.js';
 import { Places } from './places.js';
 import { Club } from './club.js';
+import { RealTraffic, RealPeds, RealPolice } from '../realmap/realai.js';
+import { REAL_SPAWN, REAL_PLACES } from '../realmap/spots.js';
 
-/** Where a new game starts on the real map: Ocean Drive at 10th Street, South Beach (game metres). */
-export const REAL_SPAWN = { x: 6330.5, z: -700, rot: Math.PI };
+export { REAL_SPAWN, REAL_PLACES };
 
 export const PROTAGONIST_LOOK = PROTAGONISTS.cal.look;
 
@@ -57,9 +58,10 @@ export class Game {
     this.stats = { robberies: 0, escapes: 0, busted: 0, wasted: 0, distanceDriven: 0 };
     this.economy = new Economy(this);
     this.wanted = new Wanted(this);
-    this.traffic = new TrafficManager(this);
-    this.peds_ = new PedManager(this);
-    this.police = new PoliceManager(this);
+    // the real map has its own traffic, pedestrians and police on the real streets
+    this.traffic = world.real ? new RealTraffic(this) : new TrafficManager(this);
+    this.peds_ = world.real ? new RealPeds(this) : new PedManager(this);
+    this.police = world.real ? new RealPolice(this) : new PoliceManager(this);
     this.store = new Store(this);
     this.missions = new MissionManager(this);
     this.markers = new Markers(this);
@@ -74,19 +76,19 @@ export class Game {
   }
 
   /**
-   * The real-map build so far: free roam on streamed Miami. Systems still tied to the old
-   * compact map (traffic, pedestrians, police, missions, shops) stay off until they are
-   * ported to the real road network.
+   * The real-map build so far: free roam on streamed Miami with traffic, pedestrians and
+   * police on the real streets. Systems still tied to the old compact map (missions, shops,
+   * the club) stay off until they are ported.
    */
   realMapMode() {
     // anyone the classic systems placed (clerk, staff, dancers) stood on the old map: remove them
     this.club?.dispose?.();
     for (const list of [this.peds, this.extras]) { for (const ch of list) ch.dispose?.(); list.length = 0; }
-    this.traffic = null; this.peds_ = null; this.places = null;
+    this.places = null;
     // neutral stand-ins for systems other code reads every frame
     const noop = () => {};
     this.store = { holdup: null, inside: false, bag: 0, alarmT: 0, clerk: null, reset: noop, step: noop };
-    this.police = { seeT: 0, seesPlayer: false, arrestProgress: 0, units: [], clearAll: noop, copSees: () => false, canSeePlayer: () => false, reenter: noop, step: noop, dispatch: noop };
+    this.blips = Object.entries(REAL_PLACES).map(([k, p]) => ({ x: p.x, z: p.z, icon: k, color: k === 'hospital' ? '#ff5566' : '#6ea0ff', label: p.name }));
     this.director = { clearAll: noop, step: noop };
     this.club = { beat: 0, isOpen: false, items: [], people: [], playerInside: false, tipsy: 0, musicFor: () => null, dispose: noop, step: noop };
     this.missions.disabled = true; // the story missions still live on the classic map

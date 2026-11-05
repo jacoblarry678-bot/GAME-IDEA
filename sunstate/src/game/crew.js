@@ -16,6 +16,7 @@ import { Character } from '../entities/character.js';
 import { PlayerController } from './player.js';
 import { PartnerController } from '../ai/partner.js';
 import { PLACES } from '../world/district.js';
+import { REAL_PLACES } from '../realmap/spots.js';
 
 export const PROTAGONISTS = {
   cal: {
@@ -158,7 +159,7 @@ export class Crew {
 
   /** The downed partner is patched up and waits at the hospital. */
   reviveAtHospital() {
-    const g = this.game, o = g.partner, h = PLACES.hospital;
+    const g = this.game, o = g.partner, h = g.world.real ? REAL_PLACES.hospital : PLACES.hospital;
     if (o.vehicle) g.unseatCharacter(o.vehicle, o, null);
     o.dead = false; o.deadT = 0; o.knockT = 0; o.health = 100; o.swim = false;
     const x = h.x + 2.5, z = h.z + 1.5;

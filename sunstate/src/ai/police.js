@@ -15,7 +15,7 @@ import { ROAD_GRAPH, nearestNode, findRoute } from '../world/layout.js';
 import { WANTED_CONFIG } from '../game/wanted.js';
 import { WEAPONS } from '../data/weapons.js';
 
-const COP_LOOK = () => ({
+export const COP_LOOK = () => ({
   female: Math.random() < 0.3, height: 1.72 + Math.random() * 0.12, build: 1.05, skin: [0x8d5524, 0xc68642, 0xe0ac69, 0xf1c27d, 0x5c3a21][Math.floor(Math.random() * 5)],
   hair: 0x1b1410, top: 0x1f3c78, bottom: 0x1a1f2e, shoes: 0x111111, hairStyle: 'short', shorts: false, sleeveless: false, hat: 0x1a2a55, beard: false,
 });

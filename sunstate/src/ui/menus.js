@@ -10,6 +10,8 @@ import { PROTAGONISTS } from '../game/crew.js';
 import { MISSIONS, CAST } from '../game/missions.js';
 import { CRIMES, WANTED_CONFIG } from '../game/wanted.js';
 
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
 const h = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; if (html) e.innerHTML = html; return e; };
 
 export class Menus {
@@ -167,6 +169,7 @@ export class Menus {
 
   // ---------------------------------------------------------------- map
   tab_map() {
+    if (this.app.game.world.real) { this.tab_map_real(); return; }
     const app = this.app, g = app.game, hud = app.hud;
     const wrap = h('div', 'mapview');
     const c = document.createElement('canvas');
@@ -228,6 +231,118 @@ export class Menus {
     ro.observe(wrap);
     this.mapCleanup = () => { ro.disconnect(); this.mapCleanup = null; };
     requestAnimationFrame(draw);
+  }
+
+  /** The real map: the whole region's roads (drawn by the road-graph worker), the streamed tiles near you, GPS. */
+  tab_map_real() {
+    const app = this.app, g = app.game, hud = app.hud, net = g.world.roads;
+    const wrap = h('div', 'mapview');
+    const c = document.createElement('canvas');
+    wrap.appendChild(c);
+    const info = h('div', 'legend', '');
+    wrap.appendChild(info);
+    this.body.appendChild(wrap);
+    const p = g.player.vehicle ? g.player.vehicle.pos : g.player.pos;
+    const view = { cx: p.x, cz: p.z, mpp: 3 };
+    let img = null, reqT = null, alive = true;
+    const legend = () => {
+      const r = hud.routeInfo;
+      const route = hud.waypoint && r ? `<br><b style="color:#d36bff">⚑</b> ${(r.len / 1000).toFixed(1)} km · ${Math.max(1, Math.round(r.eta / 60))} min${r.via.length ? ' via ' + r.via.map(esc).join(', ') : ''}` : '';
+      info.innerHTML = `<b style="color:#ff5566">+</b> Hospital &nbsp; <b style="color:#6ea0ff">⛨</b> Police &nbsp; <b style="color:#d36bff">⚑</b> Waypoint &nbsp; <b style="color:${PROTAGONISTS[g.partner.protagonist].color}">${g.partner.protagonistName[0]}</b> ${g.partner.protagonistName}${route}<br>${net?.ready ? 'Click: set waypoint · Right-click: clear · Wheel: zoom · Drag: pan' : 'Loading the road map…'}<br><small>Map data © OpenStreetMap contributors (ODbL) and the Overture Maps Foundation</small>`;
+    };
+    const S = (x, z, W, H) => [(x - view.cx) / view.mpp + W / 2, (z - view.cz) / view.mpp + H / 2];
+    const draw = () => {
+      if (!alive) return;
+      const r = wrap.getBoundingClientRect();
+      const W = r.width, H = r.height, dpr = devicePixelRatio;
+      if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+      const x = c.getContext('2d');
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
+      x.fillStyle = '#122130'; x.fillRect(0, 0, W, H);
+      if (img) {
+        // the last rendered roads, moved/scaled to the current view until a fresh one arrives
+        const k = img.mpp / view.mpp;
+        const [ox, oy] = S(img.cx - (img.w / 2) * img.mpp, img.cz - (img.h / 2) * img.mpp, W, H);
+        x.drawImage(img.bmp, ox, oy, img.w * k, img.h * k);
+      }
+      // close in: the streamed tiles' detail (water, sand, parks, buildings) under the roads
+      if (view.mpp < 2.5) {
+        x.globalAlpha = 0.85;
+        for (const rec of g.world.tiles.values()) {
+          if (!rec.mini) continue;
+          const [ax, ay] = S(rec.raster.x0, rec.raster.z0, W, H);
+          const sz = 500 / view.mpp;
+          if (ax > W || ay > H || ax + sz < 0 || ay + sz < 0) continue;
+          x.drawImage(rec.mini, ax, ay, sz, sz);
+        }
+        x.globalAlpha = 1;
+      }
+      if (hud.route) {
+        x.lineCap = 'round'; x.lineJoin = 'round';
+        for (const [col, w] of [['rgba(0,0,0,0.6)', 7], ['#d36bff', 4]]) {
+          x.strokeStyle = col; x.lineWidth = w; x.beginPath();
+          hud.route.forEach(([wx, wz], i) => { const [a, b] = S(wx, wz, W, H); if (i) x.lineTo(a, b); else x.moveTo(a, b); });
+          x.stroke();
+        }
+      }
+      const dot = (wx, wz, col, glyph, size = 24) => {
+        const [mx, my] = S(wx, wz, W, H);
+        x.beginPath(); x.arc(mx, my, size / 2, 0, Math.PI * 2); x.fillStyle = 'rgba(0,0,0,0.6)'; x.fill();
+        x.lineWidth = 3; x.strokeStyle = col; x.stroke();
+        x.fillStyle = col; x.font = `800 ${size * 0.6}px Inter, Arial`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(glyph, mx, my + 1);
+      };
+      for (const b of g.blips || []) dot(b.x, b.z, b.color, ICONS[b.icon] || b.glyph || '•', b.size || 24);
+      if (hud.waypoint) dot(hud.waypoint.x, hud.waypoint.z, '#d36bff', '⚑');
+      const o = g.partner;
+      if (o && !o.dead && !(o.vehicle && o.vehicle === g.player.vehicle)) { const op = o.vehicle ? o.vehicle.pos : o.pos; dot(op.x, op.z, PROTAGONISTS[o.protagonist].color, o.protagonistName[0]); }
+      const [px, py] = S(p.x, p.z, W, H);
+      x.beginPath(); x.arc(px, py, 8, 0, Math.PI * 2); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#000'; x.stroke();
+      legend();
+    };
+    const request = () => {
+      clearTimeout(reqT);
+      reqT = setTimeout(() => {
+        const r = wrap.getBoundingClientRect();
+        const want = { cx: view.cx, cz: view.cz, mpp: view.mpp, w: Math.ceil(r.width * 1.5), h: Math.ceil(r.height * 1.5) };
+        // render 1.5× the view so a short pan still has roads under it
+        net?.render(want.cx, want.cz, want.mpp, want.w, want.h).then((bmp) => { if (bmp && alive) { img = { ...want, bmp }; draw(); } });
+      }, 120);
+    };
+    const toWorld = (ev) => {
+      const r = wrap.getBoundingClientRect();
+      return { x: view.cx + (ev.clientX - r.left - r.width / 2) * view.mpp, z: view.cz + (ev.clientY - r.top - r.height / 2) * view.mpp };
+    };
+    let drag = null;
+    wrap.onmousedown = (e) => { drag = { x: e.clientX, y: e.clientY, cx: view.cx, cz: view.cz, moved: false }; };
+    wrap.onmousemove = (e) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(dx, dy) > 4) drag.moved = true; view.cx = drag.cx - dx * view.mpp; view.cz = drag.cz - dy * view.mpp; draw(); request(); };
+    wrap.onmouseup = (e) => {
+      if (drag && !drag.moved) {
+        if (e.button === 2) { hud.waypoint = null; hud.route = null; hud.routeInfo = null; }
+        else { const w = toWorld(e); hud.waypoint = { x: w.x, z: w.z, label: 'Waypoint' }; hud.routeKey = null; this.app.audio.ui('select'); }
+        hud.routeT = 0;
+        // plan the route now (the HUD isn't ticking while paused)
+        if (hud.waypoint) hud.realRoute(p, hud.waypoint);
+        setTimeout(draw, 250); setTimeout(draw, 900);
+        draw();
+      }
+      drag = null;
+    };
+    wrap.oncontextmenu = (e) => e.preventDefault();
+    wrap.onwheel = (e) => {
+      e.preventDefault();
+      // zoom about the cursor
+      const before = toWorld(e);
+      view.mpp = Math.max(0.4, Math.min(200, view.mpp * (e.deltaY > 0 ? 1.25 : 0.8)));
+      const after = toWorld(e);
+      view.cx += before.x - after.x; view.cz += before.z - after.z;
+      draw(); request();
+    };
+    const ro = new ResizeObserver(() => { draw(); request(); });
+    ro.observe(wrap);
+    // the graph may still be loading: try again until it's there
+    const poll = setInterval(() => { if (net?.ready && !img) request(); draw(); }, 1000);
+    this.mapCleanup = () => { alive = false; ro.disconnect(); clearInterval(poll); clearTimeout(reqT); this.mapCleanup = null; };
+    requestAnimationFrame(() => { draw(); request(); });
   }
 
   // ---------------------------------------------------------------- settings

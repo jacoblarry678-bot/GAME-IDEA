@@ -15,6 +15,7 @@ import * as T from '../world/textures.js';
 import { loadIndex, loadPack, mapBase } from './data.js';
 import { buildTileData, meshesFromArrays, SURF, RASTER } from './tilemesh.js';
 import TileWorker from './tileworker.js?worker&inline';
+import { RoadNet } from './roadnet.js';
 
 export const WATER_Y = -0.45;
 const SEABED = -3.5;
@@ -54,6 +55,7 @@ export class RealWorld {
     this.signs = []; this.places = {}; this.interiors = [];
     this.signalClock = 0; this.clubPulse = 0;
     this.facades = Object.entries(this.mats).filter(([k]) => k.startsWith('fac:')).map(([, m]) => m);
+    this.roads = new RoadNet(this); // the drivable network around you (traffic, police, GPS)
     this.focus = new THREE.Vector3(6330, 0, -700);
     this.radius = DETAIL[engine.settings?.g?.drawDistance] || 750;
     this._lod = 0;
@@ -73,6 +75,7 @@ export class RealWorld {
       this.worker = null;
       this.index = await loadIndex();
     }
+    this.roads.start(this.index, mapBase()); // (loads in the background)
   }
 
   onWorker(m) {
@@ -337,6 +340,7 @@ export class RealWorld {
     this.focus.copy(cam);
     this.radius = DETAIL[this.engine.settings?.g?.drawDistance] || this.radius;
     this.stream(this.engine.externalClock ? 50 : 4);
+    this.roads.update(cam.x, cam.z);
     // the sea follows the camera (its shader works in world space, so it never swims)
     this.water.position.x = Math.round(cam.x / 64) * 64;
     this.water.position.z = Math.round(cam.z / 64) * 64;

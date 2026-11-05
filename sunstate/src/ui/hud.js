@@ -318,6 +318,30 @@ export class HUD {
     return this.waypoint;
   }
 
+  /**
+   * Real map GPS: a route over the real streets, computed in the road-graph worker. Re-planned
+   * when the target changes, when you stray from the line, or every few seconds.
+   */
+  realRoute(pos, tgt) {
+    const net = this.game.world.roads;
+    if (!net?.ready || this.routePending) return;
+    const key = `${Math.round(tgt.x)},${Math.round(tgt.z)}`;
+    const off = this.route ? offRoute(this.route, pos.x, pos.z) : Infinity;
+    const age = performance.now() - (this.routeAt || 0);
+    if (key === this.routeKey && off < 25 && age < 8000) return;
+    this.routePending = true;
+    net.route(pos.x, pos.z, tgt.x, tgt.z).then((r) => {
+      this.routePending = false;
+      this.routeKey = key; this.routeAt = performance.now();
+      if (!r) { this.route = [[pos.x, pos.z], [tgt.x, tgt.z]]; this.routeInfo = null; return; }
+      const pts = [];
+      for (let i = 0; i < r.pts.length; i += 2) pts.push([r.pts[i], r.pts[i + 1]]);
+      pts.push([tgt.x, tgt.z]);
+      this.route = pts;
+      this.routeInfo = { len: r.len, eta: r.eta, via: r.names.filter((n) => !/^\d+$/.test(n)).slice(0, 3) };
+    });
+  }
+
   tm(x, z) { return this.game?.world.real ? [x * 2, z * 2] : toMap(x, z); }
 
   drawMinimap(dt) {
@@ -352,8 +376,12 @@ export class HUD {
     // GPS route
     const tgt = this.gpsTarget();
     this.routeT -= dt;
-    if (tgt && this.routeT <= 0) { this.routeT = 0.8; this.route = routeBetween(pos.x, pos.z, tgt.x, tgt.z); }
-    if (!tgt) this.route = null;
+    if (tgt && this.routeT <= 0) {
+      this.routeT = 0.8;
+      if (g.world.real) this.realRoute(pos, tgt);
+      else this.route = routeBetween(pos.x, pos.z, tgt.x, tgt.z);
+    }
+    if (!tgt) { this.route = null; this.routeInfo = null; }
     if (this.route) {
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       for (const [col, w] of [['rgba(0,0,0,0.5)', 9], [g.missions.active ? '#ffd23f' : '#d36bff', 5]]) {
@@ -390,7 +418,7 @@ export class HUD {
       ctx.fillText(glyph, sx, sy + 1);
       void off;
     };
-    for (const b of STATIC_BLIPS) blip(b.x, b.z, b.color, ICONS[b.icon], 24, b.icon === 'safehouse');
+    for (const b of (g.world.real ? g.blips || [] : STATIC_BLIPS)) blip(b.x, b.z, b.color, ICONS[b.icon] || b.glyph || '•', b.size || 24, b.icon === 'safehouse' || !!b.edge);
     for (const def of g.missions.available) if (g.missions.canStart(def.id)) blip(def.start.x, def.start.z, '#29e6ff', 'S', 26, true);
     if (tgt) blip(tgt.x, tgt.z, g.missions.active ? '#ffd23f' : '#d36bff', g.missions.active ? '●' : '⚑', 24, true);
     // the partner, when they're not riding with you
@@ -432,4 +460,16 @@ export class HUD {
   }
 
   setVisible(v) { this.root.classList.toggle('hidden', !v); }
+}
+
+/** Distance from (x, z) to the nearest leg of a route given as [[x, z], ...]. */
+function offRoute(route, x, z) {
+  let best = Infinity;
+  for (let i = 1; i < route.length; i++) {
+    const [ax, az] = route[i - 1], [bx, bz] = route[i];
+    const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2));
+    best = Math.min(best, Math.hypot(ax + dx * t - x, az + dz * t - z));
+  }
+  return best;
 }
