@@ -57,8 +57,16 @@ export class Menus {
       return b;
     };
     const save = this.app.saveInfo();
-    add('Continue', () => this.app.continueGame(), !hasSave, save ? `Saved ${new Date(save.savedAt).toLocaleString()} · $${save.money.toLocaleString()}` : '');
-    add('New Game', () => this.app.startNew());
+    const real = !!this.app.world.real;
+    const switchMap = (to) => { try { localStorage.setItem('sunstate.map', to); } catch {} location.reload(); };
+    if (real) {
+      add('Explore Real Miami', () => this.app.startNew(), false, 'BETA · the real city at 1:1, streamed from open map data · free roam for now');
+      add('Back to classic South Beach', () => switchMap('classic'), false, 'the story, missions, traffic and police');
+    } else {
+      add('Continue', () => this.app.continueGame(), !hasSave, save ? `Saved ${new Date(save.savedAt).toLocaleString()} · $${save.money.toLocaleString()}` : '');
+      add('New Game', () => this.app.startNew());
+      add('Real Miami (beta)', () => switchMap('real'), false, 'the real city at 1:1: Miami Beach, Downtown, the Keys');
+    }
     add('Settings', () => this.openPause('settings', true));
     add('Controls', () => this.openPause('controls', true));
     if (window.matchMedia?.('(pointer: coarse)').matches && !navigator.getGamepads?.()?.some(Boolean)) {

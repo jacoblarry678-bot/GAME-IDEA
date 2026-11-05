@@ -19,7 +19,9 @@ async function boot() {
   const input = new Input(canvas, settings);
   // ?map=real streams the real Miami (in progress); the classic compact South Beach is the default for now
   const params = new URLSearchParams(location.search);
-  const world = params.get('map') === 'real' ? await RealWorld.create(engine) : new World(engine);
+  let mapChoice = params.get('map');
+  if (!mapChoice) { try { mapChoice = localStorage.getItem('sunstate.map'); } catch {} }
+  const world = mapChoice === 'real' ? await RealWorld.create(engine) : new World(engine);
   const app = new App({ engine, world, input, settings, canvas });
   await app.init();
 

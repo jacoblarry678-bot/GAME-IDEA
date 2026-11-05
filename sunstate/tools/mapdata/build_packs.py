@@ -311,6 +311,7 @@ def main():
 
     # --- ground: land use and inland water (clipped to sub-tiles) -------------------------
     log(f'ground ({stats["road_pieces"]} road pieces, {stats["edges"]} edges)')
+    active = set(P.packs.keys())  # packs with streets or buildings; ground is only cut for these
     for theme in ("land_use", "water", "land"):
         path = os.path.join(cache, f"{theme}.parquet")
         if not os.path.exists(path): continue
@@ -321,23 +322,29 @@ def main():
             kind = ground_kind(theme, subtypes[k], classes[k])
             if kind is None: continue
             g = project_geom(wkb.loads(geoms[k]))
-            if theme == "water" and not polys(g): continue
             if not polys(g): continue
             g = g.simplify(0.6, preserve_topology=True)
             x0, z0, x1, z1 = g.bounds
-            for sx in range(math.floor(x0 / SUB), math.floor(x1 / SUB) + 1):
-                for sz in range(math.floor(z0 / SUB), math.floor(z1 / SUB) + 1):
-                    clip = clip_by_rect(g, sx * SUB, sz * SUB, (sx + 1) * SUB, (sz + 1) * SUB)
-                    for poly in polys(clip):
-                        if poly.area < 4: continue
-                        pk, st, (ox, oz) = P.sub(sx * SUB + 1, sz * SUB + 1)
-                        rings, ints, lens = [poly.exterior] + list(poly.interiors), [], []
-                        for r in rings:
-                            n, ii = ring_ints(list(r.coords)[:-1], ox, oz)
-                            if n >= 3: lens.append(n); ints += ii
-                        if not lens: continue
-                        P.add(pk, st, "g", [code(GROUND, kind), len(lens)] + lens + ints)
-                        stats["ground_" + kind] += 1
+            # two-level clip: only packs that hold streets or buildings, then their sub-tiles
+            for pi in range(math.floor(x0 / PACK), math.floor(x1 / PACK) + 1):
+                for pj in range(math.floor(z0 / PACK), math.floor(z1 / PACK) + 1):
+                    if (pi, pj) not in active: continue
+                    piece = clip_by_rect(g, pi * PACK, pj * PACK, (pi + 1) * PACK, (pj + 1) * PACK)
+                    if piece.is_empty: continue
+                    bx0, bz0, bx1, bz1 = piece.bounds
+                    for sx in range(max(pi * 4, math.floor(bx0 / SUB)), min(pi * 4 + 3, math.floor(bx1 / SUB)) + 1):
+                        for sz in range(max(pj * 4, math.floor(bz0 / SUB)), min(pj * 4 + 3, math.floor(bz1 / SUB)) + 1):
+                            clip = clip_by_rect(piece, sx * SUB, sz * SUB, (sx + 1) * SUB, (sz + 1) * SUB)
+                            for poly in polys(clip):
+                                if poly.area < 4: continue
+                                pk, st, (ox, oz) = P.sub(sx * SUB + 1, sz * SUB + 1)
+                                rings, ints, lens = [poly.exterior] + list(poly.interiors), [], []
+                                for r in rings:
+                                    n, ii = ring_ints(list(r.coords)[:-1], ox, oz)
+                                    if n >= 3: lens.append(n); ints += ii
+                                if not lens: continue
+                                P.add(pk, st, "g", [code(GROUND, kind), len(lens)] + lens + ints)
+                                stats["ground_" + kind] += 1
         del t
 
     # --- places ---------------------------------------------------------------------------
