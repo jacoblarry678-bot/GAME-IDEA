@@ -10,7 +10,7 @@
  */
 import * as THREE from 'three';
 import { CollisionWorld } from '../world/collision.js';
-import { makeMaterials, buildWater } from '../world/build.js';
+import { makeMaterials, buildWater, facadeMaterial } from '../world/build.js';
 import * as T from '../world/textures.js';
 import { loadIndex, loadPack, mapBase } from './data.js';
 import { buildTileData, meshesFromArrays, SURF, RASTER } from './tilemesh.js';
@@ -91,7 +91,12 @@ export class RealWorld {
       case 'deck': mat = m.curb; break;
       case 'pier': case 'wood': mat = m.wood; break;
       case 'lot': mat = m.lot; break;
-      default: mat = m[key] || m.concrete;
+      case 'slab': mat = m.curb.clone(); mat.vertexColors = true; break;
+      case 'trim': mat = m.trim; break;
+      case 'metal': mat = m.metal; break;
+      default:
+        if (key.startsWith('fac:') && !m[key]) { mat = facadeMaterial(key.slice(4)); this.facades.push(mat); }
+        else mat = m[key] || m.concrete;
     }
     this.extraMats.set(key, mat);
     return mat;

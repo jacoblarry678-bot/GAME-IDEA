@@ -55,15 +55,18 @@ export function makeMaterials(engine) {
   };
   // facades share a texture per style; per-building colour comes from vertex colours, applied
   // to the plaster only (the glass and the aluminium frames are metallic in the ORM map)
-  for (const style of ['deco', 'shop', 'tower', 'motel', 'residential', 'civic', 'store']) {
-    const f = T.facade(style === 'store' ? 'shop' : style);
-    m['fac:' + style] = tintByMetal(std({ map: f.map, vertexColors: true, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 0, normalMap: f.normal, roughnessMap: f.orm, metalnessMap: f.orm, aoMap: f.orm, roughness: 1, metalness: 1 }));
-  }
+  for (const style of ['deco', 'shop', 'tower', 'motel', 'residential', 'civic', 'store']) m['fac:' + style] = facadeMaterial(style);
   for (const kind of ['shop', 'deco']) {
     const f = T.storefront(kind);
     m['front:' + kind] = std({ map: f.map, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 0.05, normalMap: f.normal, roughnessMap: f.orm, metalnessMap: f.orm, roughness: 1, metalness: 1 });
   }
   return m;
+}
+
+/** The material for one facade style (shared texture; colour per building from vertex colours). */
+export function facadeMaterial(style) {
+  const f = T.facade(style === 'store' ? 'shop' : style);
+  return tintByMetal(new THREE.MeshStandardMaterial({ map: f.map, vertexColors: true, emissiveMap: f.emissive, emissive: 0xffffff, emissiveIntensity: 0, normalMap: f.normal, roughnessMap: f.orm, metalnessMap: f.orm, aoMap: f.orm, roughness: 1, metalness: 1 }));
 }
 
 /** Vertex colour tints only the non-metallic parts of a texture (plaster yes, glass and metal no). */

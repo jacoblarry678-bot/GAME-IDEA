@@ -320,6 +320,44 @@ export function facade(style) {
     };
     for (let fy = 0; fy < 4; fy++) for (let bxI = 0; bxI < 4; bxI++) {
       const bx = bxI * B, by = fy * F;
+      if (style === 'glass') {
+        // office curtain wall: floor-to-floor reflective glass, thin spandrels, vertical fins
+        glassPane(L, r, bx + 2, by + 4, B - 4, F - 22, { tint: [38, 66, 82], frame: 2, mullion: true }); lit(bx + 2, by + 4, B - 4, F - 22, 0.3);
+        L.rect(bx, by + F - 18, B, 18, '#3c4a55', { rough: 0.25, metal: 0.85, height: 0.55 });
+        L.rect(bx, by, 4, F, '#c8ced3', { rough: 0.3, metal: 0.9, height: 0.8 });
+        continue;
+      }
+      if (style === 'house') {
+        // a house: one shuttered window per bay pair, white trim, a door on the ground floor
+        if (bxI % 2 === 1) {
+          glassPane(L, r, bx + 34, by + 40, 60, 54, { frame: 6, tint: [60, 72, 84] }); lit(bx + 34, by + 40, 60, 54, 0.45);
+          L.rect(bx + 20, by + 40, 12, 54, 'rgba(70,110,120,0.85)', { rough: 0.7, height: 0.7 });
+          L.rect(bx + 96, by + 40, 12, 54, 'rgba(70,110,120,0.85)', { rough: 0.7, height: 0.7 });
+        } else if (fy === 3 && bxI === 0) {
+          L.rect(bx + 44, by + 30, 40, 98, '#7a5236', { rough: 0.6, height: 0.35 });
+          L.rect(bx + 40, by + 26, 48, 4, '#f4f2ec', { rough: 0.7, height: 0.8 });
+        }
+        continue;
+      }
+      if (style === 'medit') {
+        // Mediterranean revival: arched windows with iron balconettes, a stucco band per floor
+        const ax = bx + 34, ay = by + 46, aw = 60, ah = 60;
+        L.x.save(); L.x.beginPath(); L.x.moveTo(ax, ay + ah); L.x.lineTo(ax, ay + aw / 2); L.x.arc(ax + aw / 2, ay + aw / 2, aw / 2, Math.PI, 0); L.x.lineTo(ax + aw, ay + ah); L.x.closePath(); L.x.clip();
+        glassPane(L, r, ax, ay, aw, ah, { frame: 0, mullion: false, tint: [48, 60, 70] });
+        L.x.restore();
+        lit(ax + 4, ay + 20, aw - 8, ah - 20, 0.4);
+        L.rect(ax - 6, ay + ah, aw + 12, 6, '#2a2522', { rough: 0.5, metal: 0.7, height: 0.85 });
+        for (let k = 0; k < 7; k++) L.rect(ax - 4 + k * 11, ay + ah - 18, 2, 18, '#2a2522', { rough: 0.5, metal: 0.7, height: 0.85 });
+        L.rect(bx, by + 4, B, 6, 'rgba(120,90,60,0.18)', { rough: 0.85, height: 0.75 });
+        continue;
+      }
+      if (style === 'warehouse') {
+        // corrugated metal siding, a high strip window, a roll-up door at street level
+        for (let k = 0; k < B; k += 8) L.rect(bx + k, by, 3, F, 'rgba(0,0,0,0.07)', { rough: 0.55, metal: 0.55, height: 0.62 });
+        if (fy === 0) { glassPane(L, r, bx + 10, by + 40, B - 20, 18, { frame: 2, mullion: false }); lit(bx + 10, by + 40, B - 20, 18, 0.2); }
+        if (fy === 3 && bxI === 1) { L.rect(bx + 14, by + 20, B - 28, 108, '#9aa0a4', { rough: 0.5, metal: 0.7, height: 0.4 }); for (let k = 0; k < 108; k += 6) L.rect(bx + 14, by + 20 + k, B - 28, 1, 'rgba(0,0,0,0.25)'); }
+        continue;
+      }
       if (style === 'tower') {
         // curtain wall: tall tinted glass with slab edges
         glassPane(L, r, bx + 4, by + 8, B - 8, 90, { tint: [44, 70, 86], frame: 3, mullion: false }); lit(bx + 4, by + 8, B - 8, 90, 0.38);

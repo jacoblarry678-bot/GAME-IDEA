@@ -158,22 +158,125 @@ const PASTELS = [0xf6d8c8, 0xf9e5b5, 0xcfe8e0, 0xd9e4f5, 0xf5cfd9, 0xe8e0f2, 0xf
 const NEUTRALS = [0xe9e6df, 0xd9d6ce, 0xcdd3d8, 0xeeeeea, 0xd8cfc0, 0xc9c2b6];
 function hash(x, z) { let h = Math.imul((x * 73856093) ^ (z * 19349663), 0x9e3779b1); h ^= h >>> 15; return (h >>> 0) / 4294967296; }
 
-/** Facade style for a building: towers, deco hotels on the beach, shops, houses. */
-function facadeFor(b, classes, cx, cz, deco) {
+/** Coral Gables (game metres): Mediterranean revival is the rule there. */
+const GABLES = { x0: -10700, x1: -6100, z0: 1500, z1: 8800 };
+
+/**
+ * Facade style from what the building is, how tall, where it stands and how big it is:
+ * glass offices downtown, white balcony condo towers, Art Deco on South Beach, Mediterranean
+ * revival in Coral Gables, houses, warehouses, shops.
+ */
+function facadeFor(b, classes, cx, cz, deco, area) {
   const cls = classes[b.cls] || '';
-  if (b.h > 38) return 'tower';
+  const gables = cx > GABLES.x0 && cx < GABLES.x1 && cz > GABLES.z0 && cz < GABLES.z1;
+  const homey = ['house', 'detached', 'semidetached_house', 'residential', 'apartments', ''].includes(cls);
+  if (['industrial', 'warehouse', 'garage', 'garages', 'service', 'shed', 'roof'].includes(cls)) return 'warehouse';
+  if (b.h > 30) return ['office', 'commercial', 'retail', 'government', 'civic', 'hotel'].includes(cls) && !(cls === 'hotel' && hash(cx, cz) < 0.5) ? 'glass' : 'tower';
   if (deco && b.h < 26) return 'deco';
+  if (gables && b.h < 22) return 'medit';
+  if (homey && b.h < 9 && area < 450) return 'house';
+  if (['commercial', 'retail', 'office'].includes(cls)) return b.h > 16 ? 'glass' : 'shop';
+  if (['civic', 'government', 'school', 'university', 'hospital', 'church', 'transportation', 'stadium', 'parking'].includes(cls)) return 'civic';
   if (cls === 'hotel') return b.h > 18 ? 'tower' : 'deco';
-  if (['commercial', 'retail', 'office'].includes(cls)) return b.h > 16 ? 'tower' : 'shop';
-  if (['civic', 'government', 'school', 'university', 'hospital', 'church', 'transportation', 'stadium'].includes(cls)) return 'civic';
-  if (['industrial', 'warehouse', 'garage', 'garages', 'service', 'parking'].includes(cls)) return 'civic';
-  if (b.h < 8) return 'motel';
-  return 'residential';
+  if (b.h < 8) return area < 450 ? 'house' : 'shop';
+  return b.h > 16 ? 'tower' : 'residential';
 }
 
 function area2(pts) { let a = 0; const n = pts.length / 2; for (let i = 0; i < n; i++) { const j = (i + 1) % n; a += pts[i * 2] * pts[j * 2 + 1] - pts[j * 2] * pts[i * 2 + 1]; } return a / 2; }
 
-function building(B, b, classes, colliders, deco, FACADE_TILE) {
+function inPoly(pts, x, z) {
+  let inside = false;
+  const n = pts.length / 2;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = pts[i * 2], zi = pts[i * 2 + 1], xj = pts[j * 2], zj = pts[j * 2 + 1];
+    if ((zi > z) !== (zj > z) && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Minimum-area bounding rectangle of a footprint (by trying each edge direction). */
+function obb(pts) {
+  const n = pts.length / 2;
+  let best = null;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, dx = pts[j * 2] - pts[i * 2], dz = pts[j * 2 + 1] - pts[i * 2 + 1], l = Math.hypot(dx, dz);
+    if (l < 0.5) continue;
+    const ux = dx / l, uz = dz / l;
+    let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+    for (let k = 0; k < n; k++) { const x = pts[k * 2], z = pts[k * 2 + 1], a = x * ux + z * uz, bb = -x * uz + z * ux; a0 = Math.min(a0, a); a1 = Math.max(a1, a); b0 = Math.min(b0, bb); b1 = Math.max(b1, bb); }
+    const ar = (a1 - a0) * (b1 - b0);
+    if (!best || ar < best.ar) best = { ar, ux, uz, a0, a1, b0, b1 };
+  }
+  if (!best) return null;
+  const { ux, uz, a0, a1, b0, b1 } = best, P = (a, bb) => [a * ux - bb * uz, a * uz + bb * ux];
+  return { corners: [P(a0, b0), P(a1, b0), P(a1, b1), P(a0, b1)], fill: (area2(pts) < 0 ? -area2(pts) : area2(pts)) / best.ar };
+}
+
+const ROOF_TILE = [0xb5603c, 0xa95a3a, 0xc0714a, 0x9a5236], ROOF_SHINGLE = [0x6f6a64, 0x5d5a57, 0x8a8178, 0x4f5358], ROOF_FLAT = [0xd9d6cf, 0xc9c6bf, 0xe4e1da];
+
+/** A face (a, b, c) wound to face away from `below` (the centre underneath it). */
+function roofTri(B, key, a, b, c, col) {
+  const e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+  let N = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+  if (N[1] < 0) { [b, c] = [c, b]; N = N.map((v) => -v); }
+  const l = Math.hypot(...N) || 1;
+  B.tri(key, a, b, c, N.map((v) => v / l), null, col);
+}
+
+/** Hipped roof over a rectangle (4 corners [x, z]), eaves at y, with an overhang. */
+function hipRoof(B, corners, y, col, pitch = 0.42, over = 0.45) {
+  const c = corners.map(([x, z]) => [x, z]);
+  const cx = (c[0][0] + c[2][0]) / 2, cz = (c[0][1] + c[2][1]) / 2;
+  const P = c.map(([x, z]) => { const dx = x - cx, dz = z - cz, l = Math.hypot(dx, dz) || 1; return [x + (dx / l) * over * 1.41, z + (dz / l) * over * 1.41]; });
+  const e0 = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]), e1 = Math.hypot(P[2][0] - P[1][0], P[2][1] - P[1][1]);
+  const short = Math.min(e0, e1), rise = short * 0.5 * pitch;
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const [ra, rb] = e0 > e1 ? [mid(P[3], P[0]), mid(P[1], P[2])] : [mid(P[0], P[1]), mid(P[2], P[3])];
+  const k = (short / 2) / Math.max(e0, e1);
+  const R1 = [ra[0] + (rb[0] - ra[0]) * k, ra[1] + (rb[1] - ra[1]) * k], R2 = [rb[0] + (ra[0] - rb[0]) * k, rb[1] + (ra[1] - rb[1]) * k];
+  const near = (p) => (Math.hypot(p[0] - R1[0], p[1] - R1[1]) < Math.hypot(p[0] - R2[0], p[1] - R2[1]) ? R1 : R2);
+  const top = y + rise;
+  for (let i = 0; i < 4; i++) {
+    const a = P[i], b = P[(i + 1) % 4], na = near(a), nb = near(b);
+    const A = [a[0], y - 0.15, a[1]], Bp = [b[0], y - 0.15, b[1]];
+    if (na === nb) roofTri(B, 'roof', A, Bp, [na[0], top, na[1]], col);
+    else { roofTri(B, 'roof', A, Bp, [nb[0], top, nb[1]], col); roofTri(B, 'roof', A, [nb[0], top, nb[1]], [na[0], top, na[1]], col); }
+  }
+  // soffit: the underside of the overhang, so the eaves don't look paper-thin
+  for (const [p, q] of [[P[0], P[1]], [P[1], P[2]], [P[2], P[3]], [P[3], P[0]]]) {
+    const a = [p[0], y - 0.15, p[1]], b = [q[0], y - 0.15, q[1]], c = [q[0], y - 0.3, q[1]], d = [p[0], y - 0.3, p[1]];
+    const nx = (q[1] - p[1]), nz = -(q[0] - p[0]), l = Math.hypot(nx, nz) || 1;
+    const out = (p[0] + q[0]) / 2 - cx, outz = (p[1] + q[1]) / 2 - cz, s = out * nx + outz * nz >= 0 ? 1 : -1;
+    const N = [s * nx / l, 0, s * nz / l];
+    if (s > 0) { B.tri('roof', a, b, c, N, null, col); B.tri('roof', a, c, d, N, null, col); } else { B.tri('roof', a, c, b, N, null, col); B.tri('roof', a, d, c, N, null, col); }
+  }
+}
+
+/** A horizontal slab along a wall edge (balconies, eyebrows): top, bottom and front faces. */
+function slab(B, key, ax, az, bx, bz, nx, nz, y, depth, thick, col) {
+  const ox = nx * depth, oz = nz * depth;
+  const p = [[ax, az], [bx, bz], [bx + ox, bz + oz], [ax + ox, az + oz]];
+  const top = p.map(([x, z]) => [x, y, z]), bot = p.map(([x, z]) => [x, y - thick, z]);
+  B.tri(key, top[0], top[2], top[1], UP, null, col); B.tri(key, top[0], top[3], top[2], UP, null, col);
+  B.tri(key, bot[0], bot[1], bot[2], [0, -1, 0], null, col); B.tri(key, bot[0], bot[2], bot[3], [0, -1, 0], null, col);
+  const N = [nx, 0, nz];
+  const f0 = [p[3][0], y - thick, p[3][1]], f1 = [p[2][0], y - thick, p[2][1]], f2 = [p[2][0], y, p[2][1]], f3 = [p[3][0], y, p[3][1]];
+  const e1 = [f1[0] - f0[0], 0, f1[2] - f0[2]], e2 = [0, thick, 0], cx = e1[1] * e2[2] - e1[2] * e2[1], cz = e1[0] * e2[1] - e1[1] * e2[0];
+  if (cx * nx + cz * nz >= 0) { B.tri(key, f0, f1, f2, N, null, col); B.tri(key, f0, f2, f3, N, null, col); } else { B.tri(key, f0, f2, f1, N, null, col); B.tri(key, f0, f3, f2, N, null, col); }
+}
+
+/** A small box (rooftop AC units, water tanks). */
+function box(B, key, x, z, y, w, d, h, col) {
+  const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, y1 = y + h;
+  B.tri(key, [x0, y1, z0], [x0, y1, z1], [x1, y1, z1], UP, null, col); B.tri(key, [x0, y1, z0], [x1, y1, z1], [x1, y1, z0], UP, null, col);
+  const sides = [[[x0, z1], [x1, z1], [0, 1]], [[x1, z1], [x1, z0], [1, 0]], [[x1, z0], [x0, z0], [0, -1]], [[x0, z0], [x0, z1], [-1, 0]]];
+  for (const [[ax, az], [bx2, bz], [nx, nz]] of sides) {
+    const N = [nx, 0, nz];
+    B.tri(key, [ax, y, az], [bx2, y, bz], [bx2, y1, bz], N, null, col); B.tri(key, [ax, y, az], [bx2, y1, bz], [ax, y1, az], N, null, col);
+  }
+}
+
+function building(B, b, classes, colliders, deco, FACADE_TILE, shop) {
   let pts = b.pts;
   const n = pts.length / 2;
   if (n < 3) return;
@@ -182,64 +285,86 @@ function building(B, b, classes, colliders, deco, FACADE_TILE) {
   let cx = 0, cz = 0;
   for (let i = 0; i < n; i++) { cx += pts[i * 2]; cz += pts[i * 2 + 1]; }
   cx /= n; cz /= n;
+  const area = Math.abs(area2(pts));
   const r = hash(Math.round(cx), Math.round(cz));
-  const style = facadeFor(b, classes, cx, cz, deco);
-  const palette = style === 'tower' || style === 'civic' ? NEUTRALS : PASTELS;
+  const style = facadeFor(b, classes, cx, cz, deco, area);
+  const palette = style === 'glass' || style === 'civic' || style === 'warehouse' ? NEUTRALS : style === 'tower' ? [0xf6f6f2, 0xf2efe6, 0xeceff0, 0xf4eee4] : PASTELS;
   const col = new THREE.Color(b.colour >= 0 ? b.colour : palette[Math.floor(r * palette.length)]);
   const key = 'fac:' + style;
-  const y0 = b.minh, y1 = Math.max(b.minh + 2.4, b.h);
+  const y0 = b.minh, y1 = Math.max(b.minh + 2.6, b.h);
+  // shops at street level: a storefront band on the ground floor
+  const front = (shop || style === 'shop' || (style === 'deco' && r < 0.7)) && y0 < 0.5 && y1 > 5;
+  const yF = front ? 4 : y0;
   const [tw, th] = FACADE_TILE;
   let perim = 0;
+  const edges = [];
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
     const ax = pts[i * 2], az = pts[i * 2 + 1], bx = pts[j * 2], bz = pts[j * 2 + 1];
     const len = Math.hypot(bx - ax, bz - az);
     if (len < 0.05) continue;
     const nx = (bz - az) / len, nz = -(bx - ax) / len;
-    // outward normal check against the centroid
     const out = (ax + bx) / 2 - cx, outz = (az + bz) / 2 - cz;
     const s = out * nx + outz * nz >= 0 ? 1 : -1;
     const N = [nx * s, 0, nz * s];
-    const u0 = perim / tw, u1 = (perim + len) / tw, v0 = y0 / th, v1 = y1 / th;
-    const p0 = [ax, y0, az], p1 = [bx, y0, bz], p2 = [bx, y1, bz], p3 = [ax, y1, az];
-    if (s > 0) { B.tri(key, p0, p1, p2, N, [[u0, v0], [u1, v0], [u1, v1]], col); B.tri(key, p0, p2, p3, N, [[u0, v0], [u1, v1], [u0, v1]], col); }
-    else { B.tri(key, p0, p2, p1, N, [[u0, v0], [u1, v1], [u1, v0]], col); B.tri(key, p0, p3, p2, N, [[u0, v0], [u0, v1], [u1, v1]], col); }
+    edges.push({ ax, az, bx, bz, len, nx: N[0], nz: N[2] });
+    const wall = (k, ya, yb, u0, u1, v0, v1) => {
+      const p0 = [ax, ya, az], p1 = [bx, ya, bz], p2 = [bx, yb, bz], p3 = [ax, yb, az];
+      if (s > 0) { B.tri(k, p0, p1, p2, N, [[u0, v0], [u1, v0], [u1, v1]], col); B.tri(k, p0, p2, p3, N, [[u0, v0], [u1, v1], [u0, v1]], col); }
+      else { B.tri(k, p0, p2, p1, N, [[u0, v0], [u1, v1], [u1, v0]], col); B.tri(k, p0, p3, p2, N, [[u0, v0], [u0, v1], [u1, v1]], col); }
+    };
+    if (front) wall(style === 'deco' ? 'front:deco' : 'front:shop', y0, yF, perim / 6, (perim + len) / 6, 0, 1);
+    wall(key, yF, y1, perim / tw, (perim + len) / tw, (yF - (front ? 0.6 : 0)) / th, (y1 - (front ? 0.6 : 0)) / th);
     perim += len;
     if (colliders && y0 < 3) colliders.push({ type: 'box', cx: (ax + bx) / 2 - N[0] * 0.25, cz: (az + bz) / 2 - N[2] * 0.25, hx: len / 2 + 0.2, hz: 0.3, angle: Math.atan2(-(bz - az), bx - ax), y0: -2, y1: y1 + 0.5, material: 'concrete', tag: 'building' });
   }
-  // roof: hipped for small four-sided houses, otherwise flat with a parapet look from the facade top
-  const roofCol = new THREE.Color(style === 'motel' && r > 0.5 ? 0xb8775a : 0xd9d6cf);
-  const roofShape = b.roof;
-  if (n === 4 && y1 < 10 && (roofShape === 2 || roofShape === 3 || (roofShape === 0 && style === 'motel' && r > 0.35))) {
-    // hip: ridge along the longer axis, inset by a quarter of the short side
-    const P = [0, 1, 2, 3].map((i) => [pts[i * 2], pts[i * 2 + 1]]);
-    const e0 = Math.hypot(P[1][0] - P[0][0], P[1][1] - P[0][1]), e1 = Math.hypot(P[2][0] - P[1][0], P[2][1] - P[1][1]);
-    const rh = Math.min(e0, e1) * 0.35;
-    const m01 = [(P[0][0] + P[1][0]) / 2, (P[0][1] + P[1][1]) / 2], m23 = [(P[2][0] + P[3][0]) / 2, (P[2][1] + P[3][1]) / 2];
-    const m12 = [(P[1][0] + P[2][0]) / 2, (P[1][1] + P[2][1]) / 2], m30 = [(P[3][0] + P[0][0]) / 2, (P[3][1] + P[0][1]) / 2];
-    const [ra, rb] = e0 > e1 ? [m30, m12] : [m01, m23];
-    const k = 0.25 * Math.min(e0, e1) / Math.max(e0, e1);
-    const R1 = [ra[0] + (rb[0] - ra[0]) * k, ra[1] + (rb[1] - ra[1]) * k], R2 = [rb[0] + (ra[0] - rb[0]) * k, rb[1] + (ra[1] - rb[1]) * k];
-    const top = y1 + rh;
-    const face = (a, b, c) => {
-      const e1 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], e2 = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
-      let N = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
-      if (N[1] < 0) { [b, c] = [c, b]; N = N.map((v) => -v); }
-      const l = Math.hypot(...N) || 1;
-      B.tri('roof', a, b, c, N.map((v) => v / l), null, roofCol);
-    };
-    const near = (p) => (Math.hypot(p[0] - R1[0], p[1] - R1[1]) < Math.hypot(p[0] - R2[0], p[1] - R2[1]) ? R1 : R2);
-    for (let i = 0; i < 4; i++) {
-      const a = P[i], b2 = P[(i + 1) % 4], ra_ = near(a), rb_ = near(b2);
-      const A = [a[0], y1, a[1]], Bp = [b2[0], y1, b2[1]], RA = [ra_[0], top, ra_[1]], RB = [rb_[0], top, rb_[1]];
-      if (ra_ === rb_) face(A, Bp, RA); else { face(A, Bp, RB); face(A, RB, RA); }
+  const white = new THREE.Color(0xf6f4ee);
+  // condo towers: a balcony slab with a glass rail line on every floor
+  if (style === 'tower' && y1 > 18 && edges.length <= 14) {
+    for (let fy = 6.8; fy < y1 - 2; fy += 3.4) for (const e of edges) if (e.len > 4) slab(B, 'slab', e.ax, e.az, e.bx, e.bz, e.nx, e.nz, fy, 1.4, 0.22, white);
+  }
+  // Art Deco: an "eyebrow" over each floor's windows and a stepped parapet on the longest side
+  if (style === 'deco') {
+    for (let fy = 4 + 3.0; fy < y1 - 0.5; fy += 3.4) for (const e of edges) if (e.len > 3) slab(B, 'slab', e.ax, e.az, e.bx, e.bz, e.nx, e.nz, fy, 0.55, 0.12, white);
+    const L = edges.reduce((a, e) => (e.len > (a?.len || 0) ? e : a), null);
+    if (L && L.len > 8) {
+      const mx = (L.ax + L.bx) / 2, mz = (L.az + L.bz) / 2, ux = (L.bx - L.ax) / L.len, uz = (L.bz - L.az) / L.len, w = Math.min(6, L.len * 0.35);
+      const P = [[mx - ux * w / 2, mz - uz * w / 2], [mx + ux * w / 2, mz + uz * w / 2]];
+      const tcol = new THREE.Color(PASTELS[Math.floor(hash(Math.round(mx), Math.round(mz)) * PASTELS.length)]);
+      for (const [h0, ww] of [[y1, w], [y1 + 1.2, w * 0.55]]) {
+        const a = [mx - ux * ww / 2 - L.nx * 0.05, mz - uz * ww / 2 - L.nz * 0.05], b2 = [mx + ux * ww / 2 - L.nx * 0.05, mz + uz * ww / 2 - L.nz * 0.05];
+        const N = [L.nx, 0, L.nz];
+        B.tri('trim', [a[0], h0, a[1]], [b2[0], h0, b2[1]], [b2[0], h0 + 1.2, b2[1]], N, null, tcol);
+        B.tri('trim', [a[0], h0, a[1]], [b2[0], h0 + 1.2, b2[1]], [a[0], h0 + 1.2, a[1]], N, null, tcol);
+      }
+      void P;
     }
+  }
+  // roof: hipped tile or shingle roofs on houses and Mediterranean buildings, flat (with
+  // rooftop plant) on everything else
+  const box0 = (style === 'house' || style === 'medit') && y1 < 14 ? obb(pts) : null;
+  if (box0 && box0.fill > 0.6) {
+    const tile = style === 'medit' || hash(Math.round(cz), Math.round(cx)) < 0.55;
+    const roofCol = new THREE.Color((tile ? ROOF_TILE : ROOF_SHINGLE)[Math.floor(r * 4) % 4]);
+    // close the top of the walls under the eaves
+    fillRings(B, 'roof', [new Float32Array(pts)], y1 - 0.02, roofCol);
+    hipRoof(B, box0.corners, y1, roofCol, style === 'medit' ? 0.36 : 0.45);
   } else {
-    const ring = new Float32Array(pts);
-    fillRings(B, 'roof', [ring], y1, roofCol);
+    const roofCol = new THREE.Color(ROOF_FLAT[Math.floor(r * 3) % 3]);
+    fillRings(B, 'roof', [new Float32Array(pts)], y1, roofCol);
+    // rooftop plant: AC units (and a water tank on some older mid-rises)
+    if (area > 120) {
+      const gray = new THREE.Color(0xb9bcbf);
+      const k = Math.min(4, 1 + Math.floor(area / 400));
+      for (let i = 0; i < k; i++) {
+        const h1 = hash(Math.round(cx) + i * 7, Math.round(cz) - i * 3), h2 = hash(Math.round(cz) + i * 5, Math.round(cx) + i);
+        const px = cx + (h1 - 0.5) * Math.sqrt(area) * 0.45, pz = cz + (h2 - 0.5) * Math.sqrt(area) * 0.45;
+        if (!inPoly(pts, px, pz)) continue;
+        box(B, 'metal', px, pz, y1, 1.6, 1.2, 1.1, gray);
+      }
+    }
   }
 }
-
 // -----------------------------------------------------------------------------------
 
 const GROUND_KEY = { land: 'grass', park: 'grass', grass: 'grass', beach: 'sand', sand: 'sand', golf: 'grass', forest: 'grass', wetland: 'grass', parking: 'lot', pedestrian: 'pavers', cemetery: 'grass', airport: 'lot', sports: 'grass', industrial: 'concrete', residential: null, commercial: null, farmland: 'grass', construction: 'sand', rock: 'concrete', pier: 'wood' };
@@ -390,8 +515,16 @@ export function buildTileData(tile, index, { deco = () => false, FACADE_TILE = [
   }
 
   // --- buildings ----------------------------------------------------------------------------
+  const storeKinds = index.stores || [];
+  const shopPts = tile.places.filter((p) => { const k = storeKinds[p.kind]; return k && !['other', 'office', 'school', 'worship', 'park', 'beach', 'marina', 'hospital', 'police', 'fire', 'museum', 'bank', 'atm'].includes(k); });
   for (const b of tile.buildings) {
-    building(B, b, index.buildingClasses, colliders, deco(b.pts[0], b.pts[1]), FACADE_TILE);
+    let shop = false;
+    if (shopPts.length && b.h < 60) {
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (let i = 0; i < b.pts.length; i += 2) { x0 = Math.min(x0, b.pts[i]); x1 = Math.max(x1, b.pts[i]); z0 = Math.min(z0, b.pts[i + 1]); z1 = Math.max(z1, b.pts[i + 1]); }
+      shop = shopPts.some((p) => p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1 && inPoly(b.pts, p.x, p.z));
+    }
+    building(B, b, index.buildingClasses, colliders, deco(b.pts[0], b.pts[1]), FACADE_TILE, shop);
     fillPoly([b.pts], SURF.building);
   }
 
