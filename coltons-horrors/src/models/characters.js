@@ -949,22 +949,23 @@ export function buildViewmodel(kind, outfit) {
     const joint = new THREE.MeshStandardMaterial({ color: outfit.glow2, emissive: outfit.glow2, emissiveIntensity: 1.6 });
     const glass = new THREE.MeshStandardMaterial({ color: '#9adfe8', emissive: outfit.glow, emissiveIntensity: 0.7, roughness: 0.05, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
     mesh(new THREE.CapsuleGeometry(0.035, 0.4, 4, 8), mat, 0, 0, 0.1, arm, false).rotation.x = Math.PI / 2;
-    mesh(new THREE.SphereGeometry(0.045, 8, 6), joint, 0, 0, -0.14, arm, false);
+    mesh(new THREE.SphereGeometry(0.026, 8, 6), joint, 0, 0, -0.14, arm, false);
     const hand = group(arm, 0, 0, -0.2);
     mesh(new THREE.BoxGeometry(0.06, 0.03, 0.06), mat, 0, 0, 0, hand, false);
     for (let f = 0; f < 4; f++) {
       const fm = mesh(new THREE.CapsuleGeometry(0.007, 0.12, 3, 5), mat, (f - 1.5) * 0.017, 0, -0.08, hand, false);
       fm.rotation.x = Math.PI / 2 + 0.4;
     }
-    const shardGeo = new THREE.ConeGeometry(0.05, 0.6, 3);
-    shardGeo.translate(0, 0.3, 0);
+    const shardGeo = new THREE.ConeGeometry(0.04, 0.4, 3);
+    shardGeo.translate(0, 0.2, 0);
     const sh = mesh(shardGeo, glass, 0, 0.02, -0.02, hand, false);
     sh.rotation.x = -1.2;
     sh.scale.set(1.2, 1, 0.3);
     g.userData.exeMat = mat;
   }
-  arm.position.set(0.24, -0.26, -0.3);
+  arm.position.set(kind === 'exe' ? 0.3 : 0.22, kind === 'exe' ? -0.3 : -0.24, kind === 'exe' ? -0.46 : -0.36);
   arm.rotation.set(0.1, 0.15, 0);
+  g.scale.setScalar(0.62);
   g.userData.arm = arm;
   g.userData.base = arm.position.clone();
   g.userData.baseRot = arm.rotation.clone();

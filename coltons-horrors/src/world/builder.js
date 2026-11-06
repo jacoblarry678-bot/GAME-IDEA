@@ -1174,9 +1174,9 @@ export class World {
     this.scene.fog = new THREE.FogExp2(def.fogColor, def.fogDensity * fogMul);
     this.scene.background = new THREE.Color(def.fogColor);
     const blood = this.opts.bloodMoon;
-    this.hemi = new THREE.HemisphereLight(blood ? 0x7a3a3a : def.hemi[0], def.hemi[1], def.hemi[2]);
+    this.hemi = new THREE.HemisphereLight(blood ? 0x7a3a3a : def.hemi[0], def.hemi[1], def.hemi[2] * 1.8);
     this.scene.add(this.hemi);
-    this.moon = new THREE.DirectionalLight(blood ? 0xd86a5a : def.moonColor, def.moonIntensity);
+    this.moon = new THREE.DirectionalLight(blood ? 0xd86a5a : def.moonColor, def.moonIntensity * 1.6);
     this.moon.position.set(-24, 40, -34);
     const q = this.opts.quality;
     if (q !== 'low') {
