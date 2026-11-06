@@ -27,6 +27,16 @@ export const EVENT_SHOPS = [
 ];
 BUNDLES.push({ id: 'bd_hollow', name: 'Hollow Night Bundle', desc: 'Every Hollow Night Store item: Wraith outfit, Ossuary finish, Rattle Skull and Little Ghost charms, Night Wing emblem, Pumpkin Patch card and Cobweb banner.', items: ['of_kestrel_wraith', 'fn_bone', 'ch_skull', 'ch_ghost', 'em_bat', 'cd_patch', 'bn_cobweb'], discount: 0.25, event: 'hollow_night' });
 
+EVENT_SHOPS.push(
+  { event: 'frostfall', name: 'Frostfall', bundle: 'bd_frostfall', items: ['of_marek_nutcracker', 'fn_tinsel', 'fn_giftwrap', 'ch_gingerbread', 'ch_snowman', 'em_holly', 'cd_wrapped', 'bn_lights', 'ex_gift'], blurb: 'Christmas items for test credits. Cosmetic only; what you buy stays yours after the event.' },
+  { event: 'harvest', name: 'Harvest Feast', bundle: 'bd_harvest', items: ['of_voss_harvest', 'fn_autumn', 'ch_acorn', 'em_turkey', 'cd_harvest', 'bn_leaves', 'ex_feast'], blurb: 'Thanksgiving items for test credits, through 30 November. Cosmetic only.' },
+);
+BUNDLES.push(
+  { id: 'bd_frostfall', name: 'Frostfall Bundle', desc: 'Every Frostfall Store item, 25% off.', items: ['of_marek_nutcracker', 'fn_tinsel', 'fn_giftwrap', 'ch_gingerbread', 'ch_snowman', 'em_holly', 'cd_wrapped', 'bn_lights', 'ex_gift'], discount: 0.25, event: 'frostfall' },
+  { id: 'bd_harvest', name: 'Harvest Feast Bundle', desc: 'Every Harvest Feast Store item, 25% off.', items: ['of_voss_harvest', 'fn_autumn', 'ch_acorn', 'em_turkey', 'cd_harvest', 'bn_leaves', 'ex_feast'], discount: 0.25, event: 'harvest' },
+  { id: 'bd_field', name: 'Field Kit', desc: 'Desert Fox outfit, Midnight Chrome finish and the Lucky Clover charm.', items: ['of_voss_fox', 'fn_chrome', 'ch_clover'], discount: 0.3 },
+);
+
 export const SHOP_CONFIG = { featuredSlots: 4, bundleSlots: 2, demoLabel: 'Demo rotation, generated on this device from the date. Not a live service.' };
 
 /** Base price for a single item, by rarity. */

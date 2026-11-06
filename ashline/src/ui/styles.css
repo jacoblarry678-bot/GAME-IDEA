@@ -521,3 +521,11 @@ body.touch-on #hud .captions { bottom: 70px; }
 .emote-wheel .ew-slot.empty { color: var(--muted); }
 .emote-wheel .ew-slot small { display: block; font: 500 10px var(--font-body, sans-serif); opacity: 0.7; }
 .emote-wheel .ew-c { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 11px; color: var(--muted); text-align: center; letter-spacing: 0.12em; }
+
+/* Frostfall (Christmas) */
+.menu-btn.hn-btn.ff-btn { color: #a8e0ff; text-shadow: 0 0 12px rgba(120,200,255,0.5); }
+.frost-bg { background: radial-gradient(ellipse at 80% 0%, rgba(120,180,255,0.3), transparent 60%), rgba(6,12,20,0.9) !important; }
+.frost-bg .hn-title { color: #c8ecff; text-shadow: 0 0 18px rgba(120,200,255,0.5); }
+.frost-bg .hn-candy b, .frost-bg .hn-tier .hn-c { color: #a8e0ff; }
+.frost-bg .hn-tier.got { background: rgba(120,200,255,0.16); border-color: rgba(160,220,255,0.6); }
+.frost-bg .hn-bar i { background: linear-gradient(90deg, #6fc8ff, #ffffff) !important; }

@@ -17,7 +17,7 @@ function paint(f, S = 256) {
   const col = canvas(S), ctx = col.getContext('2d');
   const img = ctx.createImageData(S, S);
   let emis = null, eimg = null, ectx = null;
-  const needsEmissive = ['ember', 'circuit', 'obsidian', 'pumpkin', 'ecto'].includes(f.kind);
+  const needsEmissive = ['ember', 'circuit', 'obsidian', 'pumpkin', 'ecto', 'frost', 'tinsel'].includes(f.kind);
   if (needsEmissive) { emis = canvas(S); ectx = emis.getContext('2d'); eimg = ectx.createImageData(S, S); }
   const r = rand(f.kind.length * 97 + (f.base?.[0] || 7));
   const hex = (x, y) => { // distance to hex grid lines
@@ -141,6 +141,38 @@ function paint(f, S = 256) {
           if (crack < 0.012) c = [70, 62, 52];
           break;
         }
+        case 'candycane': {
+          const w = ((u + v) * 6) % 1;
+          c = w < 0.35 ? [196, 28, 36] : w < 0.42 || w > 0.93 ? [236, 230, 224] : [248, 246, 244];
+          c = c.map((q) => q * (0.94 + n * 0.1));
+          break;
+        }
+        case 'frost': {
+          const cr = Math.abs(fbm(u, v, 181, 5, 5) - 0.5), cr2 = Math.abs(fbm(u * 2, v * 2, 191, 4, 4) - 0.5);
+          c = [150 + n * 60, 196 + n * 40, 230 + n * 20];
+          if (cr < 0.02 || cr2 < 0.012) { c = [235, 248, 255]; e = [80, 170, 255]; }
+          break;
+        }
+        case 'tinsel': {
+          const sp = rand(Math.floor(u * 64) * 977 + Math.floor(v * 64) * 131)();
+          const red = fbm(u, v, 201, 3, 2) > 0.6;
+          c = red ? [150, 22, 26] : [200 + n * 40, 150 + n * 30, 40];
+          if (sp > 0.93) { c = [255, 246, 200]; e = [255, 220, 120]; }
+          break;
+        }
+        case 'giftwrap': {
+          const gx = (u * 4) % 1, gy = (v * 4) % 1;
+          c = [32 + n * 16, 110 + n * 20, 60 + n * 12];
+          if (Math.abs(gx - 0.5) < 0.07 || Math.abs(gy - 0.5) < 0.07) c = [190, 30, 36];
+          else if ((Math.floor(u * 16) + Math.floor(v * 16)) % 4 === 0 && Math.hypot((u * 16) % 1 - 0.5, (v * 16) % 1 - 0.5) < 0.18) c = [236, 220, 150];
+          break;
+        }
+        case 'jade': {
+          const vein = Math.abs(Math.sin((u * 2 + v * 3 + fbm(u, v, 211, 6, 3) * 5) * Math.PI));
+          c = [40 + n * 30, 140 + n * 50, 96 + n * 30];
+          if (vein < 0.1) c = c.map((q) => q * 0.6);
+          break;
+        }
         default: break;
       }
       const i = (y * S + x) * 4;
@@ -175,6 +207,11 @@ const METAL_LOOK = {
   carbon: { metalness: 0.25, roughness: 0.35 },
   marble: { metalness: 0.05, roughness: 0.3 },
   bone: { metalness: 0.02, roughness: 0.55 },
+  candycane: { metalness: 0.05, roughness: 0.2 },
+  frost: { metalness: 0.4, roughness: 0.15 },
+  tinsel: { metalness: 0.85, roughness: 0.25 },
+  giftwrap: { metalness: 0.05, roughness: 0.5 },
+  jade: { metalness: 0.1, roughness: 0.2 },
   pumpkin: { metalness: 0.0, roughness: 0.55 },
   ecto: { metalness: 0.2, roughness: 0.3 },
 };

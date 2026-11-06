@@ -53,6 +53,11 @@ outfit('of_kestrel_tiger', 'op_kestrel', 'Tigerstripe', 'epic', 'Classic jungle 
 // Hollow Night (Halloween 2026) event outfits
 outfit('of_voss_grave', 'op_voss', 'Gravewalker', 'legendary', 'Graveyard-shift black with a lantern-orange glow. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 260 }, [[28, 24, 30], [44, 36, 46], [18, 16, 20], [60, 48, 58]], [34, 28, 36], 0x221c26, 0x120e14, { glow: 0xff7a1a });
 outfit('of_kestrel_wraith', 'op_kestrel', 'Wraith', 'epic', 'Fog-grey wraps with a ghost-green glow. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, [[150, 154, 160], [120, 126, 132], [96, 100, 106], [182, 186, 190]], [110, 114, 120], 0x8a8e94, 0x3a3e44, { glow: 0x7dffb0 });
+// Frostfall (Christmas 2026), Harvest Feast (Thanksgiving) and general 0.10.0 outfits
+outfit('of_sol_winter', 'op_sol', 'Winter Ops', 'legendary', 'Snow camo with frost-blue trim. Frostfall event track.', { type: 'event', event: 'frostfall', candy: 260 }, [[226, 232, 238], [196, 206, 216], [164, 176, 190], [244, 248, 252]], [200, 210, 220], 0xe6ecf2, 0x5a6470, { glow: 0x8fd8ff });
+outfit('of_marek_nutcracker', 'op_marek', 'Nutcracker', 'epic', 'Parade red with gold braid. Frostfall Store.', { type: 'shop', event: 'frostfall' }, [[150, 30, 34], [178, 42, 44], [110, 22, 26], [196, 160, 70]], [40, 50, 110], 0x1e2a66, 0xd8b04a, { glow: 0xffd060 });
+outfit('of_voss_harvest', 'op_voss', 'Harvest Field', 'rare', 'Wheat and pumpkin tones. Harvest Feast Store.', { type: 'shop', event: 'harvest' }, [[166, 120, 58], [196, 150, 74], [120, 80, 40], [212, 170, 96]], [140, 92, 44], 0x7a5228, 0x3a2614);
+outfit('of_voss_fox', 'op_voss', 'Desert Fox', 'epic', 'Sand and rust in a broken pattern.', { type: 'shop' }, [[190, 160, 112], [160, 110, 66], [130, 96, 64], [214, 190, 146]], [150, 112, 72], 0x9a7a52, 0x3a2c1e);
 outfit('of_kestrel_signal', 'op_kestrel', 'Signal Red', 'legendary', 'Crimson accents for those who want to be seen leaving.', { type: 'shop' }, [[60, 30, 30], [96, 40, 36], [36, 20, 20], [130, 56, 48]], [120, 30, 26], 0x3a1c1c, 0x1a0e0e, { glow: 0xff3020 });
 
 // ---------------- weapon finishes. kind drives the procedural texture generator.
@@ -84,6 +89,13 @@ finish('fn_aurora', 'Aurora', 'legendary', 'Shifting northern lights.', { type: 
 finish('fn_pumpkin', "Jack-o'-Lantern", 'legendary', 'Carved grins that glow from inside. Hollow Night event track finale.', { type: 'event', event: 'hollow_night', candy: 330 }, { kind: 'pumpkin' });
 finish('fn_ectoplasm', 'Ectoplasm', 'epic', 'Ghost-green ooze that glows in the dark. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 110 }, { kind: 'ecto' });
 finish('fn_bone', 'Ossuary', 'epic', 'Bone-white with hairline cracks. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, { kind: 'bone' });
+finish('fn_candycane', 'Candy Cane', 'epic', 'Red and white stripes with a sugar shine. Frostfall event track.', { type: 'event', event: 'frostfall', candy: 110 }, { kind: 'candycane' });
+finish('fn_frostbite', 'Frostbite', 'legendary', 'Ice crystals with a cold glow. Frostfall event track finale.', { type: 'event', event: 'frostfall', candy: 330 }, { kind: 'frost' });
+finish('fn_tinsel', 'Tinsel', 'epic', 'Glittering gold and red. Frostfall Store.', { type: 'shop', event: 'frostfall' }, { kind: 'tinsel' });
+finish('fn_giftwrap', 'Gift Wrap', 'rare', 'Green paper with a red ribbon pattern. Frostfall Store.', { type: 'shop', event: 'frostfall' }, { kind: 'giftwrap' });
+finish('fn_autumn', 'Autumn Leaves', 'rare', 'Maple reds, oranges and golds. Harvest Feast Store.', { type: 'shop', event: 'harvest' }, { kind: 'camo', colors: [[176, 64, 32], [214, 120, 36], [120, 54, 30], [226, 176, 62]], scale: 2.2 });
+finish('fn_chrome', 'Midnight Chrome', 'epic', 'Dark mirror chrome.', { type: 'shop' }, { kind: 'metallic', base: [40, 44, 54], metal: 0.95 });
+finish('fn_jade', 'Jade', 'epic', 'Polished green stone. Reach level 30.', { type: 'level', level: 30 }, { kind: 'jade' });
 finish('fn_prism', 'Prismatic', 'legendary', 'Iridescent oil-slick sheen.', { type: 'shop' }, { kind: 'prism' });
 
 // ---------------- charms
@@ -101,6 +113,11 @@ add({ id: 'ch_waspinator', type: 'charm', name: 'Waspinator Keychain', rarity: '
 charm('ch_pumpkin', 'Lantern Pumpkin', 'rare', 'A tiny jack-o\'-lantern with a candle inside. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 45 }, 'pumpkin', 0xff7a1a);
 charm('ch_skull', 'Rattle Skull', 'epic', 'Polished bone with hollow eyes. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'skull', 0xe8e2d0);
 charm('ch_ghost', 'Little Ghost', 'rare', 'Boo. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'ghost', 0xf4f6ff);
+charm('ch_ornament', 'Glass Ornament', 'rare', 'A red bauble that catches the light. Frostfall event track.', { type: 'event', event: 'frostfall', candy: 45 }, 'ornament', 0xc8302a);
+charm('ch_gingerbread', 'Gingerbread', 'rare', 'Slightly nibbled. Frostfall Store.', { type: 'shop', event: 'frostfall' }, 'gingerbread', 0xa8662e);
+charm('ch_snowman', 'Snowman', 'epic', 'Carrot nose, coal buttons. Frostfall Store.', { type: 'shop', event: 'frostfall' }, 'snowman', 0xf4f8ff);
+charm('ch_acorn', 'Acorn', 'common', 'Fell off the Ashfield oak. Harvest Feast Store.', { type: 'shop', event: 'harvest' }, 'acorn', 0x8a5a2a);
+charm('ch_clover', 'Lucky Clover', 'rare', 'Four leaves, sealed in resin.', { type: 'shop' }, 'clover', 0x3aa850);
 charm('ch_compass', 'Field Compass', 'legendary', 'Points toward the nearest objective. Probably.', { type: 'pass', tier: 48, track: 'premium' }, 'compass', 0xc89a40);
 
 // ---------------- calling cards (2D art params)
@@ -118,6 +135,10 @@ card('cd_signal', 'Signal Lost', 'epic', 'Static on every channel.', { type: 'sh
 card('cd_tactician', 'Tactician', 'epic', 'Plans drawn in chalk.', { type: 'pass', tier: 38, track: 'premium' }, { kind: 'grid', a: '#16221c', b: '#d8e0d0', fg: '#f0f4ec' });
 card('cd_hollow', 'Hollow Night', 'epic', 'A violet moon over bare trees. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 75 }, { kind: 'hollow', a: '#120a24', b: '#c8b8ff', fg: '#f4ecff' });
 card('cd_patch', 'Pumpkin Patch', 'rare', 'Rows of grinning lanterns. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, { kind: 'patch', a: '#160c1c', b: '#ff8a1a', fg: '#fff0dc' });
+card('cd_silentnight', 'Silent Night', 'epic', 'Snow on a sleeping village. Frostfall event track.', { type: 'event', event: 'frostfall', candy: 75 }, { kind: 'xmas', a: '#0a1424', b: '#ffd060', fg: '#f0f6ff' });
+card('cd_wrapped', 'Wrapped Up', 'rare', 'Ribbon and bows. Frostfall Store.', { type: 'shop', event: 'frostfall' }, { kind: 'wrap', a: '#1a5a34', b: '#c8302a', fg: '#fff4e0' });
+card('cd_harvest', 'Harvest Table', 'rare', 'Long table, longer stories. Harvest Feast Store.', { type: 'shop', event: 'harvest' }, { kind: 'harvest', a: '#3a1e0e', b: '#e8902a', fg: '#fff0dc' });
+card('cd_summit', 'Summit', 'rare', 'Above the clouds at first light.', { type: 'level', level: 26 }, { kind: 'summit', a: '#1a2238', b: '#ffb070', fg: '#fff4e8' });
 card('cd_veteran', 'Veteran', 'legendary', 'Reach level 50.', { type: 'level', level: 50 }, { kind: 'chevrons', a: '#141414', b: '#ffb84d', fg: '#fff4e0' });
 
 // ---------------- emblems (2D icon params)
@@ -136,6 +157,10 @@ emblem('em_crown', 'Crown', 'legendary', 'Top of the scoreboard.', { type: 'pass
 emblem('em_pumpkin', 'Jack', 'rare', 'Carved and lit. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 20 }, 'pumpkin', '#ff8a1a');
 emblem('em_skull', 'Grinning Skull', 'epic', 'Smiles back. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 200 }, 'skull', '#efe8d6');
 emblem('em_bat', 'Night Wing', 'rare', 'Out after dark. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'bat', '#b48cff');
+emblem('em_snowflake', 'Snowflake', 'rare', 'No two alike. Frostfall event track.', { type: 'event', event: 'frostfall', candy: 20 }, 'snowflake', '#bfe8ff');
+emblem('em_holly', 'Holly', 'rare', 'Green leaves, red berries. Frostfall Store.', { type: 'shop', event: 'frostfall' }, 'holly', '#2f9a4a');
+emblem('em_turkey', 'Turkey', 'rare', 'Gobble. Harvest Feast Store.', { type: 'shop', event: 'harvest' }, 'turkey', '#b0662e');
+emblem('em_paw', 'Paw Print', 'common', 'Something walked through the yard.', { type: 'level', level: 7 }, 'paw', '#d8d0c4');
 emblem('em_eye', 'Watcher', 'epic', 'Always watching the long lane.', { type: 'shop' }, 'eye', '#4adf8a');
 
 // ---------------- banners
@@ -148,6 +173,10 @@ banner('bn_ember', 'Ember', 'epic', 'Glowing coals.', { type: 'pass', tier: 44, 
 add({ id: 'bn_waspinator', type: 'banner', name: 'Waspinator', rarity: 'epic', collab: 'waspinator', desc: 'Collab banner: green armour, wasp stripes and translucent wings on a sunset haze.', unlock: { type: 'shop', collab: 'waspinator' }, art: { kind: 'waspinator', a: '#3a1830', b: '#e0743a' } });
 banner('bn_hollow', 'Hollow Moon', 'epic', 'Jack-o\'-lanterns under a violet moon. Hollow Night event track.', { type: 'event', event: 'hollow_night', candy: 150 }, { kind: 'hollow', a: '#0e0820', b: '#ff8a1a' });
 banner('bn_cobweb', 'Cobweb', 'rare', 'Something has been living here. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, { kind: 'cobweb', a: '#141018', b: '#d8d4e4' });
+banner('bn_northern', 'Northern Lights', 'epic', 'Green and violet ribbons over a frozen ridge. Frostfall event track.', { type: 'event', event: 'frostfall', candy: 200 }, { kind: 'northern', a: '#061020', b: '#5affb0' });
+banner('bn_lights', 'String Lights', 'rare', 'A warm row of coloured bulbs. Frostfall Store.', { type: 'shop', event: 'frostfall' }, { kind: 'stringlights', a: '#0c1018', b: '#ffd060' });
+banner('bn_leaves', 'Falling Leaves', 'rare', 'Autumn on the wind. Harvest Feast Store.', { type: 'shop', event: 'harvest' }, { kind: 'leaves', a: '#3a1a0c', b: '#e8902a' });
+banner('bn_ridge', 'Ridgeline', 'common', 'Mountains in layers of blue.', { type: 'pass', tier: 46, track: 'free' }, { kind: 'ridge', a: '#14203a', b: '#7aa0d0' });
 banner('bn_royal', 'Royal', 'legendary', 'Deep violet and gold.', { type: 'shop' }, { kind: 'gradient', a: '#1e0f30', b: '#c49a3a' });
 
 // ---------------- emotes (0.9.0): animations played on your operator; equip up to 4 in the emote wheel
@@ -161,6 +190,10 @@ emote('ex_flex', 'Flex', 'rare', 'Show off the training.', { type: 'shop' }, 'fl
 emote('ex_facepalm', 'Facepalm', 'rare', 'Who threw that grenade?', { type: 'shop' }, 'facepalm', 2.6);
 emote('ex_shuffle', 'Rail Shuffle', 'epic', 'A dance from the depot break room.', { type: 'shop' }, 'shuffle', 4.0);
 emote('ex_spin', 'Victory Spin', 'legendary', 'One full turn and a fist in the air.', { type: 'shop' }, 'spin', 3.0);
+emote('ex_snowball', 'Snowball Toss', 'epic', 'Pack it, wind up, throw. Frostfall event track.', { type: 'event', event: 'frostfall', candy: 150 }, 'snowball', 2.4);
+emote('ex_gift', 'Present', 'rare', 'For you. Frostfall Store.', { type: 'shop', event: 'frostfall' }, 'gift', 2.6);
+emote('ex_feast', 'Full Belly', 'rare', 'One more slice of pie. Harvest Feast Store.', { type: 'shop', event: 'harvest' }, 'feast', 2.6);
+emote('ex_clap', 'Applause', 'common', 'Well played. Reach level 9.', { type: 'level', level: 9 }, 'clap', 2.2);
 emote('ex_scare', 'Boo!', 'epic', 'Jump-scare your friends. Hollow Night Store.', { type: 'shop', event: 'hollow_night' }, 'scare', 2.2);
 
 export const COSMETICS = Object.fromEntries(items.map((i) => [i.id, i]));

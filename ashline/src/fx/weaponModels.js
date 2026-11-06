@@ -858,6 +858,48 @@ export function buildCharm(shape, color, mats) {
       const mo = add(new THREE.SphereGeometry(0.0014, 8, 6), 0.0078, -0.0006, 0, 0, 0, 0, dark); mo.scale.set(0.5, 1.2, 1);
       break;
     }
+    case 'ornament': {
+      const glass = new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.12, emissive: color, emissiveIntensity: 0.15 });
+      const gold = new THREE.MeshStandardMaterial({ color: 0xd8b04a, metalness: 0.9, roughness: 0.3 });
+      add(new THREE.SphereGeometry(0.0095, 16, 12), 0, -0.004, 0, 0, 0, 0, glass);
+      add(new THREE.CylinderGeometry(0.0028, 0.0032, 0.004, 10), 0, 0.0065, 0, 0, 0, 0, gold);
+      add(new THREE.TorusGeometry(0.008, 0.0009, 6, 18), 0, -0.004, 0, 0, Math.PI / 2, 0, gold);
+      break;
+    }
+    case 'gingerbread': {
+      const cookie = new THREE.MeshStandardMaterial({ color, roughness: 0.8 });
+      const icing = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+      add(new THREE.SphereGeometry(0.0055, 10, 8), 0, 0.009, 0, 0, 0, 0, cookie);
+      const body = add(new THREE.CylinderGeometry(0.0055, 0.0065, 0.012, 10), 0, -0.001, 0, 0, 0, 0, cookie); body.scale.set(1, 1, 0.45);
+      for (const z of [-1, 1]) { const arm = add(new THREE.CylinderGeometry(0.0022, 0.0022, 0.009, 6), 0, 0.002, z * 0.007, z * 1.2, 0, 0, cookie); arm.scale.set(1, 1, 0.6); const leg = add(new THREE.CylinderGeometry(0.0024, 0.0024, 0.009, 6), 0, -0.009, z * 0.0035, z * 0.3, 0, 0, cookie); leg.scale.set(1, 1, 0.6); }
+      for (const y of [0.002, -0.002]) add(new THREE.SphereGeometry(0.0011, 6, 5), 0.0028, y, 0, 0, 0, 0, icing);
+      break;
+    }
+    case 'snowman': {
+      const snow = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
+      const coal = new THREE.MeshBasicMaterial({ color: 0x111111 });
+      add(new THREE.SphereGeometry(0.0085, 12, 10), 0, -0.006, 0, 0, 0, 0, snow);
+      add(new THREE.SphereGeometry(0.006, 12, 10), 0, 0.0065, 0, 0, 0, 0, snow);
+      add(new THREE.ConeGeometry(0.0012, 0.006, 6), 0.0085, 0.0068, 0, 0, 0, -Math.PI / 2, new THREE.MeshStandardMaterial({ color: 0xff7a1a }));
+      add(new THREE.CylinderGeometry(0.0045, 0.0045, 0.006, 10), 0, 0.0145, 0, 0, 0, 0, coal);
+      for (const y of [-0.002, -0.0065]) add(new THREE.SphereGeometry(0.0009, 6, 5), 0.0083, y, 0, 0, 0, 0, coal);
+      break;
+    }
+    case 'acorn': {
+      const nut = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+      const cupM = new THREE.MeshStandardMaterial({ color: 0x5a3a1c, roughness: 0.9 });
+      const body = add(new THREE.SphereGeometry(0.0075, 12, 10), 0, -0.004, 0, 0, 0, 0, nut); body.scale.set(1, 1.25, 1);
+      add(new THREE.SphereGeometry(0.0082, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0.002, 0, 0, 0, 0, cupM);
+      add(new THREE.CylinderGeometry(0.0009, 0.0011, 0.004, 6), 0, 0.0078, 0, 0, 0, 0, cupM);
+      break;
+    }
+    case 'clover': {
+      const resin = new THREE.MeshStandardMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.2 });
+      const leaf = new THREE.MeshStandardMaterial({ color, roughness: 0.5 });
+      add(new THREE.CylinderGeometry(0.011, 0.011, 0.004, 18), 0, 0, 0, 0, 0, Math.PI / 2, resin);
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; const l = add(new THREE.SphereGeometry(0.0034, 10, 8), 0, Math.sin(a) * 0.0036, Math.cos(a) * 0.0036, 0, 0, 0, leaf); l.scale.set(0.3, 1, 1); }
+      break;
+    }
     case 'spike': add(new THREE.BoxGeometry(0.006, 0.034, 0.006)); add(new THREE.BoxGeometry(0.012, 0.004, 0.009), 0, 0.017, 0); break;
     case 'duck': add(new THREE.SphereGeometry(0.009, 10, 8)); add(new THREE.SphereGeometry(0.0062, 10, 8), 0, 0.009, -0.005); add(new THREE.ConeGeometry(0.0025, 0.006, 6), 0, 0.0085, -0.0115, -Math.PI / 2, 0, 0, new THREE.MeshStandardMaterial({ color: 0xff7a1a })); break;
     case 'cog': {

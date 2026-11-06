@@ -99,6 +99,42 @@ export const EMOTE_ANIMS = {
     m.legs[0].thigh.rotation.x = 0.5 * lunge * b; m.legs[0].shin.rotation.x = -0.4 * lunge * b;
     m.hips.position.y = 0.9;
   },
+  snowball(m, t, dur) {
+    // crouch and pack, wind up, throw
+    const b = inOut(t, dur, 0.15);
+    const [L, R] = m.arms;
+    if (t < 0.9) {
+      const k = ease(t / 0.3);
+      m.hips.position.y = 0.95 - 0.25 * k; for (const l of m.legs) { l.thigh.rotation.x = 0.7 * k; l.shin.rotation.x = -1.2 * k; }
+      m.spine.rotation.x = 0.5 * k;
+      for (const a of m.arms) { a.sh.rotation.set(0.9 * k, 0, a.side * 0.2); a.elbow.rotation.set((1.0 + 0.3 * Math.sin(t * 18)) * k, 0, 0); }
+    } else {
+      const k = ease((t - 0.9) / 0.35), th = ease((t - 1.25) / 0.2);
+      m.spine.rotation.y = 0.5 * k - 0.9 * th;
+      R.sh.rotation.set((2.6 * k - 1.6 * th) * b, 0, 0.3 * b); R.elbow.rotation.set((1.2 - 1.1 * th) * b, 0, 0);
+      L.sh.rotation.set(1.2 * b, 0, -0.2); L.elbow.rotation.set(0.3, 0, 0);
+    }
+  },
+  gift(m, t, dur) {
+    const b = inOut(t, dur, 0.3);
+    const offer = ease((t - 0.4) / 0.5);
+    for (const a of m.arms) { a.sh.rotation.set((0.9 + 0.5 * offer) * b, 0, -a.side * 0.18 * b); a.elbow.rotation.set((1.3 - 0.9 * offer) * b, 0, 0); }
+    m.spine.rotation.x = 0.15 * offer * b;
+    m.neck.rotation.z = 0.15 * Math.sin(t * 3) * b;
+  },
+  feast(m, t, dur) {
+    const b = inOut(t, dur);
+    for (const a of m.arms) { a.sh.rotation.set(0.35 * b, 0, a.side * 0.3 * b); a.elbow.rotation.set(1.7 * b, 0, a.side * (0.2 * Math.sin(t * 5)) * b); }
+    m.spine.rotation.x = -0.15 * b;
+    m.hips.position.y = 0.95 - 0.02 * Math.abs(Math.sin(t * 4));
+    m.neck.rotation.x = -0.2 * b;
+  },
+  clap(m, t, dur) {
+    const b = inOut(t, dur, 0.2);
+    const c = Math.abs(Math.sin(t * 9));
+    for (const a of m.arms) { a.sh.rotation.set(1.25 * b, 0, a.side * (0.05 + 0.35 * c) * b); a.elbow.rotation.set(0.9 * b, 0, -a.side * 0.5 * b); }
+    m.neck.rotation.x = -0.1 * b;
+  },
 };
 
 export const EMOTE_KEYS = Object.keys(EMOTE_ANIMS);

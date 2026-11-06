@@ -8,7 +8,7 @@
  * local storage. A real release would validate all of this on a server.
  */
 import { WEATHER_OPTIONS } from '../game/weather.js';
-import { XP_EVENT, HOLLOW_NIGHT, eventActive } from '../data/events.js';
+import { XP_EVENT, HOLLOW_NIGHT, EVENTS, eventActive, trackEvent } from '../data/events.js';
 import { load, save, mergeDefaults } from './storage.js';
 import { WEAPONS, EQUIPMENT, PRIMARY_IDS } from '../data/weapons.js';
 import { sanitizeBuild, attachmentsFor, ATTACHMENTS, ATTACH_SLOTS, MAX_ATTACHMENTS } from '../data/attachments.js';
@@ -41,7 +41,7 @@ const DEFAULT_PROFILE = {
     { name: 'OVERWATCH', primary: 'sr_longreach', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
     { name: 'CUSTOM 5', primary: 'ar_kv7', secondary: 'pistol_warden', lethal: 'frag', tactical: 'smoke', perks: DEFAULT_PERKS },
   ],
-  matchSetup: { mode: 'tdm', map: 'cinder_yard', botsAllies: 4, botsEnemies: 5, difficulty: 'regular', scoreLimit: 75, timeLimit: 10, friendlyFire: false, weather: 'dynamic', halloween: true },
+  matchSetup: { mode: 'tdm', map: 'cinder_yard', botsAllies: 4, botsEnemies: 5, difficulty: 'regular', scoreLimit: 75, timeLimit: 10, friendlyFire: false, weather: 'dynamic', halloween: true, festive: true },
   career: { matches: 0, wins: 0, losses: 0, draws: 0, kills: 0, deaths: 0, assists: 0, headshots: 0, shots: 0, hits: 0, score: 0, bestStreak: 0, timePlayed: 0 },
   lastMatchId: null,
   level: 1,
@@ -277,8 +277,8 @@ export class Profile {
       case 'level': return `Reach player level ${u.level}`;
       case 'weapon': return `Reach ${WEAPONS[u.weapon].name} level ${u.level}`;
       case 'pass': return `Battle Pass tier ${u.tier} (${u.track === 'premium' ? 'Premium' : 'Free'} track)`;
-      case 'shop': return u.collab ? 'Collab item · Store (Collabs section)' : u.event ? `${HOLLOW_NIGHT.name} event · Store (while the event runs)` : 'Available in the Store';
-      case 'event': return `${HOLLOW_NIGHT.name} event track · ${u.candy} Candy`;
+      case 'shop': return u.collab ? 'Collab item · Store (Collabs section)' : u.event ? `${EVENTS[u.event]?.name || 'Event'} event · Store (while the event runs)` : 'Available in the Store';
+      case 'event': return `${EVENTS[u.event]?.name || 'Event'} event track · ${u.candy} ${EVENTS[u.event]?.currency || 'points'}`;
       case 'operator': return `Comes with ${COSMETICS[u.operator].name}`;
       default: return '';
     }
@@ -424,7 +424,7 @@ export class Profile {
   buyItem(id) {
     const it = COSMETICS[id];
     if (!it || it.unlock.type !== 'shop') return { ok: false, reason: 'unavailable' };
-    if (it.unlock.event && !eventActive(HOLLOW_NIGHT, this.now())) return { ok: false, reason: 'unavailable' };
+    if (it.unlock.event && !eventActive(it.unlock.event, this.now())) return { ok: false, reason: 'unavailable' };
     if (this.owns(id)) return { ok: false, reason: 'owned' };
     const price = itemPrice(id);
     if (this.data.credits < price) return { ok: false, reason: 'funds', need: price - this.data.credits };
@@ -437,7 +437,7 @@ export class Profile {
 
   buyBundle(bundleId) {
     const b = BUNDLES.find((x) => x.id === bundleId);
-    if (!b || (b.event && !eventActive(HOLLOW_NIGHT, this.now()))) return { ok: false, reason: 'unavailable' };
+    if (!b || (b.event && !eventActive(b.event, this.now()))) return { ok: false, reason: 'unavailable' };
     const { price, ownedCount } = bundlePrice(b, this.data.owned);
     if (ownedCount === b.items.length) return { ok: false, reason: 'owned' };
     if (this.data.credits < price) return { ok: false, reason: 'funds', need: price - this.data.credits };
@@ -480,7 +480,7 @@ export class Profile {
   now() { return Date.now(); }
 
   /** Event state (created on first use). */
-  eventState(id = HOLLOW_NIGHT.id) {
+  eventState(id = (trackEvent(this.now()) || HOLLOW_NIGHT).id) {
     const e = this.data.events;
     if (!isObj(e[id])) e[id] = { candy: 0, prog: {}, done: {} };
     return e[id];
@@ -492,8 +492,8 @@ export class Profile {
    * Returns null when the event isn't running.
    */
   applyEvent(result, stats, s) {
-    const ev = HOLLOW_NIGHT;
-    if (!eventActive(ev, this.now())) return null;
+    const ev = trackEvent(this.now()); // the running event with a track (Hollow Night, Frostfall, …)
+    if (!ev) return null;
     const st = this.eventState(ev.id), C = ev.candy;
     const top3 = s.brPlace > 0 && s.brPlace <= 3;
     const lines = [['Match played', C.match]];
@@ -501,7 +501,8 @@ export class Profile {
     if (stats.kills) lines.push([`Eliminations ×${stats.kills}`, stats.kills * C.kill]);
     if (stats.headshots) lines.push([`Headshots ×${stats.headshots}`, stats.headshots * C.headshot]);
     if (top3) lines.push(['Battle Royale top 3', C.top3]);
-    const vals = { matches: 1, kills: stats.kills || 0, headshots: stats.headshots || 0, meleeKills: s.meleeKills || 0, brTop3: top3 ? 1 : 0 };
+    if (C.confirm && s.confirms) lines.push([`Tags confirmed ×${s.confirms}`, s.confirms * C.confirm]);
+    const vals = { matches: 1, kills: stats.kills || 0, headshots: stats.headshots || 0, meleeKills: s.meleeKills || 0, brTop3: top3 ? 1 : 0, confirms: s.confirms || 0, frostWins: result === 'win' && s.map === 'frosthollow' ? 1 : 0 };
     const completed = [];
     for (const ch of ev.challenges) {
       if (st.done[ch.id]) continue;
@@ -513,7 +514,7 @@ export class Profile {
     st.candy += gained;
     const unlocked = [];
     for (const t of ev.track) if (st.candy >= t.candy && !this.owns(t.item)) { const r = this.grant(t.item, 'event'); if (r.ok && !r.duplicate) unlocked.push(r.item); }
-    return { lines, gained, before, candy: st.candy, completed, unlocked, next: ev.track.find((t) => st.candy < t.candy) || null };
+    return { id: ev.id, name: ev.name, icon: ev.icon, currency: ev.currency, lines, gained, before, candy: st.candy, completed, unlocked, next: ev.track.find((t) => st.candy < t.candy) || null };
   }
 
   /** Seconds of Supercharged XP left (counts down only in matches). */

@@ -1140,7 +1140,7 @@ export class Game {
     const outcome = m.br ? (brPlace === 1 ? 'win' : 'loss') : m.winner === -1 ? 'draw' : m.winner === p.team ? 'win' : 'loss';
     const groups = m.scoreboard();
     const row = (r) => ({ name: r.c.name, bot: r.c.isBot, me: r.c === p, score: r.score, kills: r.kills, deaths: r.deaths, assists: r.assists, level: r.level, acc: r.shots ? Math.round(r.hits / r.shots * 100) + '%' : '—' });
-    const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed], brPlace: m.br ? m.br.place.get(p.team) || 0 : 0 };
+    const summary = { ...this.summary, weaponsUsed: [...this.summary.weaponsUsed], brPlace: m.br ? m.br.place.get(p.team) || 0 : 0, map: m.map.def.id, confirms: p.stats.confirms || 0 };
     const rewards = this.app.profile.recordMatch(this.id, outcome, p.stats, m.time, summary);
     return {
       online: this.online,

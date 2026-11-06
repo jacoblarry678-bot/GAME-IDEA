@@ -374,7 +374,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   const pr5 = new Profile();
   t('locked weapons in a save revert to defaults', pr5.data.loadouts[0].primary === 'ar_kv7' && pr5.data.loadouts[0].secondary === 'pistol_warden' && pr5.data.loadouts[1].primary === 'ar_tarn' && pr5.data.loadouts[1].secondary === 'pistol_warden', JSON.stringify(pr5.data.loadouts.slice(0, 2)));
   t('weapon unlock levels', !pr5.weaponUnlocked('lmg_anvil') && pr5.weaponUnlocked('ar_tarn') && pr5.weaponsUnlockedBetween(1, 6).length === 5, pr5.weaponsUnlockedBetween(1, 6).join());
-  t('catalog meets content targets (≥4 operators, ≥8 outfits, ≥20 finishes)', ['operator', 'outfit', 'finish'].map((k) => Object.values(COSMETICS).filter((i) => i.type === k).length).join() === '4,14,28');
+  t('catalog meets content targets (≥4 operators, ≥8 outfits, ≥20 finishes)', ['operator', 'outfit', 'finish'].map((k) => Object.values(COSMETICS).filter((i) => i.type === k).length).join() === '4,18,35');
 }
 
 // ---------------- M4 weapons ----------------
@@ -600,7 +600,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   // emotes
   const { COSMETICS: CC, EMOTE_IDS } = await import('../src/data/cosmetics.js');
   const { EMOTE_ANIMS } = await import('../src/entities/emotes.js');
-  t('10 emotes, each with an animation; Wave and Salute are free', EMOTE_IDS.length === 10 && EMOTE_IDS.every((id) => EMOTE_ANIMS[CC[id].emote.anim]) && CC.ex_wave.unlock.type === 'default' && CC.ex_salute.unlock.type === 'default');
+  t('14 emotes, each with an animation; Wave and Salute are free', EMOTE_IDS.length === 14 && EMOTE_IDS.every((id) => EMOTE_ANIMS[CC[id].emote.anim]) && CC.ex_wave.unlock.type === 'default' && CC.ex_salute.unlock.type === 'default');
   const m = mkMatch(); const p = m.player; place(p, 12, 0, -1.5);
   p.cmd.emote = 'ex_wave'; m.tick(1 / 60);
   t('an emote starts when standing still', p.emoteState?.id === 'ex_wave' && p.events.some((e) => e.type === 'emote'));
@@ -644,7 +644,7 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   const { COSMETICS } = await import('../src/data/cosmetics.js');
   const { SHOP_ITEMS, EVENT_SHOPS, currentRotation } = await import('../src/data/shop.js');
   const at = (y, m, d, h = 12) => new Date(y, m, d, h).getTime();
-  t('event dates: 16 Oct – 6 Nov 2026 (device clock)', !eventActive(HOLLOW_NIGHT, at(2026, 9, 15)) && eventActive(HOLLOW_NIGHT, at(2026, 9, 16, 0)) && eventActive(HOLLOW_NIGHT, at(2026, 10, 6, 23)) && !eventActive(HOLLOW_NIGHT, at(2026, 10, 7, 0)));
+  t('Hollow Night dates: 16 Oct – 5 Nov 2026 (ended in 0.10.0)', !eventActive(HOLLOW_NIGHT, at(2026, 9, 15)) && eventActive(HOLLOW_NIGHT, at(2026, 9, 16, 0)) && eventActive(HOLLOW_NIGHT, at(2026, 10, 5, 23)) && !eventActive(HOLLOW_NIGHT, at(2026, 10, 6, 0)));
   t('every event-track reward exists, is an event item and matches its Candy price', HOLLOW_NIGHT.track.every((tr) => COSMETICS[tr.item]?.unlock.type === 'event' && COSMETICS[tr.item].unlock.candy === tr.candy));
   t('event store items exist, are event-only and stay out of the daily rotation', EVENT_SHOPS[0].items.every((id) => COSMETICS[id]?.unlock.event === 'hollow_night' && !SHOP_ITEMS.includes(id)) && !currentRotation().bundles.some((b) => b.event));
   t('16 Halloween cosmetics across 7 types (incl. the Boo! emote)', new Set([...HOLLOW_NIGHT.track.map((x) => x.item), ...EVENT_SHOPS[0].items].map((id) => COSMETICS[id].type)).size === 7 && HOLLOW_NIGHT.track.length + EVENT_SHOPS[0].items.length === 16);
@@ -664,14 +664,14 @@ function addEnemy(m, team = 1, lo = LO) { const c = new Combatant({ name: 'T', t
   t('Candy total adds up and the track keeps unlocking', candy === 29 + 19 + (19 + 8 + 25 + 30) && trackReached(candy).every((tr) => pr.owns(tr.item)), String(candy));
   t('event items can be bought while the event runs', pr.buyItem('ch_ghost').ok && pr.owns('ch_ghost'));
   const pr2 = new Profile();
-  t('Candy and event progress survive a reload', pr2.eventState().candy === candy && pr2.eventState().done.hn_play === true);
-  pr2.now = () => at(2026, 10, 10);
+  t('Candy and event progress survive a reload', pr2.eventState('hollow_night').candy === candy && pr2.eventState('hollow_night').done.hn_play === true);
+  pr2.now = () => at(2027, 0, 20); // after Hollow Night and Frostfall
   t('after the event: no Candy, event store closed, unlocked items kept', pr2.recordMatch('hn-4', 'win', stats, 300, sum()).event === null && pr2.buyItem('ch_skull').reason === 'unavailable' && pr2.buyBundle('bd_hollow').reason === 'unavailable' && pr2.owns('em_pumpkin'));
   delete pr2.data.owned.em_pumpkin; pr2.grantEarnedUnlocks(true);
   t('earned track items are restored if missing (self-healing)', pr2.owns('em_pumpkin'));
   pr2.data.events.hollow_night.candy = -5; pr2.data.events.hollow_night.prog = 'x'; pr2.save();
   const pr3 = new Profile();
-  t('corrupt event data is sanitised', pr3.eventState().candy === 0 && typeof pr3.eventState().prog === 'object');
+  t('corrupt event data is sanitised', pr3.eventState('hollow_night').candy === 0 && typeof pr3.eventState('hollow_night').prog === 'object');
   t('unlock text explains event items', /event track · 20 Candy/.test(pr3.unlockText(COSMETICS.em_pumpkin)) && /Store/.test(pr3.unlockText(COSMETICS.ch_skull)));
 }
 

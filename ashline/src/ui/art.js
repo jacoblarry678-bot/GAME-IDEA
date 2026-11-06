@@ -44,6 +44,21 @@ export function cardArt(id, w = 384, h = 96) {
     case 'static': for (let i = 0; i < 900; i++) { x.fillStyle = r() > 0.5 ? a.b + '55' : '#ffffff22'; x.fillRect(r() * w, r() * h, 2 + r() * 6, 1); } break;
     case 'grid': x.strokeStyle = a.b + '44'; x.lineWidth = 1; for (let i = 0; i < w; i += 16) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); } for (let i = 0; i < h; i += 16) { x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); } x.strokeStyle = a.b; x.lineWidth = 2; x.beginPath(); x.moveTo(w * 0.55, h * 0.75); x.lineTo(w * 0.7, h * 0.3); x.lineTo(w * 0.85, h * 0.6); x.stroke(); break;
     case 'hollow': hollowNight(x, w, h, r, a, false); break;
+    case 'xmas': winterScene(x, w, h, r, a, true); break;
+    case 'summit': winterScene(x, w, h, r, a, false); break;
+    case 'wrap': {
+      x.fillStyle = a.b; x.fillRect(w * 0.62, 0, h * 0.18, h); x.fillRect(0, h * 0.42, w, h * 0.16);
+      x.fillStyle = '#ffffff22'; for (let i = 0; i < 40; i++) { x.beginPath(); x.arc(r() * w, r() * h, 2 + r() * 3, 0, 7); x.fill(); }
+      x.fillStyle = a.b; for (const s of [-1, 1]) { x.beginPath(); x.ellipse(w * 0.62 + h * 0.09 + s * h * 0.22, h * 0.5, h * 0.22, h * 0.12, s * 0.5, 0, 7); x.fill(); }
+      break;
+    }
+    case 'harvest': {
+      const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#3a1e0e'); g.addColorStop(0.6, '#8a3e16'); g.addColorStop(1, '#e8902a');
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      x.fillStyle = '#f2c060'; x.beginPath(); x.arc(w * 0.78, h * 0.62, h * 0.3, Math.PI, 0); x.fill();
+      x.fillStyle = '#2a140a'; for (let i = 0; i < 26; i++) { const sx = r() * w, sh = h * (0.2 + r() * 0.3); x.fillRect(sx, h - sh, 2, sh); x.beginPath(); x.ellipse(sx + 1, h - sh, 4, 9, 0.3, 0, 7); x.fill(); }
+      break;
+    }
     case 'patch': { hollowNight(x, w, h, r, a, true); break; }
     case 'chevrons': x.fillStyle = a.b; for (let i = 0; i < 3; i++) { const cx = w * 0.78, cy = h * 0.25 + i * 20; x.beginPath(); x.moveTo(cx - 30, cy); x.lineTo(cx, cy + 14); x.lineTo(cx + 30, cy); x.lineTo(cx + 30, cy + 8); x.lineTo(cx, cy + 22); x.lineTo(cx - 30, cy + 8); x.fill(); } break;
     default: break;
@@ -108,6 +123,30 @@ export function emblemArt(id, size = 64) {
       poly([[0.44, 0.42], [0.46, 0.3], [0.49, 0.4], [0.51, 0.4], [0.54, 0.3], [0.56, 0.42]]);
       break;
     }
+    case 'snowflake': {
+      x.lineWidth = s * 0.06; x.lineCap = 'round';
+      for (let i = 0; i < 6; i++) { const ang = (i / 6) * Math.PI * 2; const ex = m + Math.cos(ang) * s * 0.4, ey = m + Math.sin(ang) * s * 0.4; x.beginPath(); x.moveTo(m, m); x.lineTo(ex, ey); x.stroke();
+        for (const k of [0.55, 0.78]) { const bx = m + Math.cos(ang) * s * 0.4 * k, by = m + Math.sin(ang) * s * 0.4 * k; for (const d of [-1, 1]) { x.beginPath(); x.moveTo(bx, by); x.lineTo(bx + Math.cos(ang + d * 0.8) * s * 0.1, by + Math.sin(ang + d * 0.8) * s * 0.1); x.stroke(); } } }
+      break;
+    }
+    case 'holly': {
+      for (const [ang] of [[-0.6], [0.6], [Math.PI + 0.1]]) { x.save(); x.translate(m, m); x.rotate(ang); x.beginPath(); x.moveTo(0, 0); for (let k = 0; k <= 4; k++) x.lineTo(s * 0.08 * k, (k % 2 ? -1 : -0.4) * s * 0.12); x.lineTo(s * 0.38, 0); for (let k = 4; k >= 0; k--) x.lineTo(s * 0.08 * k, (k % 2 ? 1 : 0.4) * s * 0.12); x.closePath(); x.fill(); x.restore(); }
+      x.shadowBlur = 0; x.fillStyle = '#d42a2a'; for (const [bx, by] of [[0.47, 0.44], [0.55, 0.5], [0.46, 0.53]]) { x.beginPath(); x.arc(bx * s, by * s, s * 0.06, 0, 7); x.fill(); }
+      break;
+    }
+    case 'turkey': {
+      const fan = ['#d4902a', '#a8461e', '#e8b440', '#7a3a18', '#d4902a'];
+      fan.forEach((col, i) => { x.fillStyle = col; const ang = Math.PI + (i + 0.5) * (Math.PI / fan.length); x.beginPath(); x.moveTo(m, s * 0.6); x.arc(m, s * 0.6, s * 0.42, ang - 0.32, ang + 0.32); x.closePath(); x.fill(); });
+      x.fillStyle = e.color; x.beginPath(); x.ellipse(m, s * 0.64, s * 0.2, s * 0.22, 0, 0, 7); x.fill();
+      x.beginPath(); x.arc(m, s * 0.38, s * 0.1, 0, 7); x.fill();
+      x.shadowBlur = 0; x.fillStyle = '#e8a020'; poly([[0.5, 0.38], [0.6, 0.41], [0.5, 0.44]]); x.fillStyle = '#c8302a'; x.beginPath(); x.ellipse(s * 0.47, s * 0.47, s * 0.025, s * 0.06, 0, 0, 7); x.fill();
+      break;
+    }
+    case 'paw': {
+      x.beginPath(); x.ellipse(m, s * 0.62, s * 0.2, s * 0.17, 0, 0, 7); x.fill();
+      for (const [px, py] of [[0.28, 0.4], [0.42, 0.28], [0.58, 0.28], [0.72, 0.4]]) { x.beginPath(); x.ellipse(px * s, py * s, s * 0.08, s * 0.1, 0, 0, 7); x.fill(); }
+      break;
+    }
     case 'eye': x.beginPath(); x.moveTo(s * 0.08, m); x.quadraticCurveTo(m, s * 0.12, s * 0.92, m); x.quadraticCurveTo(m, s * 0.88, s * 0.08, m); x.fill(); x.fillStyle = '#000'; x.beginPath(); x.arc(m, m, s * 0.14, 0, 7); x.fill(); break;
     default: x.beginPath(); x.arc(m, m, s * 0.35, 0, 7); x.fill();
   }
@@ -133,6 +172,28 @@ export function bannerArt(id, w = 480, h = 120) {
   if (a.kind === 'hollow') hollowNight(x, w, h, r, a, true);
   if (a.kind === 'cobweb') cobweb(x, w, h, a);
   if (a.kind === 'tallwoods') tallWoods(x, w, h, r, a);
+  if (a.kind === 'northern') {
+    for (let band = 0; band < 3; band++) {
+      const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'transparent'); g.addColorStop(0.5, band === 1 ? 'rgba(180,120,255,0.45)' : 'rgba(80,255,170,0.45)'); g.addColorStop(1, 'transparent');
+      x.fillStyle = g; x.beginPath(); x.moveTo(0, h * (0.2 + band * 0.12));
+      for (let i = 0; i <= 20; i++) x.lineTo((i / 20) * w, h * (0.18 + band * 0.12 + 0.12 * Math.sin(i * 0.7 + band * 2)));
+      for (let i = 20; i >= 0; i--) x.lineTo((i / 20) * w, h * (0.42 + band * 0.12 + 0.1 * Math.sin(i * 0.6 + band)));
+      x.fill();
+    }
+    for (let i = 0; i < 50; i++) { x.fillStyle = `rgba(255,255,255,${0.3 + r() * 0.6})`; x.fillRect(r() * w, r() * h * 0.6, 1, 1); }
+    x.fillStyle = '#0a0f18'; x.beginPath(); x.moveTo(0, h); for (let i = 0; i <= 10; i++) x.lineTo((i / 10) * w, h * (0.72 + (i % 2 ? -0.08 : 0.06) + r() * 0.04)); x.lineTo(w, h); x.fill();
+    x.fillStyle = '#e8f2ff'; x.beginPath(); x.moveTo(0, h); for (let i = 0; i <= 10; i++) x.lineTo((i / 10) * w, h * (0.86 + r() * 0.04)); x.lineTo(w, h); x.fill();
+  }
+  if (a.kind === 'stringlights') {
+    x.strokeStyle = '#222'; x.lineWidth = 2; x.beginPath(); x.moveTo(0, h * 0.3); for (let i = 0; i <= 12; i++) x.quadraticCurveTo((i - 0.5) / 12 * w, h * 0.55, (i / 12) * w, h * 0.3); x.stroke();
+    const cols = ['#ff4040', '#40d060', '#4080ff', '#ffd040', '#ff80e0'];
+    for (let i = 0; i < 24; i++) { const bx = (i + 0.5) / 24 * w, by = h * (0.32 + 0.18 * Math.sin(((i + 0.5) / 2) * Math.PI) ** 2); const col = cols[i % cols.length]; const g = x.createRadialGradient(bx, by + 6, 1, bx, by + 6, 18); g.addColorStop(0, col); g.addColorStop(1, 'transparent'); x.fillStyle = g; x.fillRect(bx - 18, by - 12, 36, 36); x.fillStyle = col; x.beginPath(); x.ellipse(bx, by + 6, 4, 6, 0, 0, 7); x.fill(); }
+  }
+  if (a.kind === 'leaves') {
+    const cols = ['#e8902a', '#c8401e', '#f2c040', '#8a3a14'];
+    for (let i = 0; i < 46; i++) { x.save(); x.translate(r() * w, r() * h); x.rotate(r() * 6); x.fillStyle = cols[i % 4]; x.beginPath(); x.moveTo(0, -9); x.quadraticCurveTo(8, -2, 0, 9); x.quadraticCurveTo(-8, -2, 0, -9); x.fill(); x.restore(); }
+  }
+  if (a.kind === 'ridge') for (let l = 0; l < 4; l++) { x.fillStyle = shade(a.b, 0.4 + l * 0.18); x.beginPath(); x.moveTo(0, h); for (let i = 0; i <= 12; i++) x.lineTo((i / 12) * w, h * (0.35 + l * 0.15) - Math.abs(Math.sin(i * 1.3 + l * 2)) * h * 0.2); x.lineTo(w, h); x.fill(); }
   const url = c.toDataURL();
   cache.set(key, url);
   return url;
@@ -227,6 +288,24 @@ function hollowNight(x, w, h, r, a, lanterns) {
   }
 }
 
+/** Snowy village at night (xmas) or a snowy summit at sunrise. */
+function winterScene(x, w, h, r, a, village) {
+  const g = x.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, a.a); g.addColorStop(1, village ? '#2a3a5a' : '#c06a50');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < 60; i++) { x.fillStyle = `rgba(255,255,255,${0.3 + r() * 0.6})`; x.beginPath(); x.arc(r() * w, r() * h, 0.5 + r() * 1.4, 0, 7); x.fill(); }
+  if (village) {
+    x.fillStyle = '#0c1424'; for (let i = 0; i < 6; i++) { const hx = w * (0.08 + i * 0.15), hw = 34 + r() * 20, hh = 22 + r() * 16; x.fillRect(hx, h * 0.78 - hh, hw, hh); x.beginPath(); x.moveTo(hx - 4, h * 0.78 - hh); x.lineTo(hx + hw / 2, h * 0.78 - hh - 16); x.lineTo(hx + hw + 4, h * 0.78 - hh); x.fill(); x.fillStyle = a.b; x.fillRect(hx + hw * 0.3, h * 0.78 - hh * 0.6, 6, 6); x.fillStyle = '#0c1424'; }
+    x.fillStyle = '#1e4a2a'; x.beginPath(); x.moveTo(w * 0.86, h * 0.2); x.lineTo(w * 0.94, h * 0.78); x.lineTo(w * 0.78, h * 0.78); x.fill();
+    x.fillStyle = a.b; x.beginPath(); x.arc(w * 0.86, h * 0.2, 4, 0, 7); x.fill();
+  } else {
+    x.fillStyle = '#ffd8a0'; x.beginPath(); x.arc(w * 0.7, h * 0.7, h * 0.2, 0, 7); x.fill();
+    x.fillStyle = '#1a2238'; x.beginPath(); x.moveTo(0, h); x.lineTo(w * 0.3, h * 0.25); x.lineTo(w * 0.55, h * 0.75); x.lineTo(w * 0.8, h * 0.4); x.lineTo(w, h * 0.8); x.lineTo(w, h); x.fill();
+    x.fillStyle = '#f0f4ff'; x.beginPath(); x.moveTo(w * 0.3, h * 0.25); x.lineTo(w * 0.36, h * 0.4); x.lineTo(w * 0.24, h * 0.38); x.fill();
+  }
+  x.fillStyle = '#eef4ff'; x.fillRect(0, h * 0.78, w, h * 0.22);
+}
+
 /** Corner cobwebs with a dangling spider. */
 function cobweb(x, w, h, a) {
   x.strokeStyle = a.b; x.globalAlpha = 0.55; x.lineWidth = 1;
@@ -282,7 +361,7 @@ export function itemThumb(it) {
     case 'finish': { const u = finishSwatch(it.id); return u ? `<img class="thumb-sq" src="${u}" alt="">` : '<div class="thumb-sq thumb-factory"></div>'; }
     case 'outfit': { const p = it.outfit.palette; return `<div class="thumb-sq" style="background:conic-gradient(rgb(${p[0]}) 0 25%,rgb(${p[1]}) 0 50%,rgb(${p[2]}) 0 75%,rgb(${p[3]}) 0)"></div>`; }
     case 'operator': return `<div class="thumb-sq thumb-op">${it.name[0]}</div>`;
-    case 'emote': return `<div class="thumb-sq thumb-op" style="font-size:22px">${({ wave: '👋', salute: '🫡', thumbs: '👍', cheer: '🙌', laugh: '😆', flex: '💪', facepalm: '🤦', shuffle: '🕺', spin: '🌀', scare: '👻' })[it.emote.anim] || '☺'}</div>`;
+    case 'emote': return `<div class="thumb-sq thumb-op" style="font-size:22px">${({ wave: '👋', salute: '🫡', thumbs: '👍', cheer: '🙌', laugh: '😆', flex: '💪', facepalm: '🤦', shuffle: '🕺', spin: '🌀', scare: '👻', snowball: '☃', gift: '🎁', feast: '🥧', clap: '👏' })[it.emote.anim] || '☺'}</div>`;
     case 'charm': return `<div class="thumb-sq thumb-charm" style="--c:#${(it.charm.color || 0x444444).toString(16).padStart(6, '0')}"></div>`;
     default: return '<div class="thumb-sq"></div>';
   }

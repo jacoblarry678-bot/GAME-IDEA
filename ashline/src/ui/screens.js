@@ -2,7 +2,7 @@
  * Menu screens: main, play setup, loadouts, settings, career, about,
  * pause and results. Screens are DOM pages over the live 3D background.
  */
-import { XP_EVENT, HOLLOW_NIGHT, eventActive, eventTimeLeft } from '../data/events.js';
+import { XP_EVENT, HOLLOW_NIGHT, EVENTS, eventActive, eventTimeLeft, trackEvent, activeEvents } from '../data/events.js';
 import { WEATHER_OPTIONS, WEATHER_NAMES } from '../game/weather.js';
 import { el, esc } from './dom.js';
 import { SETTINGS_SCHEMA, ACTION_LABELS, DEFAULT_BINDINGS } from '../core/settings.js';
@@ -190,8 +190,8 @@ const SCREENS = {
             <button class="menu-btn" data-go="armory">Armory${app.profile.unseenCount() ? ` <span class="newdot">${app.profile.unseenCount()}</span>` : ''}<span class="sub">Operators, outfits, finishes, charms, cards</span></button>
             <button class="menu-btn" data-go="pass">Battle Pass<span class="sub">Season ${SEASON.number} · tier ${app.profile.passTier} / ${SEASON.tiers}${app.profile.data.pass.premium ? ' · Premium' : ''}</span></button>
             <button class="menu-btn" data-go="challenges">Challenges<span class="sub">${app.profile.challengeDefs().daily.filter((c) => c.done).length}/5 daily · ${app.profile.challengeDefs().weekly.filter((c) => c.done).length}/3 weekly</span></button>
-            ${eventActive(HOLLOW_NIGHT, app.profile.now()) ? `<button class="menu-btn hn-btn" data-go="event">🎃 Hollow Night<span class="sub">Halloween event · ${Math.ceil(eventTimeLeft(HOLLOW_NIGHT, app.profile.now()) / 86400000)} days left · ${app.profile.eventState().candy} Candy</span></button>` : ''}
-            <button class="menu-btn" data-go="store">Store<span class="sub">${eventActive(HOLLOW_NIGHT, app.profile.now()) ? 'Hollow Night items · ' : ''}test credits only</span></button>
+            ${(() => { const ev = trackEvent(app.profile.now()); return ev ? `<button class="menu-btn hn-btn ${ev.id === 'frostfall' ? 'ff-btn' : ''}" data-go="event">${ev.icon} ${esc(ev.name)}<span class="sub">${ev.id === 'frostfall' ? 'Christmas' : 'Halloween'} event · ${Math.ceil(eventTimeLeft(ev, app.profile.now()) / 86400000)} days left · ${app.profile.eventState(ev.id).candy} ${ev.currency}</span></button>` : ''; })()}
+            <button class="menu-btn" data-go="store">Store<span class="sub">${activeEvents(app.profile.now()).map((e) => `${e.icon} ${esc(e.name)}`).join(' · ')}${activeEvents(app.profile.now()).length ? ' items · ' : ''}test credits only</span></button>
             <button class="menu-btn" data-go="settings">Settings<span class="sub">Graphics, controls, audio, interface, accessibility</span></button>
             <button class="menu-btn" data-go="career">Career<span class="sub">${prof.career.matches} matches · ${prof.career.kills} eliminations</span></button>
             <button class="menu-btn" data-go="about">About &amp; Controls<span class="sub">What's in this build and what's next</span></button>
@@ -264,6 +264,9 @@ const SCREENS = {
             ${eventActive(HOLLOW_NIGHT, app.profile.now()) ? `<div class="field" style="grid-column: span 2"><label>🎃 Hollow Night atmosphere</label><div class="choice" data-k="halloween">
               <button data-v="true" class="${setup.halloween !== false ? 'sel' : ''}">On</button><button data-v="false" class="${setup.halloween === false ? 'sel' : ''}">Off</button>
             </div><div class="muted small">Night sky, purple fog and jack-o'-lanterns during the Halloween event. Visual only.</div></div>` : ''}
+            ${eventActive('frostfall', app.profile.now()) ? `<div class="field" style="grid-column: span 2"><label>🎄 Frostfall atmosphere</label><div class="choice" data-k="festive">
+              <button data-v="true" class="${setup.festive !== false ? 'sel' : ''}">On</button><button data-v="false" class="${setup.festive === false ? 'sel' : ''}">Off</button>
+            </div><div class="muted small">Snowfall, snowy ground, Christmas trees and gifts during the Christmas event. Visual only.</div></div>` : ''}
             <div class="field" style="grid-column: span 2"><label>Loadout</label><div class="choice" data-k="loadout">
               ${app.profile.data.loadouts.map((l, i) => `<button data-v="${i}" class="${app.profile.data.activeLoadout === i ? 'sel' : ''}">${esc(l.name)} · ${esc(WEAPONS[l.primary].name)}</button>`).join('')}
             </div><div class="muted small">${esc(WEAPONS[lo.primary].name)} + ${esc(WEAPONS[lo.secondary].name)} · ${esc(EQUIPMENT[lo.lethal].name)} · ${esc(EQUIPMENT[lo.tactical].name)}</div></div>
@@ -311,6 +314,7 @@ const SCREENS = {
             if (k === 'loadout') { app.profile.data.activeLoadout = Number(v); }
             else if (k === 'friendlyFire') setup.friendlyFire = v === 'true';
             else if (k === 'halloween') setup.halloween = v === 'true';
+            else if (k === 'festive') setup.festive = v === 'true';
             else if (k === 'mode') { setup.mode = v; setup.scoreLimit = MODES[v].defaults.scoreLimit; setup.timeLimit = MODES[v].defaults.timeLimit; if (v === 'br' && MAPS.ashfield) setup.map = 'ashfield'; }
             else setup[k] = v;
             app.profile.save();
@@ -720,10 +724,10 @@ function rewardsHtml(app, rw, recorded) {
     <div class="xpbar"><i style="width:${pct}%"></i></div>
     <div class="row small" style="margin-top:8px"><span>Battle pass tier ${rw.pass.from} → <b>${rw.pass.to}</b></span>${rw.pass.to > rw.pass.from ? '<span class="pill on">Rewards ready to claim</span>' : ''}</div>
     ${rw.boost ? `<div class="row small xp-boost-line" style="margin-top:8px"><span class="pill xpb">SUPERCHARGED XP ×${rw.boost.mult}</span><span class="muted">${rw.boost.left > 0 ? `${fmtBoost(rw.boost.left)} of boost left` : 'Boost used up'}</span></div>` : ''}
-    ${rw.event ? `<div class="hn-res"><div class="row small"><b>🎃 HOLLOW NIGHT</b><div class="spacer"></div><b class="hn-candy-t">+${rw.event.gained} Candy</b><span class="muted">(${rw.event.candy} total)</span></div>
+    ${rw.event ? `<div class="hn-res"><div class="row small"><b>${rw.event.icon} ${esc(rw.event.name.toUpperCase())}</b><div class="spacer"></div><b class="hn-candy-t">+${rw.event.gained} ${rw.event.currency}</b><span class="muted">(${rw.event.candy} total)</span></div>
       <div class="muted small">${rw.event.lines.map(([k, v]) => `${esc(k)} +${v}`).join(' · ')}</div>
       ${rw.event.unlocked.length ? `<div class="row small" style="flex-wrap:wrap;gap:6px;margin-top:4px">${rw.event.unlocked.map((i) => `<span class="pill on">Unlocked: ${esc(i.name)}</span>`).join('')}</div>` : ''}
-      <div class="muted small">${rw.event.next ? `Next reward at ${rw.event.next.candy} Candy: ${esc(COSMETICS[rw.event.next.item].name)}` : 'Event track complete!'}</div></div>` : ''}
+      <div class="muted small">${rw.event.next ? `Next reward at ${rw.event.next.candy} ${rw.event.currency}: ${esc(COSMETICS[rw.event.next.item].name)}` : 'Event track complete!'}</div></div>` : ''}
     ${rw.weapons.length ? `<div class="small" style="margin-top:8px">${rw.weapons.map((w) => `<div class="row"><span class="muted">${esc(WEAPONS[w.id].name)}</span><div class="spacer"></div>+${w.xp} XP · LV ${w.to}${w.to > w.from ? ' <span class="pill on">Level up</span>' : ''}</div>${w.atts?.length ? `<div class="muted" style="margin:-2px 0 4px 10px">New attachments: ${w.atts.map((id) => esc(ATTACHMENTS[id].name)).join(', ')}</div>` : ''}`).join('')}</div>` : ''}
     ${rw.challenges.length ? `<div class="small" style="margin-top:8px">${rw.challenges.map((c) => `<div class="row"><span class="pill on">Challenge complete</span><span>${esc(c.text)}</span></div>`).join('')}</div>` : ''}
     ${rw.newWeapons?.length ? `<h3 class="title" style="margin-top:12px">New weapons</h3><div class="row" style="flex-wrap:wrap;gap:8px">${rw.newWeapons.map((id) => `<div class="pill on">${esc(WEAPONS[id].name)} · ${esc(WEAPONS[id].classLabel)}</div>`).join('')}</div>` : ''}
