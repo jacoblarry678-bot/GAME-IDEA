@@ -1,0 +1,23 @@
+{
+  "name": "coltons-horrors",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "COLTON'S HORRORS: an original 1v4 asymmetric horror game for the browser (play as a survivor or a killer against bots).",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "build:single": "vite build && node tools/build-single.mjs",
+    "test": "node tools/e2e.mjs"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
