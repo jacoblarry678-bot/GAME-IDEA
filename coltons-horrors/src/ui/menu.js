@@ -2,8 +2,9 @@
 import * as THREE from 'three';
 import {
   SURVIVORS, KILLERS, SURVIVOR_PERKS, KILLER_PERKS, ITEMS, ITEM_ADDONS, KILLER_ADDONS, OFFERINGS, MAPS, RARITIES,
-  SURVIVOR_BY_ID, KILLER_BY_ID, PERK_BY_ID, ITEM_BY_ID, ADDON_BY_ID, OFFERING_BY_ID, SURVIVOR_CATEGORIES, KILLER_CATEGORIES, VERSION, outfitOf,
+  SURVIVOR_BY_ID, KILLER_BY_ID, PERK_BY_ID, ITEM_BY_ID, ADDON_BY_ID, OFFERING_BY_ID, SURVIVOR_CATEGORIES, KILLER_CATEGORIES, VERSION, PTB_NOTE, outfitOf,
 } from '../data.js';
+import { buildWoodsman } from '../models/woodsman.js';
 import { profile, saveProfile, ownsPerk, ownsOutfit, countOf, buy, resetProfile } from '../core/profile.js';
 import { buildSurvivor, buildSpecter, buildExe, poseSurvivor, poseKiller, drawExeFace } from '../models/characters.js';
 import { glowSpriteTexture, groundTexture } from '../world/textures.js';
@@ -81,7 +82,7 @@ export class Lobby {
     this.modelKey = key;
     if (this.model) { this.scene.remove(this.model.root); }
     const outfit = outfitOf(def, outfitId);
-    this.model = profile.role === 'killer' ? (def.id === 'specter' ? buildSpecter(outfit) : buildExe(outfit)) : buildSurvivor(def, outfit);
+    this.model = profile.role === 'killer' ? (def.id === 'specter' ? buildSpecter(outfit) : def.id === 'woodsman' ? buildWoodsman(outfit) : buildExe(outfit)) : buildSurvivor(def, outfit);
     this.scene.add(this.model.root);
     this.camera.position.set(0, profile.role === 'killer' ? 1.5 : 1.3, profile.role === 'killer' ? 6.8 : 5.6);
     this.camera.lookAt(0, profile.role === 'killer' ? 1.15 : 0.98, 0);
@@ -129,7 +130,7 @@ export class Lobby {
     const tabs = TABS.map(([id, label]) => `<button class="lb-tab ${this.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`).join('');
     this.root.innerHTML = `
       <header class="lb-top">
-        <div class="lb-brand"><span class="lb-title">Colton's Horrors</span><span class="lb-ver">v${VERSION}</span></div>
+        <div class="lb-brand"><span class="lb-title">Colton's Horrors</span><span class="lb-ver">v${VERSION} · PTB</span></div>
         <div class="lb-role" role="group" aria-label="Side">
           <button class="${profile.role === 'survivor' ? 'on' : ''}" data-role="survivor">Survivor</button>
           <button class="${profile.role === 'killer' ? 'on' : ''}" data-role="killer">Killer</button>
@@ -160,7 +161,7 @@ export class Lobby {
     const list = role === 'killer' ? KILLERS : SURVIVORS;
     const cur = this.charId();
     const def = this.charDef();
-    const cards = list.map((c) => `<button class="lb-char ${c.id === cur ? 'on' : ''}" data-char="${c.id}"><b>${esc(c.name)}</b><span>${esc(c.role || c.realName)}</span></button>`).join('');
+    const cards = list.map((c) => `<button class="lb-char ${c.id === cur ? 'on' : ''}" data-char="${c.id}"><b>${esc(c.name)}${c.ptb ? ' <i class="ptb">PTB</i>' : ''}</b><span>${esc(c.role || c.realName)}</span></button>`).join('');
     const opp = role === 'survivor' ? `
       <label class="lb-field"><span>Killer to face</span>
         <select id="opp">${[['random', 'Random'], ...KILLERS.map((k) => [k.id, k.name])].map(([v, l]) => `<option value="${v}" ${profile.opponent === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : '';
@@ -177,6 +178,7 @@ export class Lobby {
         <article class="lb-bio">
           <h3>${esc(def.name)}${def.realName ? ` <small>${esc(def.realName)}</small>` : def.age ? ` <small>${def.age} · ${esc(def.role)}</small>` : ''}</h3>
           <p class="lore">${esc(def.bio)}</p>
+          ${def.ptb ? `<p class="ptb-note"><i class="ptb">PTB</i> ${esc(PTB_NOTE)}</p>` : ''}
           ${role === 'killer' ? `<p class="power">${icon(def.power.glyph)}<b>${esc(def.power.name)}.</b> ${esc(def.power.desc)}</p><p class="meta">Weapon: ${esc(def.weapon)} · Speed ${def.speed} m/s · Terror radius ${def.terror} m</p>` : `<p class="meta">Signature perk: <b>${esc(PERK_BY_ID[def.signature].name)}</b></p>`}
         </article>
       </section>
@@ -186,6 +188,7 @@ export class Lobby {
           <label class="lb-field"><span>Bot difficulty</span>
             <select id="diff">${['easy', 'normal', 'hard'].map((d) => `<option ${profile.settings.difficulty === d ? 'selected' : ''} value="${d}">${d[0].toUpperCase() + d.slice(1)}</option>`).join('')}</select></label>
         </div>
+        ${role === 'killer' ? '<p class="meta"><b>Moris:</b> burn an Ashen Rite to execute downed survivors who have been hooked once (press R next to them). Without it you can still finish off the <b>last survivor standing</b> with a mini mori.</p>' : ''}
         <p class="meta">The map is chosen at random unless you burn a map offering. Four maps: ${MAPS.map((mp) => esc(mp.name)).join(', ')}.</p>
         <div class="lb-chips">${perkChips}${extra}${off}</div>
         <button class="btn-ghost" data-tab="loadout">Edit loadout</button>
@@ -235,7 +238,7 @@ export class Lobby {
     const list = def.outfits.map((o) => {
       const owned = ownsOutfit(o.id);
       return `<button class="lb-outfit ${eq === o.id ? 'on' : ''}" ${rarityStyle(o.rarity)} data-outfit="${o.id}">
-        <div class="sw">${['topColor', 'accent', 'legsColor', 'dress', 'dress2', 'body', 'glow', 'glow2'].filter((k) => o[k]).slice(0, 3).map((k) => `<i style="background:${o[k]}"></i>`).join('')}</div>
+        <div class="sw">${['topColor', 'accent', 'legsColor', 'dress', 'dress2', 'body', 'glow', 'glow2', 'plaid', 'plaid2', 'mask'].filter((k) => o[k]).slice(0, 3).map((k) => `<i style="background:${o[k]}"></i>`).join('')}</div>
         <b>${esc(o.name)}</b><span>${RARITIES[o.rarity].name}</span>
         <em>${eq === o.id ? 'Equipped' : owned ? 'Equip' : `${icon('lock')}${o.price.toLocaleString()}`}</em></button>`;
     }).join('');
@@ -263,12 +266,19 @@ export class Lobby {
 
   archivesHtml() {
     return `<section class="lb-sec lb-arch">
+      <h2>Patch notes: 1.1.0 (PTB)</h2>
+      <ul>
+        <li><b>New killer on the PTB: The Woodsman.</b> A logger in a carved birch mask with a felling axe. His power, <b>Heavy Chop</b>, charges a long lunging chop that smashes dropped pallets. Comes with 2 perks (Timber!, Splinter), 6 add-ons and 4 outfits.</li>
+        <li><b>Moris.</b> The new <b>Ashen Rite</b> offering lets the killer execute any downed survivor who has been hooked at least once. Every killer has their own execution.</li>
+        <li><b>Mini moris.</b> With no offering at all, the killer can finish off the last survivor standing once they are down. Press <b>R</b> (or the Mori button on touch).</li>
+        <li>Bot killers sometimes burn an Ashen Rite. You will see a warning at the start of the match.</li>
+      </ul>
       <h2>How a night works</h2>
       <p>Four survivors start together. They need to repair <b>5 of the 7 generators</b>, then hold an <b>exit gate</b> switch open and run. The killer hunts them: two hits put a survivor down, and a downed survivor can be carried to a <b>hook</b>. A third hook (or a long enough wait) means they are sacrificed. When one survivor is left, a <b>hatch</b> opens somewhere on the map. Once a gate opens, the dark closes in for two minutes.</p>
       <h3>Survivor controls</h3>
       <ul><li><b>WASD</b> move, <b>Shift</b> run, <b>C</b> crouch</li><li>Hold <b>Left mouse</b> or <b>E</b>: repair, heal, unhook, open gates, search chests, unplug screens</li><li><b>Space</b>: vault windows and pallets, drop a pallet on the killer, hit skill checks</li><li>Hold <b>Right mouse</b> or <b>F</b>: use your item</li><li>When carried, tap <b>A</b> and <b>D</b> to wiggle free. On the hook's second stage, keep pressing <b>Space</b>.</li></ul>
       <h3>Killer controls</h3>
-      <ul><li><b>WASD</b> move, <b>Left mouse</b> attack (hold to lunge)</li><li><b>Space</b> or <b>E</b>: pick up, hook, break pallets, damage generators, vault, close the hatch</li><li>Hold <b>Right mouse</b> or <b>Q</b>: your power</li></ul>
+      <ul><li><b>WASD</b> move, <b>Left mouse</b> attack (hold to lunge), <b>R</b> mori</li><li><b>Space</b> or <b>E</b>: pick up, hook, break pallets, damage generators, vault, close the hatch</li><li>Hold <b>Right mouse</b> or <b>Q</b>: your power</li></ul>
       <p class="meta">On a phone or tablet the game shows a stick and buttons. Running, running into pallets and missed skill checks all make noise, and running leaves scratch marks that only the killer can see.</p>
       <h2>The killers</h2>
       ${KILLERS.map((k) => `<h3>${esc(k.name)} <small>${esc(k.realName)}</small></h3><p class="lore">${esc(k.bio)}</p>`).join('')}
@@ -306,7 +316,7 @@ export class Lobby {
     const cats = r.role === 'killer' ? KILLER_CATEGORIES : SURVIVOR_CATEGORIES;
     const headline = r.role === 'killer'
       ? (r.kills >= 3 ? 'A good night\'s hunt' : r.kills ? 'Some got away' : 'They all slipped away')
-      : (r.playerOutcome && r.playerOutcome.startsWith('escaped') ? 'You made it out' : r.playerOutcome === 'sacrificed' ? 'You were sacrificed' : r.playerOutcome === 'bled out' ? 'You bled out' : r.playerOutcome === 'taken' ? 'The dark took you' : 'You left the match');
+      : (r.playerOutcome && r.playerOutcome.startsWith('escaped') ? 'You made it out' : r.playerOutcome === 'executed' ? 'You were executed' : r.playerOutcome === 'finished off' ? 'You were finished off' : r.playerOutcome === 'sacrificed' ? 'You were sacrificed' : r.playerOutcome === 'bled out' ? 'You bled out' : r.playerOutcome === 'taken' ? 'The dark took you' : 'You left the match');
     return `<section class="lb-sec lb-results">
       <h2 class="res-h">${headline}</h2>
       <p class="meta">${esc(r.map)} · against ${esc(r.killer)} · ${r.gens} generators repaired</p>

@@ -257,3 +257,6 @@ input[type='range'] { accent-color: var(--blood); }
 .tbtn.on { background: rgba(176, 42, 34, 0.7); }
 @media (pointer: coarse) { .h-help { display: none; } .h-loadout { bottom: auto; top: 210px; } .h-team { width: 150px; } }
 @media (max-width: 700px) { .h-obj-num { font-size: 32px; } .h-mate-txt span { display: none; } .h-team { width: 124px; } .h-feed { width: 52vw; } .h-toast b { font-size: 14px; } }
+
+.ptb { font-style: normal; font-family: var(--ui); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #0b0a0d; background: var(--sodium); padding: 1px 5px; border-radius: 2px; vertical-align: middle; }
+.ptb-note { display: flex; gap: 8px; align-items: baseline; color: var(--sodium); font-size: 14px; line-height: 1.4; margin: 4px 0; }

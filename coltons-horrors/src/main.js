@@ -136,8 +136,9 @@ function buildSetup(rng) {
   if (offering) consume(offering);
   if (params.get('map')) offering = null;
   saveProfile();
+  const killerMori = role !== 'killer' && rng.chance(skill > 0.7 ? 0.35 : 0.15);
   return {
-    role, survivors, killerId, killerOutfit, killerPerks, killerAddons, killerSkill: skill, offering,
+    role, survivors, killerId, killerOutfit, killerPerks, killerAddons, killerSkill: skill, offering, killerMori,
     mapId: params.get('map') || null, seed: params.get('seed') ? +params.get('seed') : rng.int(1, 1e9), quality: quality(),
   };
 }

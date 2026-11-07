@@ -24,11 +24,12 @@ function defaultProfile() {
       flashlight: 2, medkit: 2, toolbox: 2, map: 1,
       wide_lens: 1, sterile_gauze: 1, socket_set: 1, creased_corner: 1,
       ring_fragment: 2, lake_silt: 1, cracked_glass: 2, dusty_cartridge: 1,
+      off_rite: 1, whetstone: 1, iron_wedge: 1,
       off_ashgrove: 1, off_hollowpines: 1, off_stivo: 1, off_gravelpit: 1, off_lantern: 1, off_bonecharm: 1,
     },
     loadout: {
       survivor: { perks: ['adrenal_surge', 'steady_hands', null, null], item: 'flashlight', addons: [null, null], offering: null },
-      killer: { perks: ['whispers', 'hook_rot', 'relentless', null], addons: { specter: [null, null], exe: [null, null] }, offering: null },
+      killer: { perks: ['whispers', 'hook_rot', 'relentless', null], addons: { specter: [null, null], exe: [null, null], woodsman: [null, null] }, offering: null },
     },
     settings: {
       quality: 'auto', sensitivity: 1.0, invertY: false, volume: 0.8, music: 0.7,
@@ -60,6 +61,9 @@ function load() {
 }
 
 export const profile = load();
+// new characters and their signature perks are unlocked for older saves too
+for (const k of KILLERS) for (const id of k.signature) if (!profile.ownedPerks.includes(id)) profile.ownedPerks.push(id);
+for (const c of [...SURVIVORS, ...KILLERS]) if (!profile.ownedOutfits.includes(c.outfits[0].id)) profile.ownedOutfits.push(c.outfits[0].id);
 
 export function saveProfile() {
   try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch (e) { /* ignore */ }

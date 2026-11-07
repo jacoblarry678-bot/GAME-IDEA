@@ -447,6 +447,16 @@ export function poseSurvivor(rig, p) {
     R.sh[0] = lerp(-2.8, -0.6, pr); R.el[0] = -0.3;
     L.sh[0] = lerp(-2.4, -0.4, pr);
     torsoX = lerp(-0.1, 0.35, pr);
+  } else if (mode === 'kneel') {
+    bodyY = -0.46 * s;
+    L.hip[0] = R.hip[0] = 0.05; L.kn[0] = R.kn[0] = 1.65; L.an[0] = R.an[0] = 0.5;
+    torsoX = 0.15 + Math.sin(t * 9) * 0.03; headX = 0.55;
+    L.sh[0] = R.sh[0] = -0.3; L.el[0] = R.el[0] = -1.2; L.sh[2] = 0.25; R.sh[2] = -0.25;
+  } else if (mode === 'lifted') {
+    const f = Math.sin(t * 13);
+    L.sh[0] = R.sh[0] = -2.3; L.el[0] = R.el[0] = -1.6 + f * 0.2;
+    L.hip[0] = 0.1 + f * 0.35; R.hip[0] = 0.1 - f * 0.35; L.kn[0] = R.kn[0] = 0.5; L.an[0] = R.an[0] = 0.7;
+    torsoX = -0.1; headX = -0.45;
   } else if (mode === 'flinch') {
     torsoX = -0.35; headX = -0.4;
     L.sh[0] = R.sh[0] = -0.6; L.el[0] = R.el[0] = -1.4;
@@ -831,7 +841,8 @@ export function poseKiller(rig, p) {
     legs.lh = -Math.sin(ph) * 0.7 * amp; legs.rh = Math.sin(ph) * 0.7 * amp;
     legs.lk = Math.max(0, Math.sin(ph - 1.2)) * 1.1 * amp + 0.1; legs.rk = Math.max(0, Math.sin(ph + Math.PI - 1.2)) * 1.1 * amp + 0.1;
     bodyY = Math.abs(Math.cos(ph)) * 0.05 * amp;
-    torsoX = 0.3; headX = -0.15 + Math.sin(t * 7) * 0.02; headY = Math.sin(t * 0.8) * 0.2; headZ = Math.sin(t * 13) * 0.04;
+    if (rig.kind === 'woodsman') { torsoX = 0.14 + amp * 0.08; headX = -0.05; headY = Math.sin(t * 0.5) * 0.25; bodyY = Math.abs(Math.cos(ph)) * 0.07 * amp; }
+    else { torsoX = 0.3; headX = -0.15 + Math.sin(t * 7) * 0.02; headY = Math.sin(t * 0.8) * 0.2; headZ = Math.sin(t * 13) * 0.04; }
     L.sh = [Math.sin(ph) * 0.5 * amp + 0.1, 0, 0.15]; L.el = [-0.4, 0, 0];
     R.sh = [-0.45 - Math.sin(ph) * 0.3 * amp, 0, -0.18]; R.el = [-0.9, 0, 0];
   }
@@ -872,6 +883,20 @@ export function poseKiller(rig, p) {
       break;
     case 'vault':
       torsoX = 0.6 * Math.sin(pr * Math.PI) + 0.1; L.sh = [-1.5, 0, 0.3]; R.sh = [-1.5, 0, -0.3];
+      break;
+    case 'raise':
+      R.sh = [-2.9, 0.2, -0.35]; R.el = [-1.3, 0, 0]; L.sh = [-2.6, 0, 0.45]; L.el = [-1.2, 0, 0];
+      torsoX = -0.12; headX = -0.15;
+      break;
+    case 'chop': {
+      const b = clamp(pr, 0, 1);
+      R.sh = [lerp(-2.9, -0.7, b), 0.1, -0.2]; R.el = [lerp(-1.3, -0.1, b), 0, 0];
+      L.sh = [lerp(-2.6, -0.8, b), 0, 0.3]; L.el = [lerp(-1.2, -0.2, b), 0, 0];
+      torsoX = lerp(-0.12, 0.65, b); headX = lerp(-0.15, 0.3, b);
+      break;
+    }
+    case 'grab':
+      L.sh = [-2.0, 0, 0.1]; L.el = [-0.25, 0, 0]; R.sh = [-0.9, 0, -0.25]; R.el = [-0.9, 0, 0]; torsoX = 0.05; headX = 0.2;
       break;
     case 'phase':
       headY += Math.sin(t * 31) * 0.4; headX = 0.6; torsoX = 0.35; L.sh = [0.4, 0, 0.5]; R.sh = [0.4, 0, -0.5];

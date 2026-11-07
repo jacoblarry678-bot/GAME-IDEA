@@ -98,7 +98,7 @@ export class SurvivorAI {
       if (s.hooks === 1 && s.hookProg > 0.35 && s.selfTries < 1 && Math.random() < dt * 0.1) it.interact = true;
       return;
     }
-    if (s.state === 'carried') return;
+    if (s.state === 'carried' || s.state === 'mori') return;
     if (this.knowsKiller()) { this.killerSeenT = m.time; this.killerPos = { x: k.pos.x, z: k.pos.z }; }
     const kd = m.dist(s, k);
     const known = m.time - this.killerSeenT < 2.5;
@@ -360,7 +360,10 @@ export class KillerAI {
     if (downed && (!this.chaseTarget || m.dist(downed, k) < 8 || m.dist(this.chaseTarget, k) > 10)) {
       this.chaseTarget = null;
       this.move(dt, it, downed.pos.x, downed.pos.z, 0.3);
-      if (m.dist(downed, k) < 1.6) { it.act = true; it.target = { type: 'pickup' }; }
+      if (m.dist(downed, k) < 1.6) {
+        if (m.moriKind(downed) && k.state === 'normal') it.mori = true;
+        else { it.act = true; it.target = { type: 'pickup' }; }
+      }
       return;
     }
     if (this.chaseTarget) return this.chase(dt, it);
@@ -420,7 +423,12 @@ export class KillerAI {
       if (diff < 0.45) it.attack = true;
     }
     // powers
-    if (k.power.kind === 'veil') {
+    if (k.power.kind === 'chop') {
+      const p = k.power;
+      if (!p.raising && visible && d > 3.2 && d < 7.5 && this.skill > 0.25 && Math.random() < dt * 3) this.powerHold = p.chargeTime * (0.55 + this.skill * 0.45);
+      if (p.raising && (d > 10 || !visible)) this.powerHold = 0;
+      if (p.raising) it.attack = false;
+    } else if (k.power.kind === 'veil') {
       if (k.phasing) { this.powerHold = d > 2.6 ? 0.2 : 0; if (d < 2.6) it.power = false; }
       else if (k.power.charge >= 1 && d > 7 && d < 22 && this.skill > 0.3 && Math.random() < dt * 2) this.powerHold = 0.5;
     } else if (k.power.kind === 'exe' && k.power.cooldown <= 0 && d > 18) this.usePowerTravel(s.pos.x, s.pos.z);

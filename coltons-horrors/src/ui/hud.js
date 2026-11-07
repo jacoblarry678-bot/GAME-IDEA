@@ -5,8 +5,8 @@ import { PERK_BY_ID, ITEM_BY_ID } from '../data.js';
 import { fmtTime, clamp } from '../core/util.js';
 import { GENS_NEEDED } from '../game/match.js';
 
-const STATE_ICON = { healthy: 'heart', injured: 'drop', dying: 'cross', carried: 'claw', hooked: 'hook', dead: 'skull', escaped: 'gate' };
-const STATE_LABEL = { healthy: 'Healthy', injured: 'Injured', dying: 'Down', carried: 'Carried', hooked: 'Hooked', dead: 'Dead', escaped: 'Escaped' };
+const STATE_ICON = { mori: 'skull', healthy: 'heart', injured: 'drop', dying: 'cross', carried: 'claw', hooked: 'hook', dead: 'skull', escaped: 'gate' };
+const STATE_LABEL = { mori: 'Mori', healthy: 'Healthy', injured: 'Injured', dying: 'Down', carried: 'Carried', hooked: 'Hooked', dead: 'Dead', escaped: 'Escaped' };
 
 export class HUD {
   constructor(root) {
@@ -45,7 +45,7 @@ export class HUD {
       </div>
       <div class="h-markers"></div>
       <div class="h-spectate" hidden><span></span><button class="btn-ghost h-leave">Leave match</button></div>
-      <div class="h-help">${P.isKiller ? 'LMB attack · SPACE / E action · RMB / Q power · ESC pause' : 'WASD move · SHIFT run · C crouch · hold LMB / E use · SPACE vault, pallet, skill check · RMB / F item · ESC pause'}</div>
+      <div class="h-help">${P.isKiller ? 'LMB attack · SPACE / E action · RMB / Q power · R mori · ESC pause' : 'WASD move · SHIFT run · C crouch · hold LMB / E use · SPACE vault, pallet, skill check · RMB / F item · ESC pause'}</div>
     `;
     const q = (s) => this.root.querySelector(s);
     this.el = {
@@ -107,6 +107,7 @@ export class HUD {
         prog = 1 - P.hookProg;
       } else if (P.state === 'carried') { prompt = 'Tap A and D to wiggle free'; prog = P.wiggle; }
       else if (P.state === 'dying') { prompt = 'You are down. Crawl away or wait for help'; prog = 1 - P.bleed; }
+      else if (P.state === 'mori') { prompt = P.moriKind === 'full' ? 'Mori' : 'Mini mori'; }
       else if (a && a.type === 'repair') { prompt = 'Repairing'; prog = a.target.progress; }
       else if (a && (a.type === 'heal' || a.type === 'recover')) { prompt = a.type === 'heal' ? `Healing ${a.target.name.split(' ')[0]}` : `Picking up ${a.target.name.split(' ')[0]}`; prog = a.target.heal; }
       else if (a && a.type === 'selfheal') { prompt = 'Healing yourself'; prog = P.heal; }
@@ -127,6 +128,8 @@ export class HUD {
     } else if (P.isKiller) {
       prompt = m.killerPrompt();
       if (k.state !== 'normal' && k.stateDur && ['pickup', 'hook', 'break', 'kick', 'channel', 'closeHatch'].includes(k.state)) prog = k.stateT / k.stateDur;
+      if (k.power.kind === 'chop' && k.power.raising) { prompt = k.power.charge * k.power.chargeTime >= k.power.minCharge ? (k.power.charge >= 1 ? 'Full charge: release to chop' : 'Release to chop') : 'Raising the axe'; prog = k.power.charge; }
+      if (k.state === 'mori') { prompt = k.stateData && k.stateData.kind === 'full' ? 'Mori' : 'Mini mori'; prog = null; }
       if (k.carrying) prompt = prompt || 'Carry them to a hook';
       if (k.state === 'stun') prompt = 'Stunned';
       if (k.state === 'blind') prompt = 'Blinded';
@@ -153,6 +156,7 @@ export class HUD {
     } else {
       const p = k.power;
       if (p.kind === 'veil') el.item.innerHTML = `<div class="h-itm ${p.active ? 'live' : p.charge >= 1 ? 'ready' : ''}">${icon('ghost')}</div><div class="h-itm-txt"><b>Veil Walk</b><div class="h-meter"><i style="width:${(p.active ? 1 - p.t / p.dur : p.charge) * 100}%"></i></div></div>`;
+      else if (p.kind === 'chop') el.item.innerHTML = `<div class="h-itm ${p.raising ? 'live' : 'ready'}">${icon('axe')}</div><div class="h-itm-txt"><b>Heavy Chop</b><div class="h-meter"><i style="width:${p.charge * 100}%"></i></div></div>`;
       else el.item.innerHTML = `<div class="h-itm ${p.cooldown <= 0 ? 'ready' : ''}">${icon('tv')}</div><div class="h-itm-txt"><b>Signal Jump${p.selecting ? ': release to jump' : ''}</b><div class="h-meter"><i style="width:${(1 - p.cooldown / p.maxCd) * 100}%"></i></div></div>`;
     }
     // screen effects
@@ -164,6 +168,7 @@ export class HUD {
     el.blind.style.opacity = (P.isKiller && k.state === 'blind' ? Math.max(0.85, m.blindFlash) : m.blindFlash).toFixed(3);
     el.glitch.style.opacity = P.isSurvivor && P.glitchUntil > t ? (0.18 + Math.random() * 0.2).toFixed(3) : 0;
     el.veil.style.opacity = P.isKiller && k.phasing ? 1 : 0;
+    if (P.isKiller) this.root.querySelector('.h-cross').hidden = k.state === 'mori';
     // spectate bar
     el.spectate.hidden = !m.spectate;
     if (m.spectate) el.spectate.querySelector('span').textContent = `Spectating ${m.spectate.name} · click to switch`;

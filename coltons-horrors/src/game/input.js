@@ -71,7 +71,7 @@ export class Input {
     look.addEventListener('touchmove', (e) => { for (const t of e.changedTouches) if (t.identifier === lid) { this.touch.lookDX += (t.clientX - lx) * 2.2; this.touch.lookDY += (t.clientY - ly) * 2.2; lx = t.clientX; ly = t.clientY; } e.preventDefault(); }, { passive: false });
     look.addEventListener('touchend', () => { lid = null; });
     const btns = role === 'killer'
-      ? [['attack', 'Attack'], ['act', 'Action'], ['item', 'Power']]
+      ? [['attack', 'Attack'], ['act', 'Action'], ['item', 'Power'], ['mori', 'Mori']]
       : [['act', 'Vault / Drop'], ['interact', 'Hold: Use'], ['item', 'Item'], ['run', 'Run'], ['crouch', 'Crouch']];
     const wrap = document.createElement('div');
     wrap.className = 'tbtns';
@@ -109,6 +109,7 @@ export class Input {
       attackPressed: this.mouse.lp || t.taps.has('attack'),
       lookX: this.mouse.dx + t.lookDX, lookY: this.mouse.dy + t.lookDY,
       wiggle: this.wiggle + (t.taps.has('act') ? 1 : 0) + (t.taps.has('interact') ? 1 : 0),
+      moriPressed: p.has('KeyR') || t.taps.has('mori'),
       escape: p.has('Escape') || p.has('KeyP'),
       tab: k.has('Tab'),
     };

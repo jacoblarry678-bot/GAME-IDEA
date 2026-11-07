@@ -1,7 +1,8 @@
 // All game content definitions for Colton's Horrors.
 // Every character, perk, add-on, offering and map here is original to this project.
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
+export const PTB_NOTE = 'Public Test Build: The Woodsman is new and his numbers may change in the next update.';
 
 export const RARITIES = {
   common: { name: 'Common', color: '#a49c8c' },
@@ -124,6 +125,22 @@ export const KILLERS = [
       { id: 'exe_bsod', name: 'Blue Screen', rarity: 'legendary', price: 14000, body: '#0a1a6a', glow: '#ffffff', glow2: '#6aa0ff', face: '#ffffff' },
     ],
   },
+  {
+    id: 'woodsman', name: 'The Woodsman', realName: 'Abel Crane', height: 2.06, ptb: true,
+    speed: 4.6, terror: 32, weapon: 'Felling Axe',
+    signature: ['timber', 'splinter'],
+    bio: 'Abel Crane felled timber on Crane Ridge for thirty winters. When the mill closed and the company men came to take his land, he walked into the pines with his felling axe and a mask carved from the first birch he ever cut. The ridge has been quiet since. The trees have not.',
+    power: {
+      id: 'heavy_chop', name: 'Heavy Chop', glyph: 'axe',
+      desc: 'Hold the Power button to raise the axe (you move 15% slower while it is up). Release after at least 0.6 seconds to bring it down in a long lunging chop that covers far more ground than a normal attack and smashes any dropped pallet in its path. The longer the charge, up to 1.5 seconds, the farther the chop. A miss leaves you prying the axe out of the ground for 2.5 seconds.',
+    },
+    outfits: [
+      { id: 'woodsman_default', name: 'Ridge Logger', rarity: 'common', price: 0, plaid: '#8a1e1a', plaid2: '#151515', pants: '#3a3a2a', mask: '#d8d0b8', cap: '#3a2a1a', metal: '#8a8a88', haft: '#5a3a20' },
+      { id: 'woodsman_widow', name: 'Widow Maker', rarity: 'rare', price: 6000, plaid: '#2a4a2a', plaid2: '#101010', pants: '#2a2a2a', mask: '#c8b890', cap: '#1a1a1a', metal: '#6a6a66', haft: '#3a2614' },
+      { id: 'woodsman_burnt', name: 'Burnt Stand', rarity: 'epic', price: 9000, plaid: '#3a2a20', plaid2: '#0a0a0a', pants: '#1a1410', mask: '#2a2420', cap: '#0a0a0a', metal: '#4a3a30', haft: '#1a120c' },
+      { id: 'woodsman_frost', name: 'Frost Line', rarity: 'legendary', price: 14000, plaid: '#3a5a7a', plaid2: '#d8e0e8', pants: '#2a3040', mask: '#e8eef4', cap: '#d8e0e8', metal: '#c0d8e8', haft: '#6a7a8a' },
+    ],
+  },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -161,6 +178,8 @@ export const KILLER_PERKS = [
   { id: 'muffled_heart', name: 'Muffled Heart', icon: 'heart', price: 4500, desc: 'Your terror radius is 50% smaller.' },
   { id: 'hook_rot', name: 'Hook Rot', icon: 'hook', price: 3500, desc: 'Hooked survivors weaken 25% faster. When someone is unhooked, the rescuer is revealed to you for 5 seconds.' },
   { id: 'final_hour', name: 'Final Hour', icon: 'hourglass', price: 6000, desc: 'When the exit gates are powered, every survivor is Marked for 60 seconds: any hit puts them down.' },
+  { id: 'timber', name: 'Timber!', icon: 'axe', price: 3500, desc: 'When you break a pallet, every survivor within 16 m is revealed to you for 4 seconds.' },
+  { id: 'splinter', name: 'Splinter', icon: 'drop', price: 3500, desc: 'Downed survivors bleed out 25% faster and leave twice as much blood.' },
   { id: 'patient_hunter', name: 'Patient Hunter', icon: 'moon', price: 3000, desc: 'Move 5% faster while you are not chasing or carrying anyone.' },
 ];
 
@@ -212,6 +231,13 @@ export const KILLER_ADDONS = [
   { id: 'dead_pixel', killer: 'exe', name: 'Dead Pixel Eye', rarity: 'rare', price: 1600, desc: 'Glitched survivors are revealed to you for the whole duration.' },
   { id: 'unplugged_cord', killer: 'exe', name: 'Frayed Cord', rarity: 'rare', price: 1600, desc: 'Unplugged screens come back 50% sooner.' },
   { id: 'infinite_loop', killer: 'exe', name: 'Infinite Loop', rarity: 'epic', price: 2800, desc: 'Signal Jump cooldown is 35% shorter.' },
+  // The Woodsman (PTB)
+  { id: 'whetstone', killer: 'woodsman', name: 'Whetstone', rarity: 'common', price: 600, desc: 'Heavy Chop reaches full charge 0.3 seconds sooner.' },
+  { id: 'pine_tar', killer: 'woodsman', name: 'Pine Tar', rarity: 'common', price: 600, desc: 'Pry the axe free 0.8 seconds faster after a missed chop.' },
+  { id: 'iron_wedge', killer: 'woodsman', name: 'Iron Wedge', rarity: 'uncommon', price: 900, desc: 'Heavy Chop travels 15% farther.' },
+  { id: 'birch_mask', killer: 'woodsman', name: 'Birch Mask Shard', rarity: 'uncommon', price: 900, desc: 'Move only 7% slower while the axe is raised.' },
+  { id: 'saw_tooth', killer: 'woodsman', name: 'Rusted Saw Tooth', rarity: 'rare', price: 1600, desc: 'Survivors hit by a Heavy Chop are slowed by 20% for 4 seconds after their burst of speed.' },
+  { id: 'heartwood', killer: 'woodsman', name: 'Heartwood', rarity: 'legendary', price: 4000, desc: 'A fully charged Heavy Chop puts a healthy survivor straight down.' },
   { id: 'blue_screen', killer: 'exe', name: 'Blue Screen', rarity: 'legendary', price: 4000, desc: 'Arriving knocks 15% off generators within 16 m and reveals survivors within 24 m for 6 seconds.' },
 ];
 
@@ -231,6 +257,7 @@ export const OFFERINGS = [
   { id: 'off_bonecharm', side: 'any', name: 'Bone Charm', icon: 'skull', rarity: 'uncommon', price: 900, marrowMain: 1.0, desc: '+100% Marrow in your main category (Grit or Savagery).' },
   { id: 'off_wishbone', side: 'survivor', name: 'Wishbone', icon: 'box', rarity: 'common', price: 600, chests: 2, desc: 'Two extra chests appear in the match.' },
   { id: 'off_penny', side: 'survivor', name: 'Lucky Penny', icon: 'coin', rarity: 'rare', price: 1200, hatchNear: true, desc: 'The hatch spawns close to where you start.' },
+  { id: 'off_rite', side: 'killer', name: 'Ashen Rite', icon: 'skull', rarity: 'epic', price: 2500, mori: true, desc: 'Lets you perform a Mori: execute any downed survivor who has already been hooked once (press R next to them).' },
   { id: 'off_hangman', side: 'killer', name: 'Hangman\'s Rope', icon: 'rope', rarity: 'legendary', price: 3500, hangman: true, desc: 'Survivors are sacrificed on their second hook instead of their third.' },
 ];
 

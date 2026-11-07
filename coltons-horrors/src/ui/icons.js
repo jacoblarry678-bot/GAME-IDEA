@@ -38,6 +38,7 @@ const P = {
   lock: '<rect x="5" y="11" width="14" height="10" rx="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   shirt: '<path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3c0 2-2 3-4 3S8 5 8 3z"/>',
   gen: '<rect x="3" y="9" width="18" height="10" rx="1"/><path d="M7 9V5h4v4M15 13h3M6 13h5M8 19v2M16 19v2"/>',
+  axe: '<path d="M13 4c3-2 7 0 8 3l-6 3-3-3z"/><path d="M13.5 6.5 3 20"/><path d="M15 10c1 2 3 3 5 3"/>',
   gate: '<path d="M3 21V5h18v16"/><path d="M7 21V9h10v12M7 13h10M7 17h10"/>',
 };
 

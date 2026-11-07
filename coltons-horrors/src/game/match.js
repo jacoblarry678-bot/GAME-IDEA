@@ -6,6 +6,7 @@ import { SURVIVOR_BY_ID, KILLER_BY_ID, ITEM_BY_ID, OFFERING_BY_ID, MAP_BY_ID, MA
 import { RNG, clamp, lerp, angleWrap, approachAngle, damp } from '../core/util.js';
 import { scratchTexture, bloodTexture, rippleTexture, glowSpriteTexture } from '../world/textures.js';
 import { SurvivorAI, KillerAI } from './ai.js';
+import { buildWoodsman, buildWoodsmanViewmodel } from '../models/woodsman.js';
 
 const WALK = 2.26, RUN = 4.0, CROUCH = 1.13, CRAWL = 0.7;
 const GEN_TIME = 70, GENS_NEEDED = 5;
@@ -72,7 +73,7 @@ export class Killer {
     this.name = def.name;
     this.isPlayer = !!o.isPlayer;
     this.outfit = outfitOf(def, outfitId);
-    this.rig = def.id === 'specter' ? buildSpecter(this.outfit) : buildExe(this.outfit);
+    this.rig = def.id === 'specter' ? buildSpecter(this.outfit) : def.id === 'woodsman' ? buildWoodsman(this.outfit) : buildExe(this.outfit);
     m.world.root.add(this.rig.root);
     this.pos = new THREE.Vector3(o.x, 0, o.z);
     this.yaw = 0; this.pitch = 0;
@@ -87,7 +88,9 @@ export class Killer {
     this.chaseTarget = null; this.chaseT = 0; this.bloodlust = 0;
     this.lungeBonusUntil = 0;
     this.terror = def.terror * (this.perks.includes('muffled_heart') ? 0.5 : 1);
-    this.power = def.id === 'specter'
+    this.power = def.id === 'woodsman'
+      ? { kind: 'chop', charge: 0, raising: false, chargeTime: 1.5 - (this.has('whetstone') ? 0.3 : 0), minCharge: 0.6 }
+      : def.id === 'specter'
       ? { kind: 'veil', charge: 1, active: false, t: 0, dur: 4 + (this.has('ring_fragment') ? 0.5 : 0) + (this.has('waterlogged_diary') ? 1 : 0), recharge: 14 * (this.has('lake_silt') ? 0.9 : 1) * (this.has('torn_hem') ? 0.8 : 1) }
       : { kind: 'exe', cooldown: 0, maxCd: 18 * (this.has('burnt_capacitor') ? 0.85 : 1) * (this.has('infinite_loop') ? 0.65 : 1), channel: 1.5 - (this.has('cracked_glass') ? 0.3 : 0), target: null, selecting: false };
     this.ai = this.isPlayer ? null : new KillerAI(m, this, o.skill || 0.6);
@@ -118,6 +121,7 @@ export class Match {
       extraChests: offering && offering.chests ? offering.chests : 0, hatchNear: offering && offering.hatchNear,
     });
     this.sacrificeAt = offering && offering.hangman ? 2 : 3;
+    this.moriAllowed = setup.role === 'killer' ? !!(offering && offering.mori) : !!setup.killerMori;
     // entities
     this.survivors = [];
     const sp = this.world.spawns.survivors;
@@ -150,7 +154,7 @@ export class Match {
     this.camera.rotation.order = 'YXZ';
     this.scene.add(this.camera);
     if (this.player.isKiller) {
-      this.viewmodel = buildViewmodel(killerDef.id, this.killer.outfit);
+      this.viewmodel = killerDef.id === 'woodsman' ? buildWoodsmanViewmodel(this.killer.outfit) : buildViewmodel(killerDef.id, this.killer.outfit);
       this.camera.add(this.viewmodel);
       this.killer.rig.root.visible = false;
     }
@@ -161,6 +165,7 @@ export class Match {
     this.scene.add(this.playerLight);
     this.audio.ambience(mapDef.kit, weather !== 'clear');
     this.announce(`${mapDef.name}`, mapDef.region);
+    if (this.moriAllowed && setup.role !== 'killer') this.announce(`${killerDef.name} burned an Ashen Rite`, 'Hooked survivors can be executed', 'bad');
   }
 
   /* ---------------- helpers ---------------- */
@@ -305,6 +310,7 @@ export class Match {
       it.attackPressed = inp.attackPressed;
       it.act = inp.actPressed || inp.interactPressed;
       it.power = inp.item;
+      it.mori = inp.moriPressed;
       it.look = { yaw: c.yaw, pitch: c.pitch };
     }
   }
@@ -340,8 +346,9 @@ export class Match {
       return;
     }
     // status timers
+    if (s.state === 'mori') { s.speed = 0; return; }
     if (s.state === 'dying') {
-      s.bleed += dt / BLEED_TIME;
+      s.bleed += (dt / BLEED_TIME) * (this.killer.has('splinter') ? 1.25 : 1);
       if (s.bleed >= 1) this.kill(s, 'bled out');
     }
     if (s.state === 'hooked') return this.updateHooked(s, dt);
@@ -417,7 +424,7 @@ export class Match {
     }
     if (s.state !== 'healthy') {
       s.bloodT -= dt;
-      if (s.bloodT <= 0) { s.bloodT = s.state === 'dying' ? 1.5 : 1.0; this.addDecal('blood', s.pos.x + (Math.random() - 0.5) * 0.4, s.pos.z + (Math.random() - 0.5) * 0.4, this.killer.has('bloodhound') ? 24 : 12); }
+      if (s.bloodT <= 0) { s.bloodT = (s.state === 'dying' ? 1.5 : 1.0) * (this.killer.has('splinter') ? 0.5 : 1); this.addDecal('blood', s.pos.x + (Math.random() - 0.5) * 0.4, s.pos.z + (Math.random() - 0.5) * 0.4, this.killer.has('bloodhound') ? 24 : 12); }
     }
     if (s.speed > 1.5) {
       s.stepT -= dt * s.speed;
@@ -853,9 +860,12 @@ export class Match {
     s.action = null;
     s.deathAnim = 0;
     if (onHook) { this.killer.addScore('ritual', 1500); this.sfx('sacrifice', s.pos.x, s.pos.z, 80); }
+    else if (reason === 'executed') this.killer.addScore('ritual', 1800);
+    else if (reason === 'finished off') this.killer.addScore('ritual', 1200);
     else this.killer.addScore('ritual', 800);
     if (s.flash) s.flash.intensity = 0;
-    this.announce(`${s.name} ${reason === 'sacrificed' ? 'was sacrificed' : reason === 'bled out' ? 'bled out' : 'was taken by the dark'}`, '', 'bad');
+    const what = { sacrificed: 'was sacrificed', 'bled out': 'bled out', executed: `was executed by ${this.killer.def.name}`, 'finished off': `was finished off by ${this.killer.def.name}` }[reason] || 'was taken by the dark';
+    this.announce(`${s.name} ${what}`, reason === 'executed' ? 'Mori' : reason === 'finished off' ? 'Mini mori' : '', 'bad');
     if (s === this.player) this.onPlayerOut();
     this.checkHatch();
   }
@@ -1000,8 +1010,10 @@ export class Match {
     if (k.chaseTarget && k.has('bloodlust')) v *= 1 + k.bloodlust;
     if (k.phasing) v = k.def.speed * 1.65 * (k.has('dried_lily') ? 1.1 : 1);
     if (k.ai && !k.isPlayer) v *= 0.92 + k.ai.skill * 0.1;
+    if (k.power.kind === 'chop' && k.power.raising) v *= k.has('birch_mask') ? 0.93 : 0.85;
     switch (k.state) {
       case 'lunge': return v * 1.5;
+      case 'chop': return v * (2.0 + (k.stateData ? k.stateData.charge : 0) * 0.9) * (k.has('iron_wedge') ? 1.15 : 1);
       case 'recover': return v * (k.stateData === 'hit' ? 0.35 : 0.55);
       case 'normal': return v;
       default: return 0;
@@ -1013,7 +1025,7 @@ export class Match {
     k.stateT += dt;
     this.updatePower(k, dt);
     // timed states
-    if (k.state !== 'normal' && k.state !== 'lunge' && k.stateT >= k.stateDur) {
+    if (k.state !== 'normal' && k.state !== 'lunge' && k.state !== 'chop' && k.stateT >= k.stateDur) {
       const st = k.state, data = k.stateData;
       k.state = 'normal';
       if (st === 'pickup' && data && data.state === 'dying') {
@@ -1021,7 +1033,8 @@ export class Match {
         k.addScore('savagery', 300);
       }
       if (st === 'hook' && data && k.carrying === data.s) this.hookSurvivor(data.s, data.hook);
-      if (st === 'break' && data) { this.world.breakPallet(data); k.addScore('savagery', 150); this.sfx('break', data.x, data.z, 40); }
+      if (st === 'break' && data) { this.world.breakPallet(data); k.addScore('savagery', 150); this.sfx('break', data.x, data.z, 40); this.timber(data); }
+      if (st === 'mori' && data) this.kill(data.s, data.kind === 'full' ? 'executed' : 'finished off');
       if (st === 'kick' && data && !data.done) {
         data.progress = Math.max(0, data.progress - (k.has('sundering_grip') ? 0.15 : 0.05));
         data.regressing = true;
@@ -1042,7 +1055,9 @@ export class Match {
     // facing
     if (it.look) k.yaw = it.look.yaw, k.pitch = it.look.pitch;
     // attack
-    if (k.state === 'normal' && it.attack && !k.carrying && !k.phasing && !k.power.selecting) {
+    if (it.mori && k.state === 'normal' && !k.carrying && !k.phasing) { const t = this.moriTarget(); if (t) this.startMori(t.s, t.kind); }
+    it.mori = false;
+    if (k.state === 'normal' && it.attack && !k.carrying && !k.phasing && !k.power.selecting && !k.power.raising) {
       k.state = 'lunge'; k.stateT = 0; k.stateDur = 0.55;
       this.sfx('swing', k.pos.x, k.pos.z, 15);
     }
@@ -1052,6 +1067,17 @@ export class Match {
       if (hit) { this.hitSurvivor(k, hit); }
       else if (k.stateT >= k.stateDur || (!it.attack && k.stateT > 0.18)) this.setKillerState('recover', 1.5, 'miss');
     }
+    if (k.state === 'chop') {
+      const fx = Math.sin(k.yaw), fz = Math.cos(k.yaw);
+      for (const p of this.world.pallets) {
+        if (p.state !== 'down' && p.state !== 'falling') continue;
+        const dx = p.x - k.pos.x, dz = p.z - k.pos.z, d = Math.hypot(dx, dz);
+        if (d < 1.7 && (dx * fx + dz * fz) / Math.max(d, 0.01) > 0.2) { this.world.breakPallet(p); this.sfx('break', p.x, p.z, 45); k.addScore('cunning', 200); this.timber(p); }
+      }
+      const hit = this.findHit(k, 2.0);
+      if (hit) this.hitSurvivor(k, hit, { chop: k.stateData.charge });
+      else if (k.stateT >= k.stateDur) { this.setKillerState('recover', 2.5 - (k.has('pine_tar') ? 0.8 : 0), 'miss'); this.sfx('kick', k.pos.x, k.pos.z, 20); }
+    }
     // contextual action
     if (it.act && k.state === 'normal' && !k.phasing) this.killerAct(k, it.target);
     it.act = false;
@@ -1059,11 +1085,12 @@ export class Match {
     const v = this.killerSpeed(k);
     let mx = it.mx, mz = it.mz;
     if (k.state === 'lunge' && Math.hypot(mx, mz) < 0.2) { mx = Math.sin(k.yaw); mz = Math.cos(k.yaw); }
+    if (k.state === 'chop') { mx = Math.sin(k.yaw); mz = Math.cos(k.yaw); }
     const ml = Math.hypot(mx, mz);
     if (ml > 0.05 && v > 0 && !k.vault) {
       const step = v * Math.min(1, ml) * dt;
       k.pos.x += (mx / ml) * step; k.pos.z += (mz / ml) * step;
-      if (!it.look) k.yaw = approachAngle(k.yaw, Math.atan2(mx, mz), dt * (k.state === 'lunge' ? 4 : 8));
+      if (!it.look && k.state !== 'chop') k.yaw = approachAngle(k.yaw, Math.atan2(mx, mz), dt * (k.state === 'lunge' ? 4 : 8));
       k.speed = v * Math.min(1, ml);
     } else k.speed = 0;
     if (!k.vault) this.world.resolve(k.pos, k.r, (c) => c.kind === 'gate' && c.ref.open);
@@ -1087,9 +1114,10 @@ export class Match {
     return best;
   }
 
-  hitSurvivor(k, s) {
+  hitSurvivor(k, s, opts = {}) {
     const t = this.time;
     let downed = false;
+    if (opts.chop >= 0.999 && k.has('heartwood') && s.state === 'healthy' && s.protectUntil <= t) s.state = 'injured';
     s.action = null;
     s.vault = null;
     if (s.protectUntil > t) { s.protectUntil = 0; this.announce(`${s.name} shrugged off the hit`, 'Borrowed Breath', 'good'); }
@@ -1100,7 +1128,7 @@ export class Match {
     if (!downed) {
       s.boostUntil = t + 1.8; s.boostMult = 1.5;
       if (s.has('adrenal_surge') && s.adrenalReady <= t) { s.boostUntil = t + 3; s.adrenalReady = t + 60; }
-      if (k.has('hamstring')) s.hinderPending = true;
+      if (k.has('hamstring') || (opts.chop !== undefined && k.has('saw_tooth'))) s.hinderPending = true;
     }
     k.addScore('savagery', downed ? 600 : 350);
     k.bloodlust = 0; k.chaseT = 0;
@@ -1110,6 +1138,91 @@ export class Match {
     for (let i = 0; i < 3; i++) this.addDecal('blood', s.pos.x + (Math.random() - 0.5), s.pos.z + (Math.random() - 0.5), 14);
     if (s === this.player) this.hitFlash = 1;
     if (downed) this.announce(`${s.name} is down`, '', 'bad');
+    if (opts.chop !== undefined) { this.sfx('kick', s.pos.x, s.pos.z, 30); this.shake = 0.35; }
+  }
+
+  /* ---------------- moris ---------------- */
+
+  // Full mori: needs the Ashen Rite and a survivor hooked at least once. Mini mori: the last survivor standing.
+  moriKind(s) {
+    if (s.state !== 'dying') return null;
+    if (this.moriAllowed && s.hooks >= 1) return 'full';
+    if (this.survivors.filter((o) => o.alive).length === 1) return 'mini';
+    return null;
+  }
+
+  moriTarget() {
+    const k = this.killer;
+    for (const s of this.survivors) {
+      if (Math.hypot(s.pos.x - k.pos.x, s.pos.z - k.pos.z) > 2.0) continue;
+      const kind = this.moriKind(s);
+      if (kind) return { s, kind };
+    }
+    return null;
+  }
+
+  startMori(s, kind) {
+    const k = this.killer;
+    k.yaw = Math.atan2(s.pos.x - k.pos.x, s.pos.z - k.pos.z);
+    const p = this.world.nav.nearestWalkable(k.pos.x + Math.sin(k.yaw) * 1.05, k.pos.z + Math.cos(k.yaw) * 1.05, 2) || [s.pos.x, s.pos.z];
+    s.pos.set(p[0], 0, p[1]);
+    s.yaw = k.yaw + Math.PI;
+    s.state = 'mori';
+    s.action = null;
+    s.moriKind = kind;
+    this.setKillerState('mori', kind === 'full' ? 5.2 : 2.4, { s, kind });
+    this.moriCam = Math.atan2(k.pos.x - s.pos.x, k.pos.z - s.pos.z) + Math.PI / 2;
+    this.sfx('scream', s.pos.x, s.pos.z, 50);
+    if (k.def.id === 'exe') this.sfx('glitch', k.pos.x, k.pos.z, 40);
+    if (k.def.id === 'specter') this.sfx('veilIn', k.pos.x, k.pos.z, 40);
+  }
+
+  // Pose the victim and the killer through each killer's mori.
+  moriFrame() {
+    const k = this.killer, d = k.stateData;
+    const p = clamp(k.stateT / k.stateDur, 0, 1);
+    const kind = k.def.id;
+    const out = { victim: 'crawl', y: 0, scale: 1, visible: true, killer: 'move', kp: 0, impact: false };
+    if (d.kind === 'full') {
+      if (kind === 'woodsman') {
+        out.victim = p < 0.62 ? 'kneel' : 'crawl';
+        out.killer = p < 0.55 ? 'raise' : p < 0.72 ? 'chop' : 'move';
+        out.kp = clamp((p - 0.55) / 0.08, 0, 1);
+        out.impact = p > 0.62;
+      } else if (kind === 'specter') {
+        out.killer = 'grab';
+        out.victim = p < 0.12 ? 'kneel' : 'lifted';
+        out.y = p < 0.8 ? clamp((p - 0.12) / 0.3, 0, 1) * 0.75 : 0.75 - ((p - 0.8) / 0.2) * 2.8;
+        out.impact = p > 0.8;
+      } else {
+        out.killer = p < 0.85 ? 'grab' : 'move';
+        out.victim = p < 0.12 ? 'kneel' : 'lifted';
+        out.y = clamp((p - 0.12) / 0.3, 0, 1) * 0.55;
+        out.visible = p < 0.45 || Math.random() > (p - 0.45) * 1.9;
+        out.scale = p < 0.7 ? 1 : Math.max(0.02, 1 - (p - 0.7) / 0.3);
+        out.impact = p > 0.6;
+      }
+    } else {
+      out.killer = kind === 'woodsman' ? (p < 0.4 ? 'raise' : p < 0.6 ? 'chop' : 'move') : p < 0.35 ? 'lunge' : p < 0.65 ? 'attack' : 'move';
+      out.kp = kind === 'woodsman' ? clamp((p - 0.4) / 0.08, 0, 1) : clamp((p - 0.35) / 0.3, 0, 1);
+      out.impact = p > 0.45;
+      if (kind === 'exe' && p > 0.5) { out.visible = Math.random() > (p - 0.5) * 2; out.scale = Math.max(0.02, 1 - (p - 0.5) * 2); }
+      if (kind === 'specter' && p > 0.55) out.y = -((p - 0.55) / 0.45) * 2.2;
+    }
+    if (out.impact && !d.impactDone) {
+      d.impactDone = true;
+      this.shake = 0.45;
+      this.sfx('hit', d.s.pos.x, d.s.pos.z, 40);
+      if (kind === 'exe') this.sfx('staticBurst', d.s.pos.x, d.s.pos.z, 40);
+      else for (let i = 0; i < 6; i++) this.addDecal('blood', d.s.pos.x + (Math.random() - 0.5) * 1.4, d.s.pos.z + (Math.random() - 0.5) * 1.4, 30);
+      if (kind === 'specter') for (let i = 0; i < 3; i++) this.addDecal('ripple', d.s.pos.x, d.s.pos.z, 2 + i * 0.5);
+    }
+    return out;
+  }
+
+  timber(p) {
+    if (!this.killer.has('timber')) return;
+    for (const s of this.survivors) if (s.alive && Math.hypot(s.pos.x - p.x, s.pos.z - p.z) < 16) s.revealUntil = this.time + 4;
   }
 
   killerAct(k, target) {
@@ -1134,7 +1247,7 @@ export class Match {
     if (k.state !== 'normal' || k.phasing) return null;
     const near = (x, z, r) => Math.hypot(k.pos.x - x, k.pos.z - z) < r;
     if (k.carrying) { for (const h of w.hooks) if (!h.occupant && near(h.x, h.z, 2.4)) return 'Hook survivor'; return null; }
-    for (const s of this.survivors) if (s.state === 'dying' && near(s.pos.x, s.pos.z, 1.9)) return 'Pick up';
+    for (const s of this.survivors) if (s.state === 'dying' && near(s.pos.x, s.pos.z, 1.9)) { const mk = this.moriKind(s); return mk ? `Pick up · R: ${mk === 'full' ? 'Mori' : 'Mini mori'}` : 'Pick up'; }
     if (w.hatch.open && !w.hatch.closed && near(w.hatch.x, w.hatch.z, 2)) return 'Close hatch';
     for (const p of w.pallets) if ((p.state === 'down') && near(p.x, p.z, 1.9)) return 'Break pallet';
     if (this.vaultable(k)) return 'Vault';
@@ -1147,6 +1260,22 @@ export class Match {
   updatePower(k, dt) {
     const p = k.power;
     const it = k.intent;
+    if (p.kind === 'chop') {
+      if (k.state !== 'normal' || k.carrying) { p.raising = false; p.charge = 0; return; }
+      if (it.power) {
+        if (!p.raising) { p.raising = true; p.charge = 0; this.sfx('swing', k.pos.x, k.pos.z, 12); }
+        p.charge = Math.min(1, p.charge + dt / p.chargeTime);
+      } else if (p.raising) {
+        p.raising = false;
+        if (p.charge * p.chargeTime >= p.minCharge) {
+          k.state = 'chop'; k.stateT = 0; k.stateDur = 0.32 + p.charge * 0.28; k.stateData = { charge: p.charge };
+          this.sfx('swing', k.pos.x, k.pos.z, 25);
+          k.addScore('cunning', 40);
+        }
+        p.charge = 0;
+      }
+      return;
+    }
     if (p.kind === 'veil') {
       if (p.active) {
         p.t += dt;
@@ -1290,12 +1419,14 @@ export class Match {
     const P = this.player;
     const view = this.spectate || P;
     const t = this.time;
+    const mf = k.state === 'mori' && k.stateData ? this.moriFrame() : null;
     // survivors
     for (const s of this.survivors) {
       const rig = s.rig;
       if (!s.alive) { if (s.state === 'escaped') rig.root.visible = false; rig.aura.set(null); continue; }
       let mode = 'stand';
       if (s.state === 'dying') mode = 'crawl';
+      else if (s.state === 'mori') mode = mf ? mf.victim : 'crawl';
       else if (s.state === 'carried') mode = 'carried';
       else if (s.state === 'hooked') mode = 'hooked';
       else if (s.vault) mode = 'vault';
@@ -1315,10 +1446,11 @@ export class Match {
       } else {
         rig.root.position.set(s.pos.x, s.vault ? Math.sin(Math.min(1, s.vault.t) * Math.PI) * 0.45 : 0, s.pos.z);
         rig.root.rotation.y = s.yaw;
+        if (s.state === 'mori' && mf) { rig.root.position.y = mf.y; rig.root.scale.setScalar(mf.scale); }
       }
       // visibility for a Specter player in the veil
       const hidden = P.isKiller && k.phasing && !(k.has('mourning_locket') && this.dist(s, k) < 10);
-      rig.root.visible = !hidden || s.state === 'carried';
+      rig.root.visible = (!hidden || s.state === 'carried') && !(s.state === 'mori' && mf && !mf.visible);
       // auras
       let aura = null;
       if (P.isKiller) {
@@ -1334,7 +1466,11 @@ export class Match {
     // killer
     const kr = k.rig;
     let mode = 'move';
-    if (k.state === 'lunge') mode = 'lunge';
+    let kp = k.stateDur ? k.stateT / k.stateDur : 0;
+    if (mf) { mode = mf.killer; kp = mf.kp; }
+    else if (k.state === 'chop') mode = 'chop';
+    else if (k.power.kind === 'chop' && k.power.raising) mode = 'raise';
+    else if (k.state === 'lunge') mode = 'lunge';
     else if (k.state === 'recover' && k.stateData === 'hit' && k.stateT < 0.6) mode = 'attack';
     else if (k.state === 'recover' && k.stateT < 0.5) mode = 'attack';
     else if (k.state === 'stun' || k.state === 'blind') mode = 'stun';
@@ -1345,13 +1481,15 @@ export class Match {
     else if (k.state === 'vault') mode = 'vault';
     else if (k.carrying) mode = 'carry';
     else if (k.phasing) mode = 'phase';
-    poseKiller(kr, { mode, speed: k.speed, dt, progress: k.stateDur ? k.stateT / k.stateDur : 0 });
+    poseKiller(kr, { mode, speed: k.speed, dt, progress: kp });
     kr.root.position.set(k.pos.x, k.vault ? Math.sin(Math.min(1, k.vault.t) * Math.PI) * 0.4 : 0, k.pos.z);
     kr.root.rotation.y = k.yaw;
+    if (P.isKiller) kr.root.visible = k.state === 'mori';
     if (kr.kind === 'specter') {
       const phaseVis = k.phasing ? 0.035 + Math.random() * 0.04 : k.state === 'channel' ? 0.5 : 1;
       if (kr.curOpacity !== phaseVis) { setSpecterOpacity(kr, phaseVis); kr.curOpacity = phaseVis; }
-    } else {
+    } else if (kr.kind === 'exe') {
+      if (mf) kr.glitch = 1;
       kr.mat.userData.uniforms.uTime.value = t;
       kr.mat.userData.uniforms.uGlitch.value = kr.glitch;
       kr.ghosts.forEach((g, i) => { g.visible = kr.glitch > 0.4 && Math.random() < 0.6; g.position.x = (i ? -1 : 1) * 0.08 * kr.glitch; });
@@ -1400,9 +1538,11 @@ export class Match {
     else if (k.state === 'stun' || k.state === 'blind') { py -= 0.2; rz += 0.4; }
     else if (k.carrying) { py -= 0.12; }
     else if (k.state === 'channel') { py += 0.05; rx += 0.3; }
+    else if (k.state === 'chop') { py = base.y + 0.22 - pr * 0.4; rx = br.x + 1.2 - pr * 2.1; px = base.x - 0.05; }
+    else if (k.power.kind === 'chop' && k.power.raising) { const c = k.power.charge; py += 0.22 * c + (c >= 1 ? Math.sin(t * 40) * 0.004 : 0); rx += 1.2 * c; px -= 0.05 * c; }
     arm.position.set(damp(arm.position.x, px, 18, dt), damp(arm.position.y, py, 18, dt), damp(arm.position.z, pz, 18, dt));
     arm.rotation.set(damp(arm.rotation.x, rx, 18, dt), damp(arm.rotation.y, ry, 18, dt), damp(arm.rotation.z, rz, 18, dt));
-    vm.visible = !(k.phasing) || Math.random() < 0.3;
+    vm.visible = k.state !== 'mori' && (!(k.phasing) || Math.random() < 0.3);
     if (vm.userData.exeMat) { vm.userData.exeMat.userData.uniforms.uTime.value = t; vm.userData.exeMat.userData.uniforms.uGlitch.value = k.rig.glitch; }
   }
 
@@ -1412,12 +1552,28 @@ export class Match {
     const cam = this.camera;
     const c = this.cam;
     const P = this.player;
+    const kk = this.killer;
+    this.shake = Math.max(0, (this.shake || 0) - dt);
+    if (kk.state === 'mori' && kk.stateData && (P.isKiller || P === kk.stateData.s || this.spectate === kk.stateData.s)) {
+      // cinematic orbit around the killer and the victim
+      const v = kk.stateData.s;
+      const mx = (kk.pos.x + v.pos.x) / 2, mz = (kk.pos.z + v.pos.z) / 2;
+      const p = kk.stateT / kk.stateDur;
+      const ang = this.moriCam + p * 0.9;
+      let r = 3.6 - p * 0.8;
+      const f = this.world.rayBlock(mx, 1.6, mz, mx + Math.sin(ang) * r, 2.0, mz + Math.cos(ang) * r);
+      r *= Math.max(0.35, f);
+      const sh = this.shake * 0.25;
+      cam.position.set(mx + Math.sin(ang) * r + (Math.random() - 0.5) * sh, 1.75 + (Math.random() - 0.5) * sh, mz + Math.cos(ang) * r);
+      cam.lookAt(mx, 1.15, mz);
+      return;
+    }
     if (P.isKiller) {
       const k = this.killer;
       let eye = k.def.height * 0.93;
       if (k.state === 'pickup') eye -= 0.4 * Math.sin((k.stateT / k.stateDur) * Math.PI);
       if (k.state === 'kick' || k.state === 'break') eye -= 0.25;
-      const shake = k.state === 'stun' ? (Math.random() - 0.5) * 0.05 : 0;
+      const shake = k.state === 'stun' ? (Math.random() - 0.5) * 0.05 : (Math.random() - 0.5) * (this.shake || 0) * 0.08;
       cam.position.set(k.pos.x + Math.sin(k.yaw) * 0.15, eye + (k.vault ? Math.sin(Math.min(1, k.vault.t) * Math.PI) * 0.4 : 0), k.pos.z + Math.cos(k.yaw) * 0.15);
       cam.rotation.set(c.pitch + shake, c.yaw + Math.PI, 0);
       const fovT = (this.ctx.settings.fov || 80) + (k.phasing ? 12 : 0) + (k.state === 'lunge' ? 6 : 0);
