@@ -24,7 +24,7 @@ function defaultProfile() {
       flashlight: 2, medkit: 2, toolbox: 2, map: 1,
       wide_lens: 1, sterile_gauze: 1, socket_set: 1, creased_corner: 1,
       ring_fragment: 2, lake_silt: 1, cracked_glass: 2, dusty_cartridge: 1,
-      off_rite: 1, whetstone: 1, iron_wedge: 1,
+      off_rite: 1, whetstone: 1, iron_wedge: 1, off_craneridge: 1,
       off_ashgrove: 1, off_hollowpines: 1, off_stivo: 1, off_gravelpit: 1, off_lantern: 1, off_bonecharm: 1,
     },
     loadout: {
@@ -64,6 +64,11 @@ export const profile = load();
 // new characters and their signature perks are unlocked for older saves too
 for (const k of KILLERS) for (const id of k.signature) if (!profile.ownedPerks.includes(id)) profile.ownedPerks.push(id);
 for (const c of [...SURVIVORS, ...KILLERS]) if (!profile.ownedOutfits.includes(c.outfits[0].id)) profile.ownedOutfits.push(c.outfits[0].id);
+if (!profile.gifts || !profile.gifts.includes('1.2.0')) {
+  profile.gifts = [...(profile.gifts || []), '1.2.0'];
+  profile.inventory.off_craneridge = (profile.inventory.off_craneridge || 0) + 2;
+  profile.marrow += 5000;
+}
 
 export function saveProfile() {
   try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch (e) { /* ignore */ }

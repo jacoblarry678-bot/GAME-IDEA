@@ -64,3 +64,32 @@ export function segIntersect(ax, az, bx, bz, cx, cz, dx, dz) {
   const u = ((cx - ax) * s1 - (cz - az) * r1) / den;
   return t >= 0 && t <= 1 && u >= 0 && u <= 1;
 }
+
+// Repairs zero-length or NaN vertex normals (they make the lighting shader output NaN: black pixels
+// that flicker, and with bloom spread into black blocks). Bad normals point away from the mesh centre.
+export function repairNormals(root) {
+  const seen = new Set();
+  let fixed = 0;
+  root.traverse((o) => {
+    const g = o.geometry;
+    if (!o.isMesh || !g || seen.has(g) || !g.attributes.normal) return;
+    seen.add(g);
+    const n = g.attributes.normal, p = g.attributes.position;
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    const c = g.boundingSphere ? g.boundingSphere.center : { x: 0, y: 0, z: 0 };
+    let changed = false;
+    for (let i = 0; i < n.count; i++) {
+      const x = n.getX(i), y = n.getY(i), z = n.getZ(i);
+      const l = Math.hypot(x, y, z);
+      if (l > 0.01 && Number.isFinite(l)) continue;
+      let dx = p.getX(i) - c.x, dy = p.getY(i) - c.y, dz = p.getZ(i) - c.z;
+      let dl = Math.hypot(dx, dy, dz);
+      if (!(dl > 1e-6)) { dx = 0; dy = 1; dz = 0; dl = 1; }
+      n.setXYZ(i, dx / dl, dy / dl, dz / dl);
+      changed = true;
+      fixed++;
+    }
+    if (changed) n.needsUpdate = true;
+  });
+  return fixed;
+}

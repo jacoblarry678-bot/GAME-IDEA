@@ -15,6 +15,10 @@ function stdMat(tex, rough = 0.9, metal = 0, extra = {}) {
 }
 
 function makeKit(kind) {
+  if (kind === 'mill') return {
+    wall: stdMat(T.planksTexture('#7a746a', 'millwall')), wall2: stdMat(T.logsTexture('#5a4632')), roof: stdMat(T.corrugatedTexture('#6a6a66'), 0.6, 0.45),
+    trim: stdMat(T.planksTexture('#3a3026', 'milltrim')), logs: stdMat(T.logsTexture('#6a5038')), bark: stdMat(T.barkTexture()), wallH: 2.5, mainH: 5.2, perimeter: 'millogs',
+  };
   if (kind === 'farm') return {
     wall: stdMat(T.planksTexture('#6a5440')), wall2: stdMat(T.planksTexture('#6a2a20', 'barn')), roof: stdMat(T.corrugatedTexture('#5a5048'), 0.7, 0.4),
     trim: stdMat(T.planksTexture('#3e3024', 'trim')), hay: stdMat(T.hayTexture()), wallH: 2.4, mainH: 5.0, perimeter: 'fence',
@@ -71,6 +75,7 @@ export class World {
     this.cornPatches = [];
     this.treeSpots = { pine: [], dead: [], rock: [], corn: [] };
     this.hash = new Map();
+    this.camBoxes = [];
     this.t = 0;
     this.build();
   }
@@ -163,6 +168,9 @@ export class World {
         if (!c.active || c.h < y) continue;
         if (x > c.minX - 0.15 && x < c.maxX + 0.15 && z > c.minZ - 0.15 && z < c.maxZ + 0.15) return (s - 1) / steps;
       }
+      for (const b of this.camBoxes) {
+        if (x > b.minX - 0.15 && x < b.maxX + 0.15 && y > b.minY - 0.15 && y < b.maxY + 0.15 && z > b.minZ - 0.15 && z < b.maxZ + 0.15) return (s - 1) / steps;
+      }
     }
     return 1;
   }
@@ -219,6 +227,7 @@ export class World {
     const [w, d] = alongX ? [W, t] : [t, W];
     this.batch.box(mat, x, 0.45, z, w, 0.9, d, 0, 2);
     if (h > 2.05) this.batch.box(mat, x, (2.0 + h) / 2, z, w, h - 2.0, d, 0, 2);
+    this.camBoxes.push({ minX: x - w / 2 - 0.1, maxX: x + w / 2 + 0.1, minY: 1.95, maxY: h + 0.1, minZ: z - d / 2 - 0.1, maxZ: z + d / 2 + 0.1 });
     // frame boards
     const fw = alongX ? [W + 0.2, 0.1, t + 0.1] : [t + 0.1, 0.1, W + 0.2];
     this.batch.box(k.trim, x, 0.92, z, fw[0], fw[1], fw[2], 0, 1);
@@ -291,9 +300,10 @@ export class World {
     if (this.def.kit === 'asylum') {
       // collapsed: only part of the slab remains
       this.batch.box(k.roof, x - w * 0.2, y, z, w * 0.6, 0.18, d, 0, 2);
+      this.camBoxes.push({ minX: x - w * 0.5, maxX: x + w * 0.1, minY: y - 0.15, maxY: y + 0.15, minZ: z - d / 2, maxZ: z + d / 2 });
       return;
     }
-    if (this.def.kit === 'junk') { this.batch.box(k.roof, x, y + 0.05, z, w + 0.4, 0.08, d + 0.4, 0, 2); return; }
+    if (this.def.kit === 'junk') { this.batch.box(k.roof, x, y + 0.05, z, w + 0.4, 0.08, d + 0.4, 0, 2); this.camBoxes.push({ minX: x - w / 2 - 0.2, maxX: x + w / 2 + 0.2, minY: y - 0.1, maxY: y + 0.2, minZ: z - d / 2 - 0.2, maxZ: z + d / 2 + 0.2 }); return; }
     const pitch = 0.42;
     const halfD = (d + 0.6) / 2;
     const slope = halfD / Math.cos(pitch);
@@ -301,13 +311,13 @@ export class World {
       this.batch.add(boxGeo(w + 0.6, 0.08, slope, 2), k.roof, x, y + Math.tan(pitch) * halfD / 2, z + s * halfD / 2, s * pitch, 0, 0);
     }
     // gable ends
+    // two separate faces (front and back) so each has a proper normal
     const tri = new THREE.BufferGeometry();
     const hh = Math.tan(pitch) * halfD;
-    const v = new Float32Array([-halfD, 0, 0, halfD, 0, 0, 0, hh, 0]);
-    tri.setAttribute('position', new THREE.BufferAttribute(v, 3));
-    tri.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, halfD, 0, halfD / 2, hh / 2]), 2));
-    tri.setIndex([0, 1, 2, 2, 1, 0]);
-    tri.computeVertexNormals();
+    tri.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-halfD, 0, 0.01, halfD, 0, 0.01, 0, hh, 0.01, halfD, 0, -0.01, -halfD, 0, -0.01, 0, hh, -0.01]), 3));
+    tri.setAttribute('normal', new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, -1, 0, 0, -1]), 3));
+    tri.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, halfD, 0, halfD / 2, hh / 2, halfD, 0, 0, 0, halfD / 2, hh / 2]), 2));
+    this.camBoxes.push({ minX: x - w / 2 - 0.4, maxX: x + w / 2 + 0.4, minY: y - 0.05, maxY: y + hh + 0.3, minZ: z - halfD, maxZ: z + halfD });
     for (const s of [-1, 1]) this.batch.add(tri, k.wall2 || k.wall, x + s * w / 2, y, z, 0, Math.PI / 2, 0);
   }
 
@@ -398,6 +408,7 @@ export class World {
     // interior clutter
     const [ix, iz] = tr(5, 3.6);
     if (this.def.kit === 'farm') { this.hayBale(ix, iz, 0); this.hayBale(ix + 0.1, iz, 0, 0.9); }
+    else if (this.def.kit === 'mill') this.sawTable(ix, iz);
     else this.crate(ix, iz, 0.9);
     const genSpot = tr(-4.5, -2.6);
     const chestSpot = tr(4.5, 4.4);
@@ -532,6 +543,8 @@ export class World {
       const s = len / 2;
       this.treeSpots.rock.push([x, z, s * 1.1]);
       this.solidBox(x, z, alongX ? len : 1.6, alongX ? 1.6 : len, 2.2);
+    } else if (kit === 'mill') {
+      this.logPile(x, z, axis, len);
     } else if (kit === 'asylum') {
       this.batch.box(mats.concrete(), x, 1.1, z, alongX ? len : 1.0, 2.2, alongX ? 1.0 : len, 0, 2);
       this.solidBox(x, z, alongX ? len : 1.0, alongX ? 1.0 : len, 2.2);
@@ -551,10 +564,105 @@ export class World {
 
   /* ---------------- zones ---------------- */
 
+  /* ---------------- sawmill props ---------------- */
+
+  logPile(x, z, axis, len) {
+    const alongX = axis === 'x';
+    const rows = [[5, 0.32], [4, 0.95], [3, 1.55]];
+    for (const [n, y] of rows) for (let i = 0; i < n; i++) {
+      const off = (i - (n - 1) / 2) * 0.62;
+      const [bx, bz] = alongX ? [x, z + off] : [x + off, z];
+      this.batch.add(cylGeo(0.3, 0.3, len, 12, 1.2), this.kit.bark, bx, y, bz, 0, 0, Math.PI / 2, 1, 1, 1);
+      // the batch rotates around Z, so turn the whole log to run along the requested axis
+      const last = this.batch.buckets.get(this.kit.bark);
+      const g = last[last.length - 1];
+      if (!alongX) { g.translate(-bx, -y, -bz); g.rotateY(Math.PI / 2); g.translate(bx, y, bz); }
+      for (const s of [-1, 1]) {
+        const ex = alongX ? bx + s * len / 2 : bx, ez = alongX ? bz : bz + s * len / 2;
+        this.batch.add(new THREE.CircleGeometry(0.29, 12), this.kit.logs, ex, y, ez, 0, alongX ? s * Math.PI / 2 : (s > 0 ? 0 : Math.PI), 0);
+      }
+    }
+    this.solidBox(x, z, alongX ? len : 3.2, alongX ? 3.2 : len, 1.85);
+  }
+
+  stump(x, z) {
+    this.batch.add(cylGeo(0.42, 0.5, 0.6, 12, 1), this.kit.bark || mats.oldWood(), x, 0.3, z);
+    this.batch.add(new THREE.CircleGeometry(0.42, 12), this.kit.logs || mats.oldWood(), x, 0.61, z, -Math.PI / 2, 0, 0);
+    this.addCircle(x, z, 0.5, 0.6);
+  }
+
+  lumberStack(x, z) {
+    const w = this.kit.trim;
+    for (let i = 0; i < 6; i++) this.batch.box(w, x, 0.12 + i * 0.16, z, 3.0, 0.14, 1.1, 0, 1);
+    for (const s of [-1, 0, 1]) this.batch.box(mats.darkMetal(), x + s * 1.2, 0.5, z, 0.04, 1.0, 1.14, 0, 1);
+    this.solidBox(x, z, 3.0, 1.2, 1.0);
+  }
+
+  logTruck(x, z, ry) {
+    const c = Math.abs(Math.cos(ry)) > 0.7;
+    const paint = stdMat(T.metalTexture('#6a2a1e', 'truck'), 0.55, 0.4);
+    const L = 8;
+    const ax = (o) => (c ? [x + o, z] : [x, z + o]);
+    const [hx, hz] = ax(-L / 2 + 1.2);
+    this.batch.box(paint, hx, 1.3, hz, c ? 2.2 : 2.3, 1.9, c ? 2.3 : 2.2, 0, 1);
+    this.batch.box(mats.black(), hx, 1.75, hz, c ? 2.24 : 2.0, 0.6, c ? 2.0 : 2.24, 0, 1);
+    const [bx, bz] = ax(1.0);
+    this.batch.box(mats.darkMetal(), bx, 0.85, bz, c ? 5.6 : 2.2, 0.3, c ? 2.2 : 5.6, 0, 1);
+    for (const o of [-3.0, 0, 2.6]) {
+      const [wx, wz] = ax(o);
+      for (const s of [-1, 1]) this.batch.add(cylGeo(0.48, 0.48, 0.35, 14, 1), mats.rubber(), wx + (c ? 0 : s * 1.05), 0.48, wz + (c ? s * 1.05 : 0), c ? Math.PI / 2 : 0, 0, c ? 0 : Math.PI / 2);
+    }
+    for (let i = 0; i < 6; i++) {
+      const [lx, lz] = ax(1.0);
+      const row = i < 3 ? 0 : 1, col = i % 3;
+      this.batch.add(cylGeo(0.33, 0.33, 5.4, 12, 1.2), this.kit.bark, lx + (c ? 0 : (col - 1) * 0.66 + row * 0.33), 1.33 + row * 0.6, lz + (c ? (col - 1) * 0.66 + row * 0.33 : 0), c ? 0 : Math.PI / 2, 0, c ? Math.PI / 2 : 0);
+    }
+    this.solidBox(x, z, c ? L : 2.4, c ? 2.4 : L, 2.4);
+  }
+
+  sawTable(x, z) {
+    this.batch.box(this.kit.trim, x, 0.45, z, 2.6, 0.9, 1.0, 0, 1);
+    const blade = new THREE.MeshStandardMaterial({ color: '#9a9a96', metalness: 0.85, roughness: 0.35 });
+    this.batch.add(cylGeo(0.55, 0.55, 0.03, 32, 1), blade, x, 1.05, z, Math.PI / 2, 0, 0);
+    this.solidBox(x, z, 2.6, 1.1, 1.3);
+  }
+
+  snow() {
+    const n = this.opts.quality === 'low' ? 700 : 1600;
+    this.snowData = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) {
+      this.snowData[i * 4] = (Math.random() - 0.5) * 44;
+      this.snowData[i * 4 + 1] = Math.random() * 18;
+      this.snowData[i * 4 + 2] = (Math.random() - 0.5) * 44;
+      this.snowData[i * 4 + 3] = Math.random();
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    this.snowPts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xe8eef8, map: T.glowSpriteTexture(), size: 0.11, transparent: true, opacity: 0.9, depthWrite: false }));
+    this.snowPts.frustumCulled = false;
+    this.scene.add(this.snowPts);
+    this.snowing = true;
+  }
+
   filler(cx, cz) {
     const kit = this.def.kit;
     const R = this.rng;
     const roll = R.next();
+    if (kit === 'mill') {
+      if (roll < 0.35) {
+        for (let i = 0; i < 7; i++) this.pine(cx + R.range(-6.5, 6.5), cz + R.range(-6.5, 6.5), R.range(0.8, 1.3));
+        this.logPile(cx + R.range(-3, 3), cz + R.range(-3, 3), R.pick(['x', 'z']), R.range(3, 5));
+      } else if (roll < 0.7) {
+        this.palletPair(cx, cz, R.pick(['x', 'z']));
+        this.stump(cx + R.range(-6, 6), cz + R.range(-6, 6));
+        this.pine(cx + R.range(-6, 6), cz + R.range(-6, 6), R.range(0.9, 1.3));
+      } else {
+        this.logTruck(cx, cz, R.pick([0, Math.PI / 2]));
+        this.lumberStack(cx + R.range(-5, 5), cz + 5);
+        this.addFire(cx - 5, cz - 5);
+      }
+      return;
+    }
     if (kit === 'farm') {
       if (roll < 0.4) {
         this.cornPatches.push([cx - 6, cx + 6, cz - 6, cz + 6]);
@@ -629,6 +737,7 @@ export class World {
       if (kit === 'farm') R.chance(0.5) ? this.hayBale(x, z, R.range(0, 3)) : this.deadTree(x, z, R.range(0.9, 1.4));
       else if (kit === 'camp') R.chance(0.6) ? this.pine(x, z, R.range(0.9, 1.4)) : this.picnicTable(x, z);
       else if (kit === 'asylum') R.chance(0.5) ? this.rubble(x, z) : this.bench(x, z);
+      else if (kit === 'mill') { const r = R.next(); if (r < 0.45) this.pine(x, z, R.range(0.9, 1.4)); else if (r < 0.75) this.stump(x, z); else this.lumberStack(x, z); }
       else R.chance(0.5) ? this.tires(x, z) : this.crate(x, z, R.range(0.8, 1.2));
     }
   }
@@ -679,7 +788,7 @@ export class World {
       { side: 'N', fixed: -HALF, along: 'x' }, { side: 'S', fixed: HALF, along: 'x' },
       { side: 'W', fixed: -HALF, along: 'z' }, { side: 'E', fixed: HALF, along: 'z' },
     ];
-    const pMat = kind === 'brick' ? this.kit.wall : kind === 'metal' ? this.kit.wall : kind === 'logs' ? this.kit.wall : this.kit.trim;
+    const pMat = kind === 'millogs' ? this.kit.wall2 : kind === 'brick' ? this.kit.wall : kind === 'metal' ? this.kit.wall : kind === 'logs' ? this.kit.wall : this.kit.trim;
     for (const s of sides) {
       const gate = gateDefs.find((g) => g.side === s.side);
       const segs = gate ? [[-HALF - 0.5, gate.lat - 4.2], [gate.lat + 4.2, HALF + 0.5]] : [[-HALF - 0.5, HALF + 0.5]];
@@ -687,7 +796,7 @@ export class World {
         const len = b - a, mid = (a + b) / 2;
         const [x, z] = s.along === 'x' ? [mid, s.fixed] : [s.fixed, mid];
         const [w, d] = s.along === 'x' ? [len, 0.5] : [0.5, len];
-        const h = kind === 'fence' ? 1.5 : kind === 'logs' ? 2.2 : kind === 'brick' ? 3.4 : 3.6;
+        const h = kind === 'fence' ? 1.5 : kind === 'logs' ? 2.2 : kind === 'millogs' ? 2.6 : kind === 'brick' ? 3.4 : 3.6;
         if (kind === 'fence') {
           // split-rail fence with posts
           const n = Math.ceil(len / 2.5);
@@ -924,6 +1033,7 @@ export class World {
     this.sky();
     this.lighting();
     if (o.weather === 'rain' || o.weather === 'storm') this.rain(o.weather === 'storm');
+    else if (o.weather === 'snow') this.snow();
   }
 
   ground() {
@@ -973,6 +1083,11 @@ export class World {
           if (this.nav.isFree(px, pz)) this.treeSpots.corn.push([px, pz, R.range(0.85, 1.15)]);
         }
       }
+    } else if (kit === 'mill') {
+      ring(q === 'low' ? 240 : 480, HALF + 1.5, HALF + 34, (x, z) => this.treeSpots.pine.push([x, z, R.range(1.0, 1.9)]));
+      // the ridge rising behind the mill
+      const rock = stdMat(T.rockTexture());
+      for (let i = 0; i < 9; i++) this.batch.add(new THREE.DodecahedronGeometry(14 + R.range(0, 8), 1), rock, -60 + i * 15, -2, -HALF - 40 - R.range(0, 10), R.range(0, 3), R.range(0, 3), 0, 1, 0.9, 1);
     } else if (kit === 'camp') {
       ring(q === 'low' ? 260 : 520, HALF + 1.5, HALF + 34, (x, z) => { if (z > -HALF - 2) this.treeSpots.pine.push([x, z, R.range(1.0, 1.8)]); });
     } else if (kit === 'asylum') {
@@ -994,7 +1109,7 @@ export class World {
     if (pineN) {
       const bark = T.barkTexture();
       const trunk = new THREE.InstancedMesh(cylGeo(0.16, 0.3, 9, 8, 2), new THREE.MeshStandardMaterial({ map: bark.map, normalMap: bark.normalMap, roughness: 1 }), pineN);
-      const fol = new THREE.MeshStandardMaterial({ map: T.needlesTexture().map, normalMap: T.needlesTexture().normalMap, roughness: 1, color: '#9aa890' });
+      const fol = new THREE.MeshStandardMaterial({ map: T.needlesTexture().map, normalMap: T.needlesTexture().normalMap, roughness: 1, color: this.def.kit === 'mill' ? '#c8d4dc' : '#9aa890' });
       const cones = [];
       for (let i = 0; i < 5; i++) {
         const cg = new THREE.ConeGeometry(2.4 - i * 0.42, 2.6, 9, 3);
@@ -1089,10 +1204,10 @@ export class World {
     }
 
     // grass clumps
-    const grassN = kit === 'junk' ? 0 : q === 'low' ? 1500 : q === 'medium' ? 4500 : 9000;
+    const grassN = kit === 'junk' ? 0 : (q === 'low' ? 1500 : q === 'medium' ? 4500 : 9000) * (kit === 'mill' ? 0.25 : 1);
     if (grassN) {
-      const pal = kit === 'farm' ? ['#4a4a22', '#6a6232', '#5a5a2a', '#3a3a1a'] : kit === 'asylum' ? ['#3a4426', '#4a5430', '#2e3a1e', '#55603a'] : ['#2e3a20', '#3e4a28', '#26301a', '#4a5030'];
-      const tex = T.grassCardTexture(pal);
+      const pal = kit === 'mill' ? ['#8a8466', '#9a9070', '#6a6450', '#a8a080'] : kit === 'farm' ? ['#4a4a22', '#6a6232', '#5a5a2a', '#3a3a1a'] : kit === 'asylum' ? ['#3a4426', '#4a5430', '#2e3a1e', '#55603a'] : ['#2e3a20', '#3e4a28', '#26301a', '#4a5030'];
+      const tex = T.grassCardTexture(pal, kit === 'mill' ? '#6a6450' : '#141a0c');
       const mat = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1 });
       this.windMat(mat, 0.08);
       const b = new Batch();
@@ -1267,6 +1382,19 @@ export class World {
       this.moon.position.set(sx - 24, 40, sz - 34);
     }
     if (this.skyMesh && camPos) { this.skyMesh.position.copy(camPos); this.stars.position.copy(camPos); this.moonSprite.position.set(camPos.x - 120, 150, camPos.z - 170); }
+    // snow
+    if (this.snowing && camPos) {
+      const pos = this.snowPts.geometry.attributes.position.array;
+      const d = this.snowData;
+      for (let i = 0; i < d.length / 4; i++) {
+        d[i * 4 + 1] -= dt * (0.9 + d[i * 4 + 3] * 0.6);
+        if (d[i * 4 + 1] < 0) { d[i * 4 + 1] += 18; d[i * 4] = (Math.random() - 0.5) * 44; d[i * 4 + 2] = (Math.random() - 0.5) * 44; }
+        pos[i * 3] = camPos.x + d[i * 4] + Math.sin(t * 0.8 + d[i * 4 + 3] * 9) * 0.5;
+        pos[i * 3 + 1] = d[i * 4 + 1];
+        pos[i * 3 + 2] = camPos.z + d[i * 4 + 2] + Math.cos(t * 0.6 + d[i * 4 + 3] * 7) * 0.5;
+      }
+      this.snowPts.geometry.attributes.position.needsUpdate = true;
+    }
     // rain
     if (this.raining && camPos) {
       const pos = this.rainLines.geometry.attributes.position.array;
@@ -1305,7 +1433,7 @@ export class World {
       this.scene.remove(o);
     };
     kill(this.root);
-    for (const o of [this.skyMesh, this.stars, this.moonSprite, this.rainLines, this.hemi, this.moon, this.moon && this.moon.target]) if (o) this.scene.remove(o);
+    for (const o of [this.skyMesh, this.stars, this.moonSprite, this.rainLines, this.snowPts, this.hemi, this.moon, this.moon && this.moon.target]) if (o) this.scene.remove(o);
     this.scene.fog = null;
   }
 }

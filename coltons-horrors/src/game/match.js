@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { World, HALF } from '../world/builder.js';
 import { buildSurvivor, buildSpecter, buildExe, poseSurvivor, poseKiller, setSpecterOpacity, buildViewmodel, drawExeFace, attachAura } from '../models/characters.js';
 import { SURVIVOR_BY_ID, KILLER_BY_ID, ITEM_BY_ID, OFFERING_BY_ID, MAP_BY_ID, MAPS, outfitOf, CATEGORY_CAP } from '../data.js';
-import { RNG, clamp, lerp, angleWrap, approachAngle, damp } from '../core/util.js';
+import { RNG, clamp, lerp, angleWrap, approachAngle, damp, repairNormals } from '../core/util.js';
 import { scratchTexture, bloodTexture, rippleTexture, glowSpriteTexture } from '../world/textures.js';
 import { SurvivorAI, KillerAI } from './ai.js';
 import { buildWoodsman, buildWoodsmanViewmodel } from '../models/woodsman.js';
@@ -163,6 +163,7 @@ export class Match {
     // ambient light for the player's own visibility (very faint)
     this.playerLight = new THREE.PointLight(0x8a9ac8, this.player.isKiller ? 0.6 : 0.35, 9, 2);
     this.scene.add(this.playerLight);
+    repairNormals(this.scene);
     this.audio.ambience(mapDef.kit, weather !== 'clear');
     this.announce(`${mapDef.name}`, mapDef.region);
     if (this.moriAllowed && setup.role !== 'killer') this.announce(`${killerDef.name} burned an Ashen Rite`, 'Hooked survivors can be executed', 'bad');
@@ -1574,7 +1575,8 @@ export class Match {
       if (k.state === 'pickup') eye -= 0.4 * Math.sin((k.stateT / k.stateDur) * Math.PI);
       if (k.state === 'kick' || k.state === 'break') eye -= 0.25;
       const shake = k.state === 'stun' ? (Math.random() - 0.5) * 0.05 : (Math.random() - 0.5) * (this.shake || 0) * 0.08;
-      cam.position.set(k.pos.x + Math.sin(k.yaw) * 0.15, eye + (k.vault ? Math.sin(Math.min(1, k.vault.t) * Math.PI) * 0.4 : 0), k.pos.z + Math.cos(k.yaw) * 0.15);
+      if (k.vault) eye = Math.min(eye, 1.72 - Math.sin(Math.min(1, k.vault.t) * Math.PI) * 0.25); // duck under the window frame
+      cam.position.set(k.pos.x + Math.sin(k.yaw) * (k.vault ? 0 : 0.15), eye, k.pos.z + Math.cos(k.yaw) * (k.vault ? 0 : 0.15));
       cam.rotation.set(c.pitch + shake, c.yaw + Math.PI, 0);
       const fovT = (this.ctx.settings.fov || 80) + (k.phasing ? 12 : 0) + (k.state === 'lunge' ? 6 : 0);
       if (Math.abs(cam.fov - fovT) > 0.1) { cam.fov = damp(cam.fov, fovT, 8, dt); cam.updateProjectionMatrix(); }

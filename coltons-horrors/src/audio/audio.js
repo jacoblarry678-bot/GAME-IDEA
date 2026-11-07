@@ -97,6 +97,11 @@ export class Audio {
     }
     if (Math.random() < 0.15) this.crow();
     if (this.ambKind === 'camp' && Math.random() < 0.2) { this.tone(420, 0.35, 'sine', 0.05, null, 0.85); setTimeout(() => this.tone(400, 0.5, 'sine', 0.05, null, 0.8), 450); }
+    if (this.ambKind === 'mill') {
+      if (Math.random() < 0.35) this.tone(55 + Math.random() * 30, 0.9, 'triangle', 0.05, null, 1.25); // timber creak
+      if (Math.random() < 0.12) { this.tone(380, 2.2, 'sine', 0.035, null, 1.35); setTimeout(() => this.tone(500, 1.6, 'sine', 0.03, null, 0.7), 1900); } // far-off howl
+      if (Math.random() < 0.15) for (let i = 0; i < 3; i++) setTimeout(() => this.burst(0.08, 900, 2, 0.05, 'bandpass', true), i * 900); // distant chopping
+    }
     if (this.ambKind === 'junk' && Math.random() < 0.3) this.tone(80 + Math.random() * 60, 1.2, 'triangle', 0.04, null, 1.1);
   }
 

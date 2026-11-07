@@ -10,6 +10,7 @@ import { buildSurvivor, buildSpecter, buildExe, poseSurvivor, poseKiller, drawEx
 import { glowSpriteTexture, groundTexture } from '../world/textures.js';
 import { icon } from './icons.js';
 import { audio } from '../audio/audio.js';
+import { repairNormals } from '../core/util.js';
 
 const TABS = [['play', 'Play'], ['loadout', 'Loadout'], ['wardrobe', 'Wardrobe'], ['store', 'Reliquary'], ['archives', 'Archives'], ['settings', 'Settings']];
 
@@ -83,6 +84,7 @@ export class Lobby {
     if (this.model) { this.scene.remove(this.model.root); }
     const outfit = outfitOf(def, outfitId);
     this.model = profile.role === 'killer' ? (def.id === 'specter' ? buildSpecter(outfit) : def.id === 'woodsman' ? buildWoodsman(outfit) : buildExe(outfit)) : buildSurvivor(def, outfit);
+    repairNormals(this.model.root);
     this.scene.add(this.model.root);
     this.camera.position.set(0, profile.role === 'killer' ? 1.5 : 1.3, profile.role === 'killer' ? 6.8 : 5.6);
     this.camera.lookAt(0, profile.role === 'killer' ? 1.15 : 0.98, 0);
@@ -130,7 +132,7 @@ export class Lobby {
     const tabs = TABS.map(([id, label]) => `<button class="lb-tab ${this.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`).join('');
     this.root.innerHTML = `
       <header class="lb-top">
-        <div class="lb-brand"><span class="lb-title">Colton's Horrors</span><span class="lb-ver">v${VERSION} · PTB</span></div>
+        <div class="lb-brand"><span class="lb-title">Colton's Horrors</span><span class="lb-ver">v${VERSION}</span></div>
         <div class="lb-role" role="group" aria-label="Side">
           <button class="${profile.role === 'survivor' ? 'on' : ''}" data-role="survivor">Survivor</button>
           <button class="${profile.role === 'killer' ? 'on' : ''}" data-role="killer">Killer</button>
@@ -161,7 +163,7 @@ export class Lobby {
     const list = role === 'killer' ? KILLERS : SURVIVORS;
     const cur = this.charId();
     const def = this.charDef();
-    const cards = list.map((c) => `<button class="lb-char ${c.id === cur ? 'on' : ''}" data-char="${c.id}"><b>${esc(c.name)}${c.ptb ? ' <i class="ptb">PTB</i>' : ''}</b><span>${esc(c.role || c.realName)}</span></button>`).join('');
+    const cards = list.map((c) => `<button class="lb-char ${c.id === cur ? 'on' : ''}" data-char="${c.id}"><b>${esc(c.name)}${c.ptb ? ' <i class="ptb">PTB</i>' : c.isNew ? ' <i class="ptb new">NEW</i>' : ''}</b><span>${esc(c.role || c.realName)}</span></button>`).join('');
     const opp = role === 'survivor' ? `
       <label class="lb-field"><span>Killer to face</span>
         <select id="opp">${[['random', 'Random'], ...KILLERS.map((k) => [k.id, k.name])].map(([v, l]) => `<option value="${v}" ${profile.opponent === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : '';
@@ -239,7 +241,7 @@ export class Lobby {
       const owned = ownsOutfit(o.id);
       return `<button class="lb-outfit ${eq === o.id ? 'on' : ''}" ${rarityStyle(o.rarity)} data-outfit="${o.id}">
         <div class="sw">${['topColor', 'accent', 'legsColor', 'dress', 'dress2', 'body', 'glow', 'glow2', 'plaid', 'plaid2', 'mask'].filter((k) => o[k]).slice(0, 3).map((k) => `<i style="background:${o[k]}"></i>`).join('')}</div>
-        <b>${esc(o.name)}</b><span>${RARITIES[o.rarity].name}</span>
+        <b>${esc(o.name)}${o.isNew ? ' <i class="ptb new">NEW</i>' : ''}</b><span>${RARITIES[o.rarity].name}${o.isNew ? ' · Long Winter' : ''}</span>
         <em>${eq === o.id ? 'Equipped' : owned ? 'Equip' : `${icon('lock')}${o.price.toLocaleString()}`}</em></button>`;
     }).join('');
     return `<section class="lb-sec"><h2>${esc(def.name)}: outfits</h2><p class="meta">Click an outfit to preview it. Equip ones you own, or buy new ones with Marrow.</p><div class="lb-outfits">${list}</div></section>`;
@@ -266,7 +268,15 @@ export class Lobby {
 
   archivesHtml() {
     return `<section class="lb-sec lb-arch">
-      <h2>Patch notes: 1.1.0 (PTB)</h2>
+      <h2>Patch notes: 1.2.0</h2>
+      <ul>
+        <li><b>The Woodsman is live.</b> He is out of the PTB and playable by everyone, with his perks, add-ons and outfits.</li>
+        <li><b>New map: Crane Ridge Sawmill.</b> A snowed-in lumber mill on the Woodsman's ridge: log piles, a rusted saw, a log truck, drifting snow and a ridge of rock behind the mill. Burn a Frostbitten Tally Stick to go there. You have been given two.</li>
+        <li><b>New cosmetics: the Long Winter collection.</b> One new winter outfit for every survivor and killer (9 in all), in the Wardrobe.</li>
+        <li><b>Fixed: parts of the map flickering or flashing black.</b> Character limbs and roof ends had broken lighting normals that drew black pixels, and on High quality the bloom effect spread them into black blocks. Also fixed the camera passing through roofs and window frames, removed screen effects that could flash black on some phones, and the game now recovers if the browser drops the graphics context.</li>
+        <li>+5,000 Marrow for everyone to celebrate.</li>
+      </ul>
+      <h2>Patch notes: 1.1.0</h2>
       <ul>
         <li><b>New killer on the PTB: The Woodsman.</b> A logger in a carved birch mask with a felling axe. His power, <b>Heavy Chop</b>, charges a long lunging chop that smashes dropped pallets. Comes with 2 perks (Timber!, Splinter), 6 add-ons and 4 outfits.</li>
         <li><b>Moris.</b> The new <b>Ashen Rite</b> offering lets the killer execute any downed survivor who has been hooked at least once. Every killer has their own execution.</li>

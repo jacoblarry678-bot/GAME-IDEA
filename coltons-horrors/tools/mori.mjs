@@ -8,7 +8,7 @@ const server = spawn('npx', ['vite', 'preview', '--port', '4198', '--strictPort'
 await new Promise((r) => setTimeout(r, 2500));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 let bad = 0;
-for (const killer of ['woodsman', 'specter', 'exe']) {
+for (const killer of (process.argv[2] ? process.argv[2].split(',') : ['woodsman', 'specter', 'exe'])) {
   const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message + ' ' + e.stack));
@@ -33,7 +33,7 @@ for (const killer of ['woodsman', 'specter', 'exe']) {
       k.intent.mori = true;
     }, kind);
     await page.waitForTimeout(2200);
-    await page.screenshot({ path: `build/shots/mori-${killer}-${kind}.png` });
+    await page.screenshot({ path: `build/shots/mori-${killer}-${kind}.png`, timeout: 90000 });
     await page.evaluate(() => { const m = window.__match; for (let i = 0; i < 240; i++) m.update(1 / 30, null); });
     result[kind] = await page.evaluate(() => { const m = window.__match; const s = m.survivors.find((x) => x.name === window.__victim); return `${window.__kind}->${s.state}/${s.outcome}`; });
   }

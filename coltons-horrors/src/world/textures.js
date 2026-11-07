@@ -127,6 +127,16 @@ export function groundTexture(kind) {
       const shade = 0.75 + fine * 0.4 + (speck - 0.5) * 0.25;
       return [c[0] * shade, c[1] * shade, c[2] * shade, fine * 0.6 + speck * 0.4];
     }
+    if (kind === 'snow') {
+      // trampled snow with tyre ruts, footprints and dirt showing through
+      const drift = clamp((big - 0.35) * 1.6, 0, 1);
+      const melt = clamp((mid - 0.62) * 4, 0, 1);
+      let c = mixc(hex('#aab2bc'), hex('#d8dee6'), drift);
+      c = mixc(c, hex('#4a4038'), melt * 0.75);
+      const sparkle = speck > 0.985 ? 0.25 : 0;
+      const shade = 0.86 + fine * 0.18 + sparkle;
+      return [c[0] * shade, c[1] * shade, c[2] * shade, drift * 0.5 + fine * 0.4];
+    }
     if (kind === 'asylum') {
       // cracked paving slabs overtaken by moss and weeds
       const su = (u * 8) % 1, sv = (v * 8) % 1;
@@ -364,8 +374,8 @@ function canvasTex(w, h, draw) {
   return t;
 }
 
-export function grassCardTexture(palette = ['#3a4a22', '#55602e', '#6a6238', '#2c3a1a']) {
-  const key = 'grasscard' + palette.join();
+export function grassCardTexture(palette = ['#3a4a22', '#55602e', '#6a6238', '#2c3a1a'], base = '#141a0c') {
+  const key = 'grasscard' + palette.join() + base;
   if (cache.has(key)) return cache.get(key);
   const r = mulberry32(99);
   const t = canvasTex(256, 256, (g, w, h) => {
@@ -377,7 +387,7 @@ export function grassCardTexture(palette = ['#3a4a22', '#55602e', '#6a6238', '#2
       const wid = 2 + r() * 4;
       const grd = g.createLinearGradient(0, h, 0, h - hh);
       const col = palette[Math.floor(r() * palette.length)];
-      grd.addColorStop(0, '#141a0c');
+      grd.addColorStop(0, base);
       grd.addColorStop(0.4, col);
       grd.addColorStop(1, col);
       g.fillStyle = grd;

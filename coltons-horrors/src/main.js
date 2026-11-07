@@ -4,6 +4,14 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+
+// Replaces any NaN/Inf pixel with black before bloom so one bad pixel cannot smear into flickering blocks.
+const SanitizeShader = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0, 0.0, 0.0, 1.0); gl_FragColor = vec4(min(c.rgb, vec3(64.0)), c.a); }',
+};
 import './ui/styles.css';
 import { profile, saveProfile, consume, countOf, ownsPerk } from './core/profile.js';
 import { SURVIVORS, KILLERS, SURVIVOR_PERKS, KILLER_PERKS, ITEMS, KILLER_ADDONS } from './data.js';
@@ -34,6 +42,20 @@ renderer.toneMappingExposure = 1.35;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// If the browser drops the graphics context (common on phones under memory pressure) the canvas goes
+// black. Pause, drop to low quality to free memory, and carry on when it comes back.
+let contextLost = false;
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  contextLost = true;
+  if (state === 'match' && match && !paused) pauseMenu();
+}, false);
+canvas.addEventListener('webglcontextrestored', () => {
+  contextLost = false;
+  if (profile.settings.quality === 'high' || profile.settings.quality === 'auto') { profile.settings.quality = 'low'; saveProfile(); }
+  applyQuality();
+}, false);
 
 const ctx = {
   renderer, audio, settings: profile.settings, autoplay: params.has('autoplay'),
@@ -162,6 +184,7 @@ function startMatch() {
       if (quality() === 'high') {
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(match.scene, match.camera));
+        composer.addPass(new ShaderPass(SanitizeShader));
         composer.addPass(new UnrealBloomPass(new THREE.Vector2(canvas.clientWidth, canvas.clientHeight), 0.55, 0.6, 0.82));
         composer.addPass(new OutputPass());
       } else composer = null;
@@ -226,6 +249,7 @@ function frame(now) {
   let dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   const speed = ctx.autoplay && params.get('speed') ? +params.get('speed') : 1;
+  if (contextLost) return;
   if (state === 'lobby') lobby.render(renderer, dt);
   else if (state === 'match' && match) {
     const inp = input.read();
