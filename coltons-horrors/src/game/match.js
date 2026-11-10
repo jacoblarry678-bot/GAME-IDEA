@@ -6,11 +6,11 @@ import { SURVIVOR_BY_ID, KILLER_BY_ID, ITEM_BY_ID, OFFERING_BY_ID, MAP_BY_ID, MA
 import { RNG, clamp, lerp, angleWrap, approachAngle, damp, repairNormals } from '../core/util.js';
 import { scratchTexture, bloodTexture, rippleTexture, glowSpriteTexture } from '../world/textures.js';
 import { SurvivorAI, KillerAI } from './ai.js';
-import { buildWoodsman, buildWoodsmanViewmodel } from '../models/woodsman.js';
+import { buildWoodsman, buildWoodsmanViewmodel, axeMeshes } from '../models/woodsman.js';
 
 const WALK = 2.26, RUN = 4.0, CROUCH = 1.13, CRAWL = 0.7;
 const GEN_TIME = 70, GENS_NEEDED = 5;
-const HOOK_RATE = 1 / 110, BLEED_TIME = 150, ENDGAME = 120;
+const HOOK_RATE = 1 / 124, BLEED_TIME = 150, ENDGAME = 120;
 
 export class Survivor {
   constructor(m, idx, def, outfitId, o) {
@@ -89,10 +89,10 @@ export class Killer {
     this.lungeBonusUntil = 0;
     this.terror = def.terror * (this.perks.includes('muffled_heart') ? 0.5 : 1);
     this.power = def.id === 'woodsman'
-      ? { kind: 'chop', charge: 0, raising: false, chargeTime: 1.5 - (this.has('whetstone') ? 0.3 : 0), minCharge: 0.6 }
+      ? { kind: 'chop', charge: 0, raising: false, chargeTime: 1.3 - (this.has('whetstone') ? 0.3 : 0), minCharge: 0.55, axe: true, axeBackAt: 0, thrown: null }
       : def.id === 'specter'
-      ? { kind: 'veil', charge: 1, active: false, t: 0, dur: 4 + (this.has('ring_fragment') ? 0.5 : 0) + (this.has('waterlogged_diary') ? 1 : 0), recharge: 14 * (this.has('lake_silt') ? 0.9 : 1) * (this.has('torn_hem') ? 0.8 : 1) }
-      : { kind: 'exe', cooldown: 0, maxCd: 18 * (this.has('burnt_capacitor') ? 0.85 : 1) * (this.has('infinite_loop') ? 0.65 : 1), channel: 1.5 - (this.has('cracked_glass') ? 0.3 : 0), target: null, selecting: false };
+      ? { kind: 'veil', charge: 1, active: false, t: 0, dur: 4 + (this.has('ring_fragment') ? 0.5 : 0) + (this.has('waterlogged_diary') ? 1 : 0), recharge: 12 * (this.has('lake_silt') ? 0.9 : 1) * (this.has('torn_hem') ? 0.8 : 1) }
+      : { kind: 'exe', cooldown: 0, maxCd: 15 * (this.has('burnt_capacitor') ? 0.85 : 1) * (this.has('infinite_loop') ? 0.65 : 1), channel: 1.3 - (this.has('cracked_glass') ? 0.3 : 0), target: null, selecting: false };
     this.ai = this.isPlayer ? null : new KillerAI(m, this, o.skill || 0.6);
   }
   has(p) { return this.perks.includes(p) || this.addons.includes(p); }
@@ -455,7 +455,7 @@ export class Match {
       if (s.action.t >= s.action.dur) {
         s.action = null;
         s.selfTries++;
-        if (Math.random() < (s.has('escape_artist') ? 0.25 : 0.04)) { this.unhook(s, s); this.announce(`${s.name} broke free`, 'Self unhook'); }
+        if (Math.random() < (s.has('escape_artist') ? 0.35 : 0.04)) { this.unhook(s, s); this.announce(`${s.name} broke free`, 'Self unhook'); }
         else { s.hookProg += 0.06; }
       }
     }
@@ -503,7 +503,7 @@ export class Match {
     const facing = Math.sin(k.yaw) * -tx + Math.cos(k.yaw) * -tz;
     if (beam > width && facing > 0.55 && this.canSee(s.pos.x, s.pos.z, k.pos.x, k.pos.z)) {
       k.blindAcc = (k.blindAcc || 0) + dt * (s.item.addons.includes('focus_lens') ? 1.3 : 1);
-      if (k.blindAcc > 1.0) {
+      if (k.blindAcc > 0.8) {
         k.blindAcc = 0;
         const had = k.carrying;
         this.setKillerState('blind', 2.5);
@@ -583,7 +583,7 @@ export class Match {
       k.pos.x += p.nx * ks * (1.0 - Math.abs(kc) + 0.1);
       k.pos.z += p.nz * ks * (1.0 - Math.abs(kc) + 0.1);
       if (k.carrying) this.dropCarried(false);
-      this.setKillerState('stun', 2.0);
+      this.setKillerState('stun', 2.3);
       this.sfx('stun', k.pos.x, k.pos.z);
       s.addScore('nerve', 600);
       this.announce(`${s.name} stunned the killer`, 'Pallet', 'good');
@@ -636,7 +636,7 @@ export class Match {
         let rate = 1 / GEN_TIME;
         if (s.has('tinkerer')) rate *= 1.15;
         if (s.item && s.item.id === 'toolbox' && s.item.charges > 0) {
-          rate *= s.item.addons.includes('duct_tape') ? 1.75 : 1.5;
+          rate *= s.item.addons.includes('duct_tape') ? 1.85 : 1.6;
           s.item.charges -= dt;
         }
         tg.pending = (tg.pending || 0) + rate * dt;
@@ -664,7 +664,7 @@ export class Match {
       }
       case 'selfheal': {
         if (s.state !== 'injured') { s.action = null; return; }
-        let rate = 1 / 16;
+        let rate = 1 / 13;
         if (s.item && s.item.id === 'medkit' && s.item.charges > 0) {
           if (s.item.addons.includes('styptic')) rate *= 1.25;
           if (s.item.addons.includes('morphine')) rate *= 1.5;
@@ -844,7 +844,7 @@ export class Match {
     s.addScore('endurance', 300);
     if (rescuer !== s) {
       rescuer.addScore('kinship', 1000);
-      if (rescuer.has('borrowed_breath')) s.protectUntil = this.time + 12;
+      if (rescuer.has('borrowed_breath')) s.protectUntil = this.time + 15;
       if (this.killer.has('hook_rot')) rescuer.revealUntil = this.time + 5;
       this.announce(`${rescuer.name} unhooked ${s.name}`, '', 'good');
     }
@@ -1009,7 +1009,7 @@ export class Match {
     if (k.carrying) v = 4.0;
     if (k.has('patient_hunter') && !k.carrying && !k.chaseTarget) v *= 1.05;
     if (k.chaseTarget && k.has('bloodlust')) v *= 1 + k.bloodlust;
-    if (k.phasing) v = k.def.speed * 1.65 * (k.has('dried_lily') ? 1.1 : 1);
+    if (k.phasing) v = k.def.speed * 1.75 * (k.has('dried_lily') ? 1.1 : 1);
     if (k.ai && !k.isPlayer) v *= 0.92 + k.ai.skill * 0.1;
     if (k.power.kind === 'chop' && k.power.raising) v *= k.has('birch_mask') ? 0.93 : 0.85;
     switch (k.state) {
@@ -1063,7 +1063,7 @@ export class Match {
       this.sfx('swing', k.pos.x, k.pos.z, 15);
     }
     if (k.state === 'lunge') {
-      const reach = (k.has('long_reach') ? 1.25 : 1) * (k.lungeBonusUntil > this.time ? 1.6 : 1);
+      const reach = (k.has('long_reach') ? 1.25 : 1) * (k.lungeBonusUntil > this.time ? 1.6 : 1) * (k.power.kind === 'chop' && !k.power.axe ? 0.8 : 1);
       const hit = this.findHit(k, 1.9 * reach);
       if (hit) { this.hitSurvivor(k, hit); }
       else if (k.stateT >= k.stateDur || (!it.attack && k.stateT > 0.18)) this.setKillerState('recover', 1.5, 'miss');
@@ -1077,7 +1077,7 @@ export class Match {
       }
       const hit = this.findHit(k, 2.0);
       if (hit) this.hitSurvivor(k, hit, { chop: k.stateData.charge });
-      else if (k.stateT >= k.stateDur) { this.setKillerState('recover', 2.5 - (k.has('pine_tar') ? 0.8 : 0), 'miss'); this.sfx('kick', k.pos.x, k.pos.z, 20); }
+      else if (k.stateT >= k.stateDur) { this.setKillerState('recover', 2.2 - (k.has('pine_tar') ? 0.8 : 0), 'miss'); this.sfx('kick', k.pos.x, k.pos.z, 20); }
     }
     // contextual action
     if (it.act && k.state === 'normal' && !k.phasing) this.killerAct(k, it.target);
@@ -1128,18 +1128,108 @@ export class Match {
     } else { s.state = 'injured'; s.heal = 0; }
     if (!downed) {
       s.boostUntil = t + 1.8; s.boostMult = 1.5;
-      if (s.has('adrenal_surge') && s.adrenalReady <= t) { s.boostUntil = t + 3; s.adrenalReady = t + 60; }
+      if (s.has('adrenal_surge') && s.adrenalReady <= t) { s.boostUntil = t + 3; s.adrenalReady = t + 45; }
       if (k.has('hamstring') || (opts.chop !== undefined && k.has('saw_tooth'))) s.hinderPending = true;
     }
     k.addScore('savagery', downed ? 600 : 350);
     k.bloodlust = 0; k.chaseT = 0;
-    this.setKillerState('recover', 2.7 * (k.has('relentless') ? 0.6 : 1), 'hit');
+    if (opts.thrown) { k.addScore('cunning', 400); if (k.isPlayer) this.announce('Long shot', `Your axe hit ${s.name}`, 'good'); }
+    else this.setKillerState('recover', 2.7 * (k.has('relentless') ? 0.6 : 1), 'hit');
     this.sfx('hit', s.pos.x, s.pos.z, 30);
     this.sfx('scream', s.pos.x, s.pos.z, 40);
     for (let i = 0; i < 3; i++) this.addDecal('blood', s.pos.x + (Math.random() - 0.5), s.pos.z + (Math.random() - 0.5), 14);
     if (s === this.player) this.hitFlash = 1;
     if (downed) this.announce(`${s.name} is down`, '', 'bad');
     if (opts.chop !== undefined) { this.sfx('kick', s.pos.x, s.pos.z, 30); this.shake = 0.35; }
+  }
+
+  /* ---------------- The Woodsman's thrown axe ---------------- */
+
+  throwAxe(k) {
+    const p = k.power;
+    const pitch = k.isPlayer ? this.cam.pitch + 0.04 : (k.intent.aimPitch || 0.05);
+    const speed = (20 + 14 * p.charge) * (k.has('balanced_haft') ? 1.2 : 1) * (k.has('iron_wedge') ? 1.15 : 1);
+    const dir = new THREE.Vector3(Math.sin(k.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(k.yaw) * Math.cos(pitch));
+    if (!this.axeProp) {
+      this.axeProp = new THREE.Group();
+      const inner = new THREE.Group();
+      axeMeshes(inner, k.outfit, 1);
+      inner.position.y = -0.55;
+      this.axeProp.add(inner);
+      this.scene.add(this.axeProp);
+    }
+    this.axeProp.visible = true;
+    p.thrown = { pos: new THREE.Vector3(k.pos.x + dir.x * 0.7, 1.65, k.pos.z + dir.z * 0.7), vel: dir.multiplyScalar(speed), t: 0, flying: true, spin: 0, yaw: k.yaw };
+    p.axe = false;
+    p.raising = false;
+    p.charge = 0;
+    p.axeBackAt = this.time + 15 - (k.has('leather_strap') ? 5 : 0);
+    k.rig.weapon.visible = false;
+    if (this.viewmodel && this.viewmodel.userData.axe) this.viewmodel.userData.axe.visible = false;
+    this.setKillerState('recover', 0.6, 'throw');
+    this.sfx('swing', k.pos.x, k.pos.z, 30);
+    k.addScore('cunning', 60);
+  }
+
+  updateThrownAxe(k, dt) {
+    const p = k.power;
+    const th = p.thrown;
+    if (!th) { if (!p.axe && this.time >= p.axeBackAt) this.returnAxe(k, 'spare'); return; }
+    if (th.flying) {
+      const steps = Math.max(1, Math.ceil((th.vel.length() * dt) / 0.2));
+      const h = dt / steps;
+      let landed = null;
+      for (let i = 0; i < steps && !landed; i++) {
+        th.vel.y -= 6 * h;
+        th.pos.addScaledVector(th.vel, h);
+        for (const s of this.survivors) {
+          if (!s.free) continue;
+          if (Math.hypot(s.pos.x - th.pos.x, s.pos.z - th.pos.z) < 0.6 && th.pos.y > 0.1 && th.pos.y < 1.85) {
+            this.hitSurvivor(k, s, { thrown: true });
+            landed = 'body';
+            th.pos.set(s.pos.x + th.vel.x * 0.03, 0.06, s.pos.z + th.vel.z * 0.03);
+            break;
+          }
+        }
+        if (landed) break;
+        if (th.pos.y <= 0.06) { th.pos.y = 0.06; landed = 'ground'; break; }
+        for (const c of this.world.nearby(th.pos.x, th.pos.z, 0.4)) {
+          if (c.r !== undefined) { if (th.pos.y < c.h && Math.hypot(th.pos.x - c.x, th.pos.z - c.z) < c.r + 0.06) { landed = 'wall'; break; } continue; }
+          if (!c.active || c.kind === 'killerOnly' || th.pos.y > c.h) continue;
+          if (th.pos.x > c.minX - 0.05 && th.pos.x < c.maxX + 0.05 && th.pos.z > c.minZ - 0.05 && th.pos.z < c.maxZ + 0.05) { landed = 'wall'; break; }
+        }
+        if (!landed) for (const b of this.world.camBoxes) {
+          if (th.pos.x > b.minX && th.pos.x < b.maxX && th.pos.y > b.minY && th.pos.y < b.maxY && th.pos.z > b.minZ && th.pos.z < b.maxZ) { landed = 'wall'; break; }
+        }
+      }
+      th.t += dt;
+      th.spin += dt * 24;
+      if (!landed && (th.t > 3 || Math.abs(th.pos.x) > 60 || Math.abs(th.pos.z) > 60)) landed = 'ground';
+      if (landed) {
+        th.flying = false;
+        th.landed = landed;
+        if (landed === 'wall') th.pos.addScaledVector(th.vel.clone().normalize(), -0.15);
+        th.pos.y = Math.max(0.06, th.pos.y);
+        this.sfx(landed === 'body' ? 'hit' : 'kick', th.pos.x, th.pos.z, 30);
+      }
+      this.axeProp.position.copy(th.pos);
+      this.axeProp.rotation.set(th.spin, th.yaw, 0, 'YXZ');
+    } else {
+      this.axeProp.position.copy(th.pos);
+      this.axeProp.rotation.set(th.landed === 'wall' ? 1.3 : th.landed === 'ground' ? 1.9 : Math.PI / 2, th.yaw, 0, 'YXZ');
+      if (Math.hypot(k.pos.x - th.pos.x, k.pos.z - th.pos.z) < 1.6 && k.state === 'normal') this.returnAxe(k, 'pickup');
+      else if (this.time >= p.axeBackAt) this.returnAxe(k, 'spare');
+    }
+  }
+
+  returnAxe(k, how) {
+    const p = k.power;
+    p.axe = true;
+    p.thrown = null;
+    if (this.axeProp) this.axeProp.visible = false;
+    k.rig.weapon.visible = true;
+    if (this.viewmodel && this.viewmodel.userData.axe) this.viewmodel.userData.axe.visible = true;
+    this.sfx(how === 'pickup' ? 'kick' : 'click', k.pos.x, k.pos.z, 15);
   }
 
   /* ---------------- moris ---------------- */
@@ -1262,10 +1352,14 @@ export class Match {
     const p = k.power;
     const it = k.intent;
     if (p.kind === 'chop') {
-      if (k.state !== 'normal' || k.carrying) { p.raising = false; p.charge = 0; return; }
+      this.updateThrownAxe(k, dt);
+      const wantThrow = it.throwAxe || it.attackPressed;
+      it.throwAxe = false;
+      if (!p.axe || k.state !== 'normal' || k.carrying) { p.raising = false; p.charge = 0; return; }
       if (it.power) {
         if (!p.raising) { p.raising = true; p.charge = 0; this.sfx('swing', k.pos.x, k.pos.z, 12); }
         p.charge = Math.min(1, p.charge + dt / p.chargeTime);
+        if (wantThrow && p.charge * p.chargeTime >= 0.3) { this.throwAxe(k); return; }
       } else if (p.raising) {
         p.raising = false;
         if (p.charge * p.chargeTime >= p.minCharge) {
@@ -1353,7 +1447,7 @@ export class Match {
     for (const s of this.survivors) {
       if (!s.alive) continue;
       const d = this.dist(s, k);
-      if (d < 12) { s.glitchUntil = this.time + dur; if (k.has('dead_pixel')) s.revealUntil = this.time + dur; }
+      if (d < 14) { s.glitchUntil = this.time + dur; if (k.has('dead_pixel')) s.revealUntil = this.time + dur; }
       if (k.has('blue_screen') && d < 24) s.revealUntil = Math.max(s.revealUntil, this.time + 6);
     }
     if (k.has('blue_screen')) for (const g of this.world.gens) if (!g.done && Math.hypot(g.x - k.pos.x, g.z - k.pos.z) < 16) { g.progress = Math.max(0, g.progress - 0.15); g.regressing = true; }

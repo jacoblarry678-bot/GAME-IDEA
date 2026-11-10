@@ -381,6 +381,11 @@ export class KillerAI {
       this.move(dt, it, fresh.x, fresh.z);
       return;
     }
+    // go and fetch a thrown axe
+    if (k.power.kind === 'chop' && !k.power.axe && k.power.thrown && !k.power.thrown.flying) {
+      const th = k.power.thrown;
+      if (Math.hypot(th.pos.x - k.pos.x, th.pos.z - k.pos.z) < 30) { this.move(dt, it, th.pos.x, th.pos.z); return; }
+    }
     this.patrolGens(dt, it);
   }
 
@@ -425,9 +430,23 @@ export class KillerAI {
     // powers
     if (k.power.kind === 'chop') {
       const p = k.power;
-      if (!p.raising && visible && d > 3.2 && d < 7.5 && this.skill > 0.25 && Math.random() < dt * 3) this.powerHold = p.chargeTime * (0.55 + this.skill * 0.45);
-      if (p.raising && (d > 10 || !visible)) this.powerHold = 0;
-      if (p.raising) it.attack = false;
+      if (p.axe) {
+        if (!p.raising && visible && d > 3.2 && d < 7.5 && this.skill > 0.25 && Math.random() < dt * 3) { this.powerHold = p.chargeTime * (0.55 + this.skill * 0.45); this.throwPlan = false; }
+        else if (!p.raising && visible && d >= 9 && d < 24 && this.skill > 0.3 && Math.random() < dt * (this.skill - 0.2) * 1.4) { this.powerHold = 1.2; this.throwPlan = true; }
+        if (p.raising && this.throwPlan && p.charge * p.chargeTime >= 0.45) {
+          // aim with lead and a little arc for the drop
+          const speed = 20 + 14 * p.charge;
+          const tFly = d / speed;
+          const ax = s.pos.x + s.moveDir.x * s.speed * tFly * (0.6 + this.skill * 0.4), az = s.pos.z + s.moveDir.z * s.speed * tFly * (0.6 + this.skill * 0.4);
+          k.yaw = Math.atan2(ax - k.pos.x, az - k.pos.z) + (Math.random() - 0.5) * (1 - this.skill) * 0.12;
+          k.intent.aimPitch = Math.atan2(0.5 * 6 * tFly * tFly - 0.45, Math.hypot(ax - k.pos.x, az - k.pos.z));
+          it.throwAxe = true;
+          this.throwPlan = false;
+          this.powerHold = 0;
+        }
+        if (p.raising && (d > (this.throwPlan ? 26 : 10) || !visible)) { this.powerHold = 0; this.throwPlan = false; }
+        if (p.raising) it.attack = false;
+      }
     } else if (k.power.kind === 'veil') {
       if (k.phasing) { this.powerHold = d > 2.6 ? 0.2 : 0; if (d < 2.6) it.power = false; }
       else if (k.power.charge >= 1 && d > 7 && d < 22 && this.skill > 0.3 && Math.random() < dt * 2) this.powerHold = 0.5;

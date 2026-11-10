@@ -1,6 +1,6 @@
 // The Woodsman (PTB): a hulking logger in a carved birch mask, carrying a felling axe.
 import * as THREE from 'three';
-import { attachAura } from './characters.js';
+import { attachAura, tricorn } from './characters.js';
 import { fabricTexture, metalTexture, barkTexture } from '../world/textures.js';
 
 const plaidCache = new Map();
@@ -46,7 +46,7 @@ function mesh(geo, mat, x, y, z, parent, shadow = true) {
   return m;
 }
 
-function axeMeshes(parent, outfit, scale = 1) {
+export function axeMeshes(parent, outfit, scale = 1) {
   const metal = metalTexture('#6a6a66', 'axehead');
   const steel = new THREE.MeshStandardMaterial({ color: outfit.metal, map: metal.map, normalMap: metal.normalMap, metalness: 0.75, roughness: 0.45 });
   const edge = new THREE.MeshStandardMaterial({ color: '#d8dce0', metalness: 0.9, roughness: 0.2 });
@@ -100,10 +100,13 @@ export function buildWoodsman(outfit) {
   mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.12, 10), shirt, 0, 0.03, 0, neck);
   const head = grp(neck, 0, 0.14, 0.02);
   mesh(new THREE.SphereGeometry(0.13, 16, 12), cap, 0, 0.07, -0.01, head);
-  // knit cap with a fold
-  const kc = mesh(new THREE.SphereGeometry(0.145, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), cap, 0, 0.09, -0.01, head);
-  kc.scale.set(1, 1.15, 1.05);
-  mesh(new THREE.TorusGeometry(0.135, 0.025, 6, 18), cap, 0, 0.1, -0.01, head).rotation.x = Math.PI / 2;
+  if (outfit.hat === 'tricorn') tricorn(head, 1.35, outfit.cap, 0.15, outfit.metal);
+  else {
+    // knit cap with a fold
+    const kc = mesh(new THREE.SphereGeometry(0.145, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), cap, 0, 0.09, -0.01, head);
+    kc.scale.set(1, 1.15, 1.05);
+    mesh(new THREE.TorusGeometry(0.135, 0.025, 6, 18), cap, 0, 0.1, -0.01, head).rotation.x = Math.PI / 2;
+  }
   // carved birch mask: a curved shell with eye holes and a slit mouth
   const mg = new THREE.SphereGeometry(0.15, 18, 14, -Math.PI * 0.42, Math.PI * 0.84, Math.PI * 0.18, Math.PI * 0.62);
   const mk = mesh(mg, mask, 0, 0.05, 0.03, head);
@@ -167,6 +170,7 @@ export function buildWoodsmanViewmodel(outfit) {
   mesh(new THREE.SphereGeometry(0.06, 10, 8), gloves, 0, 0, 0, hand, false).scale.set(1, 0.9, 1.2);
   const axe = grp(hand, 0, 0, 0);
   axeMeshes(axe, outfit, 0.8);
+  g.userData.axe = axe;
   axe.rotation.set(-0.5, 0, -0.25);
   arm.position.set(0.28, -0.32, -0.42);
   arm.rotation.set(0.1, 0.12, 0);

@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import {
   SURVIVORS, KILLERS, SURVIVOR_PERKS, KILLER_PERKS, ITEMS, ITEM_ADDONS, KILLER_ADDONS, OFFERINGS, MAPS, RARITIES,
-  SURVIVOR_BY_ID, KILLER_BY_ID, PERK_BY_ID, ITEM_BY_ID, ADDON_BY_ID, OFFERING_BY_ID, SURVIVOR_CATEGORIES, KILLER_CATEGORIES, VERSION, PTB_NOTE, outfitOf,
+  SURVIVOR_BY_ID, KILLER_BY_ID, PERK_BY_ID, ITEM_BY_ID, ADDON_BY_ID, OFFERING_BY_ID, SURVIVOR_CATEGORIES, KILLER_CATEGORIES, VERSION, PTB_NOTE, FEATURED_COLLECTION, OUTFIT_BY_ID, outfitOf,
 } from '../data.js';
 import { buildWoodsman } from '../models/woodsman.js';
 import { profile, saveProfile, ownsPerk, ownsOutfit, countOf, buy, resetProfile } from '../core/profile.js';
@@ -241,7 +241,7 @@ export class Lobby {
       const owned = ownsOutfit(o.id);
       return `<button class="lb-outfit ${eq === o.id ? 'on' : ''}" ${rarityStyle(o.rarity)} data-outfit="${o.id}">
         <div class="sw">${['topColor', 'accent', 'legsColor', 'dress', 'dress2', 'body', 'glow', 'glow2', 'plaid', 'plaid2', 'mask'].filter((k) => o[k]).slice(0, 3).map((k) => `<i style="background:${o[k]}"></i>`).join('')}</div>
-        <b>${esc(o.name)}${o.isNew ? ' <i class="ptb new">NEW</i>' : ''}</b><span>${RARITIES[o.rarity].name}${o.isNew ? ' · Long Winter' : ''}</span>
+        <b>${esc(o.name)}${o.isNew ? ' <i class="ptb new">NEW</i>' : ''}</b><span>${RARITIES[o.rarity].name}${o.collection ? ' · ' + esc(o.collection) : ''}</span>
         <em>${eq === o.id ? 'Equipped' : owned ? 'Equip' : `${icon('lock')}${o.price.toLocaleString()}`}</em></button>`;
     }).join('');
     return `<section class="lb-sec"><h2>${esc(def.name)}: outfits</h2><p class="meta">Click an outfit to preview it. Equip ones you own, or buy new ones with Marrow.</p><div class="lb-outfits">${list}</div></section>`;
@@ -249,9 +249,20 @@ export class Lobby {
 
   storeHtml() {
     const role = profile.role;
-    const tabs = [['perks', 'Perks'], ['items', role === 'survivor' ? 'Items' : 'Power add-ons'], ['addons', role === 'survivor' ? 'Item add-ons' : 'Other killer'], ['offerings', 'Offerings']];
+    const tabs = [['collection', FEATURED_COLLECTION], ['perks', 'Perks'], ['items', role === 'survivor' ? 'Items' : 'Power add-ons'], ['addons', role === 'survivor' ? 'Item add-ons' : 'Other killer'], ['offerings', 'Offerings']];
     let list = [];
     const t = this.storeTab;
+    if (t === 'collection') {
+      const outs = Object.values(OUTFIT_BY_ID).filter((o) => o.collection === FEATURED_COLLECTION);
+      const rows = outs.map((o) => {
+        const owned = ownsOutfit(o.id);
+        return `<div class="lb-buy" ${rarityStyle(o.rarity)}>${icon('shirt')}<div><b>${esc(o.name)}</b><small>${esc(o.charName)} · ${RARITIES[o.rarity].name}</small><span class="sw-row">${['topColor', 'accent', 'hatColor', 'dress', 'dress2', 'body', 'glow', 'plaid', 'plaid2'].filter((k) => o[k]).slice(0, 4).map((k) => `<i style="background:${o[k]}"></i>`).join('')}</span></div>
+          <div class="lb-buy-act">${owned ? '<em>Owned</em>' : `<button class="btn" data-buy="outfit:${o.id}" ${profile.marrow >= o.price ? '' : 'disabled'}>${o.price.toLocaleString()}</button>`}</div></div>`;
+      }).join('');
+      return `<section class="lb-sec"><h2>The Reliquary</h2><div class="lb-subtabs">${tabs.map(([id, l]) => `<button class="${t === id ? 'on' : ''}" data-store="${id}">${esc(l)}</button>`).join('')}</div>
+        <div class="lb-feature"><h3>${esc(FEATURED_COLLECTION)}</h3><p class="lore">Salt-stained coats, tricorn hats and eyepatches for every survivor and killer, as if the whole night had washed in on a ghost ship. Buy them here, then equip them in the Wardrobe.</p></div>
+        <div class="lb-shop">${rows}</div></section>`;
+    }
     if (t === 'perks') list = (role === 'killer' ? KILLER_PERKS : SURVIVOR_PERKS).map((p) => ({ kind: 'perk', def: p, ic: p.icon, owned: ownsPerk(p.id) }));
     else if (t === 'items') list = role === 'survivor' ? ITEMS.map((i) => ({ kind: 'item', def: i, ic: i.icon })) : KILLER_ADDONS.filter((a) => a.killer === profile.killer).map((a) => ({ kind: 'addon', def: a, ic: 'addon' }));
     else if (t === 'addons') list = role === 'survivor' ? ITEM_ADDONS.map((a) => ({ kind: 'addon', def: a, ic: 'addon', sub: ITEM_BY_ID[a.item].name })) : KILLER_ADDONS.filter((a) => a.killer !== profile.killer).map((a) => ({ kind: 'addon', def: a, ic: 'addon', sub: KILLER_BY_ID[a.killer].name }));
@@ -268,6 +279,15 @@ export class Lobby {
 
   archivesHtml() {
     return `<section class="lb-sec lb-arch">
+      <h2>Patch notes: 1.3.0</h2>
+      <ul>
+        <li><b>The Woodsman rework: he can throw his axe.</b> With the axe raised, press Attack to hurl it. It flies fast with a slight drop and injures the first survivor it hits, or sticks in walls, trees and the ground. Walk over it to pick it up, or after 15 seconds he pulls a spare. Without it he cannot chop or throw and his bare-handed attacks reach less. Releasing the Power button still does a Heavy Chop. New add-ons: Leather Strap and Balanced Haft; Iron Wedge now also speeds up throws.</li>
+        <li><b>Woodsman buffs:</b> Heavy Chop charges in 1.3 seconds (was 1.5) and a missed chop costs 2.2 seconds (was 2.5).</li>
+        <li><b>Survivor buffs:</b> hook stages last about 13% longer; pallet stuns last 2.3 seconds (was 2.0); the Flashlight blinds 20% faster and holds 18 seconds of charge (was 14); the Med Kit heals in 13 seconds (was 16); the Toolbox repairs 60% faster (was 50%, Duct Tape 85%); Adrenal Surge cooldown 45 seconds (was 60); Escape Artist 35% (was 25%); Borrowed Breath protects for 15 seconds (was 12).</li>
+        <li><b>Killer buffs:</b> The Specter moves 75% faster in the veil (was 65%) and Veil Walk recharges in 12 seconds (was 14). The EXE's Signal Jump cools down in 15 seconds (was 18), channels in 1.3 seconds (was 1.5) and glitches survivors within 14 m (was 12).</li>
+        <li><b>New cosmetics: Pirate's Feast.</b> Nine pirate outfits, one for every survivor and killer, with new tricorn hats, bandanas, eyepatches and sashes. Featured in the Reliquary.</li>
+        <li><b>New offering: Ship's Feast</b> (+75% Marrow). Everyone gets two, plus 4,000 Marrow.</li>
+      </ul>
       <h2>Patch notes: 1.2.0</h2>
       <ul>
         <li><b>The Woodsman is live.</b> He is out of the PTB and playable by everyone, with his perks, add-ons and outfits.</li>
@@ -350,7 +370,7 @@ export class Lobby {
     click('[data-store]', (b) => { this.storeTab = b.dataset.store; this.draw(); });
     click('[data-buy]', (b) => {
       const [kind, id] = b.dataset.buy.split(':');
-      const def = kind === 'perk' ? PERK_BY_ID[id] : kind === 'item' ? ITEM_BY_ID[id] : kind === 'addon' ? ADDON_BY_ID[id] : OFFERING_BY_ID[id];
+      const def = kind === 'outfit' ? OUTFIT_BY_ID[id] : kind === 'perk' ? PERK_BY_ID[id] : kind === 'item' ? ITEM_BY_ID[id] : kind === 'addon' ? ADDON_BY_ID[id] : OFFERING_BY_ID[id];
       if (buy(kind, def)) audio.play('buy');
       this.draw();
     });

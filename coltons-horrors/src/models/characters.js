@@ -92,6 +92,28 @@ function limb(parent, len, r, mat, x, y, z) {
   return { pivot, mesh: m };
 }
 
+
+// Three-cornered pirate hat: a crown, a triangular brim and three upturned edges with optional trim.
+export function tricorn(parent, s, color, y, trim = null) {
+  const mat = cloth(color, 0.75);
+  const g = group(parent, 0, y, 0);
+  mesh(new THREE.CylinderGeometry(0.085 * s, 0.108 * s, 0.1 * s, 16), mat, 0, 0.05 * s, -0.005 * s, g);
+  mesh(new THREE.SphereGeometry(0.086 * s, 14, 8, 0, TAU, 0, Math.PI / 2), mat, 0, 0.098 * s, -0.005 * s, g).scale.set(1, 0.45, 1);
+  const R = 0.21 * s;
+  mesh(new THREE.CylinderGeometry(R, R, 0.014 * s, 3), mat, 0, 0, 0, g);
+  const trimMat = trim ? new THREE.MeshStandardMaterial({ color: trim, metalness: 0.7, roughness: 0.35 }) : null;
+  for (let i = 0; i < 3; i++) {
+    const a0 = (i / 3) * TAU, a1 = ((i + 1) / 3) * TAU;
+    const x0 = Math.sin(a0) * R, z0 = Math.cos(a0) * R, x1 = Math.sin(a1) * R, z1 = Math.cos(a1) * R;
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const ry = Math.atan2(-(z1 - z0), x1 - x0);
+    const w = mesh(new THREE.BoxGeometry(len * 0.9, 0.075 * s, 0.012 * s), mat, (x0 + x1) / 2 * 0.93, 0.035 * s, (z0 + z1) / 2 * 0.93, g);
+    w.rotation.y = ry;
+    if (trimMat) { const t = mesh(new THREE.BoxGeometry(len * 0.9, 0.01 * s, 0.016 * s), trimMat, (x0 + x1) / 2 * 0.93, 0.074 * s, (z0 + z1) / 2 * 0.93, g, false); t.rotation.y = ry; }
+  }
+  return g;
+}
+
 /* ================================================================== */
 /* Survivor                                                            */
 /* ================================================================== */
@@ -230,6 +252,13 @@ export function buildSurvivor(def, outfit) {
     hd.material = mats.hat.clone(); hd.material.side = THREE.DoubleSide;
     hd.scale.set(1, 1.12, 1.08);
     hd.rotation.y = Math.PI;
+  } else if (hat === 'tricorn') {
+    tricorn(head, s, outfit.hatColor, 0.13 * s, outfit.accent);
+  } else if (hat === 'bandana') {
+    const b = mesh(new THREE.SphereGeometry(0.116 * s, 16, 10, 0, TAU, 0, Math.PI * 0.52), mats.hat, 0, 0.075 * s, -0.008 * s, head);
+    b.scale.set(0.97, 1.08, 1.06);
+    mesh(new THREE.SphereGeometry(0.028 * s, 8, 6), mats.hat, 0, 0.08 * s, -0.115 * s, head);
+    for (const side of [-1, 1]) { const tl = mesh(new THREE.BoxGeometry(0.03 * s, 0.11 * s, 0.01 * s), mats.hat, side * 0.022 * s, 0.03 * s, -0.12 * s, head); tl.rotation.z = side * 0.35; }
   } else if (hat === 'headband') {
     mesh(new THREE.TorusGeometry(0.105 * s, 0.014 * s, 6, 20), mats.hat, 0, 0.12 * s, 0, head).rotation.x = Math.PI / 2 - 0.15;
   }
@@ -244,6 +273,13 @@ export function buildSurvivor(def, outfit) {
     }
     mesh(new THREE.BoxGeometry(0.026 * s, 0.004 * s, 0.004 * s), gm, 0, 0.08 * s, 0.104 * s, head, false);
   }
+  if (extras.includes('eyepatch')) {
+    const pm = plain('#0c0b0a', 0.6);
+    const patch = mesh(new THREE.CylinderGeometry(0.024 * s, 0.024 * s, 0.008 * s, 12), pm, 0.036 * s, 0.075 * s, 0.103 * s, head, false);
+    patch.rotation.x = Math.PI / 2;
+    const strap = mesh(new THREE.TorusGeometry(0.108 * s, 0.004 * s, 4, 24), pm, 0, 0.085 * s, 0, head, false);
+    strap.rotation.set(Math.PI / 2 + 0.15, 0, -0.35);
+  }
   if (extras.includes('beard')) {
     const bd = mesh(new THREE.SphereGeometry(0.075 * s, 12, 10, 0, TAU, Math.PI * 0.45, Math.PI * 0.55), mats.hair, 0, 0.035 * s, 0.03 * s, head);
     bd.scale.set(1.08, 1.1, 1.05);
@@ -257,6 +293,13 @@ export function buildSurvivor(def, outfit) {
     const sc = mesh(new THREE.TorusGeometry(0.075 * s, 0.03 * s, 8, 16), mats.extra, 0, 0.47 * s, 0.0, torso);
     sc.rotation.x = Math.PI / 2;
     mesh(new THREE.BoxGeometry(0.06 * s, 0.22 * s, 0.025 * s), mats.extra, 0.05 * s, 0.34 * s, 0.11 * s, torso).rotation.z = 0.1;
+  }
+  if (extras.includes('sash')) {
+    const sa = mesh(new THREE.TorusGeometry(0.155 * s, 0.035 * s, 8, 20), mats.extra, 0, 0.02 * s, 0, torso);
+    sa.rotation.x = Math.PI / 2;
+    sa.scale.set(1.08, 0.78, 1);
+    const tail = mesh(new THREE.BoxGeometry(0.07 * s, 0.24 * s, 0.025 * s), mats.extra, 0.12 * s, -0.1 * s, 0.07 * s, torso);
+    tail.rotation.z = 0.25;
   }
   if (extras.includes('backpack')) {
     const bp = mesh(new THREE.BoxGeometry(0.26 * s, 0.32 * s, 0.12 * s), mats.extra, 0, 0.25 * s, -0.16 * s, torso);
@@ -557,6 +600,7 @@ export function buildSpecter(outfit) {
     strands.push(g);
     void front;
   }
+  if (outfit.hat === 'tricorn') tricorn(head, 1.15, outfit.hatColor || '#141414', 0.165, outfit.metal);
   let veil = null;
   if (outfit.veil) {
     const vm = new THREE.MeshStandardMaterial({ color: outfit.dress, transparent: true, opacity: 0.45, side: THREE.DoubleSide, roughness: 1, depthWrite: false });
@@ -686,6 +730,7 @@ export function buildExe(outfit) {
     const a = mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.42, 4), plain('#8a8a8a', 0.3, 0.8), side * 0.08, 0.48, -0.1, head, false);
     a.rotation.z = side * -0.55;
   }
+  if (outfit.hat === 'tricorn') tricorn(head, 2.0, '#141414', 0.3, outfit.glow);
   const screenLight = new THREE.PointLight(outfit.face, 0.0, 4, 2);
   screenLight.position.set(0, 0.11, 0.35);
   head.add(screenLight);

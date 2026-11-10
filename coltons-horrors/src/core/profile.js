@@ -64,6 +64,11 @@ export const profile = load();
 // new characters and their signature perks are unlocked for older saves too
 for (const k of KILLERS) for (const id of k.signature) if (!profile.ownedPerks.includes(id)) profile.ownedPerks.push(id);
 for (const c of [...SURVIVORS, ...KILLERS]) if (!profile.ownedOutfits.includes(c.outfits[0].id)) profile.ownedOutfits.push(c.outfits[0].id);
+if (!profile.gifts || !profile.gifts.includes('1.3.0')) {
+  profile.gifts = [...(profile.gifts || []), '1.3.0'];
+  profile.inventory.off_feast = (profile.inventory.off_feast || 0) + 2;
+  profile.marrow += 4000;
+}
 if (!profile.gifts || !profile.gifts.includes('1.2.0')) {
   profile.gifts = [...(profile.gifts || []), '1.2.0'];
   profile.inventory.off_craneridge = (profile.inventory.off_craneridge || 0) + 2;

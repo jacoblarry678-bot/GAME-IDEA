@@ -1,4 +1,11 @@
-# Status: v1.2.0
+# Status: v1.3.0
+
+1.3.0: Woodsman rework (throwable axe with pickup and a 15 s spare), survivor and killer buffs, Pirate's Feast
+cosmetics (9 outfits with new tricorn, bandana, eyepatch and sash pieces), Ship's Feast offering.
+Verified: `tools/throw.mjs` (12 m throw injures, axe lands, pickup and spare work), `tools/normals.mjs` clean,
+full `tools/sim.mjs` match against The Woodsman with no errors.
+
+## 1.2.0
 
 1.2.0: The Woodsman is live (out of PTB). New map Crane Ridge Sawmill (snow). Long Winter cosmetics (9 outfits).
 Fixed black flicker: zero-length normals on character limbs (three.js capsule poles) and roof gables produced NaN

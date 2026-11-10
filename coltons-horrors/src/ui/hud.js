@@ -128,7 +128,7 @@ export class HUD {
     } else if (P.isKiller) {
       prompt = m.killerPrompt();
       if (k.state !== 'normal' && k.stateDur && ['pickup', 'hook', 'break', 'kick', 'channel', 'closeHatch'].includes(k.state)) prog = k.stateT / k.stateDur;
-      if (k.power.kind === 'chop' && k.power.raising) { prompt = k.power.charge * k.power.chargeTime >= k.power.minCharge ? (k.power.charge >= 1 ? 'Full charge: release to chop' : 'Release to chop') : 'Raising the axe'; prog = k.power.charge; }
+      if (k.power.kind === 'chop' && k.power.raising) { prompt = k.power.charge * k.power.chargeTime >= k.power.minCharge ? (k.power.charge >= 1 ? 'Full charge: release to chop · LMB to throw' : 'Release to chop · LMB to throw') : 'Raising the axe · LMB to throw'; prog = k.power.charge; }
       if (k.state === 'mori') { prompt = k.stateData && k.stateData.kind === 'full' ? 'Mori' : 'Mini mori'; prog = null; }
       if (k.carrying) prompt = prompt || 'Carry them to a hook';
       if (k.state === 'stun') prompt = 'Stunned';
@@ -156,7 +156,9 @@ export class HUD {
     } else {
       const p = k.power;
       if (p.kind === 'veil') el.item.innerHTML = `<div class="h-itm ${p.active ? 'live' : p.charge >= 1 ? 'ready' : ''}">${icon('ghost')}</div><div class="h-itm-txt"><b>Veil Walk</b><div class="h-meter"><i style="width:${(p.active ? 1 - p.t / p.dur : p.charge) * 100}%"></i></div></div>`;
-      else if (p.kind === 'chop') el.item.innerHTML = `<div class="h-itm ${p.raising ? 'live' : 'ready'}">${icon('axe')}</div><div class="h-itm-txt"><b>Heavy Chop</b><div class="h-meter"><i style="width:${p.charge * 100}%"></i></div></div>`;
+      else if (p.kind === 'chop') el.item.innerHTML = p.axe
+        ? `<div class="h-itm ${p.raising ? 'live' : 'ready'}">${icon('axe')}</div><div class="h-itm-txt"><b>Heavy Chop · Throw</b><div class="h-meter"><i style="width:${p.charge * 100}%"></i></div></div>`
+        : `<div class="h-itm">${icon('axe')}</div><div class="h-itm-txt"><b>Axe thrown: pick it up (${Math.max(0, Math.ceil(p.axeBackAt - m.time))}s)</b><div class="h-meter"><i style="width:${Math.max(0, 1 - (p.axeBackAt - m.time) / 15) * 100}%"></i></div></div>`;
       else el.item.innerHTML = `<div class="h-itm ${p.cooldown <= 0 ? 'ready' : ''}">${icon('tv')}</div><div class="h-itm-txt"><b>Signal Jump${p.selecting ? ': release to jump' : ''}</b><div class="h-meter"><i style="width:${(1 - p.cooldown / p.maxCd) * 100}%"></i></div></div>`;
     }
     // screen effects

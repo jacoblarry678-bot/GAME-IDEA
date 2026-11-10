@@ -261,3 +261,7 @@ input[type='range'] { accent-color: var(--blood); }
 .ptb { font-style: normal; font-family: var(--ui); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #0b0a0d; background: var(--sodium); padding: 1px 5px; border-radius: 2px; vertical-align: middle; }
 .ptb-note { display: flex; gap: 8px; align-items: baseline; color: var(--sodium); font-size: 14px; line-height: 1.4; margin: 4px 0; }
 .ptb.new { background: #7fc28a; }
+.lb-feature { border-left: 2px solid var(--sodium); padding: 4px 0 4px 14px; }
+.lb-feature h3 { margin: 0; color: var(--sodium); }
+.sw-row { display: flex !important; gap: 3px; margin-top: 4px; }
+.sw-row i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); }

@@ -1,7 +1,8 @@
 // All game content definitions for Colton's Horrors.
 // Every character, perk, add-on, offering and map here is original to this project.
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.3.0';
+export const FEATURED_COLLECTION = "Pirate's Feast";
 export const PTB_NOTE = 'Public Test Build: The Woodsman is new and his numbers may change in the next update.';
 
 export const RARITIES = {
@@ -28,7 +29,8 @@ export const SURVIVORS = [
       { id: 'colton_film', name: 'Film Club', rarity: 'uncommon', price: 3000, hair: 'swept', hairColor: '#5a3b22', top: 'jacket', topColor: '#6a2b2b', accent: '#e0d6c0', legs: 'pants', legsColor: '#1f2633', shoes: '#2a2a2a', hat: 'beanie', hatColor: '#1d1d1f', extras: [] },
       { id: 'colton_varsity', name: 'Varsity Night', rarity: 'rare', price: 6000, hair: 'swept', hairColor: '#3a2614', top: 'jacket', topColor: '#1f3f2a', accent: '#d8c48a', legs: 'pants', legsColor: '#4a4a3c', shoes: '#e8e8e0', hat: 'cap', hatColor: '#a33a2a', extras: [] },
       { id: 'colton_reel', name: 'Bloodied Reel', rarity: 'legendary', price: 12000, hair: 'swept', hairColor: '#1a1210', top: 'hoodie', topColor: '#151515', accent: '#7a0e0e', legs: 'pants', legsColor: '#2b1b1b', shoes: '#111111', hat: 'hood', hatColor: '#151515', extras: ['scarf'], extraColor: '#7a0e0e' },
-      { id: 'colton_winter', name: 'Snowbound', rarity: 'epic', price: 9000, isNew: true, hair: 'swept', hairColor: '#5a3b22', top: 'coat', topColor: '#2a3a4a', accent: '#c8c0b0', legs: 'pants', legsColor: '#2a2a30', shoes: '#3a2a1a', hat: 'beanie', hatColor: '#a83a2a', extras: ['scarf'], extraColor: '#d8d0c0' },
+      { id: 'colton_winter', name: 'Snowbound', rarity: 'epic', price: 9000, collection: 'Long Winter', hair: 'swept', hairColor: '#5a3b22', top: 'coat', topColor: '#2a3a4a', accent: '#c8c0b0', legs: 'pants', legsColor: '#2a2a30', shoes: '#3a2a1a', hat: 'beanie', hatColor: '#a83a2a', extras: ['scarf'], extraColor: '#d8d0c0' },
+      { id: 'colton_pirate', name: 'Cabin Boy', rarity: 'epic', price: 9000, isNew: true, collection: "Pirate's Feast", hair: 'swept', hairColor: '#5a3b22', top: 'shirt', topColor: '#d8d0b8', accent: '#7a1a14', legs: 'pants', legsColor: '#3a2a1a', shoes: '#1a1210', hat: 'bandana', hatColor: '#a01a1a', extras: ['sash'], extraColor: '#a01a1a' },
     ],
   },
   {
@@ -40,7 +42,8 @@ export const SURVIVORS = [
       { id: 'maya_offduty', name: 'Off Duty', rarity: 'uncommon', price: 3000, hair: 'bun', hairColor: '#1a1210', top: 'hoodie', topColor: '#7a5a8a', accent: '#e8e0f0', legs: 'slim', legsColor: '#3b4a6a', shoes: '#e8e8e8', hat: null, extras: [] },
       { id: 'maya_trauma', name: 'Trauma Bay', rarity: 'rare', price: 6000, hair: 'bun', hairColor: '#2a1a12', top: 'shirt', topColor: '#4a7a6a', accent: '#4a7a6a', legs: 'pants', legsColor: '#4a7a6a', shoes: '#f0f0f0', hat: 'headband', hatColor: '#d8d8d8', extras: [] },
       { id: 'maya_night', name: 'Night Nurse', rarity: 'epic', price: 9000, hair: 'bun', hairColor: '#0e0a08', top: 'coat', topColor: '#d8d4cc', accent: '#8a1a1a', legs: 'slim', legsColor: '#2a2a2a', shoes: '#1a1a1a', hat: null, extras: ['glasses'] },
-      { id: 'maya_winter', name: 'Search and Rescue', rarity: 'epic', price: 9000, isNew: true, hair: 'bun', hairColor: '#1a1210', top: 'jacket', topColor: '#d8501a', accent: '#e8e8e8', legs: 'pants', legsColor: '#1a1a24', shoes: '#111111', hat: 'beanie', hatColor: '#1a1a24', extras: ['glasses'] },
+      { id: 'maya_winter', name: 'Search and Rescue', rarity: 'epic', price: 9000, collection: 'Long Winter', hair: 'bun', hairColor: '#1a1210', top: 'jacket', topColor: '#d8501a', accent: '#e8e8e8', legs: 'pants', legsColor: '#1a1a24', shoes: '#111111', hat: 'beanie', hatColor: '#1a1a24', extras: ['glasses'] },
+      { id: 'maya_pirate', name: 'Ship\'s Surgeon', rarity: 'epic', price: 9000, isNew: true, collection: "Pirate's Feast", hair: 'bun', hairColor: '#1a1210', top: 'coat', topColor: '#2a2a4a', accent: '#c0a050', legs: 'pants', legsColor: '#2a2016', shoes: '#1a1210', hat: 'tricorn', hatColor: '#1a1a1a', extras: ['sash'], extraColor: '#5a1a4a' },
     ],
   },
   {
@@ -52,7 +55,8 @@ export const SURVIVORS = [
       { id: 'ruth_hunting', name: 'Hunting Season', rarity: 'uncommon', price: 3000, hair: 'short', hairColor: '#c9c6c0', top: 'vest', topColor: '#c8661a', accent: '#3a3a3a', legs: 'pants', legsColor: '#3b3b3b', shoes: '#2a2018', hat: 'beanie', hatColor: '#c8661a', extras: [] },
       { id: 'ruth_sunday', name: 'Sunday Best', rarity: 'rare', price: 6000, hair: 'short', hairColor: '#e0ddd8', top: 'coat', topColor: '#5a2a3a', accent: '#c9b98a', legs: 'slim', legsColor: '#3a2a2a', shoes: '#1a1210', hat: null, extras: ['scarf', 'glasses'], extraColor: '#c9b98a' },
       { id: 'ruth_oldgrowth', name: 'Old Growth', rarity: 'epic', price: 9000, hair: 'short', hairColor: '#a8a49c', top: 'jacket', topColor: '#2a3a2a', accent: '#8a7a4a', legs: 'pants', legsColor: '#3a3022', shoes: '#2a2018', hat: 'hood', hatColor: '#2a3a2a', extras: [] },
-      { id: 'ruth_winter', name: 'First Frost', rarity: 'epic', price: 9000, isNew: true, hair: 'short', hairColor: '#e0ddd8', top: 'coat', topColor: '#5a6a5a', accent: '#d8c8a0', legs: 'pants', legsColor: '#3a3a30', shoes: '#2a2018', hat: 'hood', hatColor: '#5a6a5a', extras: ['scarf'], extraColor: '#8a2a2a' },
+      { id: 'ruth_winter', name: 'First Frost', rarity: 'epic', price: 9000, collection: 'Long Winter', hair: 'short', hairColor: '#e0ddd8', top: 'coat', topColor: '#5a6a5a', accent: '#d8c8a0', legs: 'pants', legsColor: '#3a3a30', shoes: '#2a2018', hat: 'hood', hatColor: '#5a6a5a', extras: ['scarf'], extraColor: '#8a2a2a' },
+      { id: 'ruth_pirate', name: 'Old Salt', rarity: 'epic', price: 9000, isNew: true, collection: "Pirate's Feast", hair: 'short', hairColor: '#e0ddd8', top: 'coat', topColor: '#3a4a5a', accent: '#c0a050', legs: 'pants', legsColor: '#3a3022', shoes: '#2a2018', hat: 'tricorn', hatColor: '#2a2a2a', extras: ['eyepatch'] },
     ],
   },
   {
@@ -64,7 +68,8 @@ export const SURVIVORS = [
       { id: 'dev_drag', name: 'Weekend Drag', rarity: 'uncommon', price: 3000, hair: 'curly', hairColor: '#141010', top: 'jacket', topColor: '#1a1a1a', accent: '#8a8a8a', legs: 'pants', legsColor: '#2a3a5a', shoes: '#1a1a1a', hat: null, extras: [] },
       { id: 'dev_pit', name: 'Pit Crew', rarity: 'rare', price: 6000, hair: 'curly', hairColor: '#141010', top: 'shirt', topColor: '#b02020', accent: '#f0f0f0', legs: 'pants', legsColor: '#1a1a1a', shoes: '#f0f0f0', hat: 'cap', hatColor: '#b02020', extras: [] },
       { id: 'dev_rust', name: 'Rust Bucket', rarity: 'epic', price: 9000, hair: 'curly', hairColor: '#141010', top: 'coat', topColor: '#7a4a2a', accent: '#3a2a1a', legs: 'pants', legsColor: '#4a3a2a', shoes: '#2a1a10', hat: 'beanie', hatColor: '#3a3a3a', extras: ['glasses'] },
-      { id: 'dev_winter', name: 'Plow Driver', rarity: 'epic', price: 9000, isNew: true, hair: 'curly', hairColor: '#141010', top: 'vest', topColor: '#e0a01a', accent: '#2a2a2a', legs: 'pants', legsColor: '#2a3a5a', shoes: '#2a1a10', hat: 'beanie', hatColor: '#2a2a2a', extras: [] },
+      { id: 'dev_winter', name: 'Plow Driver', rarity: 'epic', price: 9000, collection: 'Long Winter', hair: 'curly', hairColor: '#141010', top: 'vest', topColor: '#e0a01a', accent: '#2a2a2a', legs: 'pants', legsColor: '#2a3a5a', shoes: '#2a1a10', hat: 'beanie', hatColor: '#2a2a2a', extras: [] },
+      { id: 'dev_pirate', name: 'Powder Monkey', rarity: 'epic', price: 9000, isNew: true, collection: "Pirate's Feast", hair: 'curly', hairColor: '#141010', top: 'vest', topColor: '#5a3a1a', accent: '#d8c8a0', legs: 'shorts', legsColor: '#3a2a1a', shoes: '#2a1a10', hat: 'bandana', hatColor: '#1a3a6a', extras: ['eyepatch'] },
     ],
   },
   {
@@ -76,7 +81,8 @@ export const SURVIVORS = [
       { id: 'jess_track', name: 'Track Meet', rarity: 'uncommon', price: 3000, hair: 'ponytail', hairColor: '#2a1608', top: 'hoodie', topColor: '#2a5ad8', accent: '#ffffff', legs: 'shorts', legsColor: '#2a2a2a', shoes: '#ffffff', hat: null, extras: [] },
       { id: 'jess_homecoming', name: 'Homecoming', rarity: 'rare', price: 6000, hair: 'ponytail', hairColor: '#4a2a10', top: 'jacket', topColor: '#e0e0e0', accent: '#a01a3a', legs: 'slim', legsColor: '#3a2a4a', shoes: '#1a1a1a', hat: 'headband', hatColor: '#a01a3a', extras: [] },
       { id: 'jess_neon', name: 'Neon Nights', rarity: 'legendary', price: 12000, hair: 'ponytail', hairColor: '#1a0a04', top: 'hoodie', topColor: '#e01a8a', accent: '#1ae0d8', legs: 'slim', legsColor: '#101018', shoes: '#1ae0d8', hat: 'cap', hatColor: '#1ae0d8', extras: [] },
-      { id: 'jess_winter', name: 'Cross-Country', rarity: 'epic', price: 9000, isNew: true, hair: 'ponytail', hairColor: '#2a1608', top: 'jacket', topColor: '#1a6ad8', accent: '#ffffff', legs: 'slim', legsColor: '#101018', shoes: '#ffffff', hat: 'headband', hatColor: '#ffffff', extras: [] },
+      { id: 'jess_winter', name: 'Cross-Country', rarity: 'epic', price: 9000, collection: 'Long Winter', hair: 'ponytail', hairColor: '#2a1608', top: 'jacket', topColor: '#1a6ad8', accent: '#ffffff', legs: 'slim', legsColor: '#101018', shoes: '#ffffff', hat: 'headband', hatColor: '#ffffff', extras: [] },
+      { id: 'jess_pirate', name: 'Quartermaster', rarity: 'epic', price: 9000, isNew: true, collection: "Pirate's Feast", hair: 'ponytail', hairColor: '#2a1608', top: 'jacket', topColor: '#7a1a1a', accent: '#e0c060', legs: 'slim', legsColor: '#1a1a1a', shoes: '#1a1210', hat: 'tricorn', hatColor: '#1a1a1a', extras: ['sash'], extraColor: '#e0c060' },
     ],
   },
   {
@@ -88,7 +94,8 @@ export const SURVIVORS = [
       { id: 'theo_callin', name: 'Call-In Hour', rarity: 'uncommon', price: 3000, hair: 'long', hairColor: '#3a2a1a', top: 'shirt', topColor: '#6a3a6a', accent: '#d8c8a0', legs: 'pants', legsColor: '#3a3a3a', shoes: '#1a1a1a', hat: null, extras: ['headphones', 'beard'] },
       { id: 'theo_static', name: 'Dead Air', rarity: 'rare', price: 6000, hair: 'long', hairColor: '#2a1a10', top: 'hoodie', topColor: '#2a2a2a', accent: '#d8d8d8', legs: 'pants', legsColor: '#1a1a1a', shoes: '#2a2a2a', hat: 'beanie', hatColor: '#5a5a5a', extras: ['beard'] },
       { id: 'theo_broadcast', name: 'Last Broadcast', rarity: 'legendary', price: 12000, hair: 'long', hairColor: '#5a4a3a', top: 'coat', topColor: '#1a1a2a', accent: '#c0a050', legs: 'pants', legsColor: '#1a1a1a', shoes: '#0a0a0a', hat: null, extras: ['scarf', 'glasses', 'beard'], extraColor: '#c0a050' },
-      { id: 'theo_winter', name: 'Ice Road Broadcast', rarity: 'epic', price: 9000, isNew: true, hair: 'long', hairColor: '#4a3a2a', top: 'coat', topColor: '#3a2a20', accent: '#c0a050', legs: 'pants', legsColor: '#2a2a2a', shoes: '#1a1210', hat: 'beanie', hatColor: '#6a5a4a', extras: ['headphones', 'beard', 'scarf'], extraColor: '#3a4a6a' },
+      { id: 'theo_winter', name: 'Ice Road Broadcast', rarity: 'epic', price: 9000, collection: 'Long Winter', hair: 'long', hairColor: '#4a3a2a', top: 'coat', topColor: '#3a2a20', accent: '#c0a050', legs: 'pants', legsColor: '#2a2a2a', shoes: '#1a1210', hat: 'beanie', hatColor: '#6a5a4a', extras: ['headphones', 'beard', 'scarf'], extraColor: '#3a4a6a' },
+      { id: 'theo_pirate', name: 'Captain\'s Log', rarity: 'legendary', price: 12000, isNew: true, collection: "Pirate's Feast", hair: 'long', hairColor: '#2a1a10', top: 'coat', topColor: '#1a1a2a', accent: '#e0c060', legs: 'pants', legsColor: '#1a1a1a', shoes: '#0a0a0a', hat: 'tricorn', hatColor: '#0a0a0a', extras: ['beard', 'eyepatch', 'sash'], extraColor: '#7a1a1a' },
     ],
   },
 ];
@@ -105,14 +112,15 @@ export const KILLERS = [
     bio: 'In the winter of 1912 Evelyn Marsh walked onto Hollow Lake in her wedding dress to meet a groom who never came. The ice gave way at midnight. She has been looking for him ever since, and everyone she finds is the wrong face.',
     power: {
       id: 'veil_walk', name: 'Veil Walk', glyph: 'ghost',
-      desc: 'Hold the Power button to slip behind the veil. You move 65% faster and survivors cannot see you, but you cannot see them either: only their footstep ripples, scratch marks and blood. Release or run out of veil to return. Cannot attack while in the veil.',
+      desc: 'Hold the Power button to slip behind the veil. You move 75% faster and survivors cannot see you, but you cannot see them either: only their footstep ripples, scratch marks and blood. Release or run out of veil to return. Cannot attack while in the veil.',
     },
     outfits: [
       { id: 'specter_default', name: 'Drowned Bride', rarity: 'common', price: 0, dress: '#cfcabd', dress2: '#7a7466', hair: '#0a0a0b', skin: '#b9c2bf', eyes: '#a8d8ff', veil: true, metal: '#6a4a32' },
       { id: 'specter_mourning', name: 'Mourning Black', rarity: 'rare', price: 6000, dress: '#17151a', dress2: '#3a2f3a', hair: '#0a0a0b', skin: '#c8cccc', eyes: '#ff4a4a', veil: true, metal: '#3a3a3a' },
       { id: 'specter_lakerot', name: 'Lake Rot', rarity: 'epic', price: 9000, dress: '#4a5a3a', dress2: '#2a3320', hair: '#1a2010', skin: '#8a9a80', eyes: '#d8ff6a', veil: false, metal: '#4a3a1a' },
       { id: 'specter_frost', name: 'Frostbound', rarity: 'legendary', price: 14000, dress: '#bcd8ea', dress2: '#6a8aa8', hair: '#e8f4ff', skin: '#d0e4f0', eyes: '#4ae0ff', veil: true, metal: '#9ab8d0' },
-      { id: 'specter_ice', name: 'Thin Ice', rarity: 'epic', price: 9000, isNew: true, dress: '#9ab0c0', dress2: '#4a6070', hair: '#1a2430', skin: '#a8c0cc', eyes: '#d8f4ff', veil: true, metal: '#6a7a88' },
+      { id: 'specter_ice', name: 'Thin Ice', rarity: 'epic', price: 9000, collection: 'Long Winter', dress: '#9ab0c0', dress2: '#4a6070', hair: '#1a2430', skin: '#a8c0cc', eyes: '#d8f4ff', veil: true, metal: '#6a7a88' },
+      { id: 'specter_pirate', name: 'Sea Widow', rarity: 'legendary', price: 12000, isNew: true, collection: "Pirate's Feast", dress: '#2a4a4a', dress2: '#1a2a2a', hair: '#0a1010', skin: '#9ab0a8', eyes: '#6affd8', veil: true, metal: '#b8984a', hat: 'tricorn', hatColor: '#141414' },
     ],
   },
   {
@@ -122,7 +130,7 @@ export const KILLERS = [
     bio: 'A program nobody wrote, found running on a dead arcade board in the basement of a closed motel. It learned to walk by watching the security cameras. It learned to hunt by watching the people who tried to switch it off.',
     power: {
       id: 'signal_jump', name: 'Signal Jump', glyph: 'tv',
-      desc: 'Corrupted CRT screens are scattered around the map. Hold the Power button to pick the screen you are facing, release to channel and jump to it. Survivors within 12 m of your arrival become Glitched: their skill checks jump around and their aura flickers for you. Survivors can unplug screens to switch them off for a while.',
+      desc: 'Corrupted CRT screens are scattered around the map. Hold the Power button to pick the screen you are facing, release to channel and jump to it. Survivors within 14 m of your arrival become Glitched: their skill checks jump around and their aura flickers for you. Survivors can unplug screens to switch them off for a while.',
     },
     outfits: [
       { id: 'exe_default', name: 'Static', rarity: 'common', price: 0, body: '#08090b', glow: '#2ff3ff', glow2: '#ff2f6a', face: '#ff2f3a' },
@@ -130,24 +138,26 @@ export const KILLERS = [
       { id: 'exe_gold', name: 'Corrupted Gold', rarity: 'epic', price: 9000, body: '#2a2008', glow: '#ffd84a', glow2: '#fff4c0', face: '#ffffff' },
       { id: 'exe_vapor', name: 'Vaporwave', rarity: 'epic', price: 9000, body: '#1a0a2a', glow: '#ff6ad8', glow2: '#6ad8ff', face: '#ff9af0' },
       { id: 'exe_bsod', name: 'Blue Screen', rarity: 'legendary', price: 14000, body: '#0a1a6a', glow: '#ffffff', glow2: '#6aa0ff', face: '#ffffff' },
-      { id: 'exe_frost', name: 'Frozen Frame', rarity: 'epic', price: 9000, isNew: true, body: '#0a1020', glow: '#bfefff', glow2: '#5ab0ff', face: '#e8fbff' },
+      { id: 'exe_frost', name: 'Frozen Frame', rarity: 'epic', price: 9000, collection: 'Long Winter', body: '#0a1020', glow: '#bfefff', glow2: '#5ab0ff', face: '#e8fbff' },
+      { id: 'exe_pirate', name: 'Ghost Ship.ROM', rarity: 'legendary', price: 12000, isNew: true, collection: "Pirate's Feast", body: '#14100a', glow: '#ffd84a', glow2: '#2fd8a0', face: '#ffd84a', hat: 'tricorn' },
     ],
   },
   {
-    id: 'woodsman', name: 'The Woodsman', realName: 'Abel Crane', height: 2.06, isNew: true,
+    id: 'woodsman', name: 'The Woodsman', realName: 'Abel Crane', height: 2.06,
     speed: 4.6, terror: 32, weapon: 'Felling Axe',
     signature: ['timber', 'splinter'],
     bio: 'Abel Crane felled timber on Crane Ridge for thirty winters. When the mill closed and the company men came to take his land, he walked into the pines with his felling axe and a mask carved from the first birch he ever cut. The ridge has been quiet since. The trees have not.',
     power: {
       id: 'heavy_chop', name: 'Heavy Chop', glyph: 'axe',
-      desc: 'Hold the Power button to raise the axe (you move 15% slower while it is up). Release after at least 0.6 seconds to bring it down in a long lunging chop that covers far more ground than a normal attack and smashes any dropped pallet in its path. The longer the charge, up to 1.5 seconds, the farther the chop. A miss leaves you prying the axe out of the ground for 2.5 seconds.',
+      desc: 'Hold the Power button to raise the axe (you move 15% slower while it is up). Release it to bring the axe down in a long lunging chop that smashes any dropped pallet in its path; the longer the charge (up to 1.3 seconds), the farther the chop. Or press Attack while the axe is raised to throw it: it flies fast with a slight drop and injures the first survivor it hits. Until you pick the axe back up (or 15 seconds pass and you pull a spare), you cannot chop or throw, and your bare-handed attacks reach a little less.',
     },
     outfits: [
       { id: 'woodsman_default', name: 'Ridge Logger', rarity: 'common', price: 0, plaid: '#8a1e1a', plaid2: '#151515', pants: '#3a3a2a', mask: '#d8d0b8', cap: '#3a2a1a', metal: '#8a8a88', haft: '#5a3a20' },
       { id: 'woodsman_widow', name: 'Widow Maker', rarity: 'rare', price: 6000, plaid: '#2a4a2a', plaid2: '#101010', pants: '#2a2a2a', mask: '#c8b890', cap: '#1a1a1a', metal: '#6a6a66', haft: '#3a2614' },
       { id: 'woodsman_burnt', name: 'Burnt Stand', rarity: 'epic', price: 9000, plaid: '#3a2a20', plaid2: '#0a0a0a', pants: '#1a1410', mask: '#2a2420', cap: '#0a0a0a', metal: '#4a3a30', haft: '#1a120c' },
       { id: 'woodsman_frost', name: 'Frost Line', rarity: 'legendary', price: 14000, plaid: '#3a5a7a', plaid2: '#d8e0e8', pants: '#2a3040', mask: '#e8eef4', cap: '#d8e0e8', metal: '#c0d8e8', haft: '#6a7a8a' },
-      { id: 'woodsman_winter', name: 'Long Winter', rarity: 'epic', price: 9000, isNew: true, plaid: '#4a4a4a', plaid2: '#d8d8d8', pants: '#2a2620', mask: '#e8e0d0', cap: '#7a1a14', metal: '#9aa0a8', haft: '#4a3020' },
+      { id: 'woodsman_winter', name: 'Long Winter', rarity: 'epic', price: 9000, collection: 'Long Winter', plaid: '#4a4a4a', plaid2: '#d8d8d8', pants: '#2a2620', mask: '#e8e0d0', cap: '#7a1a14', metal: '#9aa0a8', haft: '#4a3020' },
+      { id: 'woodsman_pirate', name: 'Mast Splitter', rarity: 'legendary', price: 12000, isNew: true, collection: "Pirate's Feast", plaid: '#e8e0d0', plaid2: '#1a2a5a', pants: '#2a2016', mask: '#d8c8a0', cap: '#1a1a1a', metal: '#b89a4a', haft: '#4a2a14', hat: 'tricorn' },
     ],
   },
 ];
@@ -157,7 +167,7 @@ export const KILLERS = [
 /* ------------------------------------------------------------------ */
 
 export const SURVIVOR_PERKS = [
-  { id: 'adrenal_surge', name: 'Adrenal Surge', icon: 'bolt', price: 3000, desc: 'When you are hit and stay on your feet, run 50% faster for 3 seconds. Cooldown 60 seconds.' },
+  { id: 'adrenal_surge', name: 'Adrenal Surge', icon: 'bolt', price: 3000, desc: 'When you are hit and stay on your feet, run 50% faster for 3 seconds. Cooldown 45 seconds.' },
   { id: 'steady_hands', name: 'Steady Hands', icon: 'target', price: 3000, desc: 'Skill check success zones are 50% larger. Great skill checks give 2% extra progress.' },
   { id: 'sixth_sense', name: 'Sixth Sense', icon: 'eye', price: 4000, desc: 'While the killer is within 24 m and out of your sight, you see their aura.' },
   { id: 'field_medic', name: 'Field Medic', icon: 'cross', price: 3000, desc: 'Heal other survivors 50% faster. You can heal yourself without a med kit at half speed.' },
@@ -167,8 +177,8 @@ export const SURVIVOR_PERKS = [
   { id: 'lockbreaker', name: 'Lockbreaker', icon: 'key', price: 3500, desc: 'Open exit gates 50% faster. Once the gates are powered, you see both of them through walls.' },
   { id: 'shadow_walk', name: 'Shadow Walk', icon: 'moon', price: 4000, desc: 'Crouch-walk 30% faster. You leave 50% fewer scratch marks and they fade twice as fast.' },
   { id: 'kinship', name: 'Kinship', icon: 'link', price: 3500, desc: 'See every other survivor\'s aura at all times. When anyone is hooked, see the killer for 4 seconds.' },
-  { id: 'borrowed_breath', name: 'Borrowed Breath', icon: 'shield', price: 5000, desc: 'Unhook survivors 50% faster. Anyone you unhook can take one extra hit without going down for 12 seconds.' },
-  { id: 'escape_artist', name: 'Escape Artist', icon: 'hook', price: 4500, desc: 'On your first hook, each attempt to free yourself has a 25% chance (up from 4%) and takes half as long.' },
+  { id: 'borrowed_breath', name: 'Borrowed Breath', icon: 'shield', price: 5000, desc: 'Unhook survivors 50% faster. Anyone you unhook can take one extra hit without going down for 15 seconds.' },
+  { id: 'escape_artist', name: 'Escape Artist', icon: 'hook', price: 4500, desc: 'On your first hook, each attempt to free yourself has a 35% chance (up from 4%) and takes half as long.' },
   { id: 'featherweight', name: 'Featherweight', icon: 'feather', price: 3000, desc: 'Vault windows and pallets 30% faster.' },
   { id: 'scavenger', name: 'Scavenger', icon: 'box', price: 3000, desc: 'Search chests 60% faster. Items you carry start with 25% more charge.' },
 ];
@@ -197,7 +207,7 @@ export const KILLER_PERKS = [
 /* ------------------------------------------------------------------ */
 
 export const ITEMS = [
-  { id: 'flashlight', name: 'Flashlight', icon: 'flashlight', rarity: 'uncommon', price: 1500, charges: 14, desc: 'Hold the Item button to shine it. Hold the beam on the killer\'s face to blind them. A blinded killer drops whoever they are carrying.' },
+  { id: 'flashlight', name: 'Flashlight', icon: 'flashlight', rarity: 'uncommon', price: 1500, charges: 18, desc: 'Hold the Item button to shine it. Hold the beam on the killer\'s face to blind them. A blinded killer drops whoever they are carrying.' },
   { id: 'medkit', name: 'Med Kit', icon: 'medkit', rarity: 'common', price: 1000, charges: 32, desc: 'Hold the Item button to heal yourself.' },
   { id: 'toolbox', name: 'Toolbox', icon: 'toolbox', rarity: 'common', price: 1000, charges: 32, desc: 'Repair generators 50% faster while it has charge. Used automatically while repairing.' },
   { id: 'map', name: 'Survey Map', icon: 'map', rarity: 'rare', price: 2000, charges: 40, desc: 'Hold the Item button to see generator auras through walls.' },
@@ -242,8 +252,10 @@ export const KILLER_ADDONS = [
   { id: 'infinite_loop', killer: 'exe', name: 'Infinite Loop', rarity: 'epic', price: 2800, desc: 'Signal Jump cooldown is 35% shorter.' },
   // The Woodsman (PTB)
   { id: 'whetstone', killer: 'woodsman', name: 'Whetstone', rarity: 'common', price: 600, desc: 'Heavy Chop reaches full charge 0.3 seconds sooner.' },
+  { id: 'leather_strap', killer: 'woodsman', name: 'Leather Strap', rarity: 'uncommon', price: 900, desc: 'A thrown axe comes back to your hand 5 seconds sooner.' },
+  { id: 'balanced_haft', killer: 'woodsman', name: 'Balanced Haft', rarity: 'rare', price: 1600, desc: 'Thrown axes fly 20% faster.' },
   { id: 'pine_tar', killer: 'woodsman', name: 'Pine Tar', rarity: 'common', price: 600, desc: 'Pry the axe free 0.8 seconds faster after a missed chop.' },
-  { id: 'iron_wedge', killer: 'woodsman', name: 'Iron Wedge', rarity: 'uncommon', price: 900, desc: 'Heavy Chop travels 15% farther.' },
+  { id: 'iron_wedge', killer: 'woodsman', name: 'Iron Wedge', rarity: 'uncommon', price: 900, desc: 'Heavy Chop travels 15% farther and thrown axes fly 15% faster.' },
   { id: 'birch_mask', killer: 'woodsman', name: 'Birch Mask Shard', rarity: 'uncommon', price: 900, desc: 'Move only 7% slower while the axe is raised.' },
   { id: 'saw_tooth', killer: 'woodsman', name: 'Rusted Saw Tooth', rarity: 'rare', price: 1600, desc: 'Survivors hit by a Heavy Chop are slowed by 20% for 4 seconds after their burst of speed.' },
   { id: 'heartwood', killer: 'woodsman', name: 'Heartwood', rarity: 'legendary', price: 4000, desc: 'A fully charged Heavy Chop puts a healthy survivor straight down.' },
@@ -260,6 +272,7 @@ export const OFFERINGS = [
   { id: 'off_stivo', side: 'any', name: 'Patient Wristband', icon: 'candle', rarity: 'uncommon', price: 800, map: 'stivo', desc: 'Sends the match to St. Ivo\'s Sanatorium.' },
   { id: 'off_gravelpit', side: 'any', name: 'Bent Hubcap', icon: 'candle', rarity: 'uncommon', price: 800, map: 'gravelpit', desc: 'Sends the match to Gravelpit Salvage.' },
   { id: 'off_craneridge', side: 'any', name: 'Frostbitten Tally Stick', icon: 'candle', rarity: 'uncommon', price: 800, map: 'craneridge', desc: 'Sends the match to Crane Ridge Sawmill.' },
+  { id: 'off_feast', side: 'any', name: 'Ship\'s Feast', icon: 'candle', rarity: 'rare', price: 1500, marrowAll: 0.75, desc: 'A pirate\'s spread laid out for the dark. +75% Marrow in every category.' },
   { id: 'off_lantern', side: 'any', name: 'Lantern Oil', icon: 'lantern', rarity: 'common', price: 500, fog: 0.6, desc: 'The fog is 40% thinner.' },
   { id: 'off_bog', side: 'any', name: 'Bog Incense', icon: 'mist', rarity: 'common', price: 500, fog: 1.6, desc: 'The fog is 60% thicker.' },
   { id: 'off_storm', side: 'any', name: 'Storm in a Bottle', icon: 'mist', rarity: 'rare', price: 1200, weather: 'storm', desc: 'Rain and lightning for the whole match.' },
@@ -304,7 +317,7 @@ export const MAPS = [
     id: 'craneridge', name: 'Crane Ridge Sawmill', region: 'Crane Ridge, winter of 1979',
     desc: 'The Crane family mill, abandoned the winter the company men came for the land. Snow drifts against stacked timber, the big saw is rusted mid-cut, and somewhere up the ridge an axe keeps chopping.',
     kit: 'mill', weather: 'snow', fogColor: 0x262c36, fogDensity: 0.03, sky: [0x05070c, 0x262c36],
-    moonColor: 0xc8d8f0, moonIntensity: 1.25, hemi: [0x6a7a98, 0x3a3c46, 0.62], groundTex: 'snow', isNew: true,
+    moonColor: 0xc8d8f0, moonIntensity: 1.25, hemi: [0x6a7a98, 0x3a3c46, 0.62], groundTex: 'snow',
   },
 ];
 
@@ -340,6 +353,8 @@ export const ITEM_BY_ID = index(ITEMS);
 export const ADDON_BY_ID = { ...index(ITEM_ADDONS), ...index(KILLER_ADDONS) };
 export const OFFERING_BY_ID = index(OFFERINGS);
 export const MAP_BY_ID = index(MAPS);
+
+export const OUTFIT_BY_ID = Object.fromEntries([...SURVIVORS, ...KILLERS].flatMap((c) => c.outfits.map((o) => [o.id, { ...o, charId: c.id, charName: c.name }])));
 
 export function outfitOf(charDef, outfitId) {
   return charDef.outfits.find((o) => o.id === outfitId) || charDef.outfits[0];
