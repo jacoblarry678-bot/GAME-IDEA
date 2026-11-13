@@ -49,6 +49,31 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: King Mamba, an inverted roller coaster (browser only):**
+  - **Where:** north of RV Van Run, through a stone gate in RV Van Run's
+    north wall, on a cleared, levelled jungle site.
+  - **The line:** it starts by walking in through the open jaws of a giant
+    stone king mamba, with gold eyes and fangs. Its body coils away
+    behind it.
+  - It then winds through torch-lit ruins to the Temple of the King,
+    where you board.
+  - **The trains:** eight floorless cars of four, with over-the-shoulder
+    harnesses, hanging beneath the track with your feet dangling.
+    - The track is built like any coaster and then turned over: its spine
+      runs on top, and the trains hang below.
+  - **The ride** (1,047 m, about 1 minute 45 seconds):
+    - a 47-stud lift and a twisting first drop to the west;
+    - a zero-g roll;
+    - a corkscrew down the far side;
+    - a roll over the misty temple pool;
+    - a low, fast run through the ruins, past a giant snake statue coiled
+      round a pillar.
+  - **The inversions:** all three turn around the riders' heartline below
+    the rails.
+  - **The supports:** 98 in all. They're C-shaped (a column beside the
+    train and an arm over the top), or rise straight up where the track is
+    upside down. Each one, and every ruin, statue, lamp and tree, is placed
+    only where the hanging trains never pass.
 - **New ride: Neon Getaway: The Port Benton Heist, an indoor spinning
   coaster (browser only):**
   - **Where:** a big pink-and-teal show building south of RV Van Run,

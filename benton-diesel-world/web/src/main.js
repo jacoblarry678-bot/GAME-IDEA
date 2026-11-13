@@ -39,6 +39,7 @@ import { buildBoomCoaster, BoomCoasterSite } from './boomcoaster.js';
 import { buildConstructionRunaway, ConstructionRunawaySite } from './constructionrunaway.js';
 import { buildRVVanRun, RVVanRunSite } from './rvvanrun.js';
 import { buildNeonGetaway, NeonGetawaySite } from './neongetaway.js';
+import { buildKingMamba, KingMambaSite } from './kingmamba.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -146,6 +147,8 @@ async function main() {
   const rvLayout = buildRVVanRun(data);
   // Neon Getaway: the indoor spinning coaster, south of RV Van Run
   const ngLayout = buildNeonGetaway(data);
+  // King Mamba: the inverted coaster, north of RV Van Run
+  const kmLayout = buildKingMamba(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -273,6 +276,7 @@ async function main() {
   game.houses = houses;
   const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
   const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
+  const kmSite = new KingMambaSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, kmLayout);
   const ngSite = new NeonGetawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ngLayout);
   const rvSite = new RVVanRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rvLayout);
   const bbSite = new BoomCoasterSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bbLayout);
@@ -489,6 +493,7 @@ async function main() {
     crSite.update(dt, player.pos, started);
     rvSite.update(dt, player.pos, started);
     ngSite.update(dt, player.pos, started);
+    kmSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
