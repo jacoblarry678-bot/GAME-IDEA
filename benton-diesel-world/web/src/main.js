@@ -38,6 +38,7 @@ import { buildFuelThrottle, FuelThrottleSite } from './fuelthrottle.js';
 import { buildBoomCoaster, BoomCoasterSite } from './boomcoaster.js';
 import { buildConstructionRunaway, ConstructionRunawaySite } from './constructionrunaway.js';
 import { buildRVVanRun, RVVanRunSite } from './rvvanrun.js';
+import { buildNeonGetaway, NeonGetawaySite } from './neongetaway.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -143,6 +144,8 @@ async function main() {
   const crLayout = buildConstructionRunaway(data);
   // RV Van Run: an indoor motion-simulator road trip, past Construction Runaway
   const rvLayout = buildRVVanRun(data);
+  // Neon Getaway: the indoor spinning coaster, south of RV Van Run
+  const ngLayout = buildNeonGetaway(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -270,6 +273,7 @@ async function main() {
   game.houses = houses;
   const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
   const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
+  const ngSite = new NeonGetawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ngLayout);
   const rvSite = new RVVanRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rvLayout);
   const bbSite = new BoomCoasterSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bbLayout);
   const ftSite = new FuelThrottleSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ftLayout);
@@ -458,7 +462,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || (msLayout && inBox(msLayout.indoor)));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || (msLayout && inBox(msLayout.indoor)));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -484,6 +488,7 @@ async function main() {
     bbSite.update(dt, player.pos, started);
     crSite.update(dt, player.pos, started);
     rvSite.update(dt, player.pos, started);
+    ngSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);

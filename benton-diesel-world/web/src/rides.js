@@ -118,6 +118,51 @@ function armPose(A, base, cab, extras, k) {
 }
 
 // Returns pose(t) -> { cars: Matrix4[], extras: {name: Matrix4} }
+// Spin angles for a spinning coaster's cars, integrated once over the ride
+// (so any moment can be looked up): the lateral push in each turn spins a
+// car up, friction slows it, and outside the free section it eases back to
+// facing forward.
+function spinTable(r, sampler) {
+  const DT = 1 / 30, T = r.duration, N = Math.ceil(T / DT) + 2;
+  const { from, to, gain = 0.06, drag = 0.35 } = r.spin;
+  const L = sampler.length;
+  const fwd = new THREE.Vector3(), m4 = new THREE.Matrix4();
+  const heading = (s) => { sampler.matrixAt(s, m4); fwd.setFromMatrixColumn(m4, 2); return Math.atan2(-fwd.x, -fwd.z); };
+  const tables = [];
+  for (let i = 0; i < r.carCount; i++) {
+    const a = new Float32Array(N);
+    const g = gain * (i % 2 ? -1 : 1) * (0.75 + 0.18 * i);
+    let w = 0, ang = 0, free = false;
+    for (let k = 1; k < N; k++) {
+      const t = k * DT;
+      const s = ((sampler.distanceAt(t) - i * r.carSpacing) % L + L) % L;
+      const v = (sampler.distanceAt(t + DT) - sampler.distanceAt(t)) / DT;
+      if (s > from && s < to) {
+        if (!free) { free = true; w += 0.6 * Math.sign(g); }
+        let dh = heading(s + 0.6) - heading(s - 0.6);
+        while (dh > Math.PI) dh -= Math.PI * 2;
+        while (dh < -Math.PI) dh += Math.PI * 2;
+        w += (g * v * v * (dh / 1.2) - drag * w) * DT;
+        w = Math.max(-4, Math.min(4, w));
+        ang += w * DT;
+      } else {
+        free = false;
+        w = 0;
+        const target = Math.round(ang / (Math.PI * 2)) * Math.PI * 2;
+        ang += (target - ang) * Math.min(1, DT * 2.5);
+      }
+      a[k] = ang;
+    }
+    tables.push(a);
+  }
+  return (i, t) => {
+    if (t <= 0 || t >= T) return 0;
+    const f = t / DT, k = Math.floor(f), u = f - k;
+    const a = tables[i];
+    return a[k] + ((a[k + 1] ?? a[k]) - a[k]) * u;
+  };
+}
+
 export function makeMotion(r, cfg) {
   const origin = cfMatrix(r.origin);
   const n = r.carCount;
@@ -241,13 +286,20 @@ export function makeMotion(r, cfg) {
         },
       };
     }
+    // a spinning coaster: each car turns freely on its chassis, pushed round
+    // by the turns (each car a little differently) and slowing on its own;
+    // locked facing forward in the station and up the lift
+    const spin = r.spin ? spinTable(r, sampler) : null;
     return {
       duration: r.duration,
       sampler,
       pose(t) {
         const s = sampler.distanceAt(t);
         const cars = [];
-        for (let i = 0; i < n; i++) cars.push(sampler.matrixAt(s - i * r.carSpacing));
+        for (let i = 0; i < n; i++) {
+          const m = sampler.matrixAt(s - i * r.carSpacing);
+          cars.push(spin ? m.multiply(RY(spin(i, t))) : m);
+        }
         return { cars, extras: {} };
       },
     };

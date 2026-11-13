@@ -49,6 +49,38 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Neon Getaway: The Port Benton Heist, an indoor spinning
+  coaster (browser only):**
+  - **Where:** a big pink-and-teal show building south of RV Van Run,
+    through a neon gate in RV Van Run's south wall.
+  - **Outside:** palms, a pink getaway car with a police cruiser on its
+    tail, neon lamps, and a NEON GETAWAY sign across the front. The
+    entrance is the columned front of the Port Benton Savings & Loan.
+  - **The queue:** it winds through the bank's marble lobby past six
+    teller windows, WANTED posters and neon. You board in the Getaway
+    Garage.
+  - **The cars:** round getaway tubs, four riders back to back.
+    - Each car turns freely on its chassis from the top of the lift to the
+      brakes. The turns spin it up and friction slows it.
+    - Each of the four cars spins its own way: about 10 turns a ride, up
+      to about 30 rpm.
+    - They lock facing forward again for the station.
+  - **The ride** (a 1,238 m track, about 2.5 minutes):
+    - past the open vault (gold stacked high, a red laser grid);
+    - up the parking garage lift through rings of red and blue police
+      lights;
+    - round four rows of rooftop hairpins at the top, under a police
+      helicopter, in front of the city skyline and the CORAL MOTEL,
+      SUNSET PALMS and PORT BENTON signs;
+    - a plunge into the swamp (mangroves, an airboat, gators, mist);
+    - along Sunset Beach (sand, palms, a lifeguard tower);
+    - through the police roadblock (with an explosion);
+    - past the marina's yacht with money bags on deck, and back to the
+      garage.
+  - **Lighting:** LED strips line the track, and show lights follow it
+    the whole way.
+  - Each piece of scenery is placed only where the spinning cars can't
+    touch it.
 - **Benton Holidays has closed, there are New Year's fireworks, and Mardi
   Gras is back with a new show (browser only):**
   - **Benton Holidays has closed for the year.** The Christmas trails, the
