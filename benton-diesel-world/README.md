@@ -49,6 +49,16 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Ravage now has the busiest line in the park (browser only):** its
+  1.7 km queue is built for crowds, and now it gets them.
+  - Its wait aims higher than any other ride's, and through the afternoon
+    the line fills the whole maze, from the pod dock back almost to the
+    checkpoint: about 130 minutes.
+  - Each spot in the line is shown as a group of eight guests, so the
+    switchback fields, lab corridors and briefing room are packed.
+  - The greeters warn you: get there early.
+  - (The park can now draw more waiting guests at once, so the other lines
+    don't lose any to Ravage's.)
 - **New ride: Ravage, a tilt coaster, half outdoors and half in the dark
   (browser only):**
   - **Where:** the field past the back lot. Walk into the backstage lot,

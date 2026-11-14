@@ -55,7 +55,7 @@ class Batch {
 }
 
 export class CrowdRenderer {
-  constructor(scene, { walkCapacity = 160, idleCapacity = 700, staffCapacity = 40, shadows = true } = {}) {
+  constructor(scene, { walkCapacity = 160, idleCapacity = 1200, staffCapacity = 40, shadows = true } = {}) {
     this.batches = { walk: [[], []], idle: [[], []], staff: [[], []] };
     for (const lod of [0, 1]) {
       for (let f = 0; f < WALK_FRAMES; f++) {

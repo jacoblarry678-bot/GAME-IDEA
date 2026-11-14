@@ -761,6 +761,9 @@ export function buildRavage(data) {
     origin: [...origin, 1, 0, 0, 0, 1, 0, 0, 0, 1], carCount: CARS, carSpacing: SPACING, cars, seats,
     capacity: CARS * 4, queue: qpath, trackStyle: { style: 'steel', color: TRACK_COLOR, skip: [[s0, sH]] }, extras, extrasNames, crew,
     tilt, props, noExtended: true,
+    // the park's busiest line: each spot in it is shown as a crowd of
+    // eight, so the long maze really fills up
+    party: 8,
   };
   data.rides.push(ride);
   const at = (x, z) => {
@@ -780,10 +783,10 @@ export function buildRavage(data) {
   rides.splice(insertAt, 0, {
     id: RIDE_ID, name: 'Ravage', land: 'Backwoods', category: 'Thrill', thrill: 5, kind: 'coaster', carStyle: 'coaster',
     description: "A tilt coaster, half out in the open and half in the dark. Benton BioDynamics keeps Specimen R - the Ravager - in Sector R, and tonight its containment is failing. Wind through a very long line past the wrecked transport truck and the lab corridors, get the containment briefing, then ride a transport pod up the lift onto the tilting track ... which stops, tips forward until you're hanging face down, and drops. Then a zero-g roll, an airtime hill, and back inside, where the Ravager is waiting.",
-    baseWait: 75, origin, entrance: [-266, 0, -480], exit: [-268, 0, -470], yaw: 0, layout: RIDE_ID,
+    baseWait: 160, origin, entrance: [-266, 0, -480], exit: [-268, 0, -470], yaw: 0, layout: RIDE_ID,
     cars: CARS, carSpacing: SPACING, colors: [TRACK_COLOR, 0x2a2c30, HAZ], cues,
   });
-  data.staff.lines.greeter = [...(data.staff.lines.greeter || []), 'Ravage is open out past the back lot - the line starts at the checkpoint!', "Don't look down on the tilt!"];
+  data.staff.lines.greeter = [...(data.staff.lines.greeter || []), 'Ravage is open out past the back lot - the line starts at the checkpoint!', 'Ravage has the longest line in the park - get there early!', "Don't look down on the tilt!"];
   return { ride, gate: { x: -250, z: gz }, indoor: { x0: B.x0, x1: B.x1, z0: B.z0, z1: B.z1 }, supports, tilt };
 }
 
