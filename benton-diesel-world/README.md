@@ -49,6 +49,43 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Siren's Wake, an indoor inverted water coaster (browser
+  only):**
+  - **Where:** an old harbor warehouse south of Neon Getaway, through a
+    rope-wrapped gate in Neon Getaway's south wall.
+  - **The harbor front:**
+    - The bow of the wrecked Benton Belle bursts out through the wall,
+      with a carved siren figurehead and a torn sail.
+    - A red-and-white lighthouse stands on the corner, and its beam sweeps
+      the park after dark.
+    - Pilings, crates, barrels, lanterns and harbor fog line the front.
+  - **The line** winds through the harbor master's office: SIREN SIGHTED
+    and STORM WARNING notices, a ship's wheel, glowing portholes and
+    rope railings.
+  - **Boarding:** you board the Belle's hanging gondolas at Dock 7, under
+    masts and sails. They're eight floorless cars of four with
+    over-the-shoulder harnesses, and the front car carries a carved
+    figurehead.
+  - **The ride** (812 m, about 1½ minutes):
+    - up the lift through a storm, with clouds, lightning and rain pouring
+      down on the train;
+    - a plunge into the sirens' lagoon, where riders' feet go into the
+      water with a wall of spray, past a carved stone siren with her harp
+      and glowing crystals;
+    - a zero-g roll over a whirlpool of rings of light on the water;
+    - through the broken hull of the Belle, past cannons and treasure, into
+      a second splashdown;
+    - up through a kelp forest of glowing jellyfish, under the lift's
+      crest;
+    - past a sea serpent rising out of the pool, straight through a
+      waterfall into a third splashdown, and home to the dock.
+  - **The water:** the lagoon and the waterfall pool are real water
+    surfaces.
+  - **How it's built:** like King Mamba, the track is turned over so the
+    trains hang beneath it. Indoors it hangs from the roof trusses, with
+    100 supports in all.
+  - Everything but the waterfall is placed where the trains never pass;
+    the waterfall is meant to be ridden through.
 - **New ride: King Mamba, an inverted roller coaster (browser only):**
   - **Where:** north of RV Van Run, through a stone gate in RV Van Run's
     north wall, on a cleared, levelled jungle site.

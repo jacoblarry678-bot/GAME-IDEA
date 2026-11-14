@@ -335,6 +335,14 @@ export class Effects {
       }
     } else if (kind === 'explosion') {
       this.explosion(new THREE.Vector3(at.x, at.y + 6, at.z), 1);
+    } else if (kind === 'splash') {
+      // the train hits the water: a wall of spray thrown up and out
+      for (let i = 0; i < 520; i++) {
+        tmpColor.setRGB(0.75 + Math.random() * 0.2, 0.88, 1);
+        const a = Math.random() * Math.PI * 2, out = rand(3, 9);
+        this.soft.spawn(at.x + rand(-4, 4), at.y + rand(0, 0.6), at.z + rand(-4, 4), Math.cos(a) * out, rand(7, 17), Math.sin(a) * out, tmpColor, rand(0.9, 1.7), rand(0.8, 1.4), 30, 0, 1.2);
+      }
+      this.emit('mist', new THREE.Vector3(at.x, at.y + 1.5, at.z), { duration: 2 });
     } else if (kind === 'mardi') {
       // a confetti cannon in purple, green and gold
       this.confetti(new THREE.Vector3(at.x, at.y, at.z), new THREE.Vector3(10, 3, 8), 420, [0x8a3ac8, 0x2aa04a, 0xf0c030, 0xffe070]);
