@@ -49,6 +49,45 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Ravage, a tilt coaster, half outdoors and half in the dark
+  (browser only):**
+  - **Where:** the field past the back lot. Walk into the backstage lot,
+    then through the red-and-black SECTOR R gate in its west wall (a sign
+    on the lot points the way).
+  - **The story:** Benton BioDynamics keeps Specimen R, the Ravager (the
+    park's own creature: armored, six-limbed, with a split jaw and glowing
+    spines), in its Sector R containment facility. Tonight the containment
+    is failing, and the way out is the facility's transport pods.
+  - **Outside:**
+    - A concrete facility with hazard stripes, red beacons on the roof, and
+      the Ravager's head and claws bursting out of its east wall.
+    - A really long line, about 1.7 km. It starts at a security checkpoint
+      (with the live wait time and a guard booth), then winds through two
+      big fields of switchbacks. You pass quarantine tents, a wrecked
+      SPECIMEN TRANSPORT truck torn open from the inside, leaking green
+      barrels, floodlight towers with sirens, camouflage shades and
+      warning signs.
+  - **Inside:**
+    - Lab corridors with monitors (HEART RATE 214, CONTAINMENT 31%) and
+      windows into the specimen hold.
+    - A decontamination room with steam and amber lights.
+    - **The pre-show:** the containment briefing room. A young Ravager
+      floats in a green tank, red beacons turn, and the briefing screen
+      tells you to evacuate by transport pod and not look down.
+    - Then the pod dock.
+  - **The ride:** armored pods with red eyes and red underglow.
+    - You leave through the specimen hold (green tanks, one smashed open,
+      claw marks, a sparking power panel), out of the building and up the
+      lift.
+    - **The tilt:** the pods roll onto a flat piece of track at the top of
+      the tower and stop. Then the whole piece tips forward on its hinge
+      until you're hanging face down, 80 degrees, over the ground ... holds
+      ... and lets go. You drop 32 m to about 25 m/s, with a blast at the
+      bottom.
+    - Then a zero-g roll, an airtime hill and a swing back inside, where
+      the Ravager lunges at you out of its lair (fire!), and the brakes
+      home.
+  - Once the train has dropped, the piece tips back up for the next one.
 - **New ride: Benton Roll, an indoor launched coaster in the dark (browser
   only):**
   - **Where:** north of Benton Flash. Follow the walk up Benton Flash's

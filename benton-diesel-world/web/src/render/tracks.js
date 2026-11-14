@@ -85,7 +85,8 @@ function sweep(fr, profile, color, { offY = 0, uScale = 1 } = {}) {
 
 // call fn(frame, n) at every `spacing` studs along the frames
 function every(fr, spacing, fn) {
-  let next = 0, n = 0;
+  // (a run of frames can start part way round)
+  let next = Math.ceil(fr[0].s / spacing - 1e-9) * spacing, n = 0;
   for (let i = 0; i < fr.length - 1; i++) {
     const a = fr[i], b = fr[i + 1];
     while (next <= b.s && next < fr[fr.length - 1].s - 0.5) {
@@ -256,6 +257,27 @@ function railway(fr, boxes) {
   return parts;
 }
 
+// split the frames into runs that leave out each [a, b] stretch
+function cut(fr, sampler, skip) {
+  const m = new THREE.Matrix4();
+  const at = (s) => {
+    sampler.matrixAt(s, m);
+    return { s, pos: new THREE.Vector3().setFromMatrixPosition(m), right: new THREE.Vector3().setFromMatrixColumn(m, 0), up: new THREE.Vector3().setFromMatrixColumn(m, 1), back: new THREE.Vector3().setFromMatrixColumn(m, 2) };
+  };
+  let runs = [fr];
+  for (const [a, b] of skip) {
+    runs = runs.flatMap((run) => {
+      if (run[0].s > b || run[run.length - 1].s < a) return [run];
+      const out = [];
+      const before = run.filter((f) => f.s < a), after = run.filter((f) => f.s > b);
+      if (before.length) out.push([...before, at(a)]);
+      if (after.length) out.push([at(b), ...after]);
+      return out;
+    });
+  }
+  return runs.filter((r) => r.length > 1);
+}
+
 export function buildTracks(scene, data) {
   const group = new THREE.Group();
   group.name = 'tracks';
@@ -269,7 +291,9 @@ export function buildTracks(scene, data) {
     const boxes = new Boxes(data.materials);
     let parts = [];
     let fam = 'metal';
-    if (cfg.style === 'steel') parts = steel(fr, cfg.color || 0xc04040, boxes);
+    // stretches left out (a tilt coaster's tilting piece is its own part)
+    if (cfg.skip && cfg.style === 'steel') for (const run of cut(fr, sampler, cfg.skip)) parts.push(...steel(run, cfg.color || 0xc04040, boxes));
+    else if (cfg.style === 'steel') parts = steel(fr, cfg.color || 0xc04040, boxes);
     else if (cfg.style === 'single') parts = single(fr, cfg.color || 0xf2d020, boxes);
     else if (cfg.style === 'wood') parts = wooden(fr, boxes);
     else if (cfg.style === 'flume') { parts = [flume(fr)]; fam = 'planks'; }

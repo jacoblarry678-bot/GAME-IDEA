@@ -117,6 +117,36 @@ function armPose(A, base, cab, extras, k) {
   extras[`ArmB${k}`] = linkMatrix(_E, _W, _bx);
 }
 
+// animated scenery on a ride: pistons, spinners, falling things, lunging
+// creatures, swinging and turning things
+function poseProps(props, t, extras) {
+  for (const p of props || []) {
+    const [x, y, z] = p.at;
+    if (p.kind === 'piston') extras[p.name] = TR(x, y + p.amp * Math.sin(p.freq * t + p.phase), z);
+    else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(new THREE.Matrix4().makeRotationX(p.speed * t));
+    else if (p.kind === 'fall') { const u = ((t / p.period + p.phase) % 1 + 1) % 1; extras[p.name] = TR(x, y - p.drop * u * u, z).multiply(RY(u * 3)); }
+    else if (p.kind === 'lunge') { const u = ((t / p.period) % 1 + 1) % 1, k = u < 0.15 ? u / 0.15 : u < 0.4 ? 1 : Math.max(0, 1 - (u - 0.4) / 0.4); extras[p.name] = TR(x + p.dir[0] * p.reach * k, y, z + p.dir[1] * p.reach * k).multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))); }
+    else if (p.kind === 'swing') extras[p.name] = TR(x, y, z).multiply(p.axis === 'x' ? new THREE.Matrix4().makeRotationX(p.amp * Math.sin(p.freq * t)) : RZ(p.amp * Math.sin(p.freq * t)));
+    else if (p.kind === 'turn') extras[p.name] = TR(x, y, z).multiply(RY(p.speed * t + (p.phase || 0)));
+  }
+}
+
+// A tilt coaster's tilting track: the piece (track from s0 to s1, an extra
+// pivoted at its front end) tips forward on its hinge once the train has
+// stopped on it, holds, and the train drops; it tips back once the train
+// is clear. Returns t -> the piece's world matrix (about the hinge).
+function tiltPiece(T) {
+  const P = new THREE.Vector3(...T.pivot), axis = new THREE.Vector3(...T.axis).normalize();
+  const ease = (u) => smoothstep(u);
+  const angle = (t) => {
+    if (t <= T.t0 || t >= T.t3) return 0;
+    if (t < T.t1) return T.angle * ease((t - T.t0) / (T.t1 - T.t0));
+    if (t < T.t2) return T.angle;
+    return T.angle * (1 - ease((t - T.t2) / (T.t3 - T.t2)));
+  };
+  return (t) => TR(P.x, P.y, P.z).multiply(new THREE.Matrix4().makeRotationAxis(axis, angle(t)));
+}
+
 // Returns pose(t) -> { cars: Matrix4[], extras: {name: Matrix4} }
 // Spin angles for a spinning coaster's cars, integrated once over the ride
 // (so any moment can be looked up): the lateral push in each turn spins a
@@ -258,15 +288,7 @@ export function makeMotion(r, cfg) {
           if (M.arm) armPose(M.arm, base, cab, extras, i + 1);
         }
         // animated scenery
-        for (const p of M.props || []) {
-          const [x, y, z] = p.at;
-          if (p.kind === 'piston') extras[p.name] = TR(x, y + p.amp * Math.sin(p.freq * t + p.phase), z);
-          else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(new THREE.Matrix4().makeRotationX(p.speed * t));
-          else if (p.kind === 'fall') { const u = ((t / p.period + p.phase) % 1 + 1) % 1; extras[p.name] = TR(x, y - p.drop * u * u, z).multiply(RY(u * 3)); }
-          else if (p.kind === 'lunge') { const u = ((t / p.period) % 1 + 1) % 1, k = u < 0.15 ? u / 0.15 : u < 0.4 ? 1 : Math.max(0, 1 - (u - 0.4) / 0.4); extras[p.name] = TR(x + p.dir[0] * p.reach * k, y, z + p.dir[1] * p.reach * k).multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))); }
-          else if (p.kind === 'swing') extras[p.name] = TR(x, y, z).multiply(p.axis === 'x' ? new THREE.Matrix4().makeRotationX(p.amp * Math.sin(p.freq * t)) : RZ(p.amp * Math.sin(p.freq * t)));
-          else if (p.kind === 'turn') extras[p.name] = TR(x, y, z).multiply(RY(p.speed * t + (p.phase || 0)));
-        }
+        poseProps(M.props, t, extras);
         return { cars, extras };
       },
     };
@@ -309,12 +331,21 @@ export function makeMotion(r, cfg) {
     // car's axle, set by where the car is on the track (like the real
     // ones' second pair of rails)
     const flip = r.flip ? flipCurve(r.flip, sampler.length) : null;
+    // a tilt coaster: the cars on the tilting piece tip with it
+    const tilt = r.tilt ? tiltPiece(r.tilt) : null;
+    const Pt = r.tilt ? new THREE.Matrix4().makeTranslation(-r.tilt.pivot[0], -r.tilt.pivot[1], -r.tilt.pivot[2]) : null;
     return {
       duration: r.duration,
       sampler,
       pose(t) {
         const s = sampler.distanceAt(t);
-        const cars = [];
+        const cars = [], extras = {};
+        let Mt = null;
+        if (tilt) {
+          const piece = tilt(t);
+          extras[r.tilt.name] = piece;
+          Mt = piece.clone().multiply(Pt);
+        }
         for (let i = 0; i < n; i++) {
           const si = s - i * r.carSpacing;
           const m = sampler.matrixAt(si);
@@ -322,9 +353,11 @@ export function makeMotion(r, cfg) {
           else if (flip) m.multiply(new THREE.Matrix4().makeRotationX(flip(si)));
           // a raft on the water: bobbing, rocking a little
           if (r.bob) m.multiply(TR(0, r.bob * Math.sin(1.7 * t + i * 1.3), 0)).multiply(RZ(r.bob * 0.12 * Math.sin(1.1 * t + i))).multiply(new THREE.Matrix4().makeRotationX(r.bob * 0.1 * Math.sin(1.4 * t + i * 2)));
+          if (Mt && si >= r.tilt.s0 && si <= r.tilt.s1) m.premultiply(Mt);
           cars.push(m);
         }
-        return { cars, extras: {} };
+        poseProps(r.props, t, extras);
+        return { cars, extras };
       },
     };
   }
