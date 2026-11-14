@@ -318,7 +318,11 @@ export function makeMotion(r, cfg) {
         for (let i = 0; i < n; i++) {
           const si = s - i * r.carSpacing;
           const m = sampler.matrixAt(si);
-          cars.push(spin ? m.multiply(RY(spin(i, t))) : flip ? m.multiply(new THREE.Matrix4().makeRotationX(flip(si))) : m);
+          if (spin) m.multiply(RY(spin(i, t)));
+          else if (flip) m.multiply(new THREE.Matrix4().makeRotationX(flip(si)));
+          // a raft on the water: bobbing, rocking a little
+          if (r.bob) m.multiply(TR(0, r.bob * Math.sin(1.7 * t + i * 1.3), 0)).multiply(RZ(r.bob * 0.12 * Math.sin(1.1 * t + i))).multiply(new THREE.Matrix4().makeRotationX(r.bob * 0.1 * Math.sin(1.4 * t + i * 2)));
+          cars.push(m);
         }
         return { cars, extras: {} };
       },

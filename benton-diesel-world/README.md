@@ -49,6 +49,30 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Jungle Run, a river rapids ride (browser only):**
+  - **Where:** south of Siren's Wake. Follow the harbor front's walk down
+    the west side to a bamboo gate in Siren's Wake's south wall, lit by
+    torches.
+  - **The line** winds behind bamboo rails to a thatched-roof boathouse
+    (River Expeditions), where six climb into each round raft.
+  - **The rafts:** bright rubber tubes with six seats facing in. Each one
+    bobs and rocks on the water and turns freely its own way (the
+    coaster spin, gentler), straightening up again for the dock.
+  - **The river** (882 m, about four minutes) is a water channel winding
+    through the jungle and the ruins of a lost temple:
+    - up the log ramp past a waterwheel;
+    - down the rapids past the rocks and the geysers;
+    - round the whirlpool's mossy rock island;
+    - under a waterfall pouring off a cliff;
+    - through the temple cave, under its lintels, past glowing carvings;
+    - over the big drop;
+    - past basking crocodiles, parrots on perches and a giant stone idol
+      with glowing eyes, and back to the boathouse.
+  - **Splashes:** at the rapids, the falls, the drop and the geysers. You
+    will get wet.
+  - **The jungle:** palms and broadleaf trees, broken columns, torches,
+    and timber trestles carrying the raised channel. Everything is placed
+    clear of the rafts (the waterfall excepted: you go under it).
 - **Easter is here (browser only):** Mardi Gras is over, and the nightly
   fireworks are Benton Nights again. Backstage is open under a pastel
   HAPPY EASTER arch with giant painted eggs on the posts and bunting.
