@@ -49,6 +49,31 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Benton Flash, a single-rail coaster in the RMC Raptor style
+  (browser only):**
+  - **Where:** west of Construction Runaway. Walk across its plaza to a
+    black-and-yellow gate with a lightning bolt in its west wall.
+  - **The track and train:** one tall yellow I-beam rail (a new
+    single-rail track style) on black supports. Riders sit single file,
+    two to a car, six cars to a train, with lap bars.
+  - **The ride** (835 m, a little over a minute):
+    - a 51-stud lift past the Benton Power Co. substation;
+    - a steep first drop turning out of the sky;
+    - a long zero-g stall, hanging upside down over a field of Tesla coils
+      crackling with blue-white bolts;
+    - an overbanked wave turn;
+    - two barrel rolls, and the airtime hills home.
+    - There are three inversions in all, and sparks at the coils and an
+      explosion over the hills.
+  - **The station** is the Generator Hall, with humming generators and a
+    DANGER: HIGH VOLTAGE board.
+  - **Around it:** the substation's transformers, a big lightning-bolt
+    sign on a pylon, and yellow and blue lights.
+  - **New in the track builder:** two roll shapes, a stall (halfway
+    round, held upside down, then the rest) and an overbank (out and
+    back).
+  - Every support and piece of scenery is placed clear of the train's
+    path.
 - **New ride: Jungle Run, a river rapids ride (browser only):**
   - **Where:** south of Siren's Wake. Follow the harbor front's walk down
     the west side to a bamboo gate in Siren's Wake's south wall, lit by

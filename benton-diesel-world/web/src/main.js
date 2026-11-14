@@ -45,6 +45,7 @@ import { buildKingMamba, KingMambaSite } from './kingmamba.js';
 import { buildSirensWake, SirensWakeSite } from './sirenswake.js';
 import { buildZeroSpace, ZeroSpaceSite } from './zerospace.js';
 import { buildJungleRun, JungleRunSite } from './junglerun.js';
+import { buildBentonFlash, BentonFlashSite } from './bentonflash.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -164,6 +165,8 @@ async function main() {
   const zsLayout = buildZeroSpace(data);
   // Jungle Run: river rapids, south of Siren's Wake
   const jrLayout = buildJungleRun(data);
+  // Benton Flash: the single-rail coaster, west of Construction Runaway
+  const bfLayout = buildBentonFlash(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -291,6 +294,7 @@ async function main() {
   game.houses = houses;
   const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
   const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
+  const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
   const jrSite = new JungleRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jrLayout);
   const zsSite = new ZeroSpaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, zsLayout);
   const swSite = new SirensWakeSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, swLayout);
@@ -519,6 +523,7 @@ async function main() {
     swSite.update(dt, player.pos, started);
     zsSite.update(dt, player.pos, started);
     jrSite.update(dt, player.pos, started);
+    bfSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);

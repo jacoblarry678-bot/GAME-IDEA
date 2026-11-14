@@ -131,10 +131,19 @@ export function makeTrack(pts, { rolls = [] } = {}) {
       if (idx.length < 2) continue;
       rollIdx.push([idx[0], idx[idx.length - 1]]);
       const s0 = cum[idx[0]], s1 = cum[idx[idx.length - 1]];
+      const ease = (u) => u * u * u * (u * (u * 6 - 15) + 10);
       for (const i of idx) {
-        const u = (cum[i] - s0) / (s1 - s0), e = u * u * u * (u * (u * 6 - 15) + 10);
+        const u = (cum[i] - s0) / (s1 - s0);
+        // the shape: all the way round (default), a zero-g stall (half way,
+        // held upside down, then the rest), or an overbank (out and back)
+        let a;
+        if (R.shape === 'stall') {
+          const p = (1 - (R.hold ?? 0.4)) / 2;
+          a = Math.PI * (u < p ? ease(u / p) : u < 1 - p ? 1 : 1 + ease((u - (1 - p)) / p));
+        } else if (R.shape === 'bump') a = (R.angle ?? 1.5) * Math.sin(Math.PI * u) ** 2;
+        else a = (R.angle ?? Math.PI * 2 * (R.turns ?? 1)) * ease(u);
         const u0 = up[i].clone();
-        up[i].applyAxisAngle(tan[i], (R.dir ?? 1) * Math.PI * 2 * (R.turns ?? 1) * e);
+        up[i].applyAxisAngle(tan[i], (R.dir ?? 1) * a);
         pos[i].addScaledVector(u0, R.h).addScaledVector(up[i], -R.h);
       }
     }

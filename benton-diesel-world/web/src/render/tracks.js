@@ -191,6 +191,17 @@ function steel(fr, color, boxes) {
   return parts;
 }
 
+// a single-rail track: one tall I-beam the cars ride on top of, with
+// stiffening ribs along it
+function single(fr, color, boxes) {
+  const beam = polygon([
+    [-0.45, -1.6], [0.45, -1.6], [0.45, -1.35], [0.15, -1.35], [0.15, -0.35], [0.45, -0.35],
+    [0.45, -0.1], [-0.45, -0.1], [-0.45, -0.35], [-0.15, -0.35], [-0.15, -1.35], [-0.45, -1.35],
+  ]);
+  every(fr, 3, (f) => boxes.add('metal', 'Metal', f, [0.85, 1.0, 0.12], [0, -0.85, 0], color));
+  return [sweep(fr, beam, color)];
+}
+
 function wooden(fr, boxes) {
   const parts = [];
   const steelGrey = 0x6a6d74;
@@ -259,6 +270,7 @@ export function buildTracks(scene, data) {
     let parts = [];
     let fam = 'metal';
     if (cfg.style === 'steel') parts = steel(fr, cfg.color || 0xc04040, boxes);
+    else if (cfg.style === 'single') parts = single(fr, cfg.color || 0xf2d020, boxes);
     else if (cfg.style === 'wood') parts = wooden(fr, boxes);
     else if (cfg.style === 'flume') { parts = [flume(fr)]; fam = 'planks'; }
     else if (cfg.style === 'road') { parts = road(fr, cfg, boxes); fam = 'stone'; }
