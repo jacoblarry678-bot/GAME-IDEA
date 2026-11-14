@@ -172,8 +172,8 @@ export function buildBentonFlash(data) {
   railZ(715, 252, 266);
   add([36, 0.12, 56], [729, G + 0.06, 272], 0x2a2c32, 'SmoothPlastic', { collide: 0 });
   // the entrance sign and the wait time
-  box([0.4, 8, 0.4], [746.6, G, 284], BLACK, 'Metal');
-  sign([0.2, 3, 10], [746.4, G + 8.6, 284], BLACK, 'Left', [['BENTON FLASH', 0, 0.02, 1, 0.6, YELLOW], ['SINGLE RAIL  ·  ENTRANCE', 0, 0.62, 1, 0.36, WHITE, 'GothamBold']], { glow: true });
+  box([0.4, 8, 0.4], [745, G, 290], BLACK, 'Metal');
+  sign([0.2, 3, 10], [744.8, G + 8.6, 290], BLACK, 'Left', [['BENTON FLASH', 0, 0.02, 1, 0.6, YELLOW], ['SINGLE RAIL  ·  ENTRANCE', 0, 0.62, 1, 0.36, WHITE, 'GothamBold']], { glow: true });
   box([0.6, 6, 0.6], [744, G, 254], 0x2e3238, 'Metal');
   const waitPart = add([0.8, 6, 9.6], [744, G + 9, 254], 0x101624, 'SmoothPlastic', { collide: 0 });
   data.dynamicSigns.push({ part: waitPart, kind: 'wait', face: 'Left', ride: RIDE_ID });

@@ -49,6 +49,36 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Benton Roll, an indoor launched coaster in the dark (browser
+  only):**
+  - **Where:** north of Benton Flash. Follow the walk up Benton Flash's
+    east side to a gate in its north wall.
+  - **The story:** Benton Records' house band, the Diesel Kings, are
+    playing a sold-out show across town, and you're on the list, if you
+    make it in time.
+  - **Outside:**
+    - A pink-and-teal hall with a giant teal-and-gold guitar on its front,
+      its neck reaching over the roofline, a giant record on the corner,
+      and a wall of band posters.
+    - The open-air line starts at a steel-truss stand-by gateway (with
+      Benton Records' red header, the live wait time, STAND-BY and SINGLE
+      RIDER signs, and a giant record on top). It then winds through
+      chrome-stanchion switchbacks with sagging chains under black
+      umbrellas.
+  - **The pre-show, inside:** Studio B, the band's recording session. The
+    band is on stage with guitar, drums, keys and bass, and a mixing desk
+    glows with faders. The screen says the show's across town in 10
+    minutes.
+  - **The inside line:** a short one, two rows and then a backstage
+    corridor of ALL ACCESS and CREW ONLY signs, leads to the loading dock.
+  - **The ride:** the tour cars (black and chrome, speakers in every
+    headrest, a color of their own underneath) wait at the launch light.
+    - The launch takes you to about 23 m/s through rings of pink and teal
+      light, into the dark.
+    - Then a heartline roll, a dive down the far side, a low run under the
+      helix, back over the top of it, and a corkscrew home.
+    - All the way, there are speaker stacks, neon (ON AIR, TURN IT UP,
+      ENCORE, SOLD OUT), giant records, music notes and spotlights.
 - **New ride: Override, a multi-launch coaster (browser only):**
   - **Where:** south of Jungle Run. Take the walk down Jungle Run's west
     edge to a black gate with a red scan bar in its south wall.
