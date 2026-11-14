@@ -174,7 +174,7 @@ export function buildJungleRun(data) {
   for (let x = 1028; x <= 1086; x += 9.6) for (const z of [-253.4, -270.4]) box([0.7, 9, 0.7], [x, G, z], WOOD, 'Wood', { shape: 5, collide: z < -260 ? 1 : 0 });
   add([62, 0.4, 10], [1057, G + 10.6, -257.4], THATCH, 'Fabric', { collide: 0, rot: [1, 0, 0, 0, Math.cos(0.35), -Math.sin(0.35), 0, Math.sin(0.35), Math.cos(0.35)] });
   add([62, 0.4, 10], [1057, G + 10.6, -266.6], THATCH, 'Fabric', { collide: 0, rot: [1, 0, 0, 0, Math.cos(-0.35), -Math.sin(-0.35), 0, Math.sin(-0.35), Math.cos(-0.35)] });
-  sign([24, 2.6, 0.3], [1056, G + 8.4, -253.2], WOOD, 'Back', [['JUNGLE RUN  ·  RIVER EXPEDITIONS', 0, 0, 1, 0.6, YELLOW], ['ONE RAFT PER CREW  ·  STOW YOUR HATS', 0, 0.6, 1, 0.4, 0xf4ecd8, 'GothamBold']], { glow: true });
+  sign([24, 2.6, 0.3], [1056, G + 6.6, -253.2], WOOD, 'Back', [['JUNGLE RUN  ·  RIVER EXPEDITIONS', 0, 0, 1, 0.6, YELLOW], ['ONE RAFT PER CREW  ·  STOW YOUR HATS', 0, 0.6, 1, 0.4, 0xf4ecd8, 'GothamBold']], { glow: true });
   for (const x of [1032, 1050, 1078]) add([1.2, 1.2, 0.3], [x, G + 4, -253.6], ORANGE, 'Rubber', { shape: 2, collide: 0, rot: [0, 0, 1, 0, 1, 0, -1, 0, 0] });
   const con = [1088, -254.6];
   box([1.4, 3, 2.4], [con[0], G, con[1]], 0x2e3238, 'Metal', { collide: 0 });
