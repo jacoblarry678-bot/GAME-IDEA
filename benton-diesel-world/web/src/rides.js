@@ -163,6 +163,21 @@ function spinTable(r, sampler) {
   };
 }
 
+// The seat angle along the track for a 4th-dimension coaster: anchors of
+// [distance, angle], eased (smootherstep) from one to the next.
+function flipCurve(anchors, L) {
+  const A = [...anchors].sort((a, b) => a[0] - b[0]);
+  return (s) => {
+    s = ((s % L) + L) % L;
+    if (s <= A[0][0]) return A[0][1];
+    for (let k = 0; k < A.length - 1; k++) {
+      const [s0, a0] = A[k], [s1, a1] = A[k + 1];
+      if (s <= s1) { const u = (s - s0) / (s1 - s0 || 1), e = u * u * u * (u * (u * 6 - 15) + 10); return a0 + (a1 - a0) * e; }
+    }
+    return A[A.length - 1][1];
+  };
+}
+
 export function makeMotion(r, cfg) {
   const origin = cfMatrix(r.origin);
   const n = r.carCount;
@@ -290,6 +305,10 @@ export function makeMotion(r, cfg) {
     // by the turns (each car a little differently) and slowing on its own;
     // locked facing forward in the station and up the lift
     const spin = r.spin ? spinTable(r, sampler) : null;
+    // a 4th-dimension coaster: the seats turn head over heels about the
+    // car's axle, set by where the car is on the track (like the real
+    // ones' second pair of rails)
+    const flip = r.flip ? flipCurve(r.flip, sampler.length) : null;
     return {
       duration: r.duration,
       sampler,
@@ -297,8 +316,9 @@ export function makeMotion(r, cfg) {
         const s = sampler.distanceAt(t);
         const cars = [];
         for (let i = 0; i < n; i++) {
-          const m = sampler.matrixAt(s - i * r.carSpacing);
-          cars.push(spin ? m.multiply(RY(spin(i, t))) : m);
+          const si = s - i * r.carSpacing;
+          const m = sampler.matrixAt(si);
+          cars.push(spin ? m.multiply(RY(spin(i, t))) : flip ? m.multiply(new THREE.Matrix4().makeRotationX(flip(si))) : m);
         }
         return { cars, extras: {} };
       },

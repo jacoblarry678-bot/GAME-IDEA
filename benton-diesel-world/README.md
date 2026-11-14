@@ -49,6 +49,34 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Zero Space, a 4th-dimension roller coaster (browser only):**
+  - **Where:** the Benton Orbital Launch Facility, south of Fast & Furious
+    and Stranger Things. Walk on down the path between them and through
+    the warp gate, a ring of purple and cyan light in the old south wall.
+  - **The seats** sit on wings either side of the track, two each side,
+    and turn head over heels on their own, with six seat inversions a
+    ride. Each car's hub and wings are round about the axle, so only the
+    seats and riders visibly turn.
+  - **The ride** (1,137 m, about 1 minute 50 seconds):
+    - lie back facing the sky up the 58-stud lift, past a Benton rocket on
+      its launch tower and through rings of light;
+    - go face-first down the near-vertical drop and on round in a full
+      somersault;
+    - flip again through the warp ring at the top of the raven turn;
+    - a zero-g roll through the asteroids;
+    - airtime hills over the crater field (lean back, pitch forward, lean
+      back);
+    - a half flip in the turn past the satellite dishes, and a backflip
+      home.
+  - **The plaza and station:** a launch hangar (Launch Bay 4, with Mission
+    Control's console) with a line on neon-railed switchbacks. An original
+    Benton astronaut stands on a plinth.
+  - **Scenery:** planets on pedestals (including a ringed giant), asteroids,
+    craters and lamps all round.
+  - **Supports:** 82 white supports.
+  - **How it's built:** the seat angle along the track is the ride's flip
+    curve (new in the ride animation). Every support and piece of scenery
+    is placed outside the tube the turning seats sweep.
 - **New ride: Siren's Wake, an indoor inverted water coaster (browser
   only):**
   - **Where:** an old harbor warehouse south of Neon Getaway, through a

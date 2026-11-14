@@ -41,6 +41,7 @@ import { buildRVVanRun, RVVanRunSite } from './rvvanrun.js';
 import { buildNeonGetaway, NeonGetawaySite } from './neongetaway.js';
 import { buildKingMamba, KingMambaSite } from './kingmamba.js';
 import { buildSirensWake, SirensWakeSite } from './sirenswake.js';
+import { buildZeroSpace, ZeroSpaceSite } from './zerospace.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -152,6 +153,8 @@ async function main() {
   const kmLayout = buildKingMamba(data);
   // Siren's Wake: the indoor inverted water coaster, south of Neon Getaway
   const swLayout = buildSirensWake(data);
+  // Zero Space: the 4th-dimension coaster, south of Fast & Furious
+  const zsLayout = buildZeroSpace(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -279,6 +282,7 @@ async function main() {
   game.houses = houses;
   const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
   const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
+  const zsSite = new ZeroSpaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, zsLayout);
   const swSite = new SirensWakeSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, swLayout);
   const kmSite = new KingMambaSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, kmLayout);
   const ngSite = new NeonGetawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ngLayout);
@@ -499,6 +503,7 @@ async function main() {
     ngSite.update(dt, player.pos, started);
     kmSite.update(dt, player.pos, started);
     swSite.update(dt, player.pos, started);
+    zsSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
