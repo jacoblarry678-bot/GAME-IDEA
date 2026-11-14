@@ -49,6 +49,41 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Easter is here (browser only):** Mardi Gras is over, and the nightly
+  fireworks are Benton Nights again. Backstage is open under a pastel
+  HAPPY EASTER arch with giant painted eggs on the posts and bunting.
+  - **The Easter Bar** replaces the Mardi Gras Bar in the yard:
+    - pink, mint and butter-yellow stripes;
+    - a giant decorated egg where the mask was, and pastel bunting;
+    - hot cross buns, giant chocolate eggs, a spring chicken wrap, Carrot
+      Patch Shakes (speed boost), Pink Bunny Lemonade (jump boost) and
+      Spring Fizz.
+  - **Meet the Easter Bunny** replaces the Mardi Gras show in Stage 23,
+    with the same line, now behind white picket fences.
+    - You go in under a giant egg to a spring garden: a painted sky with a
+      rainbow, a flower meadow, an egg tree and a throne of giant eggs.
+    - Each group takes the photo bench in front of the Easter Bunny (the
+      park's own: white fur, lavender waistcoat, pink ears and a basket of
+      eggs).
+    - He hops and waves, chicks bob in their nest, eggs bounce on the lawn,
+      butterflies circle, a golden egg turns, and pastel confetti pops for
+      the photo.
+  - **New walkthrough: Inside the Egg: The Easter Egg Experience** on
+    Stage 22, run like the Christmas trails. You walk through:
+    - the Egg Gallery;
+    - the Hatchery (a giant egg cracking open);
+    - the Chocolate Egg Factory;
+    - the Springtime Meadow (bunnies and butterflies);
+    - the Tunnel of Eggs;
+    - the Golden Egg.
+  - **New: the Great Benton Egg Hunt**, a walk-it-yourself experience.
+    - Twelve big painted eggs bob around the backstage yard: by the gate,
+      behind the generator, by the trailers, near the Easter Bar and out
+      by the soundstages.
+    - Walk up to one to collect it in a burst of pastel confetti.
+    - Find all twelve for a B$150 prize.
+  - The billboards, the shuttle signs and the park's posts all say Happy
+    Easter.
 - **New ride: Zero Space, a 4th-dimension roller coaster (browser only):**
   - **Where:** the Benton Orbital Launch Facility, south of Fast & Furious
     and Stranger Things. Walk on down the path between them and through

@@ -4,7 +4,7 @@
 // food, Express), and your own photos: snap the view, add a caption and
 // watch the likes and comments roll in.
 import * as Clock from './clock.js';
-import { HAUNT_OVER, XMAS_SETUP, CHRISTMAS, MARDI_GRAS } from './season.js';
+import { HAUNT_OVER, XMAS_SETUP, CHRISTMAS, MARDI_GRAS, EASTER } from './season.js';
 
 const STORE = 'bentonDieselWorld.social';
 const nowS = () => performance.now() / 1000;
@@ -13,7 +13,12 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const PARK = { handle: '@BentonDieselWorld', name: 'Benton Diesel World', color: 0xff6a1a, verified: true };
 
 // the park's own posts, newest first (each with a poster-style card)
-const SEASON_POSTS = MARDI_GRAS ? [
+const SEASON_POSTS = EASTER ? [
+  { when: 'Now', art: { title: 'HAPPY EASTER!', sub: 'MEET THE EASTER BUNNY  ·  STAGE 23', color: 0xff9ac8, emoji: '🐰' },
+    text: "Hoppy Easter! The Easter Bunny is in Stage 23 backstage - line up, take a seat on the photo bench and say hi. NEW: Inside the Egg: The Easter Egg Experience on Stage 22, and the Great Benton Egg Hunt - 12 eggs are hidden around the backstage yard. Find them all for a prize! 🥚🌷", likes: 17330 },
+  { when: '1d', art: { title: 'THE EASTER BAR', sub: 'BACKSTAGE  ·  LIMITED TIME', color: 0x7ad8a8, emoji: '🥕' },
+    text: 'The Mardi Gras Bar has hopped into spring: say hello to the Easter Bar! Hot cross buns, giant chocolate eggs, Carrot Patch Shakes and Pink Bunny Lemonade. 🍫', likes: 9120 },
+] : MARDI_GRAS ? [
   { when: 'Now', art: { title: 'MARDI GRAS SPECTACULAR', sub: 'NEW SHOW  ·  STAGE 23', color: 0x6a2a9a, emoji: '🎭' },
     text: "NEW SHOW: Krewe of Benton: Mardi Gras Spectacular is on in Stage 23 backstage! Line up, grab a seat in the grandstand and catch the beads: the King's float, a snapping gator, the big-head brass band and a confetti finale. Plus the Mardi Gras Bar is BACK - king cake, beignets and Hurricane punch in the backstage yard. 💜💚💛", likes: 19804 },
   { when: '1d', art: { title: 'HAPPY NEW YEAR!', sub: "NEW YEAR'S EVE FIREWORKS", color: 0x1e3a8a, emoji: '🎆' },

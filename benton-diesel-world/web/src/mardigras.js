@@ -7,13 +7,14 @@
 import { helpers } from './wolverine.js';
 
 export const BAR_ID = 'MardiGrasBar';
+export const EASTER_BAR_ID = 'EasterBar';
 const W = 16, D = 16, H = 10; // the tent, its open side facing west
 export const AT_GRAND = { x: 523, z: 522, base: 0.34 }; // beside the hotel's drive
 export const AT_BACKSTAGE = { x: -14, z: -446, base: 0.1, backstage: true }; // in the backstage yard, facing the gate
-const PURPLE = 0x6a2a9a, GREEN = 0x1e8a3a, GOLD = 0xf0c030, WHITE = 0xf4f4f0, BLACK = 0x101012;
-const BEADS = [PURPLE, GREEN, GOLD];
+const WHITE = 0xf4f4f0, BLACK = 0x101012;
+const MARDI_BAR_ID = 'MardiGrasBar';
 
-const MENU = [
+const MARDI_MENU = [
   { id: 'KingCake', base: 'CinnamonRoll', name: 'King Cake Slice', description: 'Cinnamon cake with purple, green and gold sugar. Find the baby, get your next slice free!', price: 16, hunger: 35, bites: 3, colors: [0xf0c030, 0x6a2a9a, 0x1e8a3a] },
   { id: 'Beignets', base: 'GearDonut', name: 'Beignets', description: 'Three hot French doughnuts buried in powdered sugar.', price: 12, hunger: 25, bites: 3, colors: [0xe8c890, 0xfaf8f2] },
   { id: 'PoBoy', base: 'BrisketSandwich', name: "Shrimp Po'Boy", description: 'Fried shrimp, lettuce and remoulade on a crusty roll. Fills you right up.', price: 30, hunger: 60, bites: 4, colors: [0xd8a860, 0xe87a5a] },
@@ -22,9 +23,27 @@ const MENU = [
   { id: 'GoldenFizz', base: 'NitroSoda', name: 'Golden Fizz', description: 'Sparkling ginger and pineapple, gold as a doubloon.', price: 9, hunger: 8, bites: 2, colors: [0xf0c030, 0xfff4c8] },
 ];
 
+// at Easter the same bar comes back as the Easter Bar: pastel stripes, a
+// giant decorated egg where the mask was, and a spring menu
+const EASTER_MENU = [
+  { id: 'HotCrossBun', base: 'CinnamonRoll', name: 'Hot Cross Bun', description: 'A warm spiced bun with a white icing cross.', price: 12, hunger: 30, bites: 3, colors: [0xc8884a, 0xf8f4ec, 0x8a5a2a] },
+  { id: 'ChocolateEgg', base: 'GearDonut', name: 'Giant Chocolate Egg', description: 'A hollow milk chocolate egg wrapped in gold foil. Share it (or don\'t).', price: 14, hunger: 20, bites: 3, colors: [0x5a3a22, 0xf0c040] },
+  { id: 'SpringWrap', base: 'BrisketSandwich', name: 'Spring Chicken Wrap', description: 'Grilled chicken, crunchy greens and honey mustard. Fills you right up.', price: 26, hunger: 55, bites: 4, colors: [0xe8d4a0, 0x7ad87a] },
+  { id: 'CarrotShake', base: 'TurboShake', name: 'Carrot Patch Shake', description: 'Carrot cake milkshake with cream cheese frosting. Speed boost!', price: 14, hunger: 14, bites: 2, colors: [0xf08a3a, 0x7ad87a], buff: { kind: 'speed', duration: 45, amount: 5 } },
+  { id: 'BunnyLemonade', base: 'Lemonade', name: 'Pink Bunny Lemonade', description: 'Strawberry lemonade with a marshmallow bunny on the rim. Jump boost!', price: 10, hunger: 10, bites: 2, colors: [0xff9ac8, 0xffffff], buff: { kind: 'jump', duration: 45, amount: 14 } },
+  { id: 'SpringFizz', base: 'NitroSoda', name: 'Spring Fizz', description: 'Sparkling mint and lime, fresh as a meadow.', price: 9, hunger: 8, bites: 2, colors: [0x9af0c8, 0xfff4c8] },
+];
+export const AT_BACKSTAGE_EASTER = { x: -14, z: -446, base: 0.1, backstage: true, theme: 'easter' };
+
 export function buildMardiGras(data, at = AT_GRAND) {
   const { add, box, sign, cf } = helpers(data);
   const X = at.x, Z = at.z, BASE = at.base, back = !!at.backstage;
+  const easter = at.theme === 'easter';
+  // (at Easter: pink, mint and butter yellow)
+  const PURPLE = easter ? 0xff9ac8 : 0x6a2a9a, GREEN = easter ? 0x7ad8a8 : 0x1e8a3a, GOLD = easter ? 0xf8e070 : 0xf0c030;
+  const BEADS = [PURPLE, GREEN, GOLD];
+  const MENU = easter ? EASTER_MENU : MARDI_MENU;
+  const BAR_ID = easter ? EASTER_BAR_ID : MARDI_BAR_ID;
   data.tags.ParkLamp = data.tags.ParkLamp || [];
   data.hauntLights = data.hauntLights || [];
   data.staffSpots = data.staffSpots || [];
@@ -88,8 +107,15 @@ export function buildMardiGras(data, at = AT_GRAND) {
     add([1.4, 0.4, 1.4], [cx - 3.2, BASE + 3, sz], BEADS[k % 3], 'Fabric', { shape: 5, collide: 0 });
   }
 
-  // ---- the giant mask over the front, feathers and all
+  // ---- the giant mask over the front, feathers and all (at Easter, a
+  // giant decorated egg)
   const mx = x0 - 0.6, my = BASE + H + 2.6;
+  if (easter) {
+    add([1.4, 6.4, 4.6], [mx - 0.2, my + 1.2, Z], 0xfff4f8, 'SmoothPlastic', { shape: 3, collide: 0 });
+    for (const [dy, c] of [[-1.2, PURPLE], [0, GREEN], [1.2, GOLD]]) add([1.5, 0.5, 4.2 - Math.abs(dy) * 0.8], [mx - 0.2, my + 1.2 + dy, Z], c, 'SmoothPlastic', { shape: 2, collide: 0 });
+    for (let k = 0; k < 6; k++) add([0.5, 0.5, 0.5], [mx - 0.9, my + 1.8, Z - 1.5 + k * 0.6], [0xb08aff, 0xff7ab8, 0x6ad8ff][k % 3], 'Neon', { shape: 3, collide: 0 });
+    box([0.3, my - BASE - H, 0.3], [mx + 0.3, BASE + H, Z], GOLD, 'Metal', { collide: 0 });
+  } else {
   add([0.5, 3, 9], [mx, my, Z], PURPLE, 'SmoothPlastic', { collide: 0 });
   for (const dz of [-1, 1]) add([0.5, 2, 2.4], [mx, my - 1.6, Z + dz * 3.4], PURPLE, 'SmoothPlastic', { collide: 0, rot: [1, 0, 0, 0, Math.cos(dz * 0.5), -Math.sin(dz * 0.5), 0, Math.sin(dz * 0.5), Math.cos(dz * 0.5)] });
   for (const dz of [-2.1, 2.1]) add([0.3, 1.1, 2.2], [mx - 0.2, my + 0.2, Z + dz], BLACK, 'SmoothPlastic', { collide: 0 });
@@ -100,10 +126,14 @@ export function buildMardiGras(data, at = AT_GRAND) {
     const a = k * 0.28;
     add([0.2, 6, 1], [mx + 0.3, my + 4.2, Z + 4.6 + k * 0.6], BEADS[(k + 3) % 3], 'Fabric', { collide: 0, rot: [1, 0, 0, 0, Math.cos(a), -Math.sin(a), 0, Math.sin(a), Math.cos(a)] });
   }
-  sign([0.3, 2.6, 15], [x0 - 0.5, BASE + H - 2.2, Z], 0x1a0a24, 'Left', [[back ? 'MARDI GRAS BAR' : 'MARDI GRAS AT THE GRAND', 0, 0, 1, 0.6, GOLD], [back ? 'BACKSTAGE  ·  ALL AGES  ·  IT\'S BACK!' : 'LIMITED TIME  ·  ALL AGES', 0, 0.6, 1, 0.4, WHITE, 'GothamBold']], { glow: true });
+  }
+  sign([0.3, 2.6, 15], [x0 - 0.5, BASE + H - 2.2, Z], easter ? 0x3a2a4a : 0x1a0a24, 'Left', [[easter ? 'EASTER BAR' : back ? 'MARDI GRAS BAR' : 'MARDI GRAS AT THE GRAND', 0, 0, 1, 0.6, GOLD], [easter ? 'BACKSTAGE  ·  ALL AGES  ·  HOP ON IN!' : back ? 'BACKSTAGE  ·  ALL AGES  ·  IT\'S BACK!' : 'LIMITED TIME  ·  ALL AGES', 0, 0.6, 1, 0.4, WHITE, 'GothamBold']], { glow: true });
   // the menu board on a stand by the counter
   box([0.3, 7, 0.3], [x0 - 8, BASE + 0.4, z0 - 1], 0x2a2a2e, 'Metal');
-  sign([0.3, 4.4, 6], [x0 - 8, BASE + 5.4, z0 - 1], 0x1a0a24, 'Left', [
+  sign([0.3, 4.4, 6], [x0 - 8, BASE + 5.4, z0 - 1], easter ? 0x3a2a4a : 0x1a0a24, 'Left', easter ? [
+    ['HOT CROSS BUNS', 0, 0.02, 1, 0.2, GOLD], ['CHOCOLATE EGGS', 0, 0.26, 1, 0.22, WHITE, 'GothamBold'],
+    ['CARROT PATCH SHAKES', 0, 0.52, 1, 0.2, 0xff9a4a, 'GothamBold'], ['PINK BUNNY LEMONADE', 0, 0.76, 1, 0.18, PURPLE, 'GothamBold'],
+  ] : [
     ['KING CAKE', 0, 0.02, 1, 0.2, GOLD], ['BEIGNETS  ·  PO\'BOYS', 0, 0.26, 1, 0.22, WHITE, 'GothamBold'],
     ['HURRICANE PUNCH', 0, 0.52, 1, 0.2, 0xff6a5a, 'GothamBold'], ['ZERO-PROOF', 0, 0.76, 1, 0.18, GREEN, 'GothamBold'],
   ], { glow: true });
@@ -140,12 +170,13 @@ export function buildMardiGras(data, at = AT_GRAND) {
   light(x0 - 2, BASE + 12, Z, GREEN);
 
   data.config.Venues.push({
-    id: BAR_ID, name: back ? 'Mardi Gras Bar (Backstage)' : 'Mardi Gras Bar at the Grand', kind: 'restaurant', land: back ? 'Studios' : 'Plaza', facing: 'W',
-    description: back ? "It's back! In the backstage yard, by the Mardi Gras show: king cake, beignets, shrimp po'boys and zero-proof Hurricane punch under the beads." : "Limited time at the Benton Diesel Grand: king cake, beignets, shrimp po'boys and zero-proof Hurricane punch under the beads.",
+    id: BAR_ID, name: easter ? 'Easter Bar (Backstage)' : back ? 'Mardi Gras Bar (Backstage)' : 'Mardi Gras Bar at the Grand', kind: 'restaurant', land: back ? 'Studios' : 'Plaza', facing: 'W',
+    description: easter ? 'In the backstage yard for Easter: hot cross buns, giant chocolate eggs, a spring chicken wrap, Carrot Patch Shakes and Pink Bunny Lemonade under the bunting.' : back ? "It's back! In the backstage yard, by the Mardi Gras show: king cake, beignets, shrimp po'boys and zero-proof Hurricane punch under the beads." : "Limited time at the Benton Diesel Grand: king cake, beignets, shrimp po'boys and zero-proof Hurricane punch under the beads.",
     items: MENU.map((m) => m.id), color: PURPLE, position: [X, 0, Z], size: [W, H, D],
   });
   data.staffSpots.push({ role: 'cashier', kind: 'restaurant', venue: BAR_ID, land: back ? 'Studios' : 'Plaza', seed: 4, cf: cf(cx + 1.6, BASE + 0.4, Z, Math.PI / 2) });
-  if (back) data.staff.lines.greeter = [...(data.staff.lines.greeter || []), 'The Mardi Gras Bar is back - backstage, through the gate!'];
+  if (easter) data.staff.lines.greeter = [...(data.staff.lines.greeter || []), 'Happy Easter! The Easter Bar is backstage, through the gate!'];
+  else if (back) data.staff.lines.greeter = [...(data.staff.lines.greeter || []), 'The Mardi Gras Bar is back - backstage, through the gate!'];
   else data.staff.lines.hotel = [...(data.staff.lines.hotel || []), 'Happy Mardi Gras! The bar is by the drive!', 'Laissez les bons temps rouler!'];
   return { x: X, z: Z };
 }

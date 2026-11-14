@@ -26,9 +26,11 @@ import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas, buildXmasSetup, XmasSetupSite } from './christmas.js';
-import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, FD_BUILDING } from './season.js';
+import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, EASTER, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
-import { buildMardiGras, AT_BACKSTAGE } from './mardigras.js';
+import { buildMardiGras, AT_BACKSTAGE, AT_BACKSTAGE_EASTER } from './mardigras.js';
+import { buildEasterBunny, EasterBunnySite } from './easterbunny.js';
+import { EggHunt } from './egghunt.js';
 import { buildMardiShow, MardiShowSite } from './mardishow.js';
 import { buildLineTickets, buildExtendedQueues } from './lanes.js';
 import { Social } from './social.js';
@@ -112,7 +114,8 @@ async function main() {
   // are gone, and the backstages are being torn down)
   if (WOLVERINE_OPEN) addWolverineWalkway();
   // (at Christmas the same builder lays out the Christmas trails)
-  const houses = HAUNT_OVER ? (CHRISTMAS ? buildHouses(data, familyLayout, 'xmas') : []) : buildHouses(data, familyLayout);
+  // (at Easter: the walkthrough Inside the Egg on Stage 22)
+  const houses = HAUNT_OVER ? (CHRISTMAS ? buildHouses(data, familyLayout, 'xmas') : EASTER ? buildHouses(data, null, 'easter') : []) : buildHouses(data, familyLayout);
   if (!HAUNT_OVER) buildHauntFood(data);
   const scareZones = HAUNT_OVER ? [] : buildScareZones(data);
   // the hotels, the Benton Parkway and the shuttle Transit Center
@@ -128,6 +131,9 @@ async function main() {
   // in Stage 23 with its own line
   if (MARDI_GRAS) buildMardiGras(data, AT_BACKSTAGE);
   const msLayout = MARDI_GRAS ? buildMardiShow(data) : null;
+  // Easter: the bar is the Easter Bar, and Meet the Easter Bunny is in Stage 23
+  if (EASTER) buildMardiGras(data, AT_BACKSTAGE_EASTER);
+  const ebLayout = EASTER ? buildEasterBunny(data) : null;
   // the New Year: Benton Nights becomes the New Year's Eve fireworks
   if (XMAS_OVER) {
     const bn = data.config.Shows.find((s) => s.id === 'BentonNights');
@@ -292,6 +298,8 @@ async function main() {
   const stSite = new StrangerThingsSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, stLayout);
   const drSite = new DieselRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, drLayout);
   const fdSite = fdLayout ? new FinalDestinationSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, fdLayout) : null;
+  const ebSite = ebLayout ? new EasterBunnySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ebLayout) : null;
+  const eggHunt = EASTER ? new EggHunt({ scene, fx, sim, hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) } }) : null;
   const msSite = msLayout ? new MardiShowSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, msLayout) : null;
   const wvSite = wvLayout ? new WolverineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wvLayout) : null;
   const ffSite = new FastFuriousSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout);
@@ -474,7 +482,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || (msLayout && inBox(msLayout.indoor)));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || (msLayout && inBox(msLayout.indoor)) || (ebLayout && inBox(ebLayout.indoor)));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -493,6 +501,8 @@ async function main() {
     ffSite.update(dt, player.pos, started);
     wvSite?.update(dt, player.pos, started);
     msSite?.update(dt, player.pos, started);
+    ebSite?.update(dt, player.pos, started);
+    eggHunt?.update(dt, player.pos, started);
     fdSite?.update(dt, player.pos, started);
     drSite.update(dt, player.pos, started);
     stSite.update(dt, player.pos, started);

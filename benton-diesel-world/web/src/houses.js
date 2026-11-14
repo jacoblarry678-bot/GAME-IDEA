@@ -9,6 +9,7 @@
 import { HOUSES, STAGE_Z, QUEUE, STAGE, stageX } from './backstage.js';
 import { FAMILY_QUEUE } from './haunt.js';
 import { XROOMS, XSTAGES, XDESC, XOUTDOOR, XHAWKINS, buildTrailFronts } from './xmastrails.js';
+import { EROOMS, ESTAGES, EDESC, buildEasterFronts } from './eastertrails.js';
 
 export const WALK = 6; // how fast a group walks a house (studs/s)
 const G = 0.1;
@@ -420,8 +421,8 @@ const ROOMS = {
 const W2 = HALF * 2 - 0.8;
 
 export function buildHouses(data, familyLayout, season = 'haunt') {
-  const xmas = season === 'xmas';
-  const ROOMSET = xmas ? XROOMS : ROOMS;
+  const xmas = season === 'xmas', easter = season === 'easter';
+  const ROOMSET = xmas ? XROOMS : easter ? EROOMS : ROOMS;
   const mats = data.materials;
   const mi = (name) => {
     let i = mats.indexOf(name);
@@ -586,7 +587,9 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
 
   // the soundstage houses (or, at Christmas, the soundstage trails)
   const TRAIL = { category: 'Christmas Trail', thrill: 1 };
-  const stageList = xmas
+  const stageList = easter
+    ? ESTAGES.map((t) => ({ i: t.stage, theme: t.theme, title: t.title, glow: t.glow, baseWait: t.baseWait, speed: WALK * t.speed, description: EDESC[t.theme], id: 'EasterInsideTheEgg', category: 'Easter Walkthrough', thrill: 1 }))
+    : xmas
     ? XSTAGES.map((t) => ({ i: t.stage, theme: t.theme, title: t.title, glow: t.glow, baseWait: t.baseWait, speed: WALK * t.speed, description: XDESC[t.theme], id: `Trail${t.theme[0].toUpperCase()}${t.theme.slice(1)}`, ...TRAIL }))
     : HOUSES.map((h, i) => ({ i, theme: h.theme, title: h.title, glow: h.glow, baseWait: [80, 65, 95, 70, 85, 110][i], speed: WALK * [1, 0.92, 0.85, 0.96, 0.88, 0.84][i], description: DESCRIPTIONS[h.theme], id: `Haunt${h.theme[0].toUpperCase()}${h.theme.slice(1)}` }));
   stageList.forEach((h) => {
@@ -613,6 +616,8 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
       baseWait: h.baseWait, description: h.description, speed: h.speed, category: h.category, thrill: h.thrill,
     });
   });
+
+  if (easter) buildEasterFronts(data);
 
   // the sixth house in the Family Landing tent
   if (familyLayout) {

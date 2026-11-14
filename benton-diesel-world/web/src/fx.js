@@ -343,6 +343,9 @@ export class Effects {
         this.soft.spawn(at.x + rand(-4, 4), at.y + rand(0, 0.6), at.z + rand(-4, 4), Math.cos(a) * out, rand(7, 17), Math.sin(a) * out, tmpColor, rand(0.9, 1.7), rand(0.8, 1.4), 30, 0, 1.2);
       }
       this.emit('mist', new THREE.Vector3(at.x, at.y + 1.5, at.z), { duration: 2 });
+    } else if (kind === 'easter') {
+      // pastel confetti
+      this.confetti(new THREE.Vector3(at.x, at.y, at.z), new THREE.Vector3(10, 3, 8), 420, [0xff9ac8, 0x7ad8a8, 0xf8e070, 0xb08aff, 0x8ad0ff, 0xffffff]);
     } else if (kind === 'mardi') {
       // a confetti cannon in purple, green and gold
       this.confetti(new THREE.Vector3(at.x, at.y, at.z), new THREE.Vector3(10, 3, 8), 420, [0x8a3ac8, 0x2aa04a, 0xf0c030, 0xffe070]);

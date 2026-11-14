@@ -6,9 +6,9 @@
 // built in houses.js. A production yard (trailers, a generator, the makeup
 // tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
-import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS, FD_OPEN } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS, EASTER, FD_OPEN } from './season.js';
 // the soundstages are clear of the haunt by the holidays
-const STAGES_CLEAR = CHRISTMAS || XMAS_OVER;
+const STAGES_CLEAR = CHRISTMAS || XMAS_OVER || MARDI_GRAS || EASTER;
 
 // (the lot runs further east once Stage 6 is built for Final Destination)
 export const BS = { x0: -250, x1: FD_OPEN ? 350 : 250, z0: -700, z1: -405 };
@@ -82,8 +82,9 @@ export function buildBackstage(data) {
   const gx = (GATE.x0 + GATE.x1) / 2, gw = GATE.x1 - GATE.x0;
   data.tags.Searchlight = data.tags.Searchlight || [];
   data.tags.SteamVent = data.tags.SteamVent || [];
-  if (HAUNT_OVER && !CHRISTMAS && !MARDI_GRAS) closedGate(); // (at Christmas the gate is open: christmas.js)
+  if (HAUNT_OVER && !CHRISTMAS && !MARDI_GRAS && !EASTER) closedGate(); // (at Christmas the gate is open: christmas.js)
   else if (MARDI_GRAS) mardiGate();
+  else if (EASTER) easterGate();
   else for (const x of [GATE.x0 + 1.5, GATE.x1 - 1.5]) {
     box([3, 19, 3], [x, G, -409], BLACK, 'Metal');
     for (let k = 0; k < 3; k++) add([1.6, 1.4, 1.6], [x + (k - 1) * 1.8, G + 0.7, -406.9], PUMPKIN, 'SmoothPlastic', { shape: 3, collide: 0 });
@@ -120,6 +121,27 @@ export function buildBackstage(data) {
       for (let k = 0; k <= n; k++) {
         const u = k / n;
         add([0.5, 0.5, 0.5], [GATE.x0 + 1.5 + (gw - 3) * u, G + 18.4 - j * 0.7 - (2.2 + j * 0.6) * 4 * u * (1 - u), -409 + (j - 1) * 0.6], c, 'Neon', { shape: 3, collide: 0 });
+      }
+    });
+  }
+  // Easter: the gate is open under a pastel arch with giant eggs on the posts
+  function easterGate() {
+    const PINK = 0xff9ac8, MINT = 0x7ad8a8, BUTTER = 0xf8e070, LILAC = 0xb08aff;
+    for (const [k, x] of [[0, GATE.x0 + 1.5], [1, GATE.x1 - 1.5]]) {
+      box([3, 19, 3], [x, G, -409], [PINK, MINT][k], 'SmoothPlastic');
+      add([3.4, 4.6, 3.4], [x, G + 21.4, -409], 0xfff4f8, 'SmoothPlastic', { shape: 3, collide: 0 });
+      for (const [dy, c] of [[-0.9, LILAC], [0.3, BUTTER]]) add([3.5, 0.5, 3.5], [x, G + 21.4 + dy, -409], c, 'SmoothPlastic', { shape: 5, collide: 0 });
+    }
+    add([gw, 3.4, 2], [gx, G + 20.6, -409], BUTTER, 'SmoothPlastic', { collide: 0 });
+    for (const [z, face] of [[-407.9, 'Back'], [-410.1, 'Front']]) sign('HAPPY EASTER  ·  BACKSTAGE', [gw - 2, 2.6, 0.2], [gx, G + 20.6, z], BUTTER, 0x6a3a8a, face, 'GothamBlack', true);
+    sign('MEET THE EASTER BUNNY  ·  STAGE 23  ·  EGG HUNT IN THE YARD', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -410.1], LILAC, 0xffffff, 'Front', 'GothamBold');
+    sign('INSIDE THE EGG  ·  STAGE 22  ·  THE EASTER BAR', [gw - 4, 1.2, 0.2], [gx, G + 17.9, -407.9], LILAC, 0xffffff, 'Back', 'GothamBold');
+    // pastel bunting under the arch
+    [PINK, MINT, BUTTER, LILAC].forEach((c, j) => {
+      const n = 14;
+      for (let k = 0; k < n; k++) {
+        const u = (k + 0.5) / n;
+        add([0.1, 1.2, 1.2], [GATE.x0 + 1.5 + (gw - 3) * u, G + 18.2 - j * 0.1 - 1.6 * 4 * u * (1 - u), -409 + (j - 1.5) * 0.5], [PINK, MINT, BUTTER, LILAC][(k + j) % 4], 'Fabric', { shape: 1, collide: 0, rot: [0, 0, 1, 0, -1, 0, 1, 0, 0] });
       }
     });
   }
@@ -366,7 +388,7 @@ export function buildBackstage(data) {
   for (const x of [tx - 15, tx + 15]) box([0.3, 7, 6], [x, G, tz + (x < tx ? -5 : 5)], WHITE, 'Fabric');
   add([30.4, 4, 8.2], [tx, G + 9, tz - 4.1], WHITE, 'Fabric', { shape: 1, collide: 0, yaw: Math.PI });
   add([30.4, 4, 8.2], [tx, G + 9, tz + 4.1], WHITE, 'Fabric', { shape: 1, collide: 0 });
-  sign(CHRISTMAS ? "SANTA'S MAILROOM" : MARDI_GRAS ? 'PARADE FLOAT STORAGE' : XMAS_OVER ? 'HOLIDAY DECOR STORAGE' : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
+  sign(CHRISTMAS ? "SANTA'S MAILROOM" : EASTER ? "THE BUNNY'S DRESSING ROOM" : MARDI_GRAS ? 'PARADE FLOAT STORAGE' : XMAS_OVER ? 'HOLIDAY DECOR STORAGE' : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
   for (let k = 0; k < 4; k++) {
     box([4, 2.6, 1.4], [tx - 9 + k * 6, G, tz + 5], 0xf4f0e8, 'SmoothPlastic', { collide: 0 });
     add([3, 2, 0.1], [tx - 9 + k * 6, G + 4.2, tz + 5.8], 0xfff2d8, 'Neon', { collide: 0 });
@@ -447,6 +469,10 @@ export class Backstage {
       this.hooks.toast("Family Landing backstage: Benton Haunt's sixth house, Lights Out at Lakeside, is open in this tent. Lights out...", 'info');
     }
     const inside = family || (playerPos.x > BS.x0 && playerPos.x < BS.x1 && playerPos.z > BS.z0 && playerPos.z < BS.z1);
+    if (inside && !family && !this.told && EASTER) {
+      this.told = true;
+      this.hooks.toast('Happy Easter! Meet the Easter Bunny in Stage 23, walk Inside the Egg on Stage 22, grab a treat at the Easter Bar - and find all 12 eggs hidden in the yard for the Great Benton Egg Hunt!', 'reward');
+    }
     if (inside && !family && !this.told && MARDI_GRAS) {
       this.told = true;
       this.hooks.toast('Happy Mardi Gras! The Mardi Gras Bar is back in the yard, and the new Krewe of Benton: Mardi Gras Spectacular is showing in Stage 23. Laissez les bons temps rouler!', 'reward');
