@@ -49,6 +49,25 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Override, a multi-launch coaster (browser only):**
+  - **Where:** south of Jungle Run. Take the walk down Jungle Run's west
+    edge to a black gate with a red scan bar in its south wall.
+  - **The story:** the park's ride computer has taken over. You board in
+    Control Room 7, under screens flashing ACCESS DENIED, OVERRIDE
+    ACCEPTED and DO NOT RESIST, five black-and-red cars of four.
+  - **Three launches,** each a straight lined with red magnetic launch
+    fins and rings of red and cyan light:
+    - **Launch 1** (to about 30 m/s) fires you straight out of the station,
+      up and over a 56-stud top hat past the glowing AI core.
+    - After an overbanked turn and a zero-g roll, **launch 2** (36 m/s)
+      blasts you through the reactor tunnel into a huge airtime hill.
+    - A camelback follows, then **launch 3** (35 m/s) throws you into a
+      heartline roll, before the brakes take control back.
+  - **The ride:** 1,309 m in about 70 seconds, with sparks at every launch,
+    fire at the reactor and an explosion at the top hat.
+  - **Around it:** server towers with blinking lights, glowing cables, red
+    and cyan lamps, and 56 graphite supports. Everything is placed clear
+    of the train's path.
 - **New ride: Benton Flash, a single-rail coaster in the RMC Raptor style
   (browser only):**
   - **Where:** west of Construction Runaway. Walk across its plaza to a
