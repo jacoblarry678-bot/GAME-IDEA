@@ -203,6 +203,19 @@ function single(fr, color, boxes) {
   return [sweep(fr, beam, color)];
 }
 
+// RMC's "T-Rex" style: flat topper rails on a wide steel flange, with a
+// deep web underneath (a T in section) and stiffener plates along it
+function trex(fr, color, boxes) {
+  const parts = [];
+  const railC = 0x9aa0a8;
+  for (const x of [-1.6, 1.6]) parts.push(sweep(fr, polygon([[x - 0.32, -0.42], [x + 0.32, -0.42], [x + 0.32, -0.1], [x - 0.32, -0.1]]), railC));
+  parts.push(sweep(fr, polygon([[-2.1, -0.72], [2.1, -0.72], [2.1, -0.42], [-2.1, -0.42]]), color));
+  parts.push(sweep(fr, polygon([[-0.38, -2.1], [0.38, -2.1], [0.38, -0.72], [-0.38, -0.72]]), color));
+  parts.push(sweep(fr, polygon([[-0.9, -2.3], [0.9, -2.3], [0.9, -2.08], [-0.9, -2.08]]), color));
+  every(fr, 2.5, (f) => boxes.add('metal', 'Metal', f, [4.1, 1.4, 0.14], [0, -1.4, 0], color));
+  return parts;
+}
+
 function wooden(fr, boxes) {
   const parts = [];
   const steelGrey = 0x6a6d74;
@@ -295,6 +308,7 @@ export function buildTracks(scene, data) {
     if (cfg.skip && cfg.style === 'steel') for (const run of cut(fr, sampler, cfg.skip)) parts.push(...steel(run, cfg.color || 0xc04040, boxes));
     else if (cfg.style === 'steel') parts = steel(fr, cfg.color || 0xc04040, boxes);
     else if (cfg.style === 'single') parts = single(fr, cfg.color || 0xf2d020, boxes);
+    else if (cfg.style === 'trex') parts = trex(fr, cfg.color || 0x3a5ad8, boxes);
     else if (cfg.style === 'wood') parts = wooden(fr, boxes);
     else if (cfg.style === 'flume') { parts = [flume(fr)]; fam = 'planks'; }
     else if (cfg.style === 'road') { parts = road(fr, cfg, boxes); fam = 'stone'; }

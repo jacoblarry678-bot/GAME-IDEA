@@ -49,6 +49,39 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Operation: Win the Crown, an indoor RMC-style coaster on
+  T-Rex-style track (browser only):**
+  - **Where:** Baron Vex's fortress, north of RC Race. Follow the walk up
+    the east side of the raceway to the navy-and-gold gate in its north
+    wall.
+  - **The story:** Baron Vex (the park's own villain) has stolen the
+    Benton Crown and locked it in his fortress. You're the agents sent to
+    win it back.
+  - **The track:** a new T-Rex style. Flat steel topper rails sit on a
+    wide blue flange with a deep T-shaped web underneath, and stiffener
+    plates run along it.
+  - **The ride**, fully indoors:
+    1. Up the lift through a criss-cross of red laser beams.
+    2. A twisting first drop past the guard towers' searchlights, with an
+       explosion as they spot you.
+    3. A **zero-g stall** over the vault: hanging upside down past its
+       giant round door and stacks of gold bars, with sparks.
+    4. An airtime hill, then a **barrel roll**.
+    5. An outward-banked hill, RMC style.
+    6. A helix round the throne room, with Baron Vex's empty throne on a
+       purple dais.
+    7. A **zero-g roll** out under the lift.
+    8. Into the brakes past the crown itself on a pedestal under a gold
+       light, with a MISSION COMPLETE / YOU WON THE CROWN sign and gold
+       confetti.
+    - That's three inversions, with a top speed of about 90 km/h.
+  - **Outside:**
+    - A dark stone fortress with battlements, four corner turrets with
+      purple roofs, purple banners, and a giant gold crown over the door.
+    - The line winds through a courtyard of hedge switchbacks under
+      sweeping searchlights, starting at an AGENTS: ENTER HERE sign.
+    - Inside, the mission briefing screen leads you to the black-and-gold
+      cars.
 - **Easter is over, and summer is here (browser only):**
   - **Easter has packed up:** the Easter Bar, Meet the Easter Bunny,
     Inside the Egg and the Great Benton Egg Hunt are gone. The soundstages

@@ -51,9 +51,17 @@ export function carriedFrames(track, { free = [], twists = [] }) {
   // speed from the timing, for banking
   const v = cum.map((_, i) => { const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1); return (cum[b] - cum[a]) / Math.max(1e-3, track.times[b] - track.times[a]); });
   const ease = (u) => u * u * u * (u * (u * 6 - 15) + 10);
+  // a twist's angle part way through: all the way round (eased), a zero-g
+  // stall (round to upside down, held, then the rest), or a bump (out to
+  // the angle and back - an outward-banked hill)
+  const shapeAt = (T, u) => {
+    if (T.shape === 'stall') { const p = (1 - (T.hold ?? 0.4)) / 2; return T.angle * 0.5 * (u < p ? ease(u / p) : u < 1 - p ? 1 : 1 + ease((u - (1 - p)) / p)); }
+    if (T.shape === 'bump') return T.angle * Math.sin(Math.PI * u) ** 2;
+    return T.angle * ease(u);
+  };
   const twistAt = (s) => {
     let a = 0;
-    for (const T of twists) a += s <= T.s0 ? 0 : s >= T.s1 ? T.angle : T.angle * ease((s - T.s0) / (T.s1 - T.s0));
+    for (const T of twists) a += s <= T.s0 ? 0 : s >= T.s1 ? (T.shape === 'bump' ? 0 : T.angle) : shapeAt(T, (s - T.s0) / (T.s1 - T.s0));
     return a;
   };
   const freeW = (s) => {
@@ -104,7 +112,7 @@ export function carriedFrames(track, { free = [], twists = [] }) {
   for (let i = 0; i < n; i++) {
     for (const T of twists) {
       if (cum[i] <= T.s0 || cum[i] >= T.s1) continue;
-      const a = T.angle * ease((cum[i] - T.s0) / (T.s1 - T.s0));
+      const a = shapeAt(T, (cum[i] - T.s0) / (T.s1 - T.s0));
       const u0 = up[i].clone().applyAxisAngle(tan[i], -a);
       pos[i].addScaledVector(u0, T.h).addScaledVector(up[i], -T.h);
     }

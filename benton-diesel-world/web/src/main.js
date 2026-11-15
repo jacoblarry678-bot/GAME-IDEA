@@ -56,6 +56,7 @@ import { buildHarborRun, HarborRunSite } from './harborrun.js';
 import { buildSpeedBreaker, SpeedBreakerSite } from './speedbreaker.js';
 import { buildRCRace, RCRaceSite } from './rcrace.js';
 import { buildSummer, SunSwingerSite } from './sunswinger.js';
+import { buildWinTheCrown, WinTheCrownSite } from './wincrown.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -197,6 +198,8 @@ async function main() {
   const rcLayout = buildRCRace(data);
   // summer: the summer parades, and Sun Swinger on the speed-trials ground
   const summerLayout = SUMMER ? buildSummer(data) : null;
+  // Operation: Win the Crown: the indoor RMC coaster, north of RC Race
+  const wcLayout = buildWinTheCrown(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -332,6 +335,7 @@ async function main() {
   const hrSite = new HarborRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, hrLayout);
   const sbSite = new SpeedBreakerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, sbLayout);
   const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
+  const wcSite = new WinTheCrownSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wcLayout);
   const ssSite = summerLayout ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
@@ -530,7 +534,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || inBox(brLayout.indoor) || inBox(rvgLayout.indoor) || inBox(bzLayout.indoor) || inBox(hrLayout.indoor) || (msLayout && inBox(msLayout.indoor)) || (ebLayout && inBox(ebLayout.indoor)));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || inBox(brLayout.indoor) || inBox(rvgLayout.indoor) || inBox(bzLayout.indoor) || inBox(hrLayout.indoor) || inBox(wcLayout.indoor) || (msLayout && inBox(msLayout.indoor)) || (ebLayout && inBox(ebLayout.indoor)));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -574,6 +578,7 @@ async function main() {
     sbSite.update(dt, player.pos, started);
     rcSite.update(dt, player.pos, started);
     ssSite?.update(dt, player.pos, started);
+    wcSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
