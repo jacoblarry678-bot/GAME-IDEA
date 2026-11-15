@@ -197,6 +197,21 @@ export class World {
       const ctx = s.ctx;
       const W = s.canvas.width, H = s.canvas.height;
       // only redraw (and re-upload) signs whose numbers changed
+      if (s.kind === 'count') {
+        // the crew's clicker count at a pre-show door
+        const ps = rideState(s.ride).preshow || { count: 0, group: 0, next: 0, open: false };
+        const key = `${ps.count}:${ps.group}:${ps.open}:${Math.ceil(ps.next / 5)}`;
+        if (key === s.key) continue;
+        s.key = key;
+        ctx.fillStyle = '#0a0c10';
+        ctx.fillRect(0, 0, W, H);
+        fitText(ctx, 'PRE-SHOW COUNT  ·  CREW ONLY', 16, 10, W - 32, 34, '#8a94a8', 700);
+        fitText(ctx, ps.count.toLocaleString('en-US'), 16, 52, W - 32, 120, '#ffd23c', 800);
+        fitText(ctx, `THIS GROUP: ${ps.group}`, 16, 180, W - 32, 46, '#faf3e0', 700);
+        fitText(ctx, ps.open ? 'DOORS OPEN' : `NEXT GROUP IN ${ps.next}s`, 16, 236, W - 32, 46, ps.open ? '#5adc6e' : '#f04636', 700);
+        s.tex.needsUpdate = true;
+        continue;
+      }
       const key = s.kind === 'wait'
         ? (({ status, wait }) => `${status}:${wait}`)(rideState(s.ride))
         : rides.map((r) => { const st = rideState(r.id); return `${st.status === 'Closed'}:${st.wait}`; }).join(',');

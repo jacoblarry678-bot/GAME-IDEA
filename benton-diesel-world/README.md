@@ -49,6 +49,43 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Benton Blitz, a multi-launch coaster that goes backward three
+  times (browser only):**
+  - **Where:** a new canyon in the old quarry, west of Ravage. Walk past
+    Ravage (follow the BENTON BLITZ signs along its exit path) to the
+    yellow-and-navy gate in Ravage's west wall. The park now runs further
+    west to fit it.
+  - **The story:** Benton Storm Chasers HQ has built a coaster that rides
+    the lightning.
+  - **The ride:** black trains with lightning-yellow trim and electric-blue
+    underglow, on electric-blue track. The launches are worked out from
+    real physics (gravity, friction, launch motors), so the train truly
+    stalls and rolls back:
+    1. Launch 1 doesn't make it over the first top hat (about 46 m tall).
+       **Backward #1:** you're thrown backward through the station and up
+       the rear ramp.
+    2. Launch 2 goes higher, but still not over. **Backward #2**, up the
+       rear ramp again.
+    3. Launch 3 takes you over the top hat, which turns as it drops, then a
+       heartline roll and a camelback.
+    4. Out on the course, the second top hat sends you back. **Backward
+       #3:** the motors push you backward up the camelback.
+    5. The last launch takes you over, round a climbing turn, and down the
+       rear ramp into the station.
+    - Lightning sparks on every launch and every backward push. Top speed
+      is about 31 m/s.
+  - **The outdoor line:** a field of switchbacks under lightning-yellow
+    sails, among storm-chaser trucks, a Doppler radar and a 30 m lightning
+    tower.
+  - **The indoor line:** Storm Chasers HQ, where three rows wind through
+    the Storm Center past storm screens and a glowing storm map.
+  - **The pre-show, the storm briefing:** the room takes guests in groups.
+    - Between shows the doors open, and a crew member counts each group in
+      on a clicker. The running count sits on a small crew-only display by
+      the door: the total, this group, and the time to the next group.
+    - Everyone else waits at the door. When the show ends, the group goes
+      through to the station together.
+    - When you walk in yourself, you're counted too, and get the briefing.
 - **Ravage now has the busiest line in the park (browser only):** its
   1.7 km queue is built for crowds, and now it gets them.
   - Its wait aims higher than any other ride's, and through the afternoon

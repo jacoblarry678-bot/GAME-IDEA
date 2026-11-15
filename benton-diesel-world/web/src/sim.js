@@ -151,6 +151,7 @@ export class Sim {
     return {
       status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, late: !!st.late, opensAt: st.cfg.opensAt ?? null, lastWait: st.lastWait ?? null,
       express: this.expressWait(st), fotl: this.fotlWait(st), extended: this.extendedOpen(st),
+      preshow: st.preshow ?? null, // a pre-show room's count (see QueueCrowd)
     };
   }
 

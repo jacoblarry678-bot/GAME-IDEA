@@ -133,7 +133,7 @@ export class Terrain {
 
   buildMesh(quality) {
     const step = quality.name === 'low' ? 8 : quality.name === 'ultra' ? 4 : 5;
-    const xs = Terrain.axis(-660, 660, 0, step);
+    const xs = Terrain.axis(-830, 660, 0, step); // (the park runs further west now: the Blitz canyon)
     const zs = Terrain.axis(-680, 640, 0, step);
     const nx = xs.length, nz = zs.length;
     const pos = new Float32Array(nx * nz * 3);

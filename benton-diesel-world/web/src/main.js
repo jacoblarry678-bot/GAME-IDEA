@@ -49,6 +49,7 @@ import { buildBentonFlash, BentonFlashSite } from './bentonflash.js';
 import { buildOverride, OverrideSite } from './override.js';
 import { buildBentonRoll, BentonRollSite } from './bentonroll.js';
 import { buildRavage, RavageSite } from './ravage.js';
+import { buildBentonBlitz, BentonBlitzSite } from './bentonblitz.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -176,6 +177,8 @@ async function main() {
   const brLayout = buildBentonRoll(data);
   // Ravage: the tilt coaster, out past the back lot
   const rvgLayout = buildRavage(data);
+  // Benton Blitz: the multi-launch coaster in the canyon past Ravage
+  const bzLayout = buildBentonBlitz(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -305,6 +308,7 @@ async function main() {
   const crSite = new ConstructionRunawaySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, crLayout);
   const brSite = new BentonRollSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, brLayout);
   const rvgSite = new RavageSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rvgLayout);
+  const bzSite = new BentonBlitzSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bzLayout);
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
   const jrSite = new JungleRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jrLayout);
@@ -502,7 +506,7 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || inBox(brLayout.indoor) || inBox(rvgLayout.indoor) || (msLayout && inBox(msLayout.indoor)) || (ebLayout && inBox(ebLayout.indoor)));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || inBox(brLayout.indoor) || inBox(rvgLayout.indoor) || inBox(bzLayout.indoor) || (msLayout && inBox(msLayout.indoor)) || (ebLayout && inBox(ebLayout.indoor)));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
@@ -539,6 +543,7 @@ async function main() {
     ovSite.update(dt, player.pos, started);
     brSite.update(dt, player.pos, started);
     rvgSite.update(dt, player.pos, started);
+    bzSite.update(dt, player.pos, started, sim.queueRide === 'BentonBlitz');
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);

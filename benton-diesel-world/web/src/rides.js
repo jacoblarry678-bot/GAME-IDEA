@@ -333,12 +333,19 @@ export function makeMotion(r, cfg) {
     const flip = r.flip ? flipCurve(r.flip, sampler.length) : null;
     // a tilt coaster: the cars on the tilting piece tip with it
     const tilt = r.tilt ? tiltPiece(r.tilt) : null;
+    // distance along the track at time t, sampled every dt (it can go back)
+    const prof = r.profile ? (t) => {
+      const P = r.profile, n = P.s.length;
+      const x = Math.max(0, Math.min(n - 1, t / P.dt)), i = Math.min(n - 2, Math.floor(x)), a = x - i;
+      return P.s[i] + (P.s[i + 1] - P.s[i]) * a;
+    } : null;
     const Pt = r.tilt ? new THREE.Matrix4().makeTranslation(-r.tilt.pivot[0], -r.tilt.pivot[1], -r.tilt.pivot[2]) : null;
     return {
       duration: r.duration,
       sampler,
       pose(t) {
-        const s = sampler.distanceAt(t);
+        // (a ride that rolls backward and forward has its own distance-time profile)
+        const s = prof ? prof(t) : sampler.distanceAt(t);
         const cars = [], extras = {};
         let Mt = null;
         if (tilt) {
