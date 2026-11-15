@@ -42,7 +42,7 @@ const knot = (x, z) => CIRCUIT.findIndex((p) => p[0] === x && p[2] === z);
 // beyond-vertical drop and the loop keep the riders the right way round),
 // pulled toward the usual banked "up" wherever the track is near level,
 // with twists (rolls about the heartline) added on top.
-function frames(track, { free = [], twists = [] }) {
+export function carriedFrames(track, { free = [], twists = [] }) {
   const n = track.cum.length;
   const V = (arr, i) => new THREE.Vector3(arr[i * 3], arr[i * 3 + 1], arr[i * 3 + 2]);
   const pos = [], tan = [];
@@ -178,7 +178,7 @@ export function buildCyclone(data) {
   // ======== the track
   const track = makeTrack(CIRCUIT);
   const sk = (x, z) => { const k = knot(x, z); let best = 0, bd = Infinity; const p = CIRCUIT[k]; for (let i = 0; i < track.cum.length; i++) { const d = (track.pos[i * 3] - p[0]) ** 2 + (track.pos[i * 3 + 1] - p[1]) ** 2 + (track.pos[i * 3 + 2] - p[2]) ** 2; if (d < bd) { bd = d; best = i; } } return track.cum[best]; };
-  frames(track, {
+  carriedFrames(track, {
     // carried, not banked: the lift, the drop and the loop
     free: [[sk(-664, -64), sk(-697, -64)], [sk(-705, -64.5), sk(-726, -73)]],
     twists: [{ s0: sk(-748, -145), s1: sk(-706, -147), angle: Math.PI * 2, h: 1.3 }],

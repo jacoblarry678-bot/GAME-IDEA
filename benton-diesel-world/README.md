@@ -49,6 +49,30 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Speed Breaker, a strata coaster (browser only):**
+  - **Where:** the speed-trials ground north of Harbor Run, through the
+    checkered gate in Harbor Run's north wall (the walk starts at the end
+    of Harbor Run's exit path).
+  - **The story:** Benton Motor Works is out to break the land speed
+    record in SB-1, a silver jet-powered record car with a jet nozzle on
+    its tail. The record run ends at the top of the Breaker tower.
+  - **The ride:**
+    1. A drag-racing start light counts down, and the jet fires.
+    2. A hydraulic launch takes you to about 186 km/h through a speed trap
+       (TRAP SPEED: 190 KM/H) and down red-and-white launch stripes.
+    3. Straight up the 128 m top hat, which twists a quarter turn on the
+       way up so you go over the top the right way up, at about 15 m/s.
+       The crest turns round, and you come straight down with a quarter
+       twist back.
+    4. Over a 50 m camelback at about 40 m/s (airtime).
+    5. Into the brakes, and round into the garage.
+  - **The Breaker tower** is a 125 m white lattice tower between the climb
+    and the drop. It has a checkered crown, red aircraft lights, and
+    SPEED BREAKER down its side, so you can see it from all over the
+    west side.
+  - **Around it:** a glass-and-steel pit garage for the station,
+    switchbacks under checkered flags, a grandstand facing the launch, and
+    a checkered entrance arch with the live wait time.
 - **New ride: Harbor Run, a robot-arm dark ride (browser only):**
   - **Where:** the old Benton harbor, north of Cyclone, through the
     navy-and-orange gate in Cyclone's north wall.

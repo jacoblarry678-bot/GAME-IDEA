@@ -53,6 +53,7 @@ import { buildBentonBlitz, BentonBlitzSite } from './bentonblitz.js';
 import { buildFlyingFire, FlyingFireSite } from './flyingfire.js';
 import { buildCyclone, CycloneSite } from './cyclone.js';
 import { buildHarborRun, HarborRunSite } from './harborrun.js';
+import { buildSpeedBreaker, SpeedBreakerSite } from './speedbreaker.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -188,6 +189,8 @@ async function main() {
   const cyLayout = buildCyclone(data);
   // Harbor Run: the robot-arm dark ride at Pier 9, north of Cyclone
   const hrLayout = buildHarborRun(data);
+  // Speed Breaker: the strata coaster, north of Harbor Run
+  const sbLayout = buildSpeedBreaker(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -321,6 +324,7 @@ async function main() {
   const ffSite2 = new FlyingFireSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout2);
   const cySite = new CycloneSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, cyLayout);
   const hrSite = new HarborRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, hrLayout);
+  const sbSite = new SpeedBreakerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, sbLayout);
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
   const jrSite = new JungleRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jrLayout);
@@ -559,6 +563,7 @@ async function main() {
     ffSite2.update(dt, player.pos, started);
     cySite.update(dt, player.pos, started);
     hrSite.update(dt, player.pos, started);
+    sbSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
