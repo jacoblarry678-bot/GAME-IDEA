@@ -49,6 +49,26 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Cyclone, a compact "El Loco"-style coaster with a drop past
+  vertical (browser only):**
+  - **Where:** a storm-wrecked farm north of Flying Fire. Follow the
+    CYCLONE sign up the east side of Flying Fire's clearing to the
+    storm-grey gate in its north wall.
+  - **The story:** a tornado tore through Benton Ridge Farm, and its funnel
+    is still spinning over the fields: a grey whirl of wind with boards,
+    hay and a tractor caught up in it, turning while the ride runs.
+    Around it are a barn with its walls torn open, a bent windmill, an
+    overturned tractor and scattered hay bales and fence boards.
+  - **The ride:** two little storm-grey cars with cyan trim, on cyan track.
+    1. A **vertical lift**: you climb straight up, lying on your back.
+    2. Over the top, and a **beyond-vertical drop**, past straight down
+       and tucking back under the crest, with a cloudburst at the bottom.
+    3. A **vertical loop**.
+    4. A camelback and tight turns round the far end.
+    5. A **zero-g roll**, with sparks as you come out.
+    6. Home to the barn.
+  - **The line:** short, through white fence-rail switchbacks from a
+    stand-by gate with the live wait time.
 - **New ride: Flying Fire, a wooden coaster that goes upside down (browser
   only):**
   - **Where:** a logging-camp clearing north of the Blitz canyon, west of
