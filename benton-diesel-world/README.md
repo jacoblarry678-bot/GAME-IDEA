@@ -49,6 +49,29 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Harbor Run, a robot-arm dark ride (browser only):**
+  - **Where:** the old Benton harbor, north of Cyclone, through the
+    navy-and-orange gate in Cyclone's north wall.
+  - **The story:** it's PORTBOT 9's first night shift. PORTBOT 9 is Benton
+    Port's new cargo robot, a four-seat bench on the end of a giant arm.
+    A storm rolls in, and the robot makes a run for it through the port.
+  - **The ride:** the arm lifts, turns, pushes and tips you through seven
+    scenes in the Pier 9 warehouse:
+    1. **The container yard:** a container swings at you and rolls you
+       onto your side.
+    2. **A freighter's engine room:** giant pistons pound, with steam,
+       red light and sparks.
+    3. **On deck in the storm:** waves, lightning, rain and wind.
+    4. **A giant wave** curls over you and tips you onto your back, with
+       spray.
+    5. **The lighthouse:** its beam sweeps over you.
+    6. **The sea serpent** that lives under the pier (the park's own
+       creature) lunges up out of the water with a splash.
+    7. **Home to the dock**, where the dock master waves you in.
+  - **Outside:** a harbor basin with a tugboat, a red-and-white
+    lighthouse, container stacks, and a gantry crane over the line.
+  - **The line:** switchbacks through the container yard, then inside the
+    warehouse up three lanes to PORTBOT 9's dock.
 - **New ride: Cyclone, a compact "El Loco"-style coaster with a drop past
   vertical (browser only):**
   - **Where:** a storm-wrecked farm north of Flying Fire. Follow the
