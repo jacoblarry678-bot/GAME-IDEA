@@ -15,6 +15,7 @@ import { makeTrack, queuePath } from './fastfurious.js';
 import { helpers } from './wolverine.js';
 import { LINES } from './guests.js';
 import { Sampler } from './rides.js';
+import { DIESEL_RUN_CLOSED } from './season.js';
 
 export const RIDE_ID = 'DieselRun';
 const LAND = { x0: -592, x1: -375, z0: 26, z1: 278 };
@@ -108,7 +109,7 @@ export function buildDieselRun(data) {
   add([LAND.x1 - LAND.x0, 1, LAND.z1 - LAND.z0], [(LAND.x0 + LAND.x1) / 2, G - 0.5, (LAND.z0 + LAND.z1) / 2], 0x4a4c50, 'Asphalt');
 
   // ---- the walk in from Diesel District: a path, lamps, the gate arch
-  const route = [[-152, 139], [-250, 139], [-372, gz]];
+  const route = [[-152, 139], [-250, 139], [DIESEL_RUN_CLOSED ? -367 : -372, gz]];
   for (let i = 0; i < route.length - 1; i++) {
     const [xa, za] = route[i], [xb, zb] = route[i + 1];
     const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
@@ -120,7 +121,7 @@ export function buildDieselRun(data) {
   for (const x of [-190, -240, -290, -340]) lamp(x, 146, ORANGE);
   // a signpost where the path leaves the walkway
   box([0.6, 9, 0.6], [-160, G, 130], 0x2a2c30, 'Metal');
-  for (const face of ['Right', 'Left']) sign([0.3, 3.4, 10], [-160 + (face === 'Right' ? 0.4 : -0.4), G + 9.4, 130], DARK, face, [['DIESEL RUN', 0, 0, 1, 0.62, ORANGE], ['NEW  ·  THIS WAY', 0, 0.62, 1, 0.38, WHITE, 'GothamBold']], { glow: true });
+  for (const face of ['Right', 'Left']) sign([0.3, 3.4, 10], [-160 + (face === 'Right' ? 0.4 : -0.4), G + 9.4, 130], DARK, face, [['DIESEL RUN', 0, 0, 1, 0.62, ORANGE], [DIESEL_RUN_CLOSED ? 'PERMANENTLY CLOSED' : 'NEW  ·  THIS WAY', 0, 0.62, 1, 0.38, DIESEL_RUN_CLOSED ? 0xff4a3a : WHITE, 'GothamBold']], { glow: true });
   // the gate arch: two black pylons with orange light bars
   const ax = -376;
   for (const z of [GATE.z0 + 1.6, GATE.z1 - 1.6]) {
@@ -483,10 +484,29 @@ export function buildDieselRun(data) {
     [at(-505, 210), 'explosion', [0, 6, -12]], [at(-465, 232), 'sparks', [3, 6, -6]], [at(-496, 255), 'fire', [0, -2, -10]],
     [at(-540, 255), 'fire', [-5, 0, 0]], [at(-532, 255), 'fire', [5, 0, 0]],
   ];
+  // shut down for good: the gate fenced off, CLOSED banners on the arch and
+  // the facade, the doors chained
+  if (DIESEL_RUN_CLOSED) {
+    const RED = 0xd8282a;
+    const fx = -371.5;
+    box([0.3, 4.2, GATE.z1 - GATE.z0 + 4], [fx, G, gz], 0x9aa0a8, 'Metal', { trans: 0.5 });
+    for (let z = GATE.z0 - 2; z <= GATE.z1 + 2; z += 4.4) box([0.4, 4.6, 0.4], [fx, G, z], 0x6a6e76, 'Metal');
+    for (let z = GATE.z0; z <= GATE.z1; z += 5) add([0.8, 0.5, 1.6], [fx + 0.6, G + 0.25, z], 0xf2c818, 'Concrete', { collide: 0 });
+    sign([0.2, 2.2, 22], [fx + 0.3, G + 2.6, gz], RED, 'Right', [['DIESEL RUN IS PERMANENTLY CLOSED', 0, 0, 1, 1, WHITE, 'GothamBlack']]);
+    sign([0.2, 0.9, 22], [fx + 0.3, G + 1.0, gz], WHITE, 'Right', [['THANK YOU FOR EVERY TEST DRIVE  ·  THE X-1 RIGS HAVE BEEN RETIRED', 0, 0, 1, 1, RED, 'GothamBold']]);
+    for (const [x, y, z, w, h] of [[ax + 2.5, G + 19.4, gz, 30, 2.4], [B.x1 + 0.7, G + 17, doorIn, 40, 3]]) {
+      sign([0.3, h, w], [x, y, z], RED, 'Right', [['PERMANENTLY CLOSED', 0, 0, 1, 1, WHITE, 'GothamBlack']], { glow: true });
+    }
+    // the doors chained shut
+    add([0.3, 5, 14], [B.x1 + 0.5, G + 2.6, doorIn], 0x6a6e76, 'Metal', { trans: 0.4, collide: 1 });
+    for (const dy of [1.6, 3.4]) add([0.2, 0.25, 14], [B.x1 + 0.7, G + dy, doorIn], 0x8a8e96, 'Metal', { collide: 0 });
+    add([0.6, 0.9, 0.6], [B.x1 + 0.9, G + 2.5, doorIn], 0xb08a30, 'Metal', { collide: 0 });
+  }
   const rides = data.config.Rides;
   let insertAt = rides.length;
   rides.forEach((r, i) => { if (r.land === 'Diesel') insertAt = i + 1; });
   rides.splice(insertAt, 0, {
+    shutdown: DIESEL_RUN_CLOSED,
     id: RIDE_ID, name: 'Diesel Run', land: 'Diesel', category: 'Thrill', thrill: 4, kind: 'darkride', carStyle: 'coaster',
     description: 'The ultimate test drive, fully indoors: ride the Benton Diesel X-1, a cabin on a six-legged motion base, through the inside of a diesel engine, a desert highway, a collapsing canyon, a storm, a bridge jump and a tunnel of fire. The cabin turns, tilts and drops with every scene.',
     baseWait: 70, origin, entrance: [-392.5, 0, doorIn + 7], exit: [-382, 0, doorOut], yaw: 0, layout: RIDE_ID,

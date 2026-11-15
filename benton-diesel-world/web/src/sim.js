@@ -70,7 +70,8 @@ export class Sim {
         queue: [], express: [], fotl: null, status: 'Open', cycleStart: 0, cycleEnds: 0, riders: [], downUntil: 0, player: null, cycleId: 0,
       };
       // closed for a refurbishment: no line, no running
-      if (cfg.refurb) Object.assign(st, { refurb: true, status: 'Closed', downUntil: Infinity });
+      if (cfg.refurb || cfg.shutdown) Object.assign(st, { refurb: true, shutdown: !!cfg.shutdown, status: 'Closed', downUntil: Infinity });
+      // (shut down for good: closed the same way, but it isn't coming back)
       // a late attraction (opensAt: a park minute) is closed until then
       this.lateCheck(st);
       this.rides.set(r.id, st);
@@ -149,7 +150,7 @@ export class Sim {
   rideState(id) {
     const st = this.rides.get(id);
     return {
-      status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, late: !!st.late, opensAt: st.cfg.opensAt ?? null, lastWait: st.lastWait ?? null,
+      status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, shutdown: !!st.shutdown, late: !!st.late, opensAt: st.cfg.opensAt ?? null, lastWait: st.lastWait ?? null,
       express: this.expressWait(st), fotl: this.fotlWait(st), extended: this.extendedOpen(st),
       preshow: st.preshow ?? null, // a pre-show room's count (see QueueCrowd)
     };
@@ -196,7 +197,7 @@ export class Sim {
     const st = this.rides.get(id);
     if (!st) return;
     if (st.refurb) {
-      this.hooks.toast(`${st.cfg.name} is closed for a small refurbishment. It'll be back very soon!`, 'warn');
+      this.hooks.toast(st.shutdown ? `${st.cfg.name} has closed for good. Thanks for every ride!` : `${st.cfg.name} is closed for a small refurbishment. It'll be back very soon!`, 'warn');
       return;
     }
     if (this.ridingRide) {

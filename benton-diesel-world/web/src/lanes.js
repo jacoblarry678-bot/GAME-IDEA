@@ -48,7 +48,7 @@ export function buildExtendedQueues(data) {
     const q = r.queue;
     if (!q || r.kind === 'walkthrough' || r.noExtended) continue;
     const cfg = data.config.Rides.find((c) => c.id === r.id);
-    if (!cfg || cfg.refurb) continue;
+    if (!cfg || cfg.refurb || cfg.shutdown) continue;
     const n = q.points.length / 2;
     const E = [q.points[(n - 1) * 2], q.points[(n - 1) * 2 + 1]], P = [q.points[(n - 2) * 2], q.points[(n - 2) * 2 + 1]];
     const ul = Math.hypot(E[0] - P[0], E[1] - P[1]) || 1;

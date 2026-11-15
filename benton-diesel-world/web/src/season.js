@@ -23,3 +23,6 @@ export const SUMMER = true;
 // new soundstage at the east end of the backstage lot.
 export const FD_BUILDING = false;
 export const FD_OPEN = true;
+// Diesel Run, the motion-simulator dark ride west of Diesel District, has
+// shut down for good: its gate is fenced off and its signs say so.
+export const DIESEL_RUN_CLOSED = true;

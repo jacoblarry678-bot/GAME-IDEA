@@ -49,6 +49,20 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Diesel Run has shut down for good (browser only):**
+  - The motion-simulator dark ride west of Diesel District is permanently
+    closed. There's no line, no crew, and the X-1 rigs sit still in the
+    building.
+  - Its gate is fenced off with chain-link panels on yellow barrier feet,
+    under a big red sign: DIESEL RUN IS PERMANENTLY CLOSED · THANK YOU FOR
+    EVERY TEST DRIVE.
+  - Red PERMANENTLY CLOSED banners hang on the gate arch and across the
+    building's facade, and its doors are chained shut.
+  - The signpost on the walkway, the wait sign and the park's wait-time
+    boards all say it's closed, and so do the ride list and the ride
+    prompt. The ride list shows CLOSED rather than REFURB, and the prompt
+    and the toast say it isn't coming back.
+  - BentonGram has a farewell post.
 - **New ride: Operation: Win the Crown, an indoor RMC-style coaster on
   T-Rex-style track (browser only):**
   - **Where:** Baron Vex's fortress, north of RC Race. Follow the walk up
