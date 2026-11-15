@@ -49,6 +49,11 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Fix (browser only):** with RC Race, the park passed 41 rides, and the
+  game stopped loading. The wait-times boards list every ride, and each
+  row got too small for the sign text code. The boards now switch to two
+  columns once there are more than 24 rides, and the sign text code
+  copes with any size of box.
 - **New ride: RC Race presented by Crinkle Crunch, a stand-up coaster
   (browser only):**
   - **Where:** the RC raceway north of Speed Breaker. Follow the walk up

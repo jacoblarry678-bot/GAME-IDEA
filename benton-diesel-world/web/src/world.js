@@ -233,17 +233,20 @@ export class World {
       } else {
         ctx.fillStyle = '#101624';
         ctx.fillRect(0, 0, W, H);
-        const rowH = (H - 16) / rides.length;
+        // (two columns once the park has too many rides for one)
+        const cols = rides.length > 24 ? 2 : 1, per = Math.ceil(rides.length / cols);
+        const rowH = (H - 16) / per, colW = (W - 16) / cols;
         rides.forEach((ride, i) => {
-          const y = 8 + i * rowH;
-          ctx.fillStyle = i % 2 ? '#1a2234' : '#141a2a';
-          ctx.fillRect(8, y, W - 16, rowH - 2);
+          const c = Math.floor(i / per), r = i % per;
+          const x0 = 8 + c * colW, y = 8 + r * rowH;
+          ctx.fillStyle = r % 2 ? '#1a2234' : '#141a2a';
+          ctx.fillRect(x0, y, colW - 4, rowH - 2);
           ctx.fillStyle = ride.landInfo.colorCss;
-          ctx.fillRect(12, y + rowH * 0.2, 8, rowH * 0.6);
+          ctx.fillRect(x0 + 4, y + rowH * 0.2, 6, rowH * 0.6);
           const st = rideState(ride.id);
-          fitText(ctx, ride.name, 28, y + 2, W * 0.66, rowH - 6, '#faf3e0', 700, 'left');
+          fitText(ctx, ride.name, x0 + 14, y + 1, colW * 0.62, rowH - 3, '#faf3e0', 700, 'left');
           const closed = st.status === 'Closed';
-          fitText(ctx, closed ? 'CLOSED' : st.wait <= 0 ? 'NO WAIT' : `${st.wait} MIN`, W * 0.7, y + 2, W * 0.28 - 12, rowH - 6, closed ? '#f04636' : waitColor(st.wait), 800, 'right');
+          fitText(ctx, closed ? 'CLOSED' : st.wait <= 0 ? 'NO WAIT' : `${st.wait} MIN`, x0 + colW * 0.66, y + 1, colW * 0.32 - 8, rowH - 3, closed ? '#f04636' : waitColor(st.wait), 800, 'right');
         });
       }
       s.tex.needsUpdate = true;
@@ -364,8 +367,8 @@ function wrapLines(ctx, text, maxW) {
 
 // Draw text scaled to fit a box (like Roblox TextScaled + TextWrapped).
 export function fitText(ctx, text, x, y, w, h, color, weight = 700, align = 'center', stroke = false) {
-  let size = Math.floor(h);
-  let lines;
+  let size = Math.max(5, Math.floor(h));
+  let lines = null;
   for (; size > 6; size -= 1) {
     ctx.font = `${weight} ${size}px ${SIGN_FONT}`;
     lines = wrapLines(ctx, text, w);
@@ -373,6 +376,8 @@ export function fitText(ctx, text, x, y, w, h, color, weight = 700, align = 'cen
     if (lines.length * size * 1.05 <= h && widest <= w) break;
   }
   ctx.font = `${weight} ${size}px ${SIGN_FONT}`;
+  // (a tiny box: the loop never ran)
+  if (!lines) lines = wrapLines(ctx, text, w);
   ctx.fillStyle = color;
   ctx.textBaseline = 'middle';
   ctx.textAlign = align;
