@@ -302,10 +302,12 @@ export class Player {
     // holder follows the ride seat; the seated pose puts the hips on it
     this.holder.matrixAutoUpdate = false;
     this.holder.matrix.copy(this.riding.matrix);
+    // standing up (a stand-up coaster): feet on the floor below the seat point
+    if (this.riding.standing) this.holder.matrix.multiply(new THREE.Matrix4().makeTranslation(0, -2.87, 0));
     this.holder.matrixWorldNeedsUpdate = true;
     this.holder.updateMatrixWorld(true);
     this.pos.setFromMatrixPosition(this.riding.matrix);
-    this.figure.update(0, { sitting: true });
+    this.figure.update(0, { sitting: !this.riding.standing });
   }
 
   stopRiding(exit) {

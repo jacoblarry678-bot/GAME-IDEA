@@ -49,6 +49,35 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: RC Race presented by Crinkle Crunch, a stand-up coaster
+  (browser only):**
+  - **Where:** the RC raceway north of Speed Breaker. Follow the walk up
+    the east side of the speed-trials ground to the gate in its north wall.
+  - **The story:** it's the Benton RC Club championship final, and you ride
+    the racers: trains built like giant remote-control buggies, with
+    wheels, an antenna with a red tip, and orange, blue and lime bodies.
+  - **You ride standing up:**
+    - Riders stand at back pads on floor plates, in shoulder harnesses.
+    - The park's guests ride it standing (some cheering).
+    - So do you: on a stand-up ride your character now stands instead of
+      sitting.
+  - **The ride:**
+    1. Up a 40 m lift and down the first drop, with sparks at the bottom.
+    2. A vertical loop.
+    3. A corkscrew.
+    4. An inclined loop.
+    5. North up the infield, under the first drop, and into the pits.
+    - That's three inversions, and the top speed is about 97 km/h.
+  - **Around it:**
+    - A race-garage station with a checkered fascia.
+    - An infield raceway with a START / FINISH gantry, tire stacks and
+      giant RC buggies.
+    - A giant RC remote control by the gate.
+    - A line of switchbacks.
+  - **The sponsor:** it's presented by Crinkle Crunch, a ridged-chip brand
+    made up for the park, with giant chip bags around the raceway. A real
+    snack brand's name and logo aren't used, the same way other real
+    names have been swapped for originals in the park.
 - **New ride: Speed Breaker, a strata coaster (browser only):**
   - **Where:** the speed-trials ground north of Harbor Run, through the
     checkered gate in Harbor Run's north wall (the walk starts at the end

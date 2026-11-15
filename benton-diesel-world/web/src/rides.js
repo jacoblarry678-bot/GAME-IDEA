@@ -593,7 +593,8 @@ export class RideVisuals {
       const seat = v.seats[x.car - 1]?.[x.seat - 1];
       const car = v.cars[x.car - 1];
       if (!seat || !car) continue;
-      const g = this.guestFactory(x.npc, thrill && x.npc % 2 === 0 ? 'sitcheer' : 'sit');
+      // (a stand-up coaster's riders stand, hips at the seat point)
+      const g = v.r.standing ? this.guestFactory(x.npc, thrill && x.npc % 2 === 0 ? 'cheer' : 'stand') : this.guestFactory(x.npc, thrill && x.npc % 2 === 0 ? 'sitcheer' : 'sit');
       g.matrixAutoUpdate = false;
       g.matrix.copy(seat);
       car.add(g);

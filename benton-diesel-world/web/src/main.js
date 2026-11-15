@@ -54,6 +54,7 @@ import { buildFlyingFire, FlyingFireSite } from './flyingfire.js';
 import { buildCyclone, CycloneSite } from './cyclone.js';
 import { buildHarborRun, HarborRunSite } from './harborrun.js';
 import { buildSpeedBreaker, SpeedBreakerSite } from './speedbreaker.js';
+import { buildRCRace, RCRaceSite } from './rcrace.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -191,6 +192,8 @@ async function main() {
   const hrLayout = buildHarborRun(data);
   // Speed Breaker: the strata coaster, north of Harbor Run
   const sbLayout = buildSpeedBreaker(data);
+  // RC Race: the stand-up coaster, north of Speed Breaker
+  const rcLayout = buildRCRace(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -256,7 +259,7 @@ async function main() {
           : `Welcome to ${rideCfg.get(id).name}. Stay with your group, keep moving, and do not touch the scare actors. Good luck...`, { interrupt: true });
         return;
       }
-      player.riding = { id, car, seat, matrix: rideVis.seatMatrix(id, car, seat) || new THREE.Matrix4() };
+      player.riding = { id, car, seat, matrix: rideVis.seatMatrix(id, car, seat) || new THREE.Matrix4(), standing: !!data.rides.find((r) => r.id === id)?.standing };
       const name = rideCfg.get(id).name;
       const kind = data.rides.find((r) => r.id === id)?.crew?.restraint;
       // the station spiel: restraints down, a team member will check them
@@ -325,6 +328,7 @@ async function main() {
   const cySite = new CycloneSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, cyLayout);
   const hrSite = new HarborRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, hrLayout);
   const sbSite = new SpeedBreakerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, sbLayout);
+  const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
   const jrSite = new JungleRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jrLayout);
@@ -564,6 +568,7 @@ async function main() {
     cySite.update(dt, player.pos, started);
     hrSite.update(dt, player.pos, started);
     sbSite.update(dt, player.pos, started);
+    rcSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
