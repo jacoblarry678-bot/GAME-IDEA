@@ -49,6 +49,38 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Easter is over, and summer is here (browser only):**
+  - **Easter has packed up:** the Easter Bar, Meet the Easter Bunny,
+    Inside the Egg and the Great Benton Egg Hunt are gone. The soundstages
+    are clear.
+  - **The summer parades:**
+    - **Summer Splash Parade**, at 10 AM and 3 PM down Main Street and
+      through the Hub. Four floats: a beach party with umbrellas and a
+      giant beach ball, an ice-cream cone with three scoops and a cherry,
+      a surf wave with a surfboard riding it, and a giant smiling sun.
+      Guests dance on each float, dancers walk alongside, and the floats
+      splash the crowd every few seconds.
+    - **Summer Lights Parade** at 7:30 PM, at dusk: the same floats lit up
+      in neon, a little faster, with confetti cannons instead of water.
+      It ends before the fireworks.
+    - The Big Rig Parade keeps its midday run (12:30). All three are in
+      the Shows list with their times.
+  - **Temporary barricades to the backstage rides:** the backstage lot is
+    closed for the summer, but the middle of its gate is open under a blue
+    RIDES THIS WAY banner.
+    - A walkway between solid blue-covered barricade panels runs down from
+      the gate and west along the avenue to Ravage's gate. It has lights
+      and signs naming every ride past it.
+    - The rest of the lot stays fenced off, and crew stand at both ends.
+  - **New flat ride: Sun Swinger:** a wave swinger on the speed-trials
+    ground, north of Speed Breaker's camelback (the walk is up the east
+    side, past Speed Breaker).
+    - 24 swings hang on chains from a sky-blue canopy crowned with a giant
+      smiling sun.
+    - The canopy spins up, rises up the tower to 15 m and tilts like a
+      wave, and the swings fly out about 14 m from the middle.
+    - It has a small switchback line under sun sails.
+  - The hotel, the billboards and BentonGram have all switched to summer.
 - **Fix (browser only):** with RC Race, the park passed 41 rides, and the
   game stopped loading. The wait-times boards list every ride, and each
   row got too small for the sign text code. The boards now switch to two

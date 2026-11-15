@@ -1,4 +1,4 @@
-import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, XMAS_SETUP, MARDI_GRAS, EASTER } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, XMAS_SETUP, MARDI_GRAS, EASTER, SUMMER } from './season.js';
 
 // The Benton resort district outside the gate: the Benton Parkway running
 // past the toll plaza, three hotels (the Benton Diesel Grand, the Haulers
@@ -182,7 +182,14 @@ const ADS_EASTER = [
   { title: 'ZERO SPACE', sub: 'YOUR SEAT FLIPS  ·  NOW OPEN', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0x30e0ff },
   { title: "SIREN'S WAKE", sub: 'YOU WILL GET WET', foot: 'VELOCITY CITY  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0x2ad8c8 },
 ];
-const ADS = EASTER ? ADS_EASTER : MARDI_GRAS ? ADS_MARDI : CHRISTMAS ? ADS_XMAS : XMAS_OVER ? ADS_NEWYEAR : XMAS_SETUP && HAUNT_OVER ? ADS_SETUP : HAUNT_OVER ? ADS_OVER : [
+const ADS_SUMMER = [
+  { title: 'HAPPY SUMMER!', sub: 'THE SUMMER SPLASH PARADE  ·  10 AM & 3 PM', foot: 'MAIN STREET  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xffc020 },
+  { title: 'SUMMER LIGHTS PARADE', sub: 'EVERY EVENING AT DUSK', foot: 'MAIN STREET  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0x40c8ff },
+  { title: 'SUN SWINGER', sub: 'NEW FLAT RIDE  ·  NOW SPINNING', foot: 'THE SPEED-TRIALS GROUND  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xff8a20 },
+  { title: 'SPEED BREAKER', sub: '190 KM/H  ·  128 M UP', foot: 'PAST THE BACK LOT  ·  BENTON DIESEL WORLD', art: 'moon', fg: 0xe0201a },
+  { title: 'RAVAGE', sub: 'THE BUSIEST LINE IN THE PARK', foot: 'WALKWAY THROUGH THE BACK LOT', art: 'moon', fg: 0xc81a1a },
+];
+const ADS = SUMMER ? ADS_SUMMER : EASTER ? ADS_EASTER : MARDI_GRAS ? ADS_MARDI : CHRISTMAS ? ADS_XMAS : XMAS_OVER ? ADS_NEWYEAR : XMAS_SETUP && HAUNT_OVER ? ADS_SETUP : HAUNT_OVER ? ADS_OVER : [
   { title: 'BENTON HAUNT IS BACK', sub: '7 HOUSES  ·  7 SCARE ZONES', foot: 'SELECT NIGHTS THROUGH NOV 2', art: 'moon', fg: ORANGE },
   { title: 'FORTNITEMARES', sub: 'THE STORM IS CLOSING IN', foot: 'NEW SCARE ZONE  ·  FAMILY LANDING', art: 'skull', fg: 0xb04aff },
   { title: 'WOLVERINE', sub: 'THE CLAWS ARE OUT  ·  NOW OPEN', foot: 'BACKWOODS  ·  BENTON DIESEL WORLD', art: 'skull', fg: 0xf2c818 },
@@ -218,7 +225,7 @@ export function buildResort(data) {
     }
   };
   Object.assign(data.staff.lines, {
-    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', EASTER ? 'Happy Easter! The Easter Bunny is in Stage 23 at the park!' : MARDI_GRAS ? 'Happy Mardi Gras! Have you ridden Wolverine yet?' : CHRISTMAS ? 'Happy holidays! Santa is at his workshop in the park!' : XMAS_OVER ? 'Happy New Year! Have you seen Wolverine going up?' : XMAS_SETUP && HAUNT_OVER ? 'Benton Holidays opens November 21 - the tree is going up!' : HAUNT_OVER ? 'Benton Haunt is over - see you next fall!' : 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
+    hotel: ['Welcome! Enjoy your stay!', 'The shuttle stops right out front!', SUMMER ? 'Happy summer! Catch the Summer Splash Parade on Main Street!' : EASTER ? 'Happy Easter! The Easter Bunny is in Stage 23 at the park!' : MARDI_GRAS ? 'Happy Mardi Gras! Have you ridden Wolverine yet?' : CHRISTMAS ? 'Happy holidays! Santa is at his workshop in the park!' : XMAS_OVER ? 'Happy New Year! Have you seen Wolverine going up?' : XMAS_SETUP && HAUNT_OVER ? 'Benton Holidays opens November 21 - the tree is going up!' : HAUNT_OVER ? 'Benton Haunt is over - see you next fall!' : 'Have a frightful night at Benton Haunt!', 'Need a hand with your bags?'],
     transit: ['Free shuttles to all three hotels!', 'Next bus is on its way!', 'Watch your step getting off!', 'Security is just this way!'],
   });
   const staff = (role, kind, x, y, z, yaw) => data.staffSpots.push({ role, kind, land: 'Plaza', seed: 0, cf: cf(x, y, z, yaw) });

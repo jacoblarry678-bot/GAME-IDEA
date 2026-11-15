@@ -4,7 +4,7 @@
 // food, Express), and your own photos: snap the view, add a caption and
 // watch the likes and comments roll in.
 import * as Clock from './clock.js';
-import { HAUNT_OVER, XMAS_SETUP, CHRISTMAS, MARDI_GRAS, EASTER } from './season.js';
+import { HAUNT_OVER, XMAS_SETUP, CHRISTMAS, MARDI_GRAS, EASTER, SUMMER } from './season.js';
 
 const STORE = 'bentonDieselWorld.social';
 const nowS = () => performance.now() / 1000;
@@ -13,7 +13,14 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export const PARK = { handle: '@BentonDieselWorld', name: 'Benton Diesel World', color: 0xff6a1a, verified: true };
 
 // the park's own posts, newest first (each with a poster-style card)
-const SEASON_POSTS = EASTER ? [
+const SEASON_POSTS = SUMMER ? [
+  { when: 'Now', art: { title: 'HAPPY SUMMER!', sub: 'THE SUMMER PARADES ARE HERE', color: 0xffb020, emoji: '☀️' },
+    text: "Summer is HERE! The Summer Splash Parade rolls down Main Street at 10 AM and 3 PM - beach party, ice cream, surf and sun floats, and yes, you WILL get splashed. At dusk, the Summer Lights Parade lights it all up in neon. 🌊☀️🍦", likes: 22410 },
+  { when: '1h', art: { title: 'SUN SWINGER', sub: 'NEW FLAT RIDE  ·  NOW SPINNING', color: 0xff8a20, emoji: '🎡' },
+    text: "NEW RIDE: Sun Swinger is spinning on the speed-trials ground! 32 swings under a giant sun, lifting you up and tilting like a wave. Heads up: the backstage lot is closed for the summer - follow the blue barricaded walkway along the avenue to Ravage and the canyon rides. 🌞", likes: 13980 },
+  { when: '1d', art: { title: 'THANKS, EASTER!', sub: 'SEE YOU NEXT SPRING', color: 0xff9ac8, emoji: '🐰' },
+    text: 'The Easter Bunny has hopped home, the egg hunt is over and the Easter Bar has packed up. Thanks for a hoppy spring! 🥚', likes: 8740 },
+] : EASTER ? [
   { when: 'Now', art: { title: 'HAPPY EASTER!', sub: 'MEET THE EASTER BUNNY  ·  STAGE 23', color: 0xff9ac8, emoji: '🐰' },
     text: "Hoppy Easter! The Easter Bunny is in Stage 23 backstage - line up, take a seat on the photo bench and say hi. NEW: Inside the Egg: The Easter Egg Experience on Stage 22, and the Great Benton Egg Hunt - 12 eggs are hidden around the backstage yard. Find them all for a prize! 🥚🌷", likes: 17330 },
   { when: '1d', art: { title: 'THE EASTER BAR', sub: 'BACKSTAGE  ·  LIMITED TIME', color: 0x7ad8a8, emoji: '🥕' },

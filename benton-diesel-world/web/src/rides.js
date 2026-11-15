@@ -392,6 +392,27 @@ export function makeMotion(r, cfg) {
       },
     };
   }
+  // a wave swinger: chairs hung on chains from a canopy that spins up,
+  // rises up the tower and tilts like a wave; the chairs swing out with
+  // the speed
+  if (r.kind === 'swinger') {
+    const T = r.duration, ramp = 9, w = TAU * 10 / (T - ramp);
+    const S = r.swing || {}, R = S.radius ?? 9, Lc = S.chain ?? 6, H0 = S.low ?? 7, H1 = S.high ?? 15;
+    const sm = (x) => smoothstep(x);
+    return {
+      duration: T,
+      pose(t) {
+        const th = rampAngle(t, T, ramp, w);
+        const spd = (rampAngle(t + 0.05, T, ramp, w) - rampAngle(t - 0.05, T, ramp, w)) / 0.1;
+        const up = t <= 0 ? 0 : sm((t - 4) / 10) * (1 - sm((t - (T - 14)) / 10));
+        const canopy = mul(origin.clone(), TR(0, H0 + (H1 - H0) * up, 0), RY(0.5 * t), new THREE.Matrix4().makeRotationX(0.2 * up), RY(-0.5 * t), RY(th));
+        const swing = Math.min(0.95, Math.atan((spd * spd * R) / 9.8));
+        const cars = [];
+        for (let i = 0; i < n; i++) cars.push(mul(canopy.clone(), RY((TAU * i) / n), TR(R, 0, 0), RZ(swing), TR(0, -Lc, 0)));
+        return { cars, extras: { Canopy: canopy } };
+      },
+    };
+  }
   if (r.kind === 'carousel') {
     const T = r.duration, ramp = 6, omega = TAU * 3 / (T - ramp);
     return {

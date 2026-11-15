@@ -317,6 +317,132 @@ function parade(ctx) {
   });
 }
 
+// ------------------------------------------------------- the summer parades
+// The Summer Splash Parade (by day: a beach party, an ice-cream float, a surf
+// wave and a giant sun, splashing the crowd) and the Summer Lights Parade
+// (at dusk: the same floats lit up in neon, confetti instead of water), on
+// the Big Rig Parade's route.
+function summerFloat(ctx, theme, night) {
+  const kit = new Kit(ctx.materials);
+  const NEON = night ? 'Neon' : 'SmoothPlastic';
+  // the truck and its deck
+  const c = [rgb(255, 200, 60), rgb(255, 150, 190), rgb(40, 150, 230), rgb(255, 120, 30)][theme - 1];
+  kit.add(0, [7, 5, 6], T(0, 3.6, -11), c);
+  kit.add(0, [6.4, 2, 0.3], T(0, 4.8, -14.1), rgb(150, 200, 230), 'Glass');
+  kit.add(0, [9, 1.4, 20], T(0, 2.4, 3), rgb(250, 240, 220));
+  kit.add(0, [9.4, 0.8, 20.4], T(0, 1.6, 3), c, NEON);
+  for (const sx of [-1, 1]) for (const sz of [-11, -1, 9]) kit.add(2, [1.4, 2.8, 2.8], T(sx * 4.2, 1.4, sz), rgb(25, 25, 25), 'Rubber');
+  if (theme === 1) {
+    // a beach party: sand, umbrellas, a giant beach ball
+    kit.add(0, [8.4, 0.6, 18], T(0, 3.4, 3), rgb(236, 210, 150), 'Fabric');
+    for (const [x, z, col] of [[-3, -3, rgb(230, 60, 60)], [3, 7, rgb(40, 150, 230)]]) {
+      kit.add(0, [0.2, 5, 0.2], T(x, 6, z), rgb(240, 240, 240), 'Metal');
+      kit.add(5, [5, 0.6, 5], T(x, 8.6, z), col, NEON);
+    }
+    for (let k = 0; k < 6; k++) kit.add(3, [6.2, 6.2, 6.2], mul(T(0, 8.4, 2), A(0, (k * TAU) / 6, 0), T(0.01, 0, 0)), [rgb(230, 60, 60), rgb(255, 255, 255), rgb(40, 150, 230), rgb(255, 210, 40), rgb(255, 255, 255), rgb(60, 190, 90)][k], NEON);
+  } else if (theme === 2) {
+    // ice cream: a giant cone with three scoops and a cherry
+    kit.add(1, [5, 8, 5], mul(T(0, 8, 4), A(Math.PI, 0, 0)), rgb(220, 170, 100), 'Fabric');
+    for (let k = 0; k < 3; k++) kit.add(3, [5.4 - k * 0.6, 4.6 - k * 0.4, 5.4 - k * 0.6], T(0, 12.6 + k * 3.4, 4), [rgb(255, 150, 190), rgb(250, 240, 220), rgb(140, 90, 60)][k], NEON);
+    kit.add(3, [1.2, 1.2, 1.2], T(0, 20.4, 4), rgb(220, 30, 40), NEON);
+  } else if (theme === 3) {
+    // surf's up: a curling wave and a surfboard riding it
+    for (let k = 0; k < 6; k++) kit.add(0, [8, 2, 2.2], mul(T(0, 4.4 + k * 1.5, 8 - k * 1.1), A(-0.3 - k * 0.22, 0, 0)), k % 2 ? rgb(40, 150, 230) : rgb(90, 200, 240), NEON);
+    kit.add(0, [8.6, 1, 1.4], T(0, 13.8, 1.6), rgb(240, 250, 255), NEON);
+    kit.add(0, [1.4, 0.3, 6], mul(T(1, 10, 4), A(-0.5, 0.4, 0.2)), rgb(255, 200, 60), NEON);
+  } else {
+    // a giant smiling sun with rays
+    kit.add(3, [9, 9, 3], T(0, 11, 4), rgb(255, 200, 40), NEON);
+    for (let k = 0; k < 12; k++) kit.add(1, [1.2, 3.2, 1], mul(T(0, 11, 4), A(0, 0, (k * TAU) / 12), T(0, 6.2, 0)), rgb(255, 140, 30), NEON);
+    for (const sx of [-1.6, 1.6]) kit.add(3, [0.9, 0.9, 0.4], T(sx, 12.2, 2.4), rgb(30, 30, 30));
+    kit.add(0, [3.2, 0.5, 0.4], T(0, 9.6, 2.4), rgb(200, 60, 30));
+  }
+  const model = kit.build();
+  model.matrixAutoUpdate = false;
+  const riders = [1, 2, 3].map((k) => {
+    const g = ctx.guests.make(7300 + theme * 10 + k + (night ? 100 : 0), 'cheer');
+    g.matrixAutoUpdate = false;
+    return g;
+  });
+  return { model, riders };
+}
+
+function summerParade(night) {
+  return (ctx) => {
+    const api = { audioPos: null };
+    const group = new THREE.Group();
+    const floats = [1, 2, 3, 4].map((th) => {
+      const f = summerFloat(ctx, th, night);
+      group.add(f.model);
+      f.riders.forEach((g) => group.add(g));
+      return f;
+    });
+    const walkers = [];
+    for (let k = 1; k <= 10; k++) {
+      const g = ctx.guests.make(8300 + k * 5 + (night ? 50 : 0), k % 2 === 0 ? 'cheer' : 'stand');
+      g.matrixAutoUpdate = false;
+      group.add(g);
+      walkers.push(g);
+    }
+    ctx.scene.add(group);
+    const speed = night ? 7 : 5, gap = 34;
+    let nextBurst = 4;
+    return Object.assign(api, {
+      caption: captions(night ? [
+        [0, 'The SUMMER LIGHTS PARADE is lighting up Main Street!'],
+        [20, 'The beach party float, glowing in the dusk!'],
+        [45, 'Here come the ice cream and surf floats!'],
+        [70, 'And the giant Benton sun - good night, summer!'],
+      ] : [
+        [0, 'The SUMMER SPLASH PARADE is rolling down Main Street!'],
+        [25, "Beach party! Don't let the beach ball get away!"],
+        [55, 'Ice cream! And surf is UP - watch out, you WILL get splashed!'],
+        [90, 'And here comes the sun!'],
+      ]),
+      update(t) {
+        floats.forEach((f, idx) => {
+          const s = t * speed - idx * gap;
+          const visible = s > 0 && s < routeLen - 1;
+          f.model.visible = visible;
+          f.riders.forEach((g) => { g.visible = visible; });
+          if (!visible) return;
+          const cf = routeAt(s);
+          place(f.model, cf);
+          if (idx === 0) api.audioPos = new THREE.Vector3().setFromMatrixPosition(cf);
+          f.riders.forEach((g, ki) => {
+            const k = ki + 1;
+            const bounce = Math.abs(Math.sin(t * 3 + k + idx + 1)) * 0.8;
+            place(g, mul(cf, T((k - 2) * 2.8, 5.4 + bounce, 8 + k * 1.4), A(0, Math.sin(t + k) * 0.6, 0)));
+          });
+        });
+        // splashing the crowd (by day), confetti (at dusk)
+        if (t >= nextBurst) {
+          nextBurst = t + 3.2;
+          const idx = Math.floor(t / 3.2) % floats.length, s = t * speed - idx * gap;
+          if (s > 0 && s < routeLen - 1 && ctx.fx) {
+            const p = new THREE.Vector3().setFromMatrixPosition(mul(routeAt(s), T(Math.sin(t) > 0 ? 5 : -5, 3, 2)));
+            if (night) ctx.fx.tramCue('mardi', p);
+            else ctx.fx.tramCue('splash', p);
+          }
+        }
+        walkers.forEach((g, ki) => {
+          const k = ki + 1;
+          const s = t * speed - (k - 1) * 9 + 12;
+          const visible = s > 0 && s < routeLen - 1;
+          g.visible = visible;
+          if (!visible) return;
+          const side = k % 2 === 0 ? 7 : -7;
+          const bounce = Math.abs(Math.sin(t * 5 + k)) * 0.9;
+          place(g, mul(routeAt(s), T(side, 3.4 + bounce, 0), A(0, Math.sin(t * 2 + k) * 0.8, 0)));
+        });
+      },
+      cleanup() {
+        ctx.scene.remove(group);
+      },
+    });
+  };
+}
+
 // -------------------------------------------------------- Benton Nights
 // (on New Year's, a countdown from ten, a huge opening volley of gold and
 // silver, twice the shells and a longer finale)
@@ -382,7 +508,7 @@ function fireworks(ctx, show = {}) {
   };
 }
 
-const IMPLS = { BigDreams: bigDreams, StuntSpectacular: stunts, BigRigParade: parade, BentonNights: fireworks };
+const IMPLS = { BigDreams: bigDreams, StuntSpectacular: stunts, BigRigParade: parade, BentonNights: fireworks, SummerSplash: summerParade(false), SummerLights: summerParade(true) };
 
 export class ShowRunner {
   constructor(ctx) {

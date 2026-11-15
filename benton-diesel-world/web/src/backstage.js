@@ -6,13 +6,14 @@
 // built in houses.js. A production yard (trailers, a generator, the makeup
 // tent, pallets of props) runs along the wall.
 import * as THREE from 'three';
-import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS, EASTER, FD_OPEN } from './season.js';
+import { HAUNT_OVER, CHRISTMAS, XMAS_OVER, MARDI_GRAS, EASTER, SUMMER, FD_OPEN } from './season.js';
 // the soundstages are clear of the haunt by the holidays
-const STAGES_CLEAR = CHRISTMAS || XMAS_OVER || MARDI_GRAS || EASTER;
+const STAGES_CLEAR = CHRISTMAS || XMAS_OVER || MARDI_GRAS || EASTER || SUMMER;
 
 // (the lot runs further east once Stage 6 is built for Final Destination)
 export const BS = { x0: -250, x1: FD_OPEN ? 350 : 250, z0: -700, z1: -405 };
 const GATE = { x0: -81, x1: -44 }; // between the wall pillars at x -83.3 and -41.7
+const WALK = { w: 8, z: -478 }; // the summer walkway: its width, and how far down the lot it turns west
 const G = 0.1; // top of the backstage paving
 export const STAGE_Z = -605; // front faces of the soundstages
 export const QUEUE = { z0: -597, z1: -505 }; // the turf queue areas in front of them
@@ -148,15 +149,55 @@ export function buildBackstage(data) {
   // a locked gate: chain-link panels between steel posts, closed signs
   function closedGate() {
     const z = -406;
-    for (const x of [GATE.x0 + 0.8, gx, GATE.x1 - 0.8]) box([1, 14, 1], [x, G, z], STEEL, 'Metal', { shape: 5 });
-    box([gw, 13.4, 0.3], [gx, G, z], 0x8a9096, 'Metal', { trans: 0.55 });
+    for (const x of [GATE.x0 + 0.8, gx, GATE.x1 - 0.8]) if (!SUMMER || x !== gx) box([1, 14, 1], [x, G, z], STEEL, 'Metal', { shape: 5 });
+    if (SUMMER) {
+      // the middle of the gate is open for the temporary walkway
+      const half = (gw - WALK.w) / 2;
+      box([half, 13.4, 0.3], [GATE.x0 + half / 2, G, z], 0x8a9096, 'Metal', { trans: 0.55 });
+      box([half, 13.4, 0.3], [GATE.x1 - half / 2, G, z], 0x8a9096, 'Metal', { trans: 0.55 });
+      for (const x of [gx - WALK.w / 2, gx + WALK.w / 2]) box([1, 14, 1], [x, G, z], STEEL, 'Metal', { shape: 5 });
+      add([WALK.w + 1, 2.4, 0.6], [gx, G + 12.4, z], 0x2a7ad8, 'Metal', { collide: 0 });
+      sign('RIDES THIS WAY', [WALK.w, 1.8, 0.2], [gx, G + 12.4, z + 0.4], 0x2a7ad8, WHITE, 'Back', 'GothamBlack');
+      sign('RIDES THIS WAY', [WALK.w, 1.8, 0.2], [gx, G + 12.4, z - 0.4], 0x2a7ad8, WHITE, 'Front', 'GothamBlack');
+      walkway();
+    } else box([gw, 13.4, 0.3], [gx, G, z], 0x8a9096, 'Metal', { trans: 0.55 });
     for (const y of [0.4, 6.8, 13.2]) add([gw, 0.3, 0.4], [gx, G + y, z], STEEL, 'Metal', { collide: 0 });
     add([1.2, 1.6, 0.6], [gx, G + 6.2, z + 0.5], 0xb08a30, 'Metal', { collide: 0 }); // the padlock
     add([0.2, 2.6, 0.2], [gx, G + 6.8, z + 0.3], 0x8a8e96, 'Metal', { collide: 0 });
     sign('BACKSTAGE CLOSED', [18, 3, 0.2], [gx, G + 10.2, z + 0.4], 0xc8322d, WHITE, 'Back', 'GothamBlack');
     sign('CAST MEMBERS ONLY  ·  NO ENTRY', [18, 1.4, 0.2], [gx, G + 7.9, z + 0.4], WHITE, 0xc8322d, 'Back', 'GothamBold');
-    sign(MARDI_GRAS ? 'BACKSTAGE CLOSED  ·  CAST MEMBERS ONLY' : XMAS_OVER ? 'HAPPY NEW YEAR!  ·  SEE YOU NEXT HOLIDAY SEASON' : 'BENTON HAUNT HAS ENDED  ·  THANKS FOR SCREAMING!', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z + 0.4], BLACK, ORANGE, 'Back', 'GothamBold');
+    sign(SUMMER ? 'HAPPY SUMMER!  ·  RIDES THROUGH THE WALKWAY' : MARDI_GRAS ? 'BACKSTAGE CLOSED  ·  CAST MEMBERS ONLY' : XMAS_OVER ? 'HAPPY NEW YEAR!  ·  SEE YOU NEXT HOLIDAY SEASON' : 'BENTON HAUNT HAS ENDED  ·  THANKS FOR SCREAMING!', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z + 0.4], BLACK, ORANGE, 'Back', 'GothamBold');
     sign('TEARDOWN IN PROGRESS  ·  HARD HATS REQUIRED', [gw - 6, 1.2, 0.2], [gx, G + 2.6, z - 0.4], 0xf2c818, BLACK, 'Front', 'GothamBold');
+  }
+
+  // the summer's temporary walkway: from the gate down to the avenue and
+  // west along it to Ravage's gate, between solid barricade panels with
+  // blue covers (the rest of the lot stays closed)
+  function walkway() {
+    const BLUE = 0x2a7ad8, h = 2.4;
+    const fence = (xa, za, xb, zb) => {
+      const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
+      add([0.25, h, len], [(xa + xb) / 2, G + h / 2, (za + zb) / 2], 0x9aa0a8, 'Metal', { yaw, trans: 0.35 });
+      add([0.3, 1.1, len], [(xa + xb) / 2, G + 1.4, (za + zb) / 2], BLUE, 'Fabric', { yaw, collide: 0 });
+      const n = Math.max(1, Math.round(len / 3));
+      for (let k = 0; k <= n; k++) {
+        const x = xa + ((xb - xa) * k) / n, zz = za + ((zb - za) * k) / n;
+        add([0.7, 0.3, 0.7], [x, G + 0.15, zz], 0xf2c818, 'Concrete', { collide: 0 });
+      }
+    };
+    const W = WALK.w / 2, ax = gx, az = WALK.z;
+    fence(ax - W, -406, ax - W, az + W); // the inside corner
+    fence(ax + W, -406, ax + W, az - W); // the outside corner
+    fence(ax - W, az + W, BS.x0 + 1.4, az + W);
+    fence(ax + W, az - W, BS.x0 + 1.4, az - W);
+    // signs along it, and lights
+    for (let x = ax - 30; x > BS.x0 + 10; x -= 40) {
+      sign('WALKWAY TO RAVAGE & THE CANYON RIDES  >', [10, 1, 0.12], [x, G + 1.4, az + W - 0.2], BLUE, WHITE, 'Front', 'GothamBold');
+      box([0.3, 7, 0.3], [x, G, az - W + 0.4], 0x1e222c, 'Metal', { collide: 0 });
+      add([1.2, 1, 1.2], [x, G + 7.2, az - W + 0.4], 0xffecbe, 'Neon', { shape: 3, collide: 0 });
+    }
+    sign('RAVAGE  ·  BENTON BLITZ  ·  FLYING FIRE  ·  CYCLONE  ·  HARBOR RUN  ·  SPEED BREAKER  ·  RC RACE  ·  SUN SWINGER', [26, 1.6, 0.15], [ax - 14, G + 3.4, az + W - 0.2], WHITE, BLUE, 'Front', 'GothamBold');
+    crew.push(['idle', ax + 2, G, -412, Math.PI], ['idle', BS.x0 + 8, G, az, Math.PI / 2]);
   }
 
   // ---- bike-rack barricades: steel rails on posts, with black covers
@@ -372,7 +413,7 @@ export function buildBackstage(data) {
 
   // ---- the production yard along the wall
   // trailers
-  for (const [x, label] of [[-220, STAGES_CLEAR ? 'BENTON HOLIDAY PRODUCTIONS' : 'BENTON HAUNT PRODUCTIONS'], [-180, 'SCENIC & PROPS'], [-140, 'LIGHTING & SOUND']]) {
+  for (const [x, label] of [[-220, SUMMER ? 'BENTON SUMMER PRODUCTIONS' : STAGES_CLEAR ? 'BENTON HOLIDAY PRODUCTIONS' : 'BENTON HAUNT PRODUCTIONS'], [-180, 'SCENIC & PROPS'], [-140, 'LIGHTING & SOUND']]) {
     box([26, 10, 8], [x, G + 1.6, -432], 0xf0f0ec, 'SmoothPlastic');
     sign(label, [22, 2, 0.2], [x, G + 8, -436.1], 0xf0f0ec, 0x16223a, 'Front', 'GothamBlack');
     box([6, 7, 7.6], [x + 16.5, G + 1, -432], 0x2a3a5a, 'SmoothPlastic');
@@ -388,7 +429,7 @@ export function buildBackstage(data) {
   for (const x of [tx - 15, tx + 15]) box([0.3, 7, 6], [x, G, tz + (x < tx ? -5 : 5)], WHITE, 'Fabric');
   add([30.4, 4, 8.2], [tx, G + 9, tz - 4.1], WHITE, 'Fabric', { shape: 1, collide: 0, yaw: Math.PI });
   add([30.4, 4, 8.2], [tx, G + 9, tz + 4.1], WHITE, 'Fabric', { shape: 1, collide: 0 });
-  sign(CHRISTMAS ? "SANTA'S MAILROOM" : EASTER ? "THE BUNNY'S DRESSING ROOM" : MARDI_GRAS ? 'PARADE FLOAT STORAGE' : XMAS_OVER ? 'HOLIDAY DECOR STORAGE' : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
+  sign(SUMMER ? 'PARADE FLOAT GARAGE' : CHRISTMAS ? "SANTA'S MAILROOM" : EASTER ? "THE BUNNY'S DRESSING ROOM" : MARDI_GRAS ? 'PARADE FLOAT STORAGE' : XMAS_OVER ? 'HOLIDAY DECOR STORAGE' : HAUNT_OVER ? 'COSTUME & PROP RETURNS' : 'SCARE ACTOR CHECK-IN & MAKEUP', [20, 1.6, 0.2], [tx, G + 5.4, tz - 8.2], BLACK, ORANGE, 'Front', 'GothamBold');
   for (let k = 0; k < 4; k++) {
     box([4, 2.6, 1.4], [tx - 9 + k * 6, G, tz + 5], 0xf4f0e8, 'SmoothPlastic', { collide: 0 });
     add([3, 2, 0.1], [tx - 9 + k * 6, G + 4.2, tz + 5.8], 0xfff2d8, 'Neon', { collide: 0 });
@@ -480,6 +521,10 @@ export class Backstage {
     if (inside && !family && !this.told && CHRISTMAS) {
       this.told = true;
       this.hooks.toast("Welcome to Santa's Workshop! Join the line by the porch and press E to meet Santa. Ho ho ho!", 'reward');
+    }
+    if (inside && !family && !this.told && SUMMER) {
+      this.told = true;
+      this.hooks.toast('Backstage is closed for the summer - follow the barricaded walkway along the avenue to Ravage and the rides past it (Benton Blitz, Flying Fire, Cyclone, Harbor Run, Speed Breaker, RC Race and Sun Swinger).', 'info');
     }
     if (inside && !family && !this.told && HAUNT_OVER) {
       this.told = true;

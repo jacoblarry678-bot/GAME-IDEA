@@ -11,10 +11,14 @@ export const XMAS_OVER = false;
 export const WOLVERINE_OPEN = true;
 // Mardi Gras is over...
 export const MARDI_GRAS = false;
-// ...and it's Easter: the backstage bar is the Easter Bar, Stage 23 has Meet
-// the Easter Bunny, Stage 22 a new walkthrough (Inside the Egg: The Easter
-// Egg Experience), and the Great Benton Egg Hunt is on in the yard.
-export const EASTER = true;
+// Easter is over too (the Easter Bar, Meet the Easter Bunny, Inside the Egg
+// and the egg hunt have packed up)...
+export const EASTER = false;
+// ...and it's summer: the summer parades are on (the Summer Splash Parade by
+// day, the Summer Lights Parade at dusk), the backstage lot is closed with a
+// temporary barricaded walkway through it to the rides past it, and a new
+// flat ride, Sun Swinger, is spinning on the speed-trials ground.
+export const SUMMER = true;
 // Final Destination: Death's Design is finished and open on Stage 6, the
 // new soundstage at the east end of the backstage lot.
 export const FD_BUILDING = false;

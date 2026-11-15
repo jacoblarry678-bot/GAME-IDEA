@@ -26,7 +26,7 @@ import { buildResort } from './resort.js';
 import { HAUNT_OVER } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas, buildXmasSetup, XmasSetupSite } from './christmas.js';
-import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, EASTER, FD_BUILDING } from './season.js';
+import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, EASTER, SUMMER, FD_BUILDING } from './season.js';
 import { buildFinalDestination, FinalDestinationSite } from './finaldest.js';
 import { buildMardiGras, AT_BACKSTAGE, AT_BACKSTAGE_EASTER } from './mardigras.js';
 import { buildEasterBunny, EasterBunnySite } from './easterbunny.js';
@@ -55,6 +55,7 @@ import { buildCyclone, CycloneSite } from './cyclone.js';
 import { buildHarborRun, HarborRunSite } from './harborrun.js';
 import { buildSpeedBreaker, SpeedBreakerSite } from './speedbreaker.js';
 import { buildRCRace, RCRaceSite } from './rcrace.js';
+import { buildSummer, SunSwingerSite } from './sunswinger.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -194,6 +195,8 @@ async function main() {
   const sbLayout = buildSpeedBreaker(data);
   // RC Race: the stand-up coaster, north of Speed Breaker
   const rcLayout = buildRCRace(data);
+  // summer: the summer parades, and Sun Swinger on the speed-trials ground
+  const summerLayout = SUMMER ? buildSummer(data) : null;
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -329,6 +332,7 @@ async function main() {
   const hrSite = new HarborRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, hrLayout);
   const sbSite = new SpeedBreakerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, sbLayout);
   const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
+  const ssSite = summerLayout ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
   const jrSite = new JungleRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jrLayout);
@@ -569,6 +573,7 @@ async function main() {
     hrSite.update(dt, player.pos, started);
     sbSite.update(dt, player.pos, started);
     rcSite.update(dt, player.pos, started);
+    ssSite?.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
