@@ -50,6 +50,7 @@ import { buildOverride, OverrideSite } from './override.js';
 import { buildBentonRoll, BentonRollSite } from './bentonroll.js';
 import { buildRavage, RavageSite } from './ravage.js';
 import { buildBentonBlitz, BentonBlitzSite } from './bentonblitz.js';
+import { buildFlyingFire, FlyingFireSite } from './flyingfire.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -179,6 +180,8 @@ async function main() {
   const rvgLayout = buildRavage(data);
   // Benton Blitz: the multi-launch coaster in the canyon past Ravage
   const bzLayout = buildBentonBlitz(data);
+  // Flying Fire: the wooden coaster that goes upside down, north of the canyon
+  const ffLayout2 = buildFlyingFire(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -309,6 +312,7 @@ async function main() {
   const brSite = new BentonRollSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, brLayout);
   const rvgSite = new RavageSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rvgLayout);
   const bzSite = new BentonBlitzSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bzLayout);
+  const ffSite2 = new FlyingFireSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ffLayout2);
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
   const jrSite = new JungleRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jrLayout);
@@ -544,6 +548,7 @@ async function main() {
     brSite.update(dt, player.pos, started);
     rvgSite.update(dt, player.pos, started);
     bzSite.update(dt, player.pos, started, sim.queueRide === 'BentonBlitz');
+    ffSite2.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);

@@ -49,6 +49,29 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Flying Fire, a wooden coaster that goes upside down (browser
+  only):**
+  - **Where:** a logging-camp clearing north of the Blitz canyon, west of
+    Wolverine. Walk through Ravage's west gate, then through the torch-lit
+    timber gate in the canyon's north wall.
+  - **The story:** legend in the Benton Ridge logging camp says a firebird
+    nests on the ridge. A big firebird (the park's own design: a
+    long-necked bird of flame with swept-back wings of crimson, orange and
+    gold feathers) perches on the roof of the timber station, Firebird
+    Lodge.
+  - **The ride:** red six-car trains with flames down their sides.
+    - The chain lift is lit with embers and has torches burning at the top.
+    - A steep wooden drop from 34 m, with fire at the bottom.
+    - **Upside down #1:** a zero-g roll.
+    - Two airtime hills up the far side.
+    - **Upside down #2:** a barrel roll at the turnaround (fire as you come
+      out of it).
+    - An S-bend run home that passes under the first drop.
+    - It's all on a classic timber structure: 144 bents of posts, ledgers
+      and cross braces.
+  - **Around it:** a timber-arch entrance with torches and the live wait
+    time, a short switchback line with timber rails and torches, stacked
+    logs, a fire lookout tower, burned stumps and campfires.
 - **New ride: Benton Blitz, a multi-launch coaster that goes backward three
   times (browser only):**
   - **Where:** a new canyon in the old quarry, west of Ravage. Walk past
