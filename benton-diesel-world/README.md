@@ -49,6 +49,33 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Jungle Raid, a Mack-style coaster with a holding brake over
+  the edge (browser only):**
+  - **Where:** a jungle clearing north of Operation: Win the Crown. Walk
+    up the east side of the fortress courtyard to the carved stone gate
+    with torches in its north wall (or use ✨ Teleport).
+  - **The story:** the Benton Explorers' Club has found the lost Temple of
+    the Jaguar King (the park's own legend), and you're on the raid for its
+    golden idol.
+  - **The ride:** explorers' jeeps in jungle green and khaki, with a spare
+    tire on the back car, on green track.
+    1. Up the lift beside a waterfall pouring off a rock cliff into a pool.
+    2. Over the top to the edge, where **the holding brake stops the train
+       with the front car hanging nose-down over the drop**, for about 3
+       seconds.
+    3. Then it lets go: a drop past vertical (about 95°) into the ravine,
+       with a splash at the bottom.
+    4. A vertical loop round a giant stone jaguar head with glowing gold
+       eyes and fangs.
+    5. A heartline roll through the stone temple arch, with torches
+       flaring.
+    6. Airtime hills over the ruins: broken columns and a stepped temple
+       with the golden idol on top.
+    7. Back to base camp.
+    - Top speed is about 97 km/h.
+  - **Around it:** a bamboo-and-thatch base-camp station with torches, a
+    switchback line between bamboo rails starting at a stone gateway, and
+    palms and jungle trees all round.
 - **Teleport buttons (browser only):** every ride, show and restaurant in
   the park app now has a ✨ Teleport button next to 📍 Guide.
   - It takes you straight to the ride's entrance (or the show's viewing

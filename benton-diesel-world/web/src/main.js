@@ -58,6 +58,7 @@ import { buildSpeedBreaker, SpeedBreakerSite } from './speedbreaker.js';
 import { buildRCRace, RCRaceSite } from './rcrace.js';
 import { buildSummer, SunSwingerSite } from './sunswinger.js';
 import { buildWinTheCrown, WinTheCrownSite } from './wincrown.js';
+import { buildJungleRaid, JungleRaidSite } from './jungleraid.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -203,6 +204,8 @@ async function main() {
   const summerLayout = SUMMER ? buildSummer(data) : null;
   // Operation: Win the Crown: the indoor RMC coaster, north of RC Race
   const wcLayout = buildWinTheCrown(data);
+  // Jungle Raid: the Mack-style coaster with the hold over the edge, north of Win the Crown
+  const jraLayout = buildJungleRaid(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -339,6 +342,7 @@ async function main() {
   const sbSite = new SpeedBreakerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, sbLayout);
   const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
   const wcSite = new WinTheCrownSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wcLayout);
+  const jraSite = new JungleRaidSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jraLayout);
   const ssSite = summerLayout ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
@@ -600,6 +604,7 @@ async function main() {
     rcSite.update(dt, player.pos, started);
     ssSite?.update(dt, player.pos, started);
     wcSite.update(dt, player.pos, started);
+    jraSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
