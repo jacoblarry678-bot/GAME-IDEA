@@ -653,6 +653,25 @@ export class GameAudio {
     if (this.showState.has('StuntSpectacular')) setTimeout(() => this.cheer(new THREE.Vector3(70, 5, -205)), 900);
   }
 
+  // a train roaring through a tunnel behind you
+  rumble(pos, seconds = 5) {
+    if (!this.started) return;
+    const E = this.E, t = E.now;
+    this.oneShotAt(pos, (dest) => {
+      E.hiss(dest, t, seconds, 0.4, 'lowpass', 220, 0.8);
+      E.hiss(dest, t + 0.3, seconds * 0.8, 0.14, 'bandpass', 1200, 0.6);
+      E.boom(dest, t + 0.2, 0.3, 1.6);
+      E.boom(dest, t + seconds * 0.45, 0.25, 1.3);
+    }, 30);
+  }
+
+  // an old station speaker crackling into life
+  crackle() {
+    if (!this.started) return;
+    const E = this.E, t = E.now;
+    for (let i = 0; i < 9; i++) E.hiss(E.ui, t + i * 0.06 + Math.random() * 0.05, 0.03 + Math.random() * 0.04, 0.05, 'bandpass', 2200 + Math.random() * 1800, 1.4);
+  }
+
   launch(pos) {
     if (!this.started) return;
     this.oneShotAt(pos, (dest) => this.E.blip(dest, this.E.now, 900, 1.1, 0.04, 'sine', 2.4), 40);

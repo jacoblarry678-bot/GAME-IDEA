@@ -59,6 +59,7 @@ import { buildRCRace, RCRaceSite } from './rcrace.js';
 import { buildSummer, SunSwingerSite } from './sunswinger.js';
 import { buildWinTheCrown, WinTheCrownSite } from './wincrown.js';
 import { buildJungleRaid, JungleRaidSite } from './jungleraid.js';
+import { buildBlackline, BlacklineSite, RIDE_ID as BL_ID } from './blackline.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -206,6 +207,8 @@ async function main() {
   const wcLayout = buildWinTheCrown(data);
   // Jungle Raid: the Mack-style coaster with the hold over the edge, north of Win the Crown
   const jraLayout = buildJungleRaid(data);
+  // BLACKLINE: The Last Train, the haunted subway dark ride south of Ravage
+  const blLayout = buildBlackline(data);
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -343,6 +346,7 @@ async function main() {
   const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
   const wcSite = new WinTheCrownSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wcLayout);
   const jraSite = new JungleRaidSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jraLayout);
+  const blSite = new BlacklineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind), voice: (text) => audio.voice.say(text, { interrupt: true }), crackle: () => audio.crackle(), rumble: () => audio.rumble(player.pos) }, blLayout);
   const ssSite = summerLayout ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
@@ -558,11 +562,22 @@ async function main() {
     // colored lights take over
     const inBox = (r) => player.pos.x > r.x0 && player.pos.x < r.x1 && player.pos.z > r.z0 && player.pos.z < r.z1;
     // (and inside the Fast & Furious warehouse, where it is always night)
-    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || inBox(brLayout.indoor) || inBox(rvgLayout.indoor) || inBox(bzLayout.indoor) || inBox(hrLayout.indoor) || inBox(wcLayout.indoor) || (msLayout && inBox(msLayout.indoor)) || (ebLayout && inBox(ebLayout.indoor)));
+    const inHouse = started && (houses.some((h) => inBox(h.rect)) || inBox(ffLayout.indoor) || inBox(drLayout.indoor) || inBox(stLayout.indoor) || inBox(ftLayout.indoor) || inBox(bbLayout.indoor) || inBox(crLayout.indoor) || inBox(rvLayout.indoor) || inBox(ngLayout.indoor) || inBox(swLayout.indoor) || inBox(brLayout.indoor) || inBox(rvgLayout.indoor) || inBox(bzLayout.indoor) || inBox(hrLayout.indoor) || inBox(wcLayout.indoor) || inBox(blLayout.indoor) || (msLayout && inBox(msLayout.indoor)) || (ebLayout && inBox(ebLayout.indoor)));
     indoor += ((inHouse ? 1 : 0) - indoor) * Math.min(1, dt * 3);
     world.sky.sun.intensity *= 1 - 0.95 * indoor;
     world.sky.fill.intensity *= 1 - 0.85 * indoor;
     scene.environmentIntensity = 1 - 0.9 * indoor;
+    // BLACKLINE's blackout: the lights in the tent die
+    {
+      const blT = sim.rideTime(BL_ID, now), st = sim.rides.get(BL_ID);
+      blSite.update(dt, player.pos, started, { riding: sim.ridingRide === BL_ID, queue: sim.queueRide === BL_ID, t: blT, cycle: st?.cycleId });
+      hauntLights.groups = blSite.lampGroups(blT);
+      if (blSite.dark > 0.01) {
+        world.sky.sun.intensity *= 1 - blSite.dark;
+        world.sky.fill.intensity *= 1 - 0.9 * blSite.dark;
+        scene.environmentIntensity *= 1 - 0.8 * blSite.dark;
+      }
+    }
     hauntLights.update(dt, player.pos, indoor, 1 - daylight);
     signTimer -= dt;
     if (signTimer <= 0) {

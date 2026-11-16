@@ -355,7 +355,10 @@ export class ScareActors {
 // in their own colors (strongest indoors and after dark).
 export class HauntLights {
   constructor(scene, lamps, count = 4) {
-    this.lamps = lamps.map(([x, y, z, color]) => ({ pos: new THREE.Vector3(x, y, z), color: new THREE.Color(color) }));
+    this.lamps = lamps.map(([x, y, z, color, group]) => ({ pos: new THREE.Vector3(x, y, z), color: new THREE.Color(color), group }));
+    // lamps in a group are lit only while their group is on (a ride's
+    // lights that go out, or come on, at points in the ride)
+    this.groups = {};
     this.lights = [];
     for (let i = 0; i < count; i++) {
       const l = new THREE.PointLight(0xffffff, 0, 26, 2);
@@ -369,7 +372,7 @@ export class HauntLights {
     this.next -= dt;
     if (this.next <= 0) {
       this.next = 0.2;
-      const near = this.lamps.filter((l) => l.pos.distanceToSquared(focus) < 34 * 34)
+      const near = this.lamps.filter((l) => (!l.group || this.groups[l.group]) && l.pos.distanceToSquared(focus) < 34 * 34)
         .sort((a, b) => a.pos.distanceToSquared(focus) - b.pos.distanceToSquared(focus)).slice(0, this.lights.length);
       this.lights.forEach((l, i) => {
         const lamp = near[i];

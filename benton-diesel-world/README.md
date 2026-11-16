@@ -49,6 +49,31 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: BLACKLINE: The Last Train, a haunted subway dark ride
+  (browser only):** "Your stop disappeared years ago."
+  - **Where:** the field south of Ravage. Walk down the east side of
+    Ravage's field to the red-and-white gate in its south wall.
+  - **The front:** one whole subway station. The station house has
+    BLACKLINE across the top and the exit, with the street entrance
+    (railings, red globe lamps, turnstiles) beside it.
+  - **The line:** down a chain-link passage into a yard of chain-link
+    switchbacks beside the black tent, with flickering station signs,
+    route maps and crackling speakers. Then a covered walkway and a
+    deserted platform hall.
+  - **The ride:** slow subway cars on rails, three cars of eight seats.
+    - Out past the maintenance yard into a tunnel in the side of the tent.
+    - Round the train graveyard.
+    - Past Graymoor, an abandoned platform with silhouettes moving
+      behind frosted windows.
+    - **The blackout:** the train stops in the junction, the lights die,
+      and the announcer says "There are no more scheduled stops." Red
+      emergency lights show what's left of the line's last conductor
+      beside the track.
+    - **The escape:** the tunnel comes down, with fans, chasing lights
+      and a roar behind you.
+    - **The finale:** sparks as you burst out through a ruined tunnel
+      mouth into the fenced rail yard, round a wrecked subway car, and
+      back to the station.
 - **New ride: Jungle Raid, a Mack-style coaster with a holding brake over
   the edge (browser only):**
   - **Where:** a jungle clearing north of Operation: Win the Crown. Walk

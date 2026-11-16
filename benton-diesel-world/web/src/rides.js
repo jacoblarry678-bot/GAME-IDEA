@@ -123,7 +123,22 @@ function poseProps(props, t, extras) {
   for (const p of props || []) {
     const [x, y, z] = p.at;
     if (p.kind === 'piston') extras[p.name] = TR(x, y + p.amp * Math.sin(p.freq * t + p.phase), z);
-    else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(new THREE.Matrix4().makeRotationX(p.speed * t));
+    else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(p.axis === 'z' ? RZ(p.speed * t) : new THREE.Matrix4().makeRotationX(p.speed * t));
+    else if (p.kind === 'show') {
+      // there only during its windows of ride time (or only outside them),
+      // rushing in a little way when it appears
+      const w = p.windows.find(([a, b]) => t >= a && t < b);
+      if (p.invert ? w : !w) { extras[p.name] = TR(x, y - 500, z); continue; }
+      const k = w && p.reach ? Math.min(1, (t - w[0]) / (p.rush || 0.5)) : 0;
+      const m = TR(x + (p.dir ? p.dir[0] * p.reach * k : 0), y, z + (p.dir ? p.dir[1] * p.reach * k : 0));
+      extras[p.name] = p.dir ? m.multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))) : m;
+    } else if (p.kind === 'blink') {
+      // on for part of every period (flickering, or chasing in turn), and
+      // only during its windows of ride time when it has some
+      const u = ((t / p.period + p.phase) % 1 + 1) % 1;
+      const on = u < p.duty && (!p.only || p.only.some(([a, b]) => t >= a && t < b));
+      extras[p.name] = TR(x, on ? y : y - 500, z);
+    }
     else if (p.kind === 'fall') { const u = ((t / p.period + p.phase) % 1 + 1) % 1; extras[p.name] = TR(x, y - p.drop * u * u, z).multiply(RY(u * 3)); }
     else if (p.kind === 'lunge') { const u = ((t / p.period) % 1 + 1) % 1, k = u < 0.15 ? u / 0.15 : u < 0.4 ? 1 : Math.max(0, 1 - (u - 0.4) / 0.4); extras[p.name] = TR(x + p.dir[0] * p.reach * k, y, z + p.dir[1] * p.reach * k).multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))); }
     else if (p.kind === 'swing') extras[p.name] = TR(x, y, z).multiply(p.axis === 'x' ? new THREE.Matrix4().makeRotationX(p.amp * Math.sin(p.freq * t)) : RZ(p.amp * Math.sin(p.freq * t)));
