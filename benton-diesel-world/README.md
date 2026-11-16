@@ -49,6 +49,35 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: The Diesel Heist, an indoor coaster replacing Diesel Run
+  (browser only):**
+  - **Where:** Diesel Run's old building, west of Diesel District. The
+    closed fence is gone; the gate arch, the facade and the walkway
+    signpost now say THE DIESEL HEIST.
+  - **The story:** Benton Diesel Works keeps its gold-plated Diesel X-2
+    prototype engine in the R&D vault. Tonight you're the crew that breaks
+    in for it. The plan on the wall says: 1 trip the alarm, 2 grab the
+    X-2, 3 drive out ("step 1 is not part of the plan").
+  - **The ride:** black getaway cars with orange stripes and a chrome truck
+    grille up front, on orange track, all indoors.
+    1. The launch trips the alarm: red beacons, laser beams across, a
+       flashing SECURITY BREACH sign, sparks.
+    2. A hill up past the R&D vault's swung-open round door and gold glow,
+       with an explosion.
+    3. A vertical loop.
+    4. A heartline roll past hovering security drones.
+    5. A helix round the X-2 itself, a gold engine turning on its
+       pedestal.
+    6. A zero-g roll, with fire.
+    7. The brakes, past the getaway truck with its engine running.
+    - That's three inversions, and the top speed is about 108 km/h.
+  - **The line is extended outside:**
+    - It starts at the gate and runs along chain-rope lanes up the
+      building's east side (chrome stanchions with red ropes), past WANTED
+      posters and lamps.
+    - Inside, it runs through six long rows in the old R&D hall, past TOP
+      SECRET and X-2 posters, then onto the platform.
+  - BentonGram has an opening post.
 - **Diesel Run has shut down for good (browser only):**
   - The motion-simulator dark ride west of Diesel District is permanently
     closed. There's no line, no crew, and the X-1 rigs sit still in the

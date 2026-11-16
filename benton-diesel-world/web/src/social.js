@@ -18,6 +18,8 @@ const SEASON_POSTS = SUMMER ? [
     text: "Summer is HERE! The Summer Splash Parade rolls down Main Street at 10 AM and 3 PM - beach party, ice cream, surf and sun floats, and yes, you WILL get splashed. At dusk, the Summer Lights Parade lights it all up in neon. 🌊☀️🍦", likes: 22410 },
   { when: '1h', art: { title: 'SUN SWINGER', sub: 'NEW FLAT RIDE  ·  NOW SPINNING', color: 0xff8a20, emoji: '🎡' },
     text: "NEW RIDE: Sun Swinger is spinning on the speed-trials ground! 32 swings under a giant sun, lifting you up and tilting like a wave. Heads up: the backstage lot is closed for the summer - follow the blue barricaded walkway along the avenue to Ravage and the canyon rides. 🌞", likes: 13980 },
+  { when: 'Now', art: { title: 'THE DIESEL HEIST', sub: 'NOW OPEN  ·  IN DIESEL RUN\'S OLD BUILDING', color: 0xf0c040, emoji: '💰' },
+    text: "NEW RIDE: The Diesel Heist is OPEN! An indoor launched coaster in Diesel Run's old building: break into the Benton Diesel Works vault, grab the gold-plated X-2 and drive out - a vertical loop, a heartline roll past the security drones, a helix round the X-2 and a zero-g roll. The line starts outside along the chain-rope lanes by the gate. 💰🏁", likes: 20112 },
   { when: 'Today', art: { title: 'FAREWELL, DIESEL RUN', sub: 'PERMANENTLY CLOSED', color: 0xff5a1a, emoji: '🏁' },
     text: "After its last test drive, Diesel Run has closed for good. Thank you to everyone who rode the Benton Diesel X-1 through the engine, the canyon, the storm and the tunnel of fire - the rigs have been retired. Something new is coming... 👀", likes: 11406 },
   { when: '1d', art: { title: 'THANKS, EASTER!', sub: 'SEE YOU NEXT SPRING', color: 0xff9ac8, emoji: '🐰' },

@@ -26,3 +26,6 @@ export const FD_OPEN = true;
 // Diesel Run, the motion-simulator dark ride west of Diesel District, has
 // shut down for good: its gate is fenced off and its signs say so.
 export const DIESEL_RUN_CLOSED = true;
+// ...and its replacement is open in the same building: The Diesel Heist, an
+// indoor coaster, with its line extended outside along chain-rope lanes.
+export const DIESEL_HEIST = true;

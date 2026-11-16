@@ -35,6 +35,7 @@ import { buildMardiShow, MardiShowSite } from './mardishow.js';
 import { buildLineTickets, buildExtendedQueues } from './lanes.js';
 import { Social } from './social.js';
 import { buildDieselRun, DieselRunSite } from './dieselrun.js';
+import { buildDieselHeist, DieselHeistSite } from './dieselheist.js';
 import { buildStrangerThings, StrangerThingsSite } from './strangerthings.js';
 import { buildFuelThrottle, FuelThrottleSite } from './fuelthrottle.js';
 import { buildBoomCoaster, BoomCoasterSite } from './boomcoaster.js';
@@ -156,6 +157,8 @@ async function main() {
   const fdLayout = FD_BUILDING ? buildFinalDestination(data) : null;
   // Diesel Run: the motion-simulator dark ride past Diesel District
   const drLayout = buildDieselRun(data);
+  // The Diesel Heist: Diesel Run's replacement, in its building
+  const dhLayout = drLayout.heist ? buildDieselHeist(data, drLayout) : null;
   // Stranger Things: Escape the Upside Down, east of Velocity City
   const stLayout = buildStrangerThings(data);
   // Escape Fuel Throttle: the robot-arm dark ride, north of Stranger Things
@@ -349,6 +352,7 @@ async function main() {
   const ftSite = new FuelThrottleSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ftLayout);
   const stSite = new StrangerThingsSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, stLayout);
   const drSite = new DieselRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, drLayout);
+  const dhSite = dhLayout ? new DieselHeistSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, dhLayout) : null;
   const fdSite = fdLayout ? new FinalDestinationSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, fdLayout) : null;
   const ebSite = ebLayout ? new EasterBunnySite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ebLayout) : null;
   const eggHunt = EASTER ? new EggHunt({ scene, fx, sim, hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) } }) : null;
@@ -557,6 +561,7 @@ async function main() {
     eggHunt?.update(dt, player.pos, started);
     fdSite?.update(dt, player.pos, started);
     drSite.update(dt, player.pos, started);
+    dhSite?.update(dt, player.pos, started);
     stSite.update(dt, player.pos, started);
     ftSite.update(dt, player.pos, started);
     bbSite.update(dt, player.pos, started);

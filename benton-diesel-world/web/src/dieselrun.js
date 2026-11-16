@@ -15,7 +15,7 @@ import { makeTrack, queuePath } from './fastfurious.js';
 import { helpers } from './wolverine.js';
 import { LINES } from './guests.js';
 import { Sampler } from './rides.js';
-import { DIESEL_RUN_CLOSED } from './season.js';
+import { DIESEL_RUN_CLOSED, DIESEL_HEIST } from './season.js';
 
 export const RIDE_ID = 'DieselRun';
 const LAND = { x0: -592, x1: -375, z0: 26, z1: 278 };
@@ -109,7 +109,7 @@ export function buildDieselRun(data) {
   add([LAND.x1 - LAND.x0, 1, LAND.z1 - LAND.z0], [(LAND.x0 + LAND.x1) / 2, G - 0.5, (LAND.z0 + LAND.z1) / 2], 0x4a4c50, 'Asphalt');
 
   // ---- the walk in from Diesel District: a path, lamps, the gate arch
-  const route = [[-152, 139], [-250, 139], [DIESEL_RUN_CLOSED ? -367 : -372, gz]];
+  const route = [[-152, 139], [-250, 139], [DIESEL_RUN_CLOSED && !DIESEL_HEIST ? -367 : -372, gz]];
   for (let i = 0; i < route.length - 1; i++) {
     const [xa, za] = route[i], [xb, zb] = route[i + 1];
     const len = Math.hypot(xb - xa, zb - za), yaw = Math.atan2(xb - xa, zb - za);
@@ -121,7 +121,7 @@ export function buildDieselRun(data) {
   for (const x of [-190, -240, -290, -340]) lamp(x, 146, ORANGE);
   // a signpost where the path leaves the walkway
   box([0.6, 9, 0.6], [-160, G, 130], 0x2a2c30, 'Metal');
-  for (const face of ['Right', 'Left']) sign([0.3, 3.4, 10], [-160 + (face === 'Right' ? 0.4 : -0.4), G + 9.4, 130], DARK, face, [['DIESEL RUN', 0, 0, 1, 0.62, ORANGE], [DIESEL_RUN_CLOSED ? 'PERMANENTLY CLOSED' : 'NEW  ·  THIS WAY', 0, 0.62, 1, 0.38, DIESEL_RUN_CLOSED ? 0xff4a3a : WHITE, 'GothamBold']], { glow: true });
+  for (const face of ['Right', 'Left']) sign([0.3, 3.4, 10], [-160 + (face === 'Right' ? 0.4 : -0.4), G + 9.4, 130], DARK, face, [[DIESEL_HEIST ? 'THE DIESEL HEIST' : 'DIESEL RUN', 0, 0, 1, 0.62, ORANGE], [DIESEL_HEIST ? 'NEW  ·  THIS WAY' : DIESEL_RUN_CLOSED ? 'PERMANENTLY CLOSED' : 'NEW  ·  THIS WAY', 0, 0.62, 1, 0.38, DIESEL_RUN_CLOSED && !DIESEL_HEIST ? 0xff4a3a : WHITE, 'GothamBold']], { glow: true });
   // the gate arch: two black pylons with orange light bars
   const ax = -376;
   for (const z of [GATE.z0 + 1.6, GATE.z1 - 1.6]) {
@@ -130,12 +130,12 @@ export function buildDieselRun(data) {
   }
   add([4, 6, GATE.z1 - GATE.z0 + 2], [ax, G + 23, gz], DARK, 'Metal', { collide: 0 });
   for (const [dx, face] of [[2.2, 'Right'], [-2.2, 'Left']]) {
-    sign([0.3, 4.2, 30], [ax + dx, G + 23.6, gz], DARK, face, [['DIESEL RUN', 0, 0, 1, 0.64, ORANGE], ['THE ULTIMATE TEST DRIVE', 0, 0.64, 1, 0.36, WHITE, 'GothamBold']], { glow: true });
+    sign([0.3, 4.2, 30], [ax + dx, G + 23.6, gz], DARK, face, [[DIESEL_HEIST ? 'THE DIESEL HEIST' : 'DIESEL RUN', 0, 0, 1, 0.64, ORANGE], [DIESEL_HEIST ? 'BREAK IN  ·  GRAB THE ENGINE  ·  DRIVE OUT' : 'THE ULTIMATE TEST DRIVE', 0, 0.64, 1, 0.36, WHITE, 'GothamBold']], { glow: true });
   }
   add([12, 0.4, GATE.z1 - GATE.z0], [-382, FLOOR - 0.2, gz], 0x3a3c42, 'Pavement');
   box([0.6, 6, 0.6], [-368, G, GATE.z0 - 6], 0x2e3238, 'Metal');
   const waitPart = add([0.8, 6, 9.6], [-368, G + 9, GATE.z0 - 6], 0x101624, 'SmoothPlastic', { collide: 0 });
-  data.dynamicSigns.push({ part: waitPart, kind: 'wait', face: 'Right', ride: RIDE_ID });
+  data.dynamicSigns.push({ part: waitPart, kind: 'wait', face: 'Right', ride: DIESEL_HEIST ? 'DieselHeist' : RIDE_ID });
   data.staffSpots.push({ role: 'greeter', kind: 'idle', land: 'Diesel', seed: 31, cf: cf(-370, G, gz + 7, -Math.PI / 2) });
   for (const z of [GATE.z0 - 2, GATE.z1 + 2]) lamp(-366, z, ORANGE);
 
@@ -160,7 +160,7 @@ export function buildDieselRun(data) {
   for (const [za, zb] of [[B.z0, doorIn - 18], [doorIn + 18, B.z1]]) neon([0.3, 0.8, zb - za], [B.x1 + 0.2, G + 24, (za + zb) / 2], ORANGE);
   for (const [x, z] of [[B.x1 + 0.3, B.z0 + 0.3], [B.x1 + 0.3, B.z1 - 0.3], [B.x0 - 0.3, B.z0 + 0.3], [B.x0 - 0.3, B.z1 - 0.3]]) neon([0.5, B.H, 0.5], [x, G + B.H / 2, z], CYAN);
   // the facade: a huge DIESEL RUN sign over the entrance, chevrons, a canopy
-  sign([0.4, 9, 46], [B.x1 + 0.4, G + 18, doorIn], 0x101114, 'Right', [['DIESEL RUN', 0, 0.02, 1, 0.66, ORANGE], ['THE ULTIMATE TEST DRIVE  ·  BENTON DIESEL X-1', 0, 0.68, 1, 0.3, WHITE, 'GothamBold']], { glow: true });
+  sign([0.4, 9, 46], [B.x1 + 0.4, G + 18, doorIn], 0x101114, 'Right', DIESEL_HEIST ? [['THE DIESEL HEIST', 0, 0.02, 1, 0.66, ORANGE], ['BENTON DIESEL WORKS  ·  AFTER HOURS', 0, 0.68, 1, 0.3, WHITE, 'GothamBold']] : [['DIESEL RUN', 0, 0.02, 1, 0.66, ORANGE], ['THE ULTIMATE TEST DRIVE  ·  BENTON DIESEL X-1', 0, 0.68, 1, 0.3, WHITE, 'GothamBold']], { glow: true });
   for (let k = 0; k < 6; k++) {
     const rot = [1, 0, 0, 0, Math.cos(0.7), -Math.sin(0.7), 0, Math.sin(0.7), Math.cos(0.7)];
     neon([0.3, 0.6, 5], [B.x1 + 0.4, G + 11.5, doorIn - 20 + k * 1.6], ORANGE, { rot });
@@ -175,6 +175,8 @@ export function buildDieselRun(data) {
   // the walk from the gate to the doors
   add([B.x1 - -375 + 2, 0.4, 26], [(B.x1 - 375) / 2, FLOOR - 0.2, doorIn], 0x3a3c42, 'Pavement');
   add([12, 0.4, doorIn - doorOut], [-383, FLOOR - 0.2, (doorIn + doorOut) / 2], 0x3a3c42, 'Pavement');
+  // (replaced: the building's insides and the ride are The Diesel Heist's)
+  if (DIESEL_HEIST) return { gate: { x: -368, z: gz }, indoor: { x0: B.x0, x1: B.x1, z0: B.z0, z1: B.z1 }, heist: true, B, T, doorIn, doorOut, FLOOR, INNER, LAND, GATE };
 
   // ---- inside: the wall between the queue hall and the show (a door to the
   // load platform near the south end), a drop ceiling of light over the hall
@@ -525,7 +527,7 @@ export class DieselRunSite {
   }
 
   update(dt, pos, started) {
-    if (!started || this.told) return;
+    if (!started || this.told || this.layout.heist) return;
     const { gate } = this.layout;
     if (Math.hypot(pos.x - gate.x, pos.z - gate.z) < 60) {
       this.told = true;
