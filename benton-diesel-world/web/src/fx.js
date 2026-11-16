@@ -346,6 +346,13 @@ export class Effects {
     } else if (kind === 'easter') {
       // pastel confetti
       this.confetti(new THREE.Vector3(at.x, at.y, at.z), new THREE.Vector3(10, 3, 8), 420, [0xff9ac8, 0x7ad8a8, 0xf8e070, 0xb08aff, 0x8ad0ff, 0xffffff]);
+    } else if (kind === 'summer') {
+      // summer confetti: beach colors, and a little spray
+      this.confetti(new THREE.Vector3(at.x, at.y, at.z), new THREE.Vector3(10, 3, 8), 420, [0xff6a1a, 0xf2c418, 0x3ad0d0, 0xff4a8a, 0x2a6ad8, 0xffffff]);
+      this.emit('mist', new THREE.Vector3(at.x, at.y, at.z), { duration: 1.5 });
+    } else if (kind === 'fireworks') {
+      // three bursts over the train, one after another
+      [0xff3030, 0xffffff, 0x3a6aff].forEach((c, i) => setTimeout(() => this.firework(new THREE.Vector3(at.x + (i - 1) * 9, at.y + 14 + i * 3, at.z), new THREE.Color(c), 0.45), i * 350));
     } else if (kind === 'mardi') {
       // a confetti cannon in purple, green and gold
       this.confetti(new THREE.Vector3(at.x, at.y, at.z), new THREE.Vector3(10, 3, 8), 420, [0x8a3ac8, 0x2aa04a, 0xf0c030, 0xffe070]);

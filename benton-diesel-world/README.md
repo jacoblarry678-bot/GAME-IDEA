@@ -49,6 +49,24 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Summer overlays (browser only):** for the summer season, six rides
+  get a summer makeover.
+  - Each one has a new summer name and a ☀ arch over the way in.
+  - Decorations fill the space round the entrance, placed automatically
+    clear of walls, tracks, queues and paths.
+  - Each ride gets new effects: water cannons, summer confetti or
+  fireworks.
+
+  | Ride | Summer name | What's new |
+  | --- | --- | --- |
+  | Jungle Raid | Monsoon Run | Water cannons at the ravine and over the ruins; tiki torches, palms, misting fans, Coconut Coolers stand |
+  | Harbor Run | Regatta Week | Nautical bunting, sailboats, life rings, a Snow Cones stand; a soaking off the breakwater |
+  | Cyclone | County Fair Twister | Bunting, hay bales, a Lemonade stand, a giant beach ball; a cloudburst |
+  | RC Race | Beach Grand Prix | Chequered flags, surfboard racks, beach balls; water cannons on the straights and confetti at the finish |
+  | Benton Blitz | Heatwave | Misting fans all along the line, a 103° thermometer, an Ice Pops stand; water cannons |
+  | Flying Fire | Firecracker Summer | Bunting, fireworks racks, a Firecracker Pops stand; fireworks bursting over the train |
+
+  A toast tells you when you reach each one.
 - **New ride: BLACKLINE: The Last Train, a haunted subway dark ride
   (browser only):** "Your stop disappeared years ago."
   - **Where:** the field south of Ravage. Walk down the east side of

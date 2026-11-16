@@ -60,6 +60,7 @@ import { buildSummer, SunSwingerSite } from './sunswinger.js';
 import { buildWinTheCrown, WinTheCrownSite } from './wincrown.js';
 import { buildJungleRaid, JungleRaidSite } from './jungleraid.js';
 import { buildBlackline, BlacklineSite, RIDE_ID as BL_ID } from './blackline.js';
+import { buildSummerOverlays, SummerOverlaySite } from './summeroverlays.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -209,6 +210,9 @@ async function main() {
   const jraLayout = buildJungleRaid(data);
   // BLACKLINE: The Last Train, the haunted subway dark ride south of Ravage
   const blLayout = buildBlackline(data);
+  // summer overlays: six rides get summer makeovers (after every ride is in)
+  const soLayout = SUMMER ? buildSummerOverlays(data) : null;
+  if (soLayout) console.log('summer overlays:', soLayout.overlays.map((o) => `${o.name} ${JSON.stringify(o.made)}${o.arch ? ' +arch' : ''}`).join(' | '));
   // Benton Holidays: decorations, ride lights and Santa's Workshop (after
   // every ride is in, so they all get lights and the decorations miss them)
   const xmasLayout = CHRISTMAS ? buildChristmas(data) : null;
@@ -346,6 +350,7 @@ async function main() {
   const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
   const wcSite = new WinTheCrownSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wcLayout);
   const jraSite = new JungleRaidSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jraLayout);
+  const soSite = soLayout ? new SummerOverlaySite({ toast: (text, kind) => game.ui?.toast(text, kind) }, soLayout) : null;
   const blSite = new BlacklineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind), voice: (text) => audio.voice.say(text, { interrupt: true }), crackle: () => audio.crackle(), rumble: () => audio.rumble(player.pos) }, blLayout);
   const ssSite = summerLayout ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
@@ -620,6 +625,7 @@ async function main() {
     ssSite?.update(dt, player.pos, started);
     wcSite.update(dt, player.pos, started);
     jraSite.update(dt, player.pos, started);
+    soSite?.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);
