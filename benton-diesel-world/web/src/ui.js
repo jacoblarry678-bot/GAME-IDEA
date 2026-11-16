@@ -172,6 +172,11 @@ export class UI {
     return h('button', { class: 'btn small guide', onclick: () => this.guideTo(pos, name) }, '📍 Guide');
   }
 
+  // jump straight there (the park is big now!)
+  teleportButton(pos, name, face) {
+    return h('button', { class: 'btn small teleport', onclick: () => { if (this.g.teleportTo?.(pos, name, face)) this.open(null); } }, '✨ Teleport');
+  }
+
   guideTo(pos, name) {
     this.g.guide.set(pos, name);
     this.toast(`Directions to ${name} - follow the glowing arrows!`, 'info');
@@ -203,7 +208,7 @@ export class UI {
       }
       const wait = h('div', { class: 'wait' }, '--');
       const last = h('div', { class: 'wait-last' }, '');
-      c.append(this.card(ride.name, `${ride.category}  ${stars(ride.thrill)}  |  ${this.sortWaits ? land.name : ride.kind}`, land.color, h('div', {}, wait, last), this.guideButton(ride.entrance, ride.name)));
+      c.append(this.card(ride.name, `${ride.category}  ${stars(ride.thrill)}  |  ${this.sortWaits ? land.name : ride.kind}`, land.color, h('div', {}, wait, last), this.guideButton(ride.entrance, ride.name), this.teleportButton(ride.entrance, ride.name, ride.origin)));
       this.live.push(() => {
         const s = sim.rideState(ride.id);
         last.textContent = s.refurb || s.status === 'Closed' ? '' : [`⚡ ${s.express <= 0 ? 'no wait' : `${s.express} min`}`, s.lastWait !== null ? `last ${s.lastWait}` : '', s.extended ? 'extended queue open' : ''].filter(Boolean).join(' · ');
@@ -262,7 +267,7 @@ export class UI {
       const land = this.lands.get(show.land);
       const status = h('div', { class: 'status' });
       const skip = h('button', { class: 'btn small ghost', onclick: () => this.g.skipTo(show) }, '⏩ Skip to showtime');
-      c.append(this.card(show.name, show.venue, land.color, status, this.guideButton(show.viewing, show.name)));
+      c.append(this.card(show.name, show.venue, land.color, status, this.guideButton(show.viewing, show.name), this.teleportButton(show.viewing, show.name, show.center)));
       c.append(h('p', { class: 'show-desc' }, show.description));
       c.append(h('div', { class: 'times' }, h('span', {}, `Showtimes: ${show.times.map((t) => Clock.format(t)).join(', ')}`), skip));
       this.live.push(() => {
@@ -300,7 +305,7 @@ export class UI {
     for (const v of this.cfg.Venues) {
       if (v.kind !== kind) continue;
       const land = this.lands.get(v.land);
-      c.append(this.card(v.name, `${land.name}  |  ${v.description}`, land.color, this.guideButton(this.venueFront(v).front, v.name)));
+      c.append(this.card(v.name, `${land.name}  |  ${v.description}`, land.color, this.guideButton(this.venueFront(v).front, v.name), this.teleportButton(this.venueFront(v).front, v.name, v.position)));
       const list = h('div', { class: 'item-list' });
       for (const id of v.items) list.append(this.itemLine(this.items.get(id)));
       c.append(list);

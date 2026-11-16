@@ -372,6 +372,22 @@ async function main() {
     player.setLook(sim.profile.look);
     game.applyWear();
   };
+  // teleport straight to a ride's entrance (or a show, or a restaurant),
+  // facing it; you step out of any line you're in, but not off a ride
+  game.teleportTo = (pos, name, face) => {
+    if (player.riding || game.walk) { game.ui?.toast("You can't teleport while you're on a ride!", 'warn'); return false; }
+    if (sim.queueRide) sim.leave(true);
+    player.pos.set(pos[0], (pos[1] || 0) + 3, pos[2]);
+    player.vel.set(0, 0, 0);
+    const dx = (face?.[0] ?? pos[0]) - pos[0], dz = (face?.[2] ?? pos[2] - 1) - pos[2];
+    player.yaw = Math.atan2(-dx, -dz);
+    player.camYaw = player.yaw;
+    player.snapCamera();
+    game.guide?.clear?.();
+    audio.ui('open');
+    game.ui?.toast(`Teleported to ${name}!`, 'info');
+    return true;
+  };
   game.teleportHome = () => {
     if (player.riding) return;
     player.pos.set(cfg.Spawn[0], 3, cfg.Spawn[2]);

@@ -49,6 +49,14 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Teleport buttons (browser only):** every ride, show and restaurant in
+  the park app now has a ✨ Teleport button next to 📍 Guide.
+  - It takes you straight to the ride's entrance (or the show's viewing
+    spot, or the restaurant's front), facing it.
+  - It's handy now the park runs all the way out to RC Race and Operation:
+    Win the Crown.
+  - If you're in a line, you step out of it. You can't teleport while
+    you're on a ride.
 - **New ride: The Diesel Heist, an indoor coaster replacing Diesel Run
   (browser only):**
   - **Where:** Diesel Run's old building, west of Diesel District. The
