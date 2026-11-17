@@ -154,6 +154,88 @@ export const RIDE_ROOMS = {
       two(R, 'executioner', 'executioner', 0x2a1a1a, 'Brick');
     } },
   ],
+  // Hollow Mask Universe: one room for each film in the Hollow Mask series
+  hollow: [
+    { wall: [0x2a1a3a, 'SmoothPlastic'], floor: 0x1a1a2a, light: 0xff4ab8, dress: (R) => { // Hollow Mask (1988): the roller rink
+      R.sign(4, 1, 'HOLLOW MASK (1988)  ·  THE ROLLER RINK', 8, 1.2, 8, 0x14101c, 0xff4ab8, true);
+      every(R, 2, (t, k) => { for (const s of [-1.6, 0, 1.6]) R.put(t, s, [1.5, 0.04, 1.9], 0.56, (k + Math.round(s)) % 2 ? 0xf0f0f0 : 0x101010, 'SmoothPlastic'); }, 1);
+      every(R, 18, (t) => { R.put(t, 0, [1.6, 1.6, 1.6], 9.2, 0xd8dce4, 'Metal', { shape: 3 }); R.put(t, 0, [0.06, 1.4, 0.06], 10.6, 0x8a8e96, 'Metal'); }, 9);
+      every(R, 6, (t, k) => R.wall(t, k % 2 ? 1 : -1, 4.6, 0.25, 0.1, k % 4 < 2 ? 0x40c8ff : 0xff4ab8, 'Neon', { y0: 3.2 + (k % 3) * 0.6 }));
+      every(R, 11, (t, k) => { for (const dt of [0, 0.7]) R.put(t + dt, (k % 2 ? 1 : -1) * 2.2, [0.5, 0.5, 1], 0.3, 0xf0f0f0, 'SmoothPlastic'); }, 5);
+      R.wall(R.len * 0.6, -1, 7, 1.3, 1.3, 0xff4ab8, 'SmoothPlastic');
+      R.sign(R.len * 0.6, -1, 'SNACK BAR  ·  CLOSED', 5, 0.9, 4, 0x14101c, 0x40c8ff, true);
+      two(R, 'copycat', 'hollowMask', 0x2a1a3a, 'SmoothPlastic');
+    } },
+    { wall: [0x3a4a5a, 'DiamondPlate'], floor: 0x10161c, light: 0x40a0ff, dress: (R) => { // Hollow Mask II: the car wash
+      R.sign(4, -1, 'HOLLOW MASK II  ·  THE CAR WASH', 7, 1.2, 8, 0x0a1420, 0x40a0ff, true);
+      every(R, 3.2, (t, k) => { for (const s of [-1.8, -0.6, 0.6, 1.8]) R.put(t, s, [0.35, 3.6, 0.08], 8.4, [0x2a6ad8, 0xd82a2a, 0xf2c418][(k + Math.round(s * 2)) % 3], 'Fabric'); }, 2);
+      every(R, 14, (t, k) => R.wall(t, k % 2 ? 1 : -1, 1.6, 6.4, 1.6, 0x3a6ad8, 'Fabric', { shape: 5 }), 6);
+      every(R, 30, (t, k) => { const sd = k % 2 ? -1 : 1; R.wall(t, sd, 4.4, 1.5, 2.1, 0x8a1a1a, 'Metal'); R.wall(t, sd, 2.4, 0.9, 1.9, 0x8a1a1a, 'Metal', { y0: 1.5 }); }, 12);
+      every(R, 9, (t, k) => R.fog(t, k % 2 ? 1 : -1), 4);
+      R.sign(R.len * 0.7, 1, 'WASH  ·  WAX  ·  DIE', 5, 1, 6.5, 0x0a1420, 0xff4ab8, true);
+      two(R, 'hollowMask', 'copycat', 0x3a4a5a, 'DiamondPlate');
+    } },
+    { wall: [0x2a2a2e, 'SmoothPlastic'], floor: 0x141416, light: 0xff2a2a, dress: (R) => { // Hollow Mask III: the TV station
+      R.sign(4, 1, 'HOLLOW MASK III  ·  CHANNEL 9 NEWS', 7, 1.2, 8, 0x14141a, 0xff2a2a, true);
+      every(R, 20, (t, k) => R.sign(t, k % 2 ? -1 : 1, 'ON AIR', 3, 1, 7.5, 0x3a0a0a, 0xff3a3a, true), 12);
+      every(R, 12, (t, k) => { const sd = k % 2 ? 1 : -1; R.wall(t, sd, 0.2, 2.4, 0.2, 0x1a1a1a, 'Metal'); R.wall(t, sd, 1.4, 0.9, 0.9, 0x2a2a2e, 'Metal', { y0: 2.4 }); R.wall(t - 0.8, sd, 0.4, 0.4, 0.4, 0x0a0a0a, 'Glass', { y0: 2.6 }); }, 6);
+      every(R, 9, (t, k) => { for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) R.wall(t + i * 1.3, k % 2 ? -1 : 1, 1.2, 0.9, 0.3, (i + j + k) % 3 ? 0x9ab8ff : 0xe8f0ff, 'Neon', { y0: 3 + j * 1 }); }, 3);
+      every(R, 5, (t, k) => R.put(t, (k % 3 - 1) * 1.2, [0.15, 0.1, 4], 0.55, 0x111111, 'Rubber', { turn: (k % 2 ? 0.3 : -0.3) }));
+      R.wall(R.len * 0.5, -1, 5, 1.4, 1.4, 0x2a3a6a, 'Wood');
+      two(R, 'hollowMask', 'hollowMask', 0x2a2a2e, 'SmoothPlastic');
+    } },
+    { wall: [0x5a2a2a, 'Fabric'], floor: 0x3a1a1a, light: 0xffc080, dress: (R) => { // Hollow Mask IV: the hotel
+      R.sign(4, -1, 'HOLLOW MASK IV  ·  THE GRAND BENTON HOTEL', 8, 1.2, 8, 0x1a0a0a, 0xf0c040, true);
+      every(R, 7, (t, k) => {
+        for (const sd of [-1, 1]) {
+          R.wall(t, sd, 1.8, 3.8, 0.15, 0x3a2414, 'Wood');
+          R.wall(t, sd, 0.5, 0.3, 0.2, 0xf0c040, 'Metal', { y0: 4.1 });
+          R.wall(t + 2.2, sd, 0.4, 0.5, 0.3, 0xffd8a0, 'Neon', { y0: 4.6 });
+        }
+      }, 3);
+      every(R, 16, (t, k) => R.put(t, (k % 2 ? 1 : -1) * 1.6, [1, 1, 1.6], 0.5, 0xf0f0f0, 'SmoothPlastic'), 9);
+      R.sign(R.len * 0.45, 1, 'DO NOT DISTURB', 2.4, 0.6, 2.6, 0xf0f0f0, 0xa01818);
+      two(R, 'copycat', 'hollowMask', 0x5a2a2a, 'Fabric');
+    } },
+    { wall: [0xc81a2a, 'Fabric'], floor: 0x2a1a10, light: 0xffa020, dress: (R) => { // Hollow Mask V: the carnival
+      R.sign(4, 1, 'HOLLOW MASK V  ·  THE CARNIVAL', 7, 1.2, 8, 0x1a0a0a, 0xffc020, true);
+      every(R, 2, (t, k) => { if (k % 2) for (const sd of [-1, 1]) R.wall(t, sd, 1, 9.5, 0.08, 0xf4f0e8, 'Fabric', { y0: 0.5 }); }, 1);
+      every(R, 16, (t, k) => { const sd = k % 2 ? -1 : 1; R.wall(t, sd, 4, 1.4, 1.4, 0xf2c418, 'WoodPlanks'); for (let i = 0; i < 3; i++) R.wall(t - 1.2 + i * 1.2, sd, 0.8, 0.8, 0.8, [0xff4a8a, 0x40c8ff, 0x8aff4a][i], 'Fabric', { shape: 3, y0: 1.4 }); }, 6);
+      every(R, 5, (t, k) => { const s = (k % 3 - 1) * 1.6; R.put(t, s, [0.7, 0.9, 0.7], 7 + (k % 2), [0xff3a3a, 0x3a8aff, 0xf2c418, 0x3ad87a][k % 4], 'SmoothPlastic', { shape: 3 }); R.put(t, s, [0.03, 1.6, 0.03], 5.8 + (k % 2), 0xf0f0f0, 'Fabric'); }, 3);
+      R.wall(R.len * 0.5, -1, 0.6, 1.4, 2.2, 0xf4f0e8, 'SmoothPlastic', { y0: 1.6 });
+      R.wall(R.len * 0.5, -1, 0.15, 7, 0.15, 0xf0c040, 'Metal');
+      two(R, 'hollowMask', 'copycat', 0xc81a2a, 'Fabric');
+    } },
+    { wall: [0xd8d8d0, 'SmoothPlastic'], floor: 0x2a2a2e, light: 0x80ffd0, dress: (R) => { // Hollow Mask VI: the laundromat
+      R.sign(4, -1, 'HOLLOW MASK VI  ·  OPEN 24 HOURS', 7, 1.2, 8, 0x101418, 0x80ffd0, true);
+      every(R, 1.9, (t) => {
+        for (const sd of [-1, 1]) {
+          R.wall(t, sd, 1.7, 1.9, 1.4, 0xe8e8e8, 'SmoothPlastic');
+          R.wall(t, sd, 1.1, 1.1, 1.45, 0x2a3a4a, 'Glass', { shape: 2, y0: 0.4 });
+        }
+      }, 2);
+      every(R, 8, (t, k) => R.put(t, 0, [0.4, 0.12, 3], 10, k % 3 ? 0xe8fff4 : 0x203028, 'Neon'), 4);
+      two(R, 'copycat', 'hollowMask', 0xd8d8d0, 'SmoothPlastic');
+    } },
+    { wall: [0x6a6a70, 'Concrete'], floor: 0x9a9a94, light: 0xe8e0ff, dress: (R) => { // Hollow Mask: The Final Cut - the mall
+      R.sign(4, 1, 'HOLLOW MASK: THE FINAL CUT  ·  BENTON MALL', 9, 1.2, 8, 0x14141a, 0xe8e0ff, true);
+      const stores = ['BENTON BOUTIQUE', 'VIDEO RENTAL', 'SHOE CITY', 'MUSIC WORLD', 'TOY BARN', 'CINEMA 6', 'FOOD COURT'];
+      every(R, 14, (t, k) => {
+        const sd = k % 2 ? -1 : 1;
+        R.wall(t + 4, sd, 9, 6, 0.12, 0x9ab8c8, 'Glass', { y0: 0.4 });
+        R.sign(t + 4, sd, stores[k % stores.length], 7, 1, 7.4, 0x14141a, [0xff4ab8, 0x40c8ff, 0xf2c418][k % 3], true);
+        // mannequins in the windows - one of them isn't a mannequin
+        for (let i = 0; i < 3; i++) {
+          R.wall(t + 1.5 + i * 2.5, sd, 0.5, 2.6, 0.45, 0xe8e4dc, 'SmoothPlastic', { y0: 0 });
+          R.wall(t + 1.5 + i * 2.5, sd, 0.6, 0.7, 0.55, 0xf2eee6, 'SmoothPlastic', { shape: 3, y0: 2.7 });
+        }
+      }, 4);
+      every(R, 20, (t, k) => { R.put(t, (k % 2 ? 1 : -1) * 2, [0.8, 0.5, 3], 0.6, 0x5a3a20, 'WoodPlanks'); R.put(t + 4, (k % 2 ? -1 : 1) * 2, [1.4, 1, 1.4], 0.5, 0x3a6a3a, 'Grass', { shape: 5 }); }, 10);
+      R.sign(R.len - 6, -1, 'THE END?', 4, 1.2, 7, 0x14141a, 0xd81a2a, true);
+      two(R, 'hollowMask', 'copycat', 0x6a6a70, 'Concrete');
+      R.actor(R.len * 0.6, 1, 'hollowMask', 0x6a6a70, 'Concrete');
+    } },
+  ],
 };
 
 // ---------------------------------------------------------------- houses
@@ -189,11 +271,39 @@ export const RIDE_HOUSES = [
   },
 ];
 
+// Hollow Mask Universe, inside The Diesel Heist (closed for the haunt): the
+// line is the Heist's whole line (the chain-rope lanes outside, every row of
+// the hall) and on up the strip along the hall's west wall; a new door in
+// the wall into the show floor, west under the launch hill (high overhead),
+// the films in turn round the empty show floor, back east under the hill,
+// down past the parked train and the platform, and out the Heist's exit.
+export const HEIST_ID = 'DieselHeist';
+export function heistHouseSpec(data) {
+  const r = data.rides.find((x) => x.id === HEIST_ID), cfg = data.config.Rides.find((c) => c.id === HEIST_ID);
+  if (!r || !cfg) return null;
+  const q = r.queue.points, fwd = [];
+  for (let k = q.length - 2; k >= 0; k -= 2) fwd.push([q[k], q[k + 1]]);
+  const iEnd = fwd.findIndex(([x, z]) => Math.abs(x + 426) < 0.01 && Math.abs(z - 90) < 0.01);
+  if (iEnd < 0) return null;
+  const door = fwd.find(([x]) => Math.abs(x + 394) < 0.01) || [-394, 145];
+  return {
+    id: 'HauntHollow', name: 'Hollow Mask Universe', land: 'Diesel', theme: 'hollow', glow: 0xd81a2a, ride: 'The Diesel Heist',
+    description: "A Benton Haunt house inside The Diesel Heist's building (the coaster is closed while it's on). Walk through every film in the Hollow Mask series - the roller rink, the car wash, the TV station, the hotel, the carnival, the laundromat and the mall - and the masked killer is in every one. The line is the Heist's whole line.",
+    interior: [[-439.4, 238], [-556, 238], [-556, 146], [-532, 146], [-532, 226], [-508, 226], [-508, 146], [-484, 146], [-484, 218], [-445, 218], [-445, 46], [-440.6, 46]],
+    outsideIn: [[-438, 238]], outsideOut: [[-436, 44], [-400, 43], [-391, 40], [-382, 40]],
+    queueFwd: [...fwd.slice(0, iEnd + 1), [-434.5, 90], [-434.5, 238], [-438, 238]], entrance: fwd[0], origin: [-500, 0, 190],
+    doors: [{ x: -440, z: 238, along: 'z' }],
+    front: { at: [-389.2, door[1] + 13], face: 'Right', noFrame: true, noRopes: true, closed: fwd[0] }, baseWait: 90, speed: 0.9, clear: true,
+  };
+}
+export const HEIST_CLOSED = 'Temporarily closed - its building is Hollow Mask Universe, a Benton Haunt house, for the haunt season. The line is the house\'s now!';
+
 // Cut a doorway into whatever walls stand across (x, z): every thin, long,
 // axis-aligned part there is split into the pieces either side and the
 // piece above.
 function cutDoor(data, add, { x, z, along }, w = 7, h = 9) {
   const hidden = new Set(data.hidden);
+  const signParts = new Set(data.signs.map((sg) => sg.part));
   const out = [];
   data.static.forEach((p, i) => {
     if (hidden.has(i)) return;
@@ -212,6 +322,8 @@ function cutDoor(data, add, { x, z, along }, w = 7, h = 9) {
   });
   for (const i of out) {
     const p = data.static[i];
+    // (a sign on the wall just comes down)
+    if (signParts.has(i)) { p[19] = 0; data.hidden.push(i); continue; }
     const axisX = Math.abs(p[7]) > 0.99;
     const longX = along === 'x';
     const ex = axisX ? p[1] / 2 : p[3] / 2, ez = axisX ? p[3] / 2 : p[1] / 2, ey = p[2] / 2;
@@ -238,42 +350,75 @@ function cutDoor(data, add, { x, z, along }, w = 7, h = 9) {
 
 // Before the corridors go in: the doorways into the buildings (call once,
 // on the parts as the ride builders left them)
-export function cutRideHouseDoors(data) {
+export function cutRideHouseDoors(data, specs = RIDE_HOUSES) {
   const { add } = helpers(data);
   data.hidden = data.hidden || [];
   let n = 0;
-  for (const hs of RIDE_HOUSES) for (const d of hs.doors) n += cutDoor(data, add, d);
+  for (const hs of specs) for (const d of hs.doors) n += cutDoor(data, add, d);
+  return n;
+}
+
+// Clear what a ride left standing inside a house's corridors (its support
+// columns, beacons, a console): the parts built before `before` that sit
+// wholly inside a corridor, below its ceiling
+export function clearCorridors(data, interior, before, half = 3.0) {
+  const hidden = new Set(data.hidden);
+  let n = 0;
+  for (let k = 0; k < interior.length - 1; k++) {
+    const [a, b] = [interior[k], interior[k + 1]];
+    const x0 = Math.min(a[0], b[0]) - half, x1 = Math.max(a[0], b[0]) + half, z0 = Math.min(a[1], b[1]) - half, z1 = Math.max(a[1], b[1]) + half;
+    for (let i = 0; i < before; i++) {
+      if (hidden.has(i)) continue;
+      const p = data.static[i];
+      const ex = (Math.abs(p[7]) * p[1] + Math.abs(p[8]) * p[2] + Math.abs(p[9]) * p[3]) / 2, ey = (Math.abs(p[10]) * p[1] + Math.abs(p[11]) * p[2] + Math.abs(p[12]) * p[3]) / 2, ez = (Math.abs(p[13]) * p[1] + Math.abs(p[14]) * p[2] + Math.abs(p[15]) * p[3]) / 2;
+      if (p[4] - ex < x0 || p[4] + ex > x1 || p[6] - ez < z0 || p[6] + ez > z1) continue;
+      if (p[5] - ey > 10.5 || p[5] + ey < 0.8) continue;
+      p[19] = 0;
+      data.hidden.push(i);
+      hidden.add(i);
+      n++;
+    }
+  }
   return n;
 }
 
 // The fronts over the doors, fog, pumpkins, ropes along the lines, the
 // wait-time boards and the greeters
-export function buildRideHouseFronts(data) {
+export function buildRideHouseFronts(data, specs = RIDE_HOUSES) {
   const { add, box, sign, cf } = helpers(data);
   data.tags.SteamVent = data.tags.SteamVent || [];
   data.dynamicSigns = data.dynamicSigns || [];
   data.staffSpots = data.staffSpots || [];
   const light = (x, y, z, color) => (data.hauntLights = data.hauntLights || []).push([x, y, z, color]);
-  for (const hs of RIDE_HOUSES) {
+  for (const hs of specs) {
     const [fx, fz] = hs.front.at;
     const alongX = hs.front.face === 'Back' || hs.front.face === 'Front';
     const sz = alongX ? [14, 3.2, 0.3] : [0.3, 3.2, 14];
-    sign(sz, [fx, G + 11.2, fz], BLACK, hs.front.face, [[hs.name.split(': ')[1].toUpperCase(), 0, 0, 1, 0.62, hs.glow], [`BENTON HAUNT  ·  INSIDE ${hs.ride.toUpperCase()}`, 0, 0.64, 1, 0.34, ORANGE, 'GothamBold']], { glow: true });
-    const [ex, ez] = hs.front.exitAt;
-    sign(alongX ? [5, 1.2, 0.3] : [0.3, 1.2, 5], [ex, G + 10, ez], BLACK, hs.front.face, [['EXIT', 0, 0, 1, 1, 0x5adc6e, 'GothamBold']], { glow: true });
+    sign(sz, [fx, G + 11.2, fz], BLACK, hs.front.face, [[(hs.name.split(': ')[1] || hs.name).toUpperCase(), 0, 0, 1, 0.62, hs.glow], [`BENTON HAUNT  ·  INSIDE ${hs.ride.toUpperCase()}`, 0, 0.64, 1, 0.34, ORANGE, 'GothamBold']], { glow: true });
+    if (hs.front.exitAt) {
+      const [ex, ez] = hs.front.exitAt;
+      sign(alongX ? [5, 1.2, 0.3] : [0.3, 1.2, 5], [ex, G + 10, ez], BLACK, hs.front.face, [['EXIT', 0, 0, 1, 1, 0x5adc6e, 'GothamBold']], { glow: true });
+    }
+    // (a ride closed for the haunt: a sign at its line saying so)
+    if (hs.front.closed) {
+      const [cx, cz] = hs.front.closed;
+      box([0.3, 5.2, 0.3], [cx + 3.2, G, cz - 2], BLACK, 'Metal', { collide: 0 });
+      sign([0.25, 2.2, 6], [cx + 3.2, G + 4.6, cz - 2], 0x1a0a0a, 'Right', [[`${hs.ride.toUpperCase()}`, 0, 0, 1, 0.3, 0xff5a1a, 'GothamBold'], ['TEMPORARILY CLOSED', 0, 0.32, 1, 0.3, 0xf04636, 'GothamBlack'], [`NOW: ${hs.name.toUpperCase()}`, 0, 0.66, 1, 0.3, hs.glow, 'GothamBold']], { glow: true });
+      sign([0.25, 2.2, 6], [cx + 2.9, G + 4.6, cz - 2], 0x1a0a0a, 'Left', [[`${hs.ride.toUpperCase()}`, 0, 0, 1, 0.3, 0xff5a1a, 'GothamBold'], ['TEMPORARILY CLOSED', 0, 0.32, 1, 0.3, 0xf04636, 'GothamBlack'], [`NOW: ${hs.name.toUpperCase()}`, 0, 0.66, 1, 0.3, hs.glow, 'GothamBold']], { glow: true });
+    }
     // the doorway: a glowing frame, fog, a pumpkin either side, a lamp
     const [ox, oz] = hs.outsideIn[hs.outsideIn.length - 1];
-    for (const s of [-1, 1]) {
+    if (!hs.front.noFrame) for (const s of [-1, 1]) {
       const px = alongX ? fx + s * 4.2 : fx, pz = alongX ? fz : fz + s * 4.2;
       add([0.4, 9, 0.4], [px, G + 4.5, pz], hs.glow, 'Neon', { collide: 0 });
       add([1.4, 1.2, 1.4], [px + (alongX ? s * 1.3 : (ox > fx ? 1.4 : -1.4)), G + 0.6, pz + (alongX ? (oz > fz ? 1.4 : -1.4) : s * 1.3)], ORANGE, 'SmoothPlastic', { collide: 0, shape: 3 });
     }
-    add(alongX ? [8.8, 0.4, 0.4] : [0.4, 0.4, 8.8], [fx, G + 9.2, fz], hs.glow, 'Neon', { collide: 0 });
+    if (!hs.front.noFrame) add(alongX ? [8.8, 0.4, 0.4] : [0.4, 0.4, 8.8], [fx, G + 9.2, fz], hs.glow, 'Neon', { collide: 0 });
     data.tags.SteamVent.push([ox, G + 0.4, oz, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
     light(ox, 5, oz, hs.glow);
     // black barricades with orange rope along the line
     const q = hs.queueFwd;
-    for (let k = 0; k < q.length - 1; k++) {
+    if (!hs.front.noRopes) for (let k = 0; k < q.length - 1; k++) {
       const [ax, az] = q[k], [bx, bz] = q[k + 1];
       const len = Math.hypot(bx - ax, bz - az);
       if (len < 3) continue;

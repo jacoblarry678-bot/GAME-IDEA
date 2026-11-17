@@ -28,7 +28,7 @@ export const HOUSES = [
   { name: 'ENGINE WORKS: MELTDOWN', title: 'Engine Works: Meltdown', theme: 'engine', color: 0x2c2e32, glow: 0xff6a10 },
   ...(FD_OPEN ? [{ name: "FINAL DESTINATION: DEATH'S DESIGN", title: "Final Destination: Death's Design", theme: 'destination', color: 0x1a1c22, glow: 0xe02020 }] : []),
 ];
-const HOUSE_COUNT = HOUSES.length + 1 + (RIDE_HOUSES_OPEN ? 3 : 0); // and the tent at Family Landing, and the houses inside ride buildings (hauntrides.js)
+const HOUSE_COUNT = HOUSES.length + 1 + (RIDE_HOUSES_OPEN ? 4 : 0); // and the tent at Family Landing, and the houses inside ride buildings (hauntrides.js)
 const COUNT_WORD = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][HOUSE_COUNT] || String(HOUSE_COUNT);
 
 export function buildBackstage(data) {
@@ -485,7 +485,7 @@ export function buildBackstage(data) {
   }
   data.staff.lines.haunt = [
     'Welcome to Benton Haunt!', `All ${COUNT_WORD} houses are open tonight!`, 'Check the app for house wait times!',
-    "You didn't see anything back here...", FD_OPEN ? "Final Destination is open on Stage 6 - you can't cheat Death!" : 'Five houses in these stages, one more in a tent at Family Landing!', 'Seven scare zones - try Fortnitemares at Family Landing!', ...(RIDE_HOUSES_OPEN ? ['New this year: houses inside the rides - Siren\'s Wake, Neon Getaway and Win the Crown!'] : []),
+    "You didn't see anything back here...", FD_OPEN ? "Final Destination is open on Stage 6 - you can't cheat Death!" : 'Five houses in these stages, one more in a tent at Family Landing!', 'Seven scare zones - try Fortnitemares at Family Landing!', ...(RIDE_HOUSES_OPEN ? ['New this year: houses inside the rides - Siren\'s Wake, Neon Getaway, Win the Crown and Hollow Mask Universe in The Diesel Heist!'] : []),
   ];
   return { gate: { x: gx, z: -405 } };
 }

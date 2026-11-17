@@ -199,6 +199,21 @@ function costumes(P) {
       head: [P(3, [1.08, 1.3, 1.08], [0, -0.32, 0.04], 0x0c0c0e, 'Fabric'), P(0, [0.18, 0.1, 0.05], [-0.16, -0.42, -0.53], 0xff2010, 'Neon'), P(0, [0.18, 0.1, 0.05], [0.16, -0.42, -0.53], 0xff2010, 'Neon')],
       handR: [P(5, [0.14, 3, 0.14], [0, -0.6, 0], 0x4a3a2a, 'Wood'), P(0, [0.08, 1.1, 0.9], [0, 0.85, -0.4], 0xb8bcc4, 'Metal')], pose: 'tool',
       lines: ['Next!', 'Off with your crown!', 'Kneel...', 'The block is ready...'] },
+    // Hollow Mask Universe: the killer from the Hollow Mask films - a cracked
+    // white porcelain mask with hollow black eyes and no mouth, a long
+    // blood-red raincoat with the hood up, a hooked blade
+    hollowMask: { look: { skin: 0xd8d0c4, shirt: 0x6a0e12, pants: 0x1a1214, hair: 0x0a0a0a, shoes: 0x0a0a0a, sleeves: 1, longPants: 1, height: 1.12 },
+      head: [P(3, [0.84, 1.0, 0.42], [0, -0.46, -0.3], 0xf2eee6, 'SmoothPlastic'), P(3, [0.22, 0.3, 0.08], [-0.17, -0.38, -0.5], 0x050505, 'SmoothPlastic'), P(3, [0.22, 0.3, 0.08], [0.17, -0.38, -0.5], 0x050505, 'SmoothPlastic'),
+        P(0, [0.03, 0.5, 0.05], [0.1, -0.62, -0.5], 0x2a2420, 'SmoothPlastic', rz(0.4)), P(0, [0.03, 0.3, 0.05], [0.18, -0.24, -0.5], 0x2a2420, 'SmoothPlastic', rz(-0.3)),
+        P(3, [1.2, 1.25, 1.15], [0, -0.3, 0.12], 0x5a0c10, 'Fabric')],
+      handR: [P(0, [0.14, 0.5, 0.18], [0, -0.1, 0], 0x1a1a1a, 'Rubber'), P(0, [0.06, 1.2, 0.3], [0, -0.85, -0.05], 0xc8ccd4, 'Metal'), P(2, [0.06, 0.5, 0.5], [0, -1.45, -0.22], 0xc8ccd4, 'Metal')],
+      chest: [P(0, [0.08, 1.4, 0.04], [0, 0.6, -0.45], 0x3a0608, 'Fabric')], pose: 'tool',
+      lines: ['Do you like sequels?', 'Every film needs a killer...', 'Roll credits!', "...", 'Cut!'] },
+    copycat: { look: { skin: 0xc8b8a8, shirt: 0x4a4a50, pants: 0x2a2a3a, hair: 0x2a1a10, shoes: 0x1a1a1a, sleeves: 1, longPants: 1, height: 1.04 },
+      head: [P(3, [0.8, 0.94, 0.4], [0, -0.46, -0.3], 0xe8e0d0, 'SmoothPlastic'), P(3, [0.2, 0.26, 0.08], [-0.16, -0.38, -0.49], 0x050505, 'SmoothPlastic'), P(3, [0.2, 0.26, 0.08], [0.16, -0.38, -0.49], 0x050505, 'SmoothPlastic'),
+        P(0, [0.5, 0.1, 0.05], [0, -0.75, -0.48], 0x2a7a3a, 'SmoothPlastic'), P(3, [1.1, 1.0, 1.05], [0, -0.2, 0.14], 0x4a4a50, 'Fabric')],
+      handR: pipe, pose: 'tool',
+      lines: ["I'm the REAL Hollow Mask!", 'Biggest fan. BIGGEST.', 'Sequel time!', 'BOO!'] },
   };
 }
 

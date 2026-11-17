@@ -49,6 +49,27 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New haunted house: Hollow Mask Universe, inside The Diesel Heist
+  (browser only).**
+  - **The Diesel Heist is temporarily closed** while it's on, because the
+    house uses its whole line. Its signs, its wait board and the app all
+    say "TEMPORARILY CLOSED".
+  - **The line:** the Heist's chain-rope lanes outside, every row of its
+    hall, then up the strip along the hall's west wall.
+  - **The walk:** through a new door into the show floor, under the launch
+    hill (the track is high overhead), round the empty show floor, back
+    under the hill, down past the parked train and the platform, and out
+    the Heist's exit.
+  - **The rooms:** one for each film in the Hollow Mask series: the roller
+    rink, the car wash, the TV station, the hotel, the carnival, the
+    laundromat and the mall, where one of the mannequins isn't one.
+  - **The killer:** the Hollow Mask is in every room. He wears a cracked
+    white porcelain mask with hollow eyes and no mouth, a blood-red
+    hooded raincoat, and carries a hooked blade. A copycat fan in a
+    cheaper mask turns up too.
+  - The haunt now has 11 houses.
+  - Hollow Mask is an original killer and franchise. "Ghostface" belongs
+    to a real film series, so it isn't used.
 - **Summer is over and Benton Haunt is back (browser only):**
   - **Summer ends:** the summer parades and the summer overlays are gone,
     and so is the barricaded walkway through the backstage lot. Sun

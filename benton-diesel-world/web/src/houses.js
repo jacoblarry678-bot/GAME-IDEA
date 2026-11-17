@@ -10,7 +10,7 @@ import { HOUSES, STAGE_Z, QUEUE, STAGE, stageX } from './backstage.js';
 import { FAMILY_QUEUE } from './haunt.js';
 import { XROOMS, XSTAGES, XDESC, XOUTDOOR, XHAWKINS, buildTrailFronts } from './xmastrails.js';
 import { EROOMS, ESTAGES, EDESC, buildEasterFronts } from './eastertrails.js';
-import { RIDE_ROOMS, RIDE_HOUSES, cutRideHouseDoors, buildRideHouseFronts } from './hauntrides.js';
+import { RIDE_ROOMS, RIDE_HOUSES, cutRideHouseDoors, buildRideHouseFronts, heistHouseSpec, clearCorridors, HEIST_ID, HEIST_CLOSED } from './hauntrides.js';
 
 export const WALK = 6; // how fast a group walks a house (studs/s)
 const G = 0.1;
@@ -666,15 +666,21 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
   // the houses inside ride buildings: doorways cut into the buildings, the
   // corridors in the floor space the rides don't use, fronts and lines
   if (rides) {
-    cutRideHouseDoors(data);
-    for (const hs of RIDE_HOUSES) {
+    // (and Hollow Mask Universe, in The Diesel Heist, which closes for it)
+    const heist = heistHouseSpec(data);
+    const specs = [...RIDE_HOUSES, ...(heist ? [heist] : [])];
+    if (heist) Object.assign(data.config.Rides.find((c) => c.id === HEIST_ID), { refurb: true, closedFor: HEIST_CLOSED });
+    const before = data.static.length;
+    cutRideHouseDoors(data, specs);
+    for (const hs of specs) {
+      if (hs.clear) clearCorridors(data, hs.interior, before);
       addHouse({
         id: hs.id, name: hs.name, land: hs.land, theme: hs.theme, glow: hs.glow, interior: hs.interior,
         outsideIn: hs.outsideIn, outsideOut: hs.outsideOut, queueFwd: hs.queueFwd, signIndex: 1, entrance: hs.entrance, origin: hs.origin,
         baseWait: hs.baseWait, description: hs.description, speed: WALK * hs.speed,
       });
     }
-    buildRideHouseFronts(data);
+    buildRideHouseFronts(data, specs);
   }
   return houses;
 }

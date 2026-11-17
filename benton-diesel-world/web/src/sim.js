@@ -150,7 +150,7 @@ export class Sim {
   rideState(id) {
     const st = this.rides.get(id);
     return {
-      status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, shutdown: !!st.shutdown, late: !!st.late, opensAt: st.cfg.opensAt ?? null, lastWait: st.lastWait ?? null,
+      status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, shutdown: !!st.shutdown, closedFor: st.cfg.closedFor ?? null, late: !!st.late, opensAt: st.cfg.opensAt ?? null, lastWait: st.lastWait ?? null,
       express: this.expressWait(st), fotl: this.fotlWait(st), extended: this.extendedOpen(st),
       preshow: st.preshow ?? null, // a pre-show room's count (see QueueCrowd)
     };
@@ -197,7 +197,7 @@ export class Sim {
     const st = this.rides.get(id);
     if (!st) return;
     if (st.refurb) {
-      this.hooks.toast(st.shutdown ? `${st.cfg.name} has closed for good. Thanks for every ride!` : `${st.cfg.name} is closed for a small refurbishment. It'll be back very soon!`, 'warn');
+      this.hooks.toast(st.shutdown ? `${st.cfg.name} has closed for good. Thanks for every ride!` : st.cfg.closedFor ? `${st.cfg.name}: ${st.cfg.closedFor}` : `${st.cfg.name} is closed for a small refurbishment. It'll be back very soon!`, 'warn');
       return;
     }
     if (this.ridingRide) {
