@@ -9,6 +9,7 @@ export class Input {
     this.pressed = new Set(); // one-shot key presses
     this.touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.enabled = true;
+    this.fly = { up: false, down: false }; // the free cam's on-screen up/down buttons
 
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement) return;

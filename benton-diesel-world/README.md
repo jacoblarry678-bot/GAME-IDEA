@@ -49,6 +49,21 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Free cam (browser only):** press **C**, or tap the 🎥 button in the
+  top bar, and the camera leaves your guest and flies anywhere.
+  - **Keyboard:** WASD or the arrow keys fly, Space or E goes up, Q goes
+    down, Shift goes faster.
+  - **Mouse:** drag to look; the mouse wheel changes your speed.
+  - **Phone:** the stick flies, dragging looks, and ▲▼ buttons rise and
+    fall.
+  - **Your guest stays put.** If they're on a ride they keep riding, and
+    in a line they keep shuffling forward with it.
+  - **The camera** has no walls to bump into, but it stays above the
+    ground and inside the world.
+  - **H** hides the rest of the HUD for clean shots, and **P** still takes
+    a photo.
+  - **C**, **Esc**, the Exit free cam button or the 🎥 button brings the
+    camera back. Teleporting also ends free cam.
 - **New haunted house: Hollow Mask Universe, inside The Diesel Heist
   (browser only).**
   - **The Diesel Heist is temporarily closed** while it's on, because the

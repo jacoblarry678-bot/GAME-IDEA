@@ -131,6 +131,21 @@
   .food .bites { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 8px; color: var(--gold); letter-spacing: 1px; }
   body.touch .food .key { display: none; }
 
+  /* free cam: fly the camera anywhere; the HUD steps aside */
+  #freecam-btn { width: 34px; justify-content: center; padding: 0; font-size: 16px; cursor: pointer; }
+  #freecam-hud { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; max-width: calc(100% - 20px); }
+  #freecam-hud .hint { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 8px 14px; border-radius: 14px; background: rgba(18, 28, 48, 0.82); border: 1px solid var(--line); font-size: 13px; text-align: center; }
+  #freecam-hud .hint b { color: var(--orange); }
+  #freecam-hud .touchkeys { display: none; }
+  body.touch #freecam-hud .keys { display: none; }
+  body.touch #freecam-hud .touchkeys { display: inline; }
+  #freecam-hud .row { display: flex; gap: 8px; pointer-events: auto; }
+  #freecam-hud button { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: rgba(18, 28, 48, 0.9); color: #fff; font: 800 15px/1 inherit; cursor: pointer; touch-action: none; }
+  #freecam-hud .fc-up, #freecam-hud .fc-down { display: none; width: 52px; }
+  body.touch #freecam-hud .fc-up, body.touch #freecam-hud .fc-down { display: inline-block; }
+  body.freecam #dock, body.freecam #food, body.freecam #prompt, body.freecam #jump-btn, body.freecam #restraint-btn, body.freecam #panel { display: none !important; }
+  body.freecam #freecam-btn { background: var(--orange); }
+  body.freecam.cleanshot #topbar, body.freecam.cleanshot #toasts, body.freecam.cleanshot #banner, body.freecam.cleanshot #caption, body.freecam.cleanshot #guide-chip, body.freecam.cleanshot #pill, body.freecam.cleanshot #freecam-hud .hint { display: none !important; }
   #dock { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(10px + var(--safe-b)); display: flex; gap: 4px; padding: 5px; border-radius: 18px; background: rgba(18, 28, 48, 0.9); border: 1px solid var(--line); box-shadow: var(--shadow); max-width: calc(100% - 20px); }
   .tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 64px; height: 56px; padding: 0 6px; border-radius: 13px; border: 0; background: transparent; }
   .tab .ico { font-size: 22px; line-height: 1; }
@@ -282,6 +297,7 @@
     <div class="chip" id="passes">🎫 0</div>
     <div class="chip" id="hunger" title="Hunger">🍔<div class="bar"><i id="hunger-fill"></i></div></div>
     <div class="chip" id="boost" hidden></div>
+    <button class="chip" id="freecam-btn" aria-label="Free cam" title="Free cam (C)">🎥</button>
     <button class="chip" id="sound-btn" aria-label="Mute sound">🔊</button>
     <button class="chip" id="menu-btn" aria-label="Settings">⚙</button>
   </div>
@@ -297,6 +313,10 @@
   <button id="jump-btn" aria-label="Jump">⤒</button>
   <nav id="dock"></nav>
   <div id="joystick" hidden><div id="joystick-knob"></div></div>
+  <div id="freecam-hud" hidden>
+    <div class="hint"><b>🎥 FREE CAM</b><span class="keys">WASD fly · Space/E up · Q down · Shift fast · drag to look · wheel speed · H hide HUD · P photo</span><span class="touchkeys">stick to fly · drag to look · ▲▼ up and down</span></div>
+    <div class="row"><button class="fc-up" aria-label="Fly up">▲</button><button class="fc-down" aria-label="Fly down">▼</button><button class="fc-exit">Exit free cam</button></div>
+  </div>
 </div>
 
 <div id="modal" hidden><div class="sheet"></div></div>

@@ -389,7 +389,22 @@ async function main() {
   };
   // teleport straight to a ride's entrance (or a show, or a restaurant),
   // facing it; you step out of any line you're in, but not off a ride
+  // free cam: fly the camera anywhere (C, or the 🎥 button)
+  game.toggleFreeCam = (on = !player.freeCam) => {
+    if (!started && on) return false;
+    if (!!player.freeCam === on) return on;
+    player.setFreeCam(on, camera);
+    document.body.classList.toggle('freecam', on);
+    if (!on) document.body.classList.remove('cleanshot');
+    $freecamHud.hidden = !on;
+    input.fly.up = input.fly.down = false;
+    if (on) { game.ui?.open?.(null); game.ui?.toast(document.body.classList.contains('touch') ? '🎥 Free cam on - fly with the stick, drag to look, ▲▼ to rise and fall.' : '🎥 Free cam on - WASD to fly, Space/E up, Q down, Shift for speed, drag to look. C or Esc to come back.', 'info'); }
+    audio.ui(on ? 'open' : 'close');
+    return on;
+  };
+  const $freecamHud = document.querySelector('#freecam-hud');
   game.teleportTo = (pos, name, face) => {
+    if (player.freeCam) game.toggleFreeCam(false);
     if (player.riding || game.walk) { game.ui?.toast("You can't teleport while you're on a ride!", 'warn'); return false; }
     if (sim.queueRide) sim.leave(true);
     player.pos.set(pos[0], (pos[1] || 0) + 3, pos[2]);

@@ -67,6 +67,15 @@ export class UI {
     $('#pill button').addEventListener('click', () => this.g.sim.leave());
     $('#guide-chip button').addEventListener('click', () => this.g.guide.clear());
     $('#menu-btn').addEventListener('click', () => this.openSettings());
+    // free cam: the button, and the on-screen fly up/down and exit buttons
+    $('#freecam-btn').addEventListener('click', () => this.g.toggleFreeCam?.());
+    $('#freecam-hud .fc-exit').addEventListener('click', () => this.g.toggleFreeCam?.(false));
+    for (const [sel, dir] of [['.fc-up', 'up'], ['.fc-down', 'down']]) {
+      const b = $(`#freecam-hud ${sel}`);
+      const set = (v) => (e) => { e.preventDefault(); if (this.g.input) this.g.input.fly[dir] = v; };
+      b.addEventListener('pointerdown', set(true));
+      for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, set(false));
+    }
     $('#sound-btn').addEventListener('click', () => {
       const a = this.g.audio;
       a.setPref('sound', !a.prefs.sound);
@@ -758,6 +767,15 @@ export class UI {
 
   // keyboard shortcuts
   handleKeys(input) {
+    // in free cam: only its own keys (E flies up), C or Esc to come back
+    if (this.g.player?.freeCam) {
+      if (input.consume('c') || input.consume('escape')) this.g.toggleFreeCam?.(false);
+      if (input.consume('h')) document.body.classList.toggle('cleanshot');
+      if (input.consume('p')) this.takePhoto();
+      input.pressed.clear();
+      return;
+    }
+    if (input.consume('c')) { this.g.toggleFreeCam?.(true); return; }
     if (input.consume('e')) {
       // on a ride: E pulls your own lap bar down
       if (this.g.staff?.playerAction()) this.g.staff.playerPull();

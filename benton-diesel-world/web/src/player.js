@@ -224,21 +224,29 @@ export class Player {
 
   // camera-relative movement + physics
   update(dt, input, camera) {
-    // camera controls
-    this.camYaw -= input.look.dx * 0.006;
-    this.camPitch = THREE.MathUtils.clamp(this.camPitch - input.look.dy * 0.005, -1.35, 0.6);
-    this.camDist = THREE.MathUtils.clamp(this.camDist * (1 + input.zoom * 0.12), 0.5, 90);
+    // camera controls (in free cam they steer the free camera instead)
+    const fc = this.freeCam;
+    if (fc) {
+      fc.yaw -= input.look.dx * 0.005;
+      fc.pitch = THREE.MathUtils.clamp(fc.pitch - input.look.dy * 0.005, -1.5, 1.5);
+      if (input.zoom) fc.speed = THREE.MathUtils.clamp(fc.speed * (1 - input.zoom * 0.12), 4, 300);
+    } else {
+      this.camYaw -= input.look.dx * 0.006;
+      this.camPitch = THREE.MathUtils.clamp(this.camPitch - input.look.dy * 0.005, -1.35, 0.6);
+      this.camDist = THREE.MathUtils.clamp(this.camDist * (1 + input.zoom * 0.12), 0.5, 90);
+    }
 
     if (this.riding) {
       this.updateRiding(dt);
     } else {
-      const mv = input.move();
+      // (in free cam you stand still - or shuffle on with the line)
+      const mv = fc ? { x: 0, y: 0 } : input.move();
       const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
       const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
       const wish = fwd.multiplyScalar(mv.y).add(right.multiplyScalar(mv.x));
       if (wish.lengthSq() > 1) wish.normalize();
       // walk by default, run with Shift (or the stick pushed all the way)
-      this.running = input.wantsRun();
+      this.running = !fc && input.wantsRun();
       let speed = this.running ? this.speed : this.speed * WALK_FRACTION;
       // in a queue line: with no input, walk the switchbacks to our spot
       const ap = this.autopilot;
@@ -262,7 +270,7 @@ export class Player {
         d = Math.atan2(Math.sin(d), Math.cos(d));
         this.yaw += d * Math.min(1, (moving ? 9 : 4) * dt);
       }
-      if (this.onGround && input.wantsJump()) {
+      if (this.onGround && !fc && input.wantsJump()) {
         this.vel.y = JUMP_SPEED + this.jumpBoost * 0.6;
         this.onGround = false;
       }
@@ -290,7 +298,48 @@ export class Player {
       this.figure.update(dt, { speed: Math.hypot(this.vel.x, this.vel.z), onGround: this.onGround, vy: this.vel.y, holding: !!this.wear.held });
     }
     this.updateBalloon(dt);
-    this.updateCamera(camera, dt);
+    if (fc) this.updateFreeCam(fc, dt, input, camera);
+    else this.updateCamera(camera, dt);
+  }
+
+  // Free cam: the camera leaves the player and flies wherever you steer it
+  // (no walls; it keeps above the ground and inside the world's edges)
+  setFreeCam(on, camera) {
+    if (on) {
+      this.freeCam = { pos: camera.position.clone(), yaw: this.camYaw, pitch: this.camPitch, speed: 30 };
+    } else {
+      this.freeCam = null;
+      this.snapCamera();
+    }
+  }
+
+  updateFreeCam(fc, dt, input, camera) {
+    const k = input.keys, on = input.enabled;
+    let f = 0, s = 0, u = 0;
+    if (on) {
+      if (k.has('w') || k.has('arrowup')) f += 1;
+      if (k.has('s') || k.has('arrowdown')) f -= 1;
+      if (k.has('d') || k.has('arrowright')) s += 1;
+      if (k.has('a') || k.has('arrowleft')) s -= 1;
+      if (k.has(' ') || k.has('e') || input.fly.up) u += 1;
+      if (k.has('q') || input.fly.down) u -= 1;
+      s += input.joy.x;
+      f -= input.joy.y;
+    }
+    const fast = on && k.has('shift') ? 4 : 1;
+    const cp = Math.cos(fc.pitch);
+    const look = new THREE.Vector3(-Math.sin(fc.yaw) * cp, Math.sin(fc.pitch), -Math.cos(fc.yaw) * cp);
+    const right = new THREE.Vector3(Math.cos(fc.yaw), 0, -Math.sin(fc.yaw));
+    const v = look.clone().multiplyScalar(f).addScaledVector(right, s).add(new THREE.Vector3(0, u, 0));
+    if (v.lengthSq() > 1) v.normalize();
+    fc.pos.addScaledVector(v, fc.speed * fast * dt);
+    fc.pos.x = THREE.MathUtils.clamp(fc.pos.x, -1000, 1450);
+    fc.pos.z = THREE.MathUtils.clamp(fc.pos.z, -900, 1000);
+    const ground = this.collision.groundHeight(fc.pos.x, fc.pos.z);
+    fc.pos.y = THREE.MathUtils.clamp(fc.pos.y, (Number.isFinite(ground) ? ground : 0) + 0.8, 600);
+    this.figure.root.visible = true;
+    camera.position.copy(fc.pos);
+    camera.lookAt(fc.pos.clone().add(look));
   }
 
   // jump the camera straight to the player (after teleports and rides)
