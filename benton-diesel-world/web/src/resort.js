@@ -190,7 +190,8 @@ const ADS_SUMMER = [
   { title: 'RAVAGE', sub: 'THE BUSIEST LINE IN THE PARK', foot: 'WALKWAY THROUGH THE BACK LOT', art: 'moon', fg: 0xc81a1a },
 ];
 const ADS = SUMMER ? ADS_SUMMER : EASTER ? ADS_EASTER : MARDI_GRAS ? ADS_MARDI : CHRISTMAS ? ADS_XMAS : XMAS_OVER ? ADS_NEWYEAR : XMAS_SETUP && HAUNT_OVER ? ADS_SETUP : HAUNT_OVER ? ADS_OVER : [
-  { title: 'BENTON HAUNT IS BACK', sub: '7 HOUSES  ·  7 SCARE ZONES', foot: 'SELECT NIGHTS THROUGH NOV 2', art: 'moon', fg: ORANGE },
+  { title: 'BENTON HAUNT IS BACK', sub: '10 HOUSES  ·  7 SCARE ZONES', foot: 'SELECT NIGHTS THIS FALL', art: 'moon', fg: ORANGE },
+  { title: 'HOUSES IN THE RIDES', sub: 'THE DROWNED CREW  ·  DEAD DROP  ·  THE BARON\'S DUNGEON', foot: 'NEW AT BENTON HAUNT', art: 'skull', fg: 0x2ad8c8 },
   { title: 'FORTNITEMARES', sub: 'THE STORM IS CLOSING IN', foot: 'NEW SCARE ZONE  ·  FAMILY LANDING', art: 'skull', fg: 0xb04aff },
   { title: 'WOLVERINE', sub: 'THE CLAWS ARE OUT  ·  NOW OPEN', foot: 'BACKWOODS  ·  BENTON DIESEL WORLD', art: 'skull', fg: 0xf2c818 },
   { title: 'FINAL DESTINATION', sub: "DEATH'S DESIGN  ·  NOW OPEN", foot: "YOU CAN'T CHEAT DEATH  ·  BENTON HAUNT", art: 'skull', fg: 0xe02020 },

@@ -49,6 +49,31 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Summer is over and Benton Haunt is back (browser only):**
+  - **Summer ends:** the summer parades and the summer overlays are gone,
+    and so is the barricaded walkway through the backstage lot. Sun
+    Swinger stays.
+  - **The haunt returns:**
+    - The houses are back in the backstage soundstages, including Final
+      Destination on Stage 6, with Lights Out at Lakeside in the Family
+      Landing tent.
+    - The seven scare zones and the haunt food are back.
+    - Ravage and BLACKLINE are reached by walking across the haunt lot.
+    - No scare-zone prop sits on a ride's queue line any more.
+  - **New: three houses inside ride buildings.** Each is built into floor
+    space its ride doesn't use, with new doors cut into the building, a
+    lit front and an outdoor line. The rides keep running beside them.
+    - **Siren's Wake: The Drowned Crew:** the storm-lashed deck of the
+      Benton Belle, the flooded hold, the crew's quarters and the siren's
+      grotto. You meet drowned sailors and a siren with a trident.
+    - **Neon Getaway: Dead Drop:** the bank's night vault, the parking
+      garage and the motel hideout. The masked getaway crew and the
+      undead cops who chased them are still there.
+    - **Win the Crown: The Baron's Dungeon:** the cells, the armory and
+      the executioner's hall under Baron Vex's fortress, with dungeon
+      guards and the executioner.
+  - The haunt now has 10 houses and 7 scare zones. The signs, billboards,
+    bus displays and park posts all say so.
 - **Summer overlays (browser only):** for the summer season, six rides
   get a summer makeover.
   - Each one has a new summer name and a ☀ arch over the way in.

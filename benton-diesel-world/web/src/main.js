@@ -23,7 +23,7 @@ import { buildFamilyBackstage, buildScareZones, buildHauntFood, FB } from './hau
 import { buildHouses, HouseWalks } from './houses.js';
 import { ScareActors, HauntLights } from './scare.js';
 import { buildResort } from './resort.js';
-import { HAUNT_OVER } from './season.js';
+import { HAUNT_OVER, RIDE_HOUSES_OPEN } from './season.js';
 import { buildFastFurious, FastFuriousSite } from './fastfurious.js';
 import { buildChristmas, buildXmasTeardown, Christmas, buildXmasSetup, XmasSetupSite } from './christmas.js';
 import { CHRISTMAS, XMAS_OVER, XMAS_SETUP, WOLVERINE_OPEN, MARDI_GRAS, EASTER, SUMMER, FD_BUILDING } from './season.js';
@@ -203,13 +203,15 @@ async function main() {
   // RC Race: the stand-up coaster, north of Speed Breaker
   const rcLayout = buildRCRace(data);
   // summer: the summer parades, and Sun Swinger on the speed-trials ground
-  const summerLayout = SUMMER ? buildSummer(data) : null;
+  const summerLayout = buildSummer(data, { parades: SUMMER });
   // Operation: Win the Crown: the indoor RMC coaster, north of RC Race
   const wcLayout = buildWinTheCrown(data);
   // Jungle Raid: the Mack-style coaster with the hold over the edge, north of Win the Crown
   const jraLayout = buildJungleRaid(data);
   // BLACKLINE: The Last Train, the haunted subway dark ride south of Ravage
   const blLayout = buildBlackline(data);
+  // Benton Haunt's houses inside ride buildings (once the rides are in)
+  if (!HAUNT_OVER && RIDE_HOUSES_OPEN) houses.push(...buildHouses(data, null, 'rides'));
   // summer overlays: six rides get summer makeovers (after every ride is in)
   const soLayout = SUMMER ? buildSummerOverlays(data) : null;
   if (soLayout) console.log('summer overlays:', soLayout.overlays.map((o) => `${o.name} ${JSON.stringify(o.made)}${o.arch ? ' +arch' : ''}`).join(' | '));
@@ -352,7 +354,7 @@ async function main() {
   const jraSite = new JungleRaidSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jraLayout);
   const soSite = soLayout ? new SummerOverlaySite({ toast: (text, kind) => game.ui?.toast(text, kind) }, soLayout) : null;
   const blSite = new BlacklineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind), voice: (text) => audio.voice.say(text, { interrupt: true }), crackle: () => audio.crackle(), rumble: () => audio.rumble(player.pos) }, blLayout);
-  const ssSite = summerLayout ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
+  const ssSite = SUMMER ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
   const ovSite = new OverrideSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, ovLayout);
   const bfSite = new BentonFlashSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, bfLayout);
   const jrSite = new JungleRunSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jrLayout);

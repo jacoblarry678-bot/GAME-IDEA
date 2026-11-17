@@ -13,14 +13,14 @@ const G = 0.1;
 const CHAIRS = 24, R = 9, CHAIN = 6, LOW = 7, HIGH = 15;
 const SUN = 0xffc020, ORANGE = 0xff7a1a, SKY = 0x40b8f0, WHITE = 0xf4f4f0, DARK = 0x1a1c20, STEEL = 0x8e949c;
 
-export function buildSummer(data) {
+export function buildSummer(data, { parades = true } = {}) {
   // ======== the summer parades: the Summer Splash Parade at 10 AM and 3 PM
   // (by day), the Summer Lights Parade at 7:30 PM (dusk); the Big Rig Parade
-  // keeps its midday run
+  // keeps its midday run (once summer is over, only Sun Swinger stays)
   const shows = data.config.Shows;
   const rig = shows.find((s) => s.id === 'BigRigParade');
-  if (rig) rig.times = [750];
-  shows.push(
+  if (rig && parades) rig.times = [750];
+  if (parades) shows.push(
     { id: 'SummerSplash', name: 'Summer Splash Parade', venue: 'Main Street & the Hub', land: 'Plaza', times: [600, 900], duration: 140, viewRadius: 130, viewing: [0, 0, 80], center: [0, 0, 80],
       description: 'Beach party, ice cream, surf and sun floats roll down Main Street - and you WILL get splashed.' },
     { id: 'SummerLights', name: 'Summer Lights Parade', venue: 'Main Street & the Hub', land: 'Plaza', times: [1170], duration: 100, viewRadius: 130, viewing: [0, 0, 80], center: [0, 0, 80],

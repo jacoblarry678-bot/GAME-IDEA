@@ -329,6 +329,11 @@ export function buildScareZones(data) {
   data.scareActors = data.scareActors || [];
   data.hauntLights = data.hauntLights || [];
   const placed = [];
+  const queueSegs = [];
+  for (const r of data.rides) {
+    const q = r.queue?.points;
+    if (q) for (let k = 0; k + 3 < q.length; k += 2) queueSegs.push([q[k], q[k + 1], q[k + 2], q[k + 3]]);
+  }
   for (const zone of SCARE_ZONES) {
     const [ax0, az0, ax1, az1] = zone.path;
     const full = Math.hypot(ax1 - ax0, az1 - az0);
@@ -348,7 +353,13 @@ export function buildScareZones(data) {
       const u = Math.max(0, Math.min(1, ((px - a.x) * ux + (pz - a.z) * uz) / l2));
       return Math.hypot(a.x + ux * u - px, a.z + uz * u - pz) < 6 + r;
     }) && !(zone.gaps || []).some(([gx, gz, gr]) => Math.hypot(gx - px, gz - pz) < gr + r);
-    const free = (px, pz, r) => offPath(px, pz, r) && find.clear(px, pz, r);
+    // (and off every ride's queue line)
+    const offQueue = (px, pz, r) => !queueSegs.some(([ax, az, bx, bz]) => {
+      const ux = bx - ax, uz = bz - az, l2 = ux * ux + uz * uz || 1;
+      const u = Math.max(0, Math.min(1, ((px - ax) * ux + (pz - az) * uz) / l2));
+      return Math.hypot(ax + ux * u - px, az + uz * u - pz) < r + 2;
+    });
+    const free = (px, pz, r) => offPath(px, pz, r) && offQueue(px, pz, r) && find.clear(px, pz, r);
     // a prop beside the path on either side, wherever there is room; a
     // band of props (not a single row like a fence) gets a second, deeper
     // band behind it so the zone spills out over the land around the path
@@ -555,7 +566,7 @@ export function buildScareZones(data) {
       }
     } else {
       beside(4.5, 7, 12, (px, pz, sd, k) => {
-        if (k % 3 === 0) { box([4.6, 2.4, 9], [px, G + 0.5, pz], 0x2a2420, 'CorrodedMetal', { yaw: yaw + k * 0.4 }); box([4, 1.8, 4.6], [px, G + 2.9, pz], 0x1a1612, 'CorrodedMetal', { yaw: yaw + k * 0.4 }); }
+        if (k % 3 === 0 && offQueue(px, pz, 4.6)) { box([4.6, 2.4, 9], [px, G + 0.5, pz], 0x2a2420, 'CorrodedMetal', { yaw: yaw + k * 0.4 }); box([4, 1.8, 4.6], [px, G + 2.9, pz], 0x1a1612, 'CorrodedMetal', { yaw: yaw + k * 0.4 }); }
         else if (k % 3 === 1) fireAt(px, pz);
         else for (let j = 0; j < 4; j++) put([2.4, 0.8, 2.4], px, pz, 0.4 + j * 0.8, 0x1a1a1a, 'Rubber', { shape: 5 });
       });

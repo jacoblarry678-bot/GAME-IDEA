@@ -1,6 +1,8 @@
-// The park calendar. Benton Haunt has ended for the year: the houses are
-// closed and their facades are coming down, the scare zones are gone...
-export const HAUNT_OVER = true;
+// The park calendar. Summer is over and Benton Haunt is back: the houses
+// in the backstage soundstages and the Family Landing tent, the seven scare
+// zones, the haunt food - and three new houses built inside ride buildings
+// (see RIDE_HOUSES_OPEN below)...
+export const HAUNT_OVER = false;
 // (the setup is done...)
 export const XMAS_SETUP = false;
 // (Benton Holidays, with its Christmas trails, has closed for the year,
@@ -14,11 +16,13 @@ export const MARDI_GRAS = false;
 // Easter is over too (the Easter Bar, Meet the Easter Bunny, Inside the Egg
 // and the egg hunt have packed up)...
 export const EASTER = false;
-// ...and it's summer: the summer parades are on (the Summer Splash Parade by
-// day, the Summer Lights Parade at dusk), the backstage lot is closed with a
-// temporary barricaded walkway through it to the rides past it, and a new
-// flat ride, Sun Swinger, is spinning on the speed-trials ground.
-export const SUMMER = true;
+// ...and summer is over: the summer parades and the summer overlays have
+// ended and the walkway through the backstage lot is gone (the lot is the
+// haunt again). Sun Swinger stays, on the speed-trials ground.
+export const SUMMER = false;
+// The haunt's new houses inside ride buildings: Siren's Wake: The Drowned
+// Crew, Neon Getaway: Dead Drop and Win the Crown: The Baron's Dungeon.
+export const RIDE_HOUSES_OPEN = true;
 // Final Destination: Death's Design is finished and open on Stage 6, the
 // new soundstage at the east end of the backstage lot.
 export const FD_BUILDING = false;

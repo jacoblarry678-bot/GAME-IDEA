@@ -167,6 +167,38 @@ function costumes(P) {
     pitCrew: { look: { skin: 0x221410, shirt: 0x2a2a2e, pants: 0x2a2a2e, hair: 0x0a0a0a, shoes: 0x1a1a1a, sleeves: 1, longPants: 1, height: 1.06 },
       head: [...eyes(P, 0xff6a10), P(0, [0.5, 0.18, 0.06], [-0.05, -0.62, -0.42], 0xff3a10, 'Neon')], handR: wrench, pose: 'tool',
       lines: ['Pit stop!', 'Your tires are smoking...', 'BOO!'] },
+    // Siren's Wake: The Drowned Crew
+    drownedSailor: { look: { skin: 0x5e8a86, shirt: 0x1e2c40, pants: 0x2a2e34, hair: 0x14201e, shoes: 0x1a1a1a, sleeves: 1, longPants: 1, height: 1.06 },
+      head: [P(5, [1.05, 0.22, 1.05], [0, -0.02, 0.02], 0xe8e8e0, 'Fabric'), P(5, [0.7, 0.2, 0.7], [0, 0.12, 0.02], 0xe8e8e0, 'Fabric'), ...eyes(P, 0x40ffe0),
+        ...[-0.3, -0.1, 0.12, 0.32].map((x, k) => P(0, [0.07, 0.6 + (k % 2) * 0.3, 0.05], [x, -0.75, -0.42], 0x2a5a2a, 'Fabric'))],
+      handR: hook, handL: claws, chest: [P(0, [0.9, 0.12, 0.05], [0, 0.9, -0.43], 0xe8e8e0, 'Fabric'), P(0, [0.9, 0.12, 0.05], [0, 0.6, -0.43], 0xe8e8e0, 'Fabric')], pose: 'claw',
+      lines: ['Abandon ship!', 'Down to the depths...', 'The sea takes everyone...', 'All hands lost!', 'BOO!'] },
+    sirenHag: { look: { skin: 0x3e8a7a, shirt: 0x14504e, pants: 0x14404a, hair: 0x0e2a22, shoes: 0x14404a, sleeves: 1, longPants: 1, hairStyle: 1, fem: 1, height: 1.08 },
+      head: [P(3, [1.1, 1.2, 1.05], [0, -0.32, 0.12], 0x1a4a3a, 'Fabric'), ...eyes(P, 0x5afff0), ...[-1, 1].map((sx) => P(1, [0.1, 0.6, 0.5], [sx * 0.52, -0.3, 0], 0x2ad8c8, 'SmoothPlastic')),
+        ...[-0.42, -0.2, 0.2, 0.42].map((x) => P(0, [0.08, 1.4, 0.06], [x, -1.0, -0.2], 0x1a5a3a, 'Fabric'))],
+      handR: [P(5, [0.14, 4.6, 0.14], [0, -0.4, 0], 0x5a6a5a, 'CorrodedMetal'), P(0, [0.9, 0.12, 0.12], [0, 1.85, 0], 0x8ab8a8, 'Metal'), ...[-0.4, 0, 0.4].map((x) => P(0, [0.08, 0.9, 0.08], [x, 2.3, 0], 0x8ab8a8, 'Metal'))],
+      pose: 'pole', lines: ['Come closer, sailor...', 'Listen to my song...', '*a haunting song*', 'Join the crew below...'] },
+    // Neon Getaway: Dead Drop
+    neonCrook: { look: { skin: 0x5a5a62, shirt: 0x16161a, pants: 0x16161a, hair: 0x0a0a0a, shoes: 0x0a0a0a, sleeves: 1, longPants: 1, height: 1.08 },
+      head: [P(3, [0.78, 0.86, 0.36], [0, -0.48, -0.3], 0xf4f0ea, 'SmoothPlastic'), P(0, [0.24, 0.07, 0.05], [-0.16, -0.38, -0.49], 0xff3a9a, 'Neon'), P(0, [0.24, 0.07, 0.05], [0.16, -0.38, -0.49], 0xff3a9a, 'Neon'),
+        P(0, [0.42, 0.06, 0.05], [0, -0.66, -0.48], 0x20e0d0, 'Neon'), P(3, [1.0, 0.5, 1.0], [0, -0.05, 0.05], 0x16161a, 'Fabric')],
+      handR: pipe, handL: [P(3, [0.8, 0.9, 0.6], [0, -0.7, 0], 0x6a5a3a, 'Fabric'), P(0, [0.3, 0.3, 0.05], [0, -0.7, -0.31], 0x2a8a3a, 'SmoothPlastic')], pose: 'tool',
+      lines: ['This is a robbery!', 'Nobody leaves the vault!', "Hands where I can see 'em!", 'The getaway car is waiting...', 'BOO!'] },
+    deadCop: { look: { skin: 0x7a8a76, shirt: 0x1a2a4a, pants: 0x1a2a4a, hair: 0x14100c, shoes: 0x0a0a0a, sleeves: 1, longPants: 1, height: 1.07 },
+      head: [P(5, [1.0, 0.36, 1.0], [0, 0.02, 0.02], 0x14203a, 'Fabric'), P(0, [1.0, 0.08, 0.45], [0, -0.14, -0.45], 0x0a0a0a, 'Rubber'), P(0, [0.22, 0.22, 0.05], [0, 0.04, -0.52], 0xd8b040, 'Metal'), ...eyes(P, 0xff3030)],
+      handR: [P(2, [0.7, 0.24, 0.24], [0, -0.45, -0.2], 0x2a2a2e, 'Metal', [0, 0, 1, 0, 1, 0, -1, 0, 0]), P(2, [0.06, 0.3, 0.3], [0, -0.45, -0.56], 0xfff4c0, 'Neon', [0, 0, 1, 0, 1, 0, -1, 0, 0])],
+      chest: [P(0, [0.2, 0.24, 0.04], [-0.24, 0.85, -0.44], 0xd8b040, 'Metal'), ...blood(2)], pose: 'tool',
+      lines: ['Freeze!', 'You have the right to remain... SCREAMING!', 'Pull over!', 'Nobody gets away...'] },
+    // Win the Crown: The Baron's Dungeon
+    dungeonGuard: { look: { skin: 0x8a8a7a, shirt: 0x4a4c52, pants: 0x2a2a2e, hair: 0x14100c, shoes: 0x1a1a1a, sleeves: 1, longPants: 1, height: 1.08 },
+      head: [P(3, [1.05, 0.8, 1.05], [0, -0.12, 0.02], 0x6a6e76, 'Metal'), P(0, [0.12, 0.5, 0.12], [0, -0.45, -0.52], 0x6a6e76, 'Metal'), P(0, [0.3, 0.3, 0.3], [0, 0.32, 0.02], 0x6a2a9a, 'Fabric'), ...eyes(P, 0xffa020)],
+      handR: [P(5, [0.14, 5, 0.14], [0, -0.5, 0], 0x4a3a2a, 'Wood'), P(1, [0.1, 0.8, 0.4], [0, 2.4, 0], 0xb8bcc4, 'Metal')],
+      chest: [P(0, [0.5, 0.5, 0.05], [0, 0.75, -0.44], 0x6a2a9a, 'Fabric'), P(0, [0.2, 0.2, 0.06], [0, 0.78, -0.47], 0xf0c040, 'Metal')], pose: 'pole',
+      lines: ['Halt!', 'To the dungeon with you!', 'The Baron wants a word...', 'No one wins the crown!', 'BOO!'] },
+    executioner: { look: { skin: 0x9a7a6a, shirt: 0x0c0c0e, pants: 0x0c0c0e, hair: 0x0c0c0e, shoes: 0x0c0c0e, sleeves: 0, longPants: 1, height: 1.18, width: 1.15 },
+      head: [P(3, [1.08, 1.3, 1.08], [0, -0.32, 0.04], 0x0c0c0e, 'Fabric'), P(0, [0.18, 0.1, 0.05], [-0.16, -0.42, -0.53], 0xff2010, 'Neon'), P(0, [0.18, 0.1, 0.05], [0.16, -0.42, -0.53], 0xff2010, 'Neon')],
+      handR: [P(5, [0.14, 3, 0.14], [0, -0.6, 0], 0x4a3a2a, 'Wood'), P(0, [0.08, 1.1, 0.9], [0, 0.85, -0.4], 0xb8bcc4, 'Metal')], pose: 'tool',
+      lines: ['Next!', 'Off with your crown!', 'Kneel...', 'The block is ready...'] },
   };
 }
 

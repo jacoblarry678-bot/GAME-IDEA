@@ -10,6 +10,7 @@ import { HOUSES, STAGE_Z, QUEUE, STAGE, stageX } from './backstage.js';
 import { FAMILY_QUEUE } from './haunt.js';
 import { XROOMS, XSTAGES, XDESC, XOUTDOOR, XHAWKINS, buildTrailFronts } from './xmastrails.js';
 import { EROOMS, ESTAGES, EDESC, buildEasterFronts } from './eastertrails.js';
+import { RIDE_ROOMS, RIDE_HOUSES, cutRideHouseDoors, buildRideHouseFronts } from './hauntrides.js';
 
 export const WALK = 6; // how fast a group walks a house (studs/s)
 const G = 0.1;
@@ -418,10 +419,13 @@ const ROOMS = {
     } },
   ],
 };
+Object.assign(ROOMS, RIDE_ROOMS);
 const W2 = HALF * 2 - 0.8;
 
 export function buildHouses(data, familyLayout, season = 'haunt') {
-  const xmas = season === 'xmas', easter = season === 'easter';
+  // ('rides': only the haunt's houses inside ride buildings, built once the
+  // rides are in)
+  const xmas = season === 'xmas', easter = season === 'easter', rides = season === 'rides';
   const ROOMSET = xmas ? XROOMS : easter ? EROOMS : ROOMS;
   const mats = data.materials;
   const mi = (name) => {
@@ -587,7 +591,9 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
 
   // the soundstage houses (or, at Christmas, the soundstage trails)
   const TRAIL = { category: 'Christmas Trail', thrill: 1 };
-  const stageList = easter
+  const stageList = rides
+    ? []
+    : easter
     ? ESTAGES.map((t) => ({ i: t.stage, theme: t.theme, title: t.title, glow: t.glow, baseWait: t.baseWait, speed: WALK * t.speed, description: EDESC[t.theme], id: 'EasterInsideTheEgg', category: 'Easter Walkthrough', thrill: 1 }))
     : xmas
     ? XSTAGES.map((t) => ({ i: t.stage, theme: t.theme, title: t.title, glow: t.glow, baseWait: t.baseWait, speed: WALK * t.speed, description: XDESC[t.theme], id: `Trail${t.theme[0].toUpperCase()}${t.theme.slice(1)}`, ...TRAIL }))
@@ -656,6 +662,19 @@ export function buildHouses(data, familyLayout, season = 'haunt') {
       baseWait: K.baseWait, description: XDESC[K.theme], speed: WALK * 0.8, opensAt: K.opensAt, ...TRAIL,
     });
     buildTrailFronts(data);
+  }
+  // the houses inside ride buildings: doorways cut into the buildings, the
+  // corridors in the floor space the rides don't use, fronts and lines
+  if (rides) {
+    cutRideHouseDoors(data);
+    for (const hs of RIDE_HOUSES) {
+      addHouse({
+        id: hs.id, name: hs.name, land: hs.land, theme: hs.theme, glow: hs.glow, interior: hs.interior,
+        outsideIn: hs.outsideIn, outsideOut: hs.outsideOut, queueFwd: hs.queueFwd, signIndex: 1, entrance: hs.entrance, origin: hs.origin,
+        baseWait: hs.baseWait, description: hs.description, speed: WALK * hs.speed,
+      });
+    }
+    buildRideHouseFronts(data);
   }
   return houses;
 }
