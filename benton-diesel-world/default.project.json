@@ -1,0 +1,160 @@
+{
+  "name": "BentonDieselWorld",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "BentonShared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "BentonServer": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "CharacterWalkSpeed": 18,
+        "CameraMaxZoomDistance": 160
+      },
+      "StarterPlayerScripts": {
+        "BentonClient": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false,
+        "Gravity": 196.2
+      },
+      "PressPlay": {
+        "$className": "Part",
+        "$properties": {
+          "Anchored": true,
+          "Size": [
+            44,
+            16,
+            2
+          ],
+          "CFrame": {
+            "CFrame": {
+              "position": [
+                0,
+                12,
+                0
+              ],
+              "orientation": [
+                [
+                  1,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  1,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  1
+                ]
+              ]
+            }
+          },
+          "Color": [
+            0.086,
+            0.133,
+            0.227
+          ],
+          "Material": "SmoothPlastic"
+        },
+        "Sign": {
+          "$className": "SurfaceGui",
+          "$properties": {
+            "Face": "Back",
+            "SizingMode": "PixelsPerStud",
+            "PixelsPerStud": 20,
+            "LightInfluence": 0
+          },
+          "Text": {
+            "$className": "TextLabel",
+            "$properties": {
+              "Size": {
+                "UDim2": [
+                  [
+                    1,
+                    0
+                  ],
+                  [
+                    1,
+                    0
+                  ]
+                ]
+              },
+              "BackgroundTransparency": 1,
+              "TextScaled": true,
+              "TextColor3": [
+                1,
+                0.55,
+                0.1
+              ],
+              "Text": "BENTON DIESEL WORLD\nPress PLAY to build the park!"
+            }
+          }
+        },
+        "SignFront": {
+          "$className": "SurfaceGui",
+          "$properties": {
+            "Face": "Front",
+            "SizingMode": "PixelsPerStud",
+            "PixelsPerStud": 20,
+            "LightInfluence": 0
+          },
+          "Text": {
+            "$className": "TextLabel",
+            "$properties": {
+              "Size": {
+                "UDim2": [
+                  [
+                    1,
+                    0
+                  ],
+                  [
+                    1,
+                    0
+                  ]
+                ]
+              },
+              "BackgroundTransparency": 1,
+              "TextScaled": true,
+              "TextColor3": [
+                1,
+                0.55,
+                0.1
+              ],
+              "Text": "BENTON DIESEL WORLD\nPress PLAY to build the park!"
+            }
+          }
+        }
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "Brightness": 2.5,
+        "EnvironmentDiffuseScale": 1,
+        "EnvironmentSpecularScale": 1,
+        "GlobalShadows": true,
+        "ClockTime": 10
+      }
+    },
+    "SoundService": {},
+    "Players": {
+      "$properties": {
+        "CharacterAutoLoads": false
+      }
+    }
+  }
+}
