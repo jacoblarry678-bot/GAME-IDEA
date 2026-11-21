@@ -118,6 +118,10 @@ export function buildLowerLot(data) {
     for (let k = 0; k <= n; k++) box([0.2, h, 0.2], [xa + ((xb - xa) * k) / n, y, z], STEEL, 'Metal');
     add([xb - xa, h - 0.2, 0.08], [(xa + xb) / 2, y + (h - 0.2) / 2 + 0.05, z], 0xb8d8e8, 'Glass', { trans: 0.6 });
     add([xb - xa, 0.12, 0.2], [(xa + xb) / 2, y + h, z], STEEL, 'Metal', { collide: 0 });
+    // (the rail is lower than a stride, so an unseen wall behind it keeps
+    // everyone from stepping over it into the pit)
+    data.hidden = data.hidden || [];
+    data.hidden.push(add([xb - xa, 5, 0.4], [(xa + xb) / 2, y + 2.5, z], INK, 'SmoothPlastic'));
   };
   const gap0 = ESC.xd - ESC.w / 2 - 0.6, gap1 = ESC.xu + ESC.w / 2 + 0.6;
   rail(TER.x0, gap0, TER.z0, G);
@@ -211,6 +215,13 @@ export function buildLowerLot(data) {
       }
       const onZ = dir === 'down' ? za : zb, onY = dir === 'down' ? ya : yb, out = dir === 'down' ? 1 : -1;
       sign([2.4, 0.7, 0.12], [x, onY + 3.4, onZ + out * 1.2], INK, out > 0 ? 'Back' : 'Front', [[dir === 'down' ? 'v  DOWN' : '^  UP', 0, 0, 1, 1, dir === 'down' ? CYAN : AMBER, 'GothamBold']], { glow: true });
+    }
+    // the deck between the two lanes, brushed steel with anti-slide studs
+    const [, my, mz] = at(0.5, 1.12);
+    add([ESC.xu - ESC.xd - 3 + 0.12, 0.12, len + 1.2], [gx, my, mz], STEEL, 'DiamondPlate', { collide: 0, rot: R });
+    for (let u = 0.08; u < 0.95; u += 0.12) {
+      const [, sy, sz] = at(u, 1.24);
+      add([0.5, 0.18, 0.5], [gx, sy, sz], 0xd8dce0, 'Metal', { collide: 0, shape: 3 });
     }
     // columns under the flight, down to the pit floor
     for (const u of [0.35, 0.75]) {

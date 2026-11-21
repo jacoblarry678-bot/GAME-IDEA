@@ -152,6 +152,14 @@ export function playerOutfit(look) {
 export class Player {
   constructor(scene, data, collision, look) {
     this.escalators = data.escalators || [];
+    // the lanes side by side in one flight make a bank: the gap between them
+    // and the bank's open edges hold you too (you're put on a lane), so
+    // nobody drops through to the floor below
+    this.escBank = new Map(this.escalators.map((e) => {
+      const lanes = this.escalators.filter((o) => o.za === e.za && o.zb === e.zb);
+      return [e, { x0: Math.min(...lanes.map((o) => o.x - o.w / 2)) - 0.9, x1: Math.max(...lanes.map((o) => o.x + o.w / 2)) + 0.9 }];
+    }));
+    this.escLane = null;
     this.scene = scene;
     this.data = data;
     this.collision = collision;
@@ -348,26 +356,45 @@ export class Player {
   // Escalators (data.escalators: each a lane running straight along z from
   // za, ya to zb, yb, 'down' carrying you from a to b, 'up' from b to a):
   // stand on one and it carries you, at its own speed plus your walking,
-  // along its slope, kept on its steps.
+  // along its slope, kept on its steps. The lane you're on holds you until
+  // you step off one of its ends (no sliding off the side, or across to the
+  // other lane, however fast you strafe); stepping into the gap between two
+  // lanes, or the edge of the bank, puts you on the lane leaving from that end.
   onEscalator(dt) {
-    for (const e of this.escalators) {
-      const lat = this.pos.x - e.x;
-      if (Math.abs(lat) > e.w / 2 + 0.4) continue;
+    const at = (e) => {
       const u = (e.za - this.pos.z) / (e.za - e.zb);
-      if (u < -0.03 || u > 1.03) continue;
-      const y = e.ya + (e.yb - e.ya) * Math.min(1, Math.max(0, u));
-      if (Math.abs(this.pos.y - y) > 2.6) continue;
-      const dirZ = Math.sign(e.zb - e.za) * (e.dir === 'down' ? 1 : -1);
-      this.pos.z += dirZ * (e.speed || 4) * dt;
-      const u2 = Math.min(1, Math.max(0, (e.za - this.pos.z) / (e.za - e.zb)));
-      this.pos.y = e.ya + (e.yb - e.ya) * u2;
-      this.pos.x = e.x + THREE.MathUtils.clamp(lat, -(e.w / 2 - 0.3), e.w / 2 - 0.3);
-      this.vel.y = 0;
-      this.onGround = true;
-      this.holder.position.copy(this.pos);
-      return true;
+      if (u < -0.03 || u > 1.03) return null;
+      return { u, dy: this.pos.y - (e.ya + (e.yb - e.ya) * Math.min(1, Math.max(0, u))) };
+    };
+    let lane = null;
+    if (this.escLane) {
+      const s = at(this.escLane);
+      if (s && Math.abs(s.dy) < 4 && Math.abs(this.pos.x - this.escLane.x) < 6) lane = this.escLane;
     }
-    return false;
+    if (!lane) {
+      let score = Infinity;
+      for (const e of this.escalators) {
+        const s = at(e);
+        if (!s || s.dy < -2.5 || s.dy > 2.6) continue;
+        const b = this.escBank.get(e);
+        if (this.pos.x < b.x0 || this.pos.x > b.x1) continue;
+        const lat = Math.abs(this.pos.x - e.x);
+        const sc = lat <= e.w / 2 + 0.4 ? lat - 100 : Math.abs((e.dir === 'down' ? 0 : 1) - s.u) + lat * 0.01;
+        if (sc < score) { score = sc; lane = e; }
+      }
+    }
+    this.escLane = lane;
+    if (!lane) return false;
+    const e = lane;
+    const dirZ = Math.sign(e.zb - e.za) * (e.dir === 'down' ? 1 : -1);
+    this.pos.z += dirZ * (e.speed || 4) * dt;
+    const u2 = Math.min(1, Math.max(0, (e.za - this.pos.z) / (e.za - e.zb)));
+    this.pos.y = e.ya + (e.yb - e.ya) * u2;
+    this.pos.x = e.x + THREE.MathUtils.clamp(this.pos.x - e.x, -(e.w / 2 - 0.3), e.w / 2 - 0.3);
+    this.vel.y = 0;
+    this.onGround = true;
+    this.holder.position.copy(this.pos);
+    return true;
   }
 
   // jump the camera straight to the player (after teleports and rides)

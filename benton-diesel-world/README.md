@@ -49,6 +49,24 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Fix: the Lower Lot's escalators go both ways again (browser only).**
+  Before this fix you could end up stuck at the bottom:
+  - The LOWER LOT arch is centred on the open gap between the two lanes, so
+    walking straight through it dropped you to the pit floor.
+  - The railings on the terrace and the halfway landing were low enough to
+    step over.
+  - Strafing or running on an escalator could slide you off its side, or
+    across onto the other lane.
+
+  Now:
+  - The lane you step on holds you until you get off at its end.
+  - Stepping into the gap between the lanes, or onto the edge of the bank,
+    puts you on the lane that leaves from that end (DOWN at the top, UP at
+    the bottom).
+  - A brushed-steel deck fills the gap between the lanes.
+  - The railings now stop you.
+  - Walk up the middle from the pit floor and you're carried to the landing
+    and on up to the terrace.
 - **New ride: Snowball, a mine train coaster in Frostbite Base, down in
   the Lower Lot (browser only).**
   - **The setting:** you ride the ore trains of the old Snowball Mine.
