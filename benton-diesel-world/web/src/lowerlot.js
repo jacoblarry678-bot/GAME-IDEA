@@ -87,7 +87,9 @@ export function buildLowerLot(data) {
   // ======== the ground: dig the basin, level the terrace and the pit's rim
   data.flatZones = [...(data.flatZones || []), { x0: 360, x1: 470, z0: -742, z1: -400, margin: 14 }];
   data.basins = [
-    { x0: ARM.x0, x1: ARM.x1, z0: ARM.z0, z1: ARM.z1, floor: FLOOR, margin: 3 }, // the pit (walled in concrete)
+    // the pit (walled in concrete: the floor runs on under the thick walls, so
+    // the ground's edge is hidden inside them)
+    { x0: ARM.x0 - 8, x1: ARM.x1 + 8, z0: ARM.z0, z1: ARM.z1, floor: FLOOR, margin: 3 },
     // (under Zero Space as far as x 874, so the cliffs keep clear of Override's site)
     { x0: ND.x0, x1: CUT, z0: ND.z0, z1: ND.z1, floor: FLOOR, margin: 26, rock: true },
     { x0: CUT, x1: FB.x1, z0: FB.z0, z1: FB.z1, floor: FLOOR, margin: 26, rock: true },
@@ -146,9 +148,13 @@ export function buildLowerLot(data) {
   // ======== the pit: concrete walls, the landing deck, the escalators
   const PW = 37; // the pit walls, floor to rim
   const wall = (x0, x1, z0, z1) => box([x1 - x0, PW, z1 - z0], [(x0 + x1) / 2, FLOOR - 0.4, (z0 + z1) / 2], CONC, 'Concrete');
-  wall(ARM.x0 - 2.5, ARM.x0 - 0.5, ARM.z0, ARM.z1 + 1);
-  wall(ARM.x1 + 0.5, ARM.x1 + 2.5, -704, ARM.z1 + 1);
-  wall(ARM.x0 - 2.5, ARM.x1 + 2.5, ARM.z1, ARM.z1 + 2);
+  wall(ARM.x0 - 9, ARM.x0 - 0.5, ARM.z0, ARM.z1 + 8);
+  wall(ARM.x1 + 0.5, ARM.x1 + 9, -704, ARM.z1 + 8);
+  // (the north wall, under the terrace's edge, is flush with the terrace)
+  box([ARM.x1 - ARM.x0 + 18, 0.34 - (FLOOR - 0.4), 8], [(ARM.x0 + ARM.x1) / 2, FLOOR - 0.4, ARM.z1 + 4], CONC, 'Concrete');
+  // a concrete rim along the top of the side walls
+  add([ARM.x0 - 0.5 - 362, 0.3, ARM.z1 - 2 - ARM.z0], [(362 + ARM.x0 - 0.5) / 2, 0.42, (ARM.z0 + ARM.z1 - 2) / 2], 0x9a9a96, 'Concrete', { collide: 0 });
+  add([464 - ARM.x1 - 0.5, 0.3, ARM.z1 - 2 + 704], [(464 + ARM.x1 + 0.5) / 2, 0.42, (-704 + ARM.z1 - 2) / 2], 0x9a9a96, 'Concrete', { collide: 0 });
   // ribs down the walls, and neon down the ribs
   for (let z = ARM.z1 - 12; z > -700; z -= 16) for (const [x, sd] of [[ARM.x0 - 0.2, 1], [ARM.x1 + 0.2, -1]]) {
     add([0.8, PW - 1, 1.4], [x + sd * 0.4, FLOOR + PW / 2 - 0.9, z], 0x7a7a76, 'Concrete', { collide: 0 });
@@ -216,7 +222,7 @@ export function buildLowerLot(data) {
 
   // ======== the floor: paving down the pit, the avenue, the rock walls
   const ground = (x0, x1, z0, z1, color, mat) => add([x1 - x0, 1, z1 - z0], [(x0 + x1) / 2, FL - 0.5, (z0 + z1) / 2], color, mat);
-  ground(ARM.x0, ARM.x1, -704, ESC.bot + 2, 0x2a2a30, 'Asphalt');
+  ground(ARM.x0, ARM.x1, -704, ARM.z1, 0x2a2a30, 'Asphalt');
   ground(ND.x0, ND.x1, ND.z0, -704, 0x26262c, 'Asphalt');
   ground(ARM.x0, ND.x0, -742, -704, 0x26262c, 'Asphalt');
   // (Lost Lagoon: sand round the lagoon, not under it)
