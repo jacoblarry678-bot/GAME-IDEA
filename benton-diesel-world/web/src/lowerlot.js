@@ -222,7 +222,7 @@ export function buildLowerLot(data) {
 
   // ======== the floor: paving down the pit, the avenue, the rock walls
   const ground = (x0, x1, z0, z1, color, mat) => add([x1 - x0, 1, z1 - z0], [(x0 + x1) / 2, FL - 0.5, (z0 + z1) / 2], color, mat);
-  ground(ARM.x0, ARM.x1, -704, ARM.z1, 0x2a2a30, 'Asphalt');
+  ground(ARM.x0 - 1, ARM.x1 + 1, -704, ARM.z1, 0x2a2a30, 'Asphalt');
   ground(ND.x0, ND.x1, ND.z0, -704, 0x26262c, 'Asphalt');
   ground(ARM.x0, ND.x0, -742, -704, 0x26262c, 'Asphalt');
   // (Lost Lagoon: sand round the lagoon, not under it)
