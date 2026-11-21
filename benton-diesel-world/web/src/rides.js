@@ -132,6 +132,14 @@ function poseProps(props, t, extras) {
       const k = w && p.reach ? Math.min(1, (t - w[0]) / (p.rush || 0.5)) : 0;
       const m = TR(x + (p.dir ? p.dir[0] * p.reach * k : 0), y, z + (p.dir ? p.dir[1] * p.reach * k : 0));
       extras[p.name] = p.dir ? m.multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))) : m;
+    } else if (p.kind === 'roll') {
+      // a ball rolling along `dir` (spinning as it goes) once the ride time
+      // reaches t0, speeding up until t1, where it stops `reach` along;
+      // back at its start when the ride is resting
+      const k = t < p.t0 ? 0 : t >= p.t1 ? 1 : ((t - p.t0) / (p.t1 - p.t0)) ** 2;
+      const d = p.reach * k;
+      const axis = new THREE.Vector3(p.dir[1], 0, -p.dir[0]).normalize();
+      extras[p.name] = TR(x + p.dir[0] * d, y, z + p.dir[1] * d).multiply(new THREE.Matrix4().makeRotationAxis(axis, -d / p.radius));
     } else if (p.kind === 'blink') {
       // on for part of every period (flickering, or chasing in turn), and
       // only during its windows of ride time when it has some

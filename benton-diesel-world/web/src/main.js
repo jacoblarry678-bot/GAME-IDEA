@@ -62,6 +62,7 @@ import { buildJungleRaid, JungleRaidSite } from './jungleraid.js';
 import { buildBlackline, BlacklineSite, RIDE_ID as BL_ID } from './blackline.js';
 import { buildSummerOverlays, SummerOverlaySite } from './summeroverlays.js';
 import { buildLowerLot, LowerLotSite } from './lowerlot.js';
+import { buildSnowball, SnowballSite } from './snowball.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -213,6 +214,8 @@ async function main() {
   const blLayout = buildBlackline(data);
   // the Lower Lot: dug out south of Zero Space, escalators down, three new lands
   const llLayout = buildLowerLot(data);
+  // Snowball: the mine train in Frostbite Base
+  const sbwLayout = buildSnowball(data);
   // Benton Haunt's houses inside ride buildings (once the rides are in)
   if (!HAUNT_OVER && RIDE_HOUSES_OPEN) houses.push(...buildHouses(data, null, 'rides'));
   // summer overlays: six rides get summer makeovers (after every ride is in)
@@ -303,7 +306,7 @@ async function main() {
       let dx = r.exit[0] - r.origin[0], dz = r.exit[2] - r.origin[2];
       const len = Math.hypot(dx, dz) || 1;
       dx /= len; dz /= len;
-      player.stopRiding({ pos: new THREE.Vector3(r.exit[0] + dx * 6, 3, r.exit[2] + dz * 6), yaw: Math.atan2(-dx, -dz) });
+      player.stopRiding({ pos: new THREE.Vector3(r.exit[0] + dx * 6, (r.exit[1] || 0) + 3, r.exit[2] + dz * 6), yaw: Math.atan2(-dx, -dz) }); // (exits down in the Lower Lot are far below)
       player.snapCamera();
     },
     onProfile: () => {
@@ -355,6 +358,7 @@ async function main() {
   const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
   const wcSite = new WinTheCrownSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wcLayout);
   const jraSite = new JungleRaidSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jraLayout);
+  const sbwSite = new SnowballSite({ toast: (text, kind) => game.ui?.toast(text, kind) }, sbwLayout);
   const llSite = new LowerLotSite({ toast: (text, kind) => game.ui?.toast(text, kind) }, llLayout);
   const soSite = soLayout ? new SummerOverlaySite({ toast: (text, kind) => game.ui?.toast(text, kind) }, soLayout) : null;
   const blSite = new BlacklineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind), voice: (text) => audio.voice.say(text, { interrupt: true }), crackle: () => audio.crackle(), rumble: () => audio.rumble(player.pos) }, blLayout);
@@ -648,6 +652,7 @@ async function main() {
     jraSite.update(dt, player.pos, started);
     soSite?.update(dt, player.pos, started);
     llSite.update(dt, player.pos, started);
+    sbwSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);

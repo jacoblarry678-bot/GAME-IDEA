@@ -49,6 +49,26 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Snowball, a mine train coaster in Frostbite Base, down in
+  the Lower Lot (browser only).**
+  - **The setting:** you ride the ore trains of the old Snowball Mine.
+    The train is a little green locomotive pulling four rusty ore carts,
+    on steel rails over wooden ties and timber trestles.
+  - **The ride:** 685 studs of track, about 1 minute 40 seconds, up to 59
+    km/h and 17 studs high, with no inversions.
+    - Lift 1 climbs along the edge of the base.
+    - A drop down the west side, then bunny hops along the foot of the
+      cliffs.
+    - Lift 2, then over the brake run with about 11 studs to spare.
+    - Hills along the snowy mountain, past the mine entrance and its ice
+      crystals, and through the ice cave.
+    - **The avalanche:** as the train runs along the mountain's foot, the
+      giant snowball breaks loose and comes rolling down its slope at you
+      in a burst of snow.
+  - **The depot:** a timber shed with snow on the roof, icicles, the
+    SNOWBALL sign and a giant snowball on top.
+    - The line runs in from the base's east-west path, and the exit
+      comes out beside it.
 - **The Lower Lot (browser only): a whole new level of the park, 36 studs
   down, with three new lands.**
   - **The ground:** dug out of the mountains south of Zero Space and

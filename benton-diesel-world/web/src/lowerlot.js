@@ -23,6 +23,9 @@ const ARM = { x0: 380, x1: 446, z0: -742, z1: -470 }; // the pit the escalators 
 const ND = { x0: 384, x1: 640, z0: -996, z1: -702 }; // Neon District (and the pit)
 const LL = { x0: 640, x1: 900, z0: -996, z1: -702 }; // Lost Lagoon
 const FB = { x0: 900, x1: 1226, z0: -996, z1: -748 }; // Frostbite Base
+// Snowball's site (the mine train): Frostbite's south-west, kept clear of the base's own things
+export const SNOW_SITE = { x0: 886, x1: 1054, z0: -992, z1: -904 };
+const inSnow = (x, z, pad = 4) => x > SNOW_SITE.x0 - pad && x < SNOW_SITE.x1 + pad && z > SNOW_SITE.z0 - pad && z < SNOW_SITE.z1 + pad;
 const AVE = -770; // the avenue east across the lot
 const CUT = 874; // the basin runs further north west of here (under Zero Space) than east (under Override)
 const ESC = { top: -469, mid1: -500.18, mid2: -512, bot: -543.18, xd: 408.6, xu: 413.4, w: 2.4, speed: 4.2 };
@@ -392,10 +395,10 @@ export function buildLowerLot(data) {
       const edge = k % 4, u = ((k * 37) % 100) / 100;
       const x = edge === 0 ? FB.x0 + 14 + u * (FB.x1 - FB.x0 - 28) : edge === 1 ? FB.x1 - 8 : edge === 2 ? FB.x0 + 14 + u * (FB.x1 - FB.x0 - 28) : FB.x0 + 8;
       const z = edge === 0 ? FB.z0 + 8 : edge === 2 ? -756 : FB.z0 + 14 + u * (FB.z1 - FB.z0 - 28);
-      if (Math.abs(z - AVE) < 9) continue;
+      if (Math.abs(z - AVE) < 9 || inSnow(x, z, 8)) continue;
       add([10 + (k % 4) * 3, 4 + (k % 3), 8 + (k % 5) * 2], [x, FL + 0.6, z], SNOW, 'SmoothPlastic', { shape: 3, rot: RY(k) });
     }
-    for (const [x, z] of [[960, -960], [1180, -950], [1200, -800], [940, -830], [1150, -985]]) {
+    for (const [x, z] of [[1180, -950], [1200, -800], [940, -830], [1150, -985]]) {
       for (let k = 0; k < 4; k++) add([1.6, 6 + k * 2, 1.6], [x + (k % 2) * 2.4 - 1.2, FL + 3 + k, z + Math.floor(k / 2) * 2 - 1], ICE, 'Glass', { shape: 1, trans: 0.25, rot: RZ((k - 1.5) * 0.15) });
     }
     add([46, 0.12, 30], [1130, FL + 0.08, -920], 0xa8d8f0, 'Glass', { collide: 0 });
@@ -427,7 +430,7 @@ export function buildLowerLot(data) {
     data.tags.SteamVent.push([PL[0] - 10, FL + 3, PL[1] - 2, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
     for (let k = 0; k < 5; k++) box([2, 1.6, 2], [PL[0] - 6 + k * 3.4, FL, PL[1] + 14 + (k % 2) * 2], 0x8a6a3a, 'WoodPlanks', { collide: 0 });
     // penguins (they came for the cocoa)
-    for (const [x, z, s] of [[1088, -914, 1], [1092, -917, 0.8], [1096, -913, 0.9], [970, -914, 1.1], [1160, -880, 0.9]]) {
+    for (const [x, z, s] of [[1088, -914, 1], [1092, -917, 0.8], [1096, -913, 0.9], [975, -884, 1.1], [1160, -880, 0.9]]) {
       add([1.6 * s, 2.4 * s, 1.4 * s], [x, FL + 1.2 * s, z], 0x14141a, 'SmoothPlastic', { shape: 3 });
       add([1.1 * s, 1.8 * s, 0.6 * s], [x, FL + 1.2 * s, z + 0.5 * s], WHITE, 'SmoothPlastic', { collide: 0, shape: 3 });
       add([0.9 * s, 0.9 * s, 0.9 * s], [x, FL + 2.7 * s, z], 0x14141a, 'SmoothPlastic', { collide: 0, shape: 3 });
@@ -436,7 +439,7 @@ export function buildLowerLot(data) {
     // snowy pines round the edges
     for (let k = 0; k < 18; k++) {
       const x = FB.x0 + 20 + ((k * 61) % (FB.x1 - FB.x0 - 40)), z = FB.z0 + 18 + ((k * 43) % (FB.z1 - FB.z0 - 40));
-      if (Math.abs(z - AVE) < 10 || Math.abs(x - 1060) < 8 || (x > 980 && x < 1140 && z > -870 && z < -800) || (x > 1100 && x < 1200 && z > -960 && z < -900)) continue;
+      if (Math.abs(z - AVE) < 10 || Math.abs(x - 1060) < 8 || inSnow(x, z, 6) || (x > 980 && x < 1140 && z > -870 && z < -800) || (x > 1100 && x < 1200 && z > -960 && z < -900)) continue;
       data.trees.push({ leaf: 0xdfe8ec, kind: 'pine', s: 0.9 + (k % 3) * 0.15, pos: [x, FLOOR, z] });
     }
     // Cocoa Camp (food) and Expedition Outfitters (a shop)
