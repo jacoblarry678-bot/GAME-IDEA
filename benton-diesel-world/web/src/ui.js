@@ -301,9 +301,10 @@ export class UI {
   venueFront(v) {
     const f = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] }[v.facing];
     const d = v.size[2] / 2;
+    const y = v.position[1] || 0; // (down in the Lower Lot, far below the park)
     return {
-      counter: [v.position[0] + f[0] * (d - 3), 0, v.position[2] + f[1] * (d - 3)],
-      front: [v.position[0] + f[0] * (d + 6), 0, v.position[2] + f[1] * (d + 6)],
+      counter: [v.position[0] + f[0] * (d - 3), y, v.position[2] + f[1] * (d - 3)],
+      front: [v.position[0] + f[0] * (d + 6), y, v.position[2] + f[1] * (d + 6)],
     };
   }
 

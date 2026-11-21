@@ -385,6 +385,8 @@ export class Trees {
       if (out < 40) continue;
       // no woods on leveled ground (the lots built out past the walls)
       if (terrain.flat.some((f) => x > f.x0 - 12 && x < f.x1 + 12 && z > f.z0 - 12 && z < f.z1 + 12)) continue;
+      // nor down in (or on the cliffs of) a dug-out basin
+      if (terrain.basins.some((f) => x > f.x0 - f.margin && x < f.x1 + f.margin && z > f.z0 - f.margin && z < f.z1 + f.margin)) continue;
       // clumps of woodland
       if (fbm2(x * 0.006, z * 0.006, 3) < 0.48) continue;
       const kind = fbm2(x * 0.01 + 50, z * 0.01, 2) > 0.5 ? 'farpine' : 'farround';

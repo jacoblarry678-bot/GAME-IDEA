@@ -151,6 +151,7 @@ export function playerOutfit(look) {
 
 export class Player {
   constructor(scene, data, collision, look) {
+    this.escalators = data.escalators || [];
     this.scene = scene;
     this.data = data;
     this.collision = collision;
@@ -290,9 +291,11 @@ export class Player {
           this.onGround = false;
         }
       }
-      // keep inside the world
+      // on an escalator: carried along it, held on its steps
+      this.onEscalator(dt);
+      // keep inside the world (which runs further south over the Lower Lot)
       this.pos.x = THREE.MathUtils.clamp(this.pos.x, -800, 1250);
-      this.pos.z = THREE.MathUtils.clamp(this.pos.z, -720, 830);
+      this.pos.z = THREE.MathUtils.clamp(this.pos.z, this.pos.x > 378 && this.pos.x < 1228 ? -998 : -720, 830);
       this.holder.position.copy(this.pos);
       this.holder.rotation.set(0, this.yaw, 0);
       this.figure.update(dt, { speed: Math.hypot(this.vel.x, this.vel.z), onGround: this.onGround, vy: this.vel.y, holding: !!this.wear.held });
@@ -340,6 +343,31 @@ export class Player {
     this.figure.root.visible = true;
     camera.position.copy(fc.pos);
     camera.lookAt(fc.pos.clone().add(look));
+  }
+
+  // Escalators (data.escalators: each a lane running straight along z from
+  // za, ya to zb, yb, 'down' carrying you from a to b, 'up' from b to a):
+  // stand on one and it carries you, at its own speed plus your walking,
+  // along its slope, kept on its steps.
+  onEscalator(dt) {
+    for (const e of this.escalators) {
+      const lat = this.pos.x - e.x;
+      if (Math.abs(lat) > e.w / 2 + 0.4) continue;
+      const u = (e.za - this.pos.z) / (e.za - e.zb);
+      if (u < -0.03 || u > 1.03) continue;
+      const y = e.ya + (e.yb - e.ya) * Math.min(1, Math.max(0, u));
+      if (Math.abs(this.pos.y - y) > 2.6) continue;
+      const dirZ = Math.sign(e.zb - e.za) * (e.dir === 'down' ? 1 : -1);
+      this.pos.z += dirZ * (e.speed || 4) * dt;
+      const u2 = Math.min(1, Math.max(0, (e.za - this.pos.z) / (e.za - e.zb)));
+      this.pos.y = e.ya + (e.yb - e.ya) * u2;
+      this.pos.x = e.x + THREE.MathUtils.clamp(lat, -(e.w / 2 - 0.3), e.w / 2 - 0.3);
+      this.vel.y = 0;
+      this.onGround = true;
+      this.holder.position.copy(this.pos);
+      return true;
+    }
+    return false;
   }
 
   // jump the camera straight to the player (after teleports and rides)

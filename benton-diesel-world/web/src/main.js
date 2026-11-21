@@ -61,6 +61,7 @@ import { buildWinTheCrown, WinTheCrownSite } from './wincrown.js';
 import { buildJungleRaid, JungleRaidSite } from './jungleraid.js';
 import { buildBlackline, BlacklineSite, RIDE_ID as BL_ID } from './blackline.js';
 import { buildSummerOverlays, SummerOverlaySite } from './summeroverlays.js';
+import { buildLowerLot, LowerLotSite } from './lowerlot.js';
 import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
@@ -210,6 +211,8 @@ async function main() {
   const jraLayout = buildJungleRaid(data);
   // BLACKLINE: The Last Train, the haunted subway dark ride south of Ravage
   const blLayout = buildBlackline(data);
+  // the Lower Lot: dug out south of Zero Space, escalators down, three new lands
+  const llLayout = buildLowerLot(data);
   // Benton Haunt's houses inside ride buildings (once the rides are in)
   if (!HAUNT_OVER && RIDE_HOUSES_OPEN) houses.push(...buildHouses(data, null, 'rides'));
   // summer overlays: six rides get summer makeovers (after every ride is in)
@@ -352,6 +355,7 @@ async function main() {
   const rcSite = new RCRaceSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, rcLayout);
   const wcSite = new WinTheCrownSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, wcLayout);
   const jraSite = new JungleRaidSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, jraLayout);
+  const llSite = new LowerLotSite({ toast: (text, kind) => game.ui?.toast(text, kind) }, llLayout);
   const soSite = soLayout ? new SummerOverlaySite({ toast: (text, kind) => game.ui?.toast(text, kind) }, soLayout) : null;
   const blSite = new BlacklineSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind), voice: (text) => audio.voice.say(text, { interrupt: true }), crackle: () => audio.crackle(), rumble: () => audio.rumble(player.pos) }, blLayout);
   const ssSite = SUMMER ? new SunSwingerSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, summerLayout) : null;
@@ -643,6 +647,7 @@ async function main() {
     wcSite.update(dt, player.pos, started);
     jraSite.update(dt, player.pos, started);
     soSite?.update(dt, player.pos, started);
+    llSite.update(dt, player.pos, started);
     xsSite?.update(dt, player.pos, started);
     people.end();
     rideVis.animateRestraints(dt);

@@ -132,14 +132,17 @@ export class Crowd {
         fx = -Math.sin(a) * w.dir;
         fz = Math.cos(a) * w.dir;
       } else {
-        const [a, b] = w.line;
-        const len = a.distanceTo(b);
+        const [a, b, opt] = w.line;
+        const len = Math.hypot(b.x - a.x, b.z - a.z);
         w.s += step / len * w.dir;
         if (w.s > 1) { w.s = 1; w.dir = -1; } else if (w.s < 0) { w.s = 0; w.dir = 1; }
         const ax = (b.x - a.x) / len, az = (b.z - a.z) / len;
         const sx = -az, sz = ax;
-        x = a.x + (b.x - a.x) * w.s + sx * w.offset;
-        z = a.z + (b.z - a.z) * w.s + sz * w.offset;
+        // (a narrow line - an escalator - keeps them in its lane)
+        const off = opt?.narrow ? Math.max(-opt.narrow, Math.min(opt.narrow, w.offset * 0.3)) : w.offset;
+        x = a.x + (b.x - a.x) * w.s + sx * off;
+        z = a.z + (b.z - a.z) * w.s + sz * off;
+        w.y = a.y + (b.y - a.y) * w.s; // (lines down in the Lower Lot, and the escalators between)
         fx = ax * w.dir;
         fz = az * w.dir;
       }
@@ -149,8 +152,9 @@ export class Crowd {
       let d = yaw - w.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       w.yaw += d * Math.min(1, dt * 6);
-      if (moving) this.people.add('walk', w.cycle, x, WALKWAY, z, w.yaw, w.seed);
-      else this.people.add('idle', w.idle, x, WALKWAY, z, w.yaw, w.seed);
+      const y = WALKWAY + (w.hub ? 0 : w.y || 0);
+      if (moving) this.people.add('walk', w.cycle, x, y, z, w.yaw, w.seed);
+      else this.people.add('idle', w.idle, x, y, z, w.yaw, w.seed);
     }
   }
 }

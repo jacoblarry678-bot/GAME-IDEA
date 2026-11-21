@@ -45,6 +45,7 @@ export class Terrain {
     this.lake = null;
     this.ponds = [];
     this.flat = data.flatZones || []; // leveled ground (construction sites)
+    this.basins = data.basins || []; // ground dug out to a floor far below (the Lower Lot)
     for (const op of data.terrain) {
       if (op.kind === 'ball') {
         const b = { x: op.center[0], y: op.center[1], z: op.center[2], r: op.radius };
@@ -110,6 +111,19 @@ export class Terrain {
         rock *= t;
       }
     }
+    // dug out: a floor far below, the ground climbing back up the cliffs
+    // round it (rocky where the basin is cut out of the hills)
+    for (const b of this.basins) {
+      const dx = Math.max(b.x0 - x, 0, x - b.x1), dz = Math.max(b.z0 - z, 0, z - b.z1);
+      const d = Math.hypot(dx, dz);
+      if (d >= b.margin) continue;
+      const t = THREE.MathUtils.smoothstep(d, 0, b.margin);
+      const nh = b.floor + (h - b.floor) * t;
+      if (nh >= h) continue;
+      if (b.rock) rock = Math.max(rock, Math.min(1, t * 6, (1 - t) * 3));
+      sand *= t;
+      h = nh;
+    }
     out.h = h;
     out.rock = rock;
     out.sand = sand;
@@ -133,8 +147,8 @@ export class Terrain {
 
   buildMesh(quality) {
     const step = quality.name === 'low' ? 8 : quality.name === 'ultra' ? 4 : 5;
-    const xs = Terrain.axis(-830, 660, 0, step); // (the park runs further west now: the Blitz canyon)
-    const zs = Terrain.axis(-680, 640, 0, step);
+    const xs = Terrain.axis(-830, 1260, 0, step); // (the park runs further west now: the Blitz canyon; east to the far Velocity rides)
+    const zs = Terrain.axis(-1020, 640, 0, step); // (and south: the Lower Lot)
     const nx = xs.length, nz = zs.length;
     const pos = new Float32Array(nx * nz * 3);
     const uv = new Float32Array(nx * nz * 2);

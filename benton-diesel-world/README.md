@@ -49,6 +49,39 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **The Lower Lot (browser only): a whole new level of the park, 36 studs
+  down, with three new lands.**
+  - **The ground:** dug out of the mountains south of Zero Space and
+    Override. A basin of about 840 × 300 studs is ringed by rock cliffs,
+    with rock walls at their foot.
+  - **Getting there:** follow the sign from Zero Space's walk to the new
+    terrace. It has glass railings, coin binoculars and a gateway lit
+    "THE LOWER LOT".
+  - **The escalators:** they run down from the terrace in two flights,
+    with a landing halfway, into a pit with neon-ribbed concrete walls.
+    - Each flight has a down lane and an up lane. Step on and you're
+      carried, about 8 seconds a flight, and you can walk too.
+    - Guests ride them too.
+  - **Neon District:** towers lit with neon (Hotel Nova, Karaoke Zone,
+    Night Market, Cyber Cafe, The Grid Tower...) and Neon Square with its
+    giant neon ring, holographic billboards and food carts.
+    - **Pixel Palace (shop):** neon shades, glow lanterns and neon
+      balloons.
+    - **Night Market Noodles (food):** ramen, bubble tea (speed) and
+      dumplings.
+  - **Lost Lagoon:** a lagoon under a waterfall pouring off the cliffs,
+    with palms, tiki huts and torches, a dock with a boat, a wreck in the
+    shallows and a boardwalk round the water.
+    - **Lagoon Shack (food):** fish tacos, coconut coolers (speed) and
+      pineapple whip (jump).
+  - **Frostbite Base:** a polar research outpost with snowfields,
+    snowbanks, ice spikes and a frozen pond. There are station huts, a
+    radar dome, a snowcat, the half-buried cargo plane that crashed here,
+    penguins and snowy pines.
+    - **Cocoa Camp (food):** polar cocoa (speed), icicle slush (jump) and
+      snowball cookies.
+    - **Expedition Outfitters (shop):** snow goggles, crew caps and
+      penguin balloons.
 - **Free cam (browser only):** press **C**, or tap the 🎥 button in the
   top bar, and the camera leaves your guest and flies anywhere.
   - **Keyboard:** WASD or the arrow keys fly, Space or E goes up, Q goes
