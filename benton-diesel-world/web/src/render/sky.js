@@ -186,6 +186,13 @@ export class SkySystem {
     this.envScene = new THREE.Scene();
     this.envMesh = new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), mat);
     this.envScene.add(this.envMesh);
+    // (three's PMREM makes and throws away its background material on every
+    // bake, so its shader would be compiled again each time the sky moves -
+    // a hitch every few seconds; an empty mesh with the same kind of material
+    // in the bake keeps that shader alive)
+    const keep = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ side: THREE.BackSide, depthWrite: false, depthTest: false }));
+    keep.frustumCulled = false;
+    this.envScene.add(keep);
     this.pmrem = new THREE.PMREMGenerator(renderer);
     this.envRT = null;
     this.envKey = '';

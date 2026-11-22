@@ -646,6 +646,26 @@ export class RideVisuals {
     }
   }
 
+  // Riders far from the camera are too small to see: hide them (each is its
+  // own draw), and only those near enough cast shadows. Cars far across the
+  // park (specks in the haze) are hidden too.
+  cullRiders(cam, hide = 320, shadow = 140, carHide = 700) {
+    for (const v of this.rides.values()) {
+      for (const car of v.cars) {
+        const e = car.matrix.elements;
+        car.visible = (e[12] - cam.x) ** 2 + (e[14] - cam.z) ** 2 < carHide * carHide;
+      }
+      for (const g of v.guests) {
+        const e = g.parent?.matrix.elements;
+        if (!e) continue;
+        const d2 = (e[12] - cam.x) ** 2 + (e[13] - cam.y) ** 2 + (e[14] - cam.z) ** 2;
+        g.visible = d2 < hide * hide;
+        const m = g.children[0];
+        if (m) m.castShadow = d2 < shadow * shadow;
+      }
+    }
+  }
+
   // Pose a ride at time t (0 = resting in the station).
   pose(id, t, far) {
     const v = this.rides.get(id);

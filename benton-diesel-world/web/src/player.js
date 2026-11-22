@@ -480,7 +480,10 @@ export class Player {
       camera.lookAt(this.camTarget.clone().sub(dir));
     } else {
       camera.position.copy(this.camTarget).addScaledVector(dir, this.camEff);
-      if (camera.position.y < 0.6) camera.position.y = 0.6;
+      // keep above the ground under the camera (down in the Lower Lot that's
+      // 36 studs below the rest of the park, so not a fixed height)
+      const floor = this.collision.groundHeight(camera.position.x, camera.position.z) + 0.6;
+      if (camera.position.y < floor) camera.position.y = floor;
       camera.lookAt(this.camTarget);
     }
   }

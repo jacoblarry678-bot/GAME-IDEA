@@ -244,6 +244,9 @@ async function main() {
   const camera = new THREE.PerspectiveCamera(65, 1, 0.3, 3200);
 
   let qualityName = loadQuality();
+  // (whether you've picked a graphics setting yourself: if not, and your
+  // machine can't keep up on High, the game drops to Low for you once)
+  const qualityChosen = (() => { try { return !!PRESETS[localStorage.getItem(QUALITY_KEY)]; } catch (e) { return true; } })();
   configureMaterials({ size: qualityName === 'low' ? 256 : 512, aniso: Math.min(8, renderer.capabilities.getMaxAnisotropy()) });
   geomOptions.bevel = qualityName !== 'low';
   geomOptions.maxLod = qualityName === 'low' ? 1 : 2;
@@ -273,7 +276,7 @@ async function main() {
     return { ...r, landInfo: { name: land.name, colorCss: `#${land.color.toString(16).padStart(6, '0')}` } };
   });
 
-  const game = { data, input, guide, thumbs, qualityName, audio };
+  const game = { data, input, guide, thumbs, qualityName, audio, camera };
   const sim = new Sim(data, {
     toast: (text, kind, amount) => game.ui?.toast(text, kind, amount),
     sound: (kind) => audio.ui(kind),
@@ -504,10 +507,28 @@ async function main() {
   const tmp = new THREE.Vector3();
   const camPos = new THREE.Vector3();
 
+  // a slow machine on High (under 24 frames a second for two 6-second
+  // stretches in a row) drops to Low once, unless you chose a setting
+  const autoQuality = { off: qualityChosen || qualityName === 'low', ms: 0, n: 0, slow: 0 };
   function frame() {
     const nowMs = performance.now();
-    const dt = Math.min(0.05, (nowMs - last) / 1000);
+    const rawMs = nowMs - last;
+    const dt = Math.min(0.05, rawMs / 1000);
     last = nowMs;
+    if (started && !autoQuality.off && rawMs < 1000) { // (a tab left in the background is a pause, not a slow frame)
+      autoQuality.ms += rawMs;
+      autoQuality.n++;
+      if (autoQuality.ms > 6000) {
+        autoQuality.slow = autoQuality.n / (autoQuality.ms / 1000) < 24 ? autoQuality.slow + 1 : 0;
+        autoQuality.ms = 0;
+        autoQuality.n = 0;
+        if (autoQuality.slow >= 2) {
+          autoQuality.off = true;
+          game.setQuality('low');
+          game.ui.toast('Graphics switched to Low to keep things smooth. You can change it in ⚙ Settings.', 'info');
+        }
+      }
+    }
     time += dt;
     const now = Clock.now();
 
@@ -542,6 +563,7 @@ async function main() {
         });
       }
     }
+    if (rideVis.frame % 4 === 0) rideVis.cullRiders(camPos);
     if (player.riding && !player.riding.transit) {
       const m = rideVis.seatMatrix(player.riding.id, player.riding.car, player.riding.seat);
       if (m) player.riding.matrix = m;

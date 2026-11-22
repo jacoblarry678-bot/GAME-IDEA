@@ -723,6 +723,6 @@ export function singleFigure(baseGeo, look) {
   const mesh = new THREE.InstancedMesh(g, humanMaterial(), 1);
   mesh.setMatrixAt(0, new THREE.Matrix4().makeScale(look.width, look.height, look.width));
   mesh.castShadow = true;
-  mesh.frustumCulled = false;
+  // (culled like any mesh: its bounds come from its one instance, set once)
   return mesh;
 }

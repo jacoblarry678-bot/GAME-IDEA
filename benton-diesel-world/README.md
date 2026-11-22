@@ -49,6 +49,25 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Fix: the game runs smoother, and the camera stays level in the Lower Lot
+  (browser only).**
+  - **Camera:** it never went below ground level (y 0.6). Down in the Lower
+    Lot, 36 studs lower, that left it far above you, looking straight down.
+    Now it only stays above the ground under it.
+  - **Ride riders:** each rider is drawn on its own, and they were drawn
+    every frame wherever they were, even off-screen, and again for shadows.
+    Now riders out of view aren't drawn, riders more than 320 studs away
+    are hidden, and only riders within 140 studs cast shadows.
+  - **Far-off ride cars:** cars more than 700 studs away, specks in the
+    haze, are hidden.
+  - **No more hitch every few seconds:** the sky's reflections were
+    re-shading from scratch each time the sun moved a little. That shader
+    is now kept.
+  - **Draw calls:** spawn went from about 3,070 to 1,250 a frame, the Lower
+    Lot pit from 1,820 to 460, and Neon District from 1,620 to 300.
+  - **Auto Low:** if you've never picked a graphics setting and the game
+    runs under 24 frames a second for 12 seconds, it switches to Low once
+    and tells you. You can change it back in ⚙ Settings.
 - **Fix: the Lower Lot's escalators go both ways again (browser only).**
   Before this fix you could end up stuck at the bottom:
   - The LOWER LOT arch is centred on the open gap between the two lanes, so
