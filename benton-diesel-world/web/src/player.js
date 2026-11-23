@@ -345,7 +345,7 @@ export class Player {
     if (v.lengthSq() > 1) v.normalize();
     fc.pos.addScaledVector(v, fc.speed * fast * dt);
     fc.pos.x = THREE.MathUtils.clamp(fc.pos.x, -1000, 1450);
-    fc.pos.z = THREE.MathUtils.clamp(fc.pos.z, -900, 1000);
+    fc.pos.z = THREE.MathUtils.clamp(fc.pos.z, -1020, 1000); // (south to the Lower Lot's cliffs)
     const ground = this.collision.groundHeight(fc.pos.x, fc.pos.z);
     fc.pos.y = THREE.MathUtils.clamp(fc.pos.y, (Number.isFinite(ground) ? ground : 0) + 0.8, 600);
     this.figure.root.visible = true;

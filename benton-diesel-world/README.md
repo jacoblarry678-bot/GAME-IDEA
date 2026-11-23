@@ -49,6 +49,10 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Fix: the free cam reaches all of the Lower Lot (browser only).** It
+  stopped at z −900, the world's old south edge, so it couldn't fly over
+  Neon Gliders, Snowball or Frostbite's south side. Now it reaches the
+  cliffs.
 - **New ride: Neon Gliders, an indoor suspended family coaster in Neon
   District, down in the Lower Lot (browser only).**
   - **The ride:** you hang beneath a glider edged in neon, two riders side
