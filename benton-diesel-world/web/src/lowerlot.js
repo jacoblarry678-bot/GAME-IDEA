@@ -319,13 +319,13 @@ export function buildLowerLot(data) {
       neon([0.8, 0.8, 2.8], [SQ[0] + Math.cos(a) * 9, FL + 12 + Math.sin(a) * 9, SQ[1]], k % 2 ? PINK : CYAN, { rot: RZ(a) });
     }
     for (const x of [SQ[0] - 9.5, SQ[0] + 9.5]) box([1, 12, 1], [x, FL, SQ[1]], INK, 'Metal');
-    for (const [x, z, t, c] of [[500, -985, 'BENTON DIESEL ZERO  ·  0% DIESEL  100% SPEED', CYAN], [632, -935, 'TONIGHT ONLY  ·  ALWAYS', PINK]]) {
+    for (const [x, z, t, c] of [[500, -985, 'BENTON DIESEL ZERO  ·  0% DIESEL  100% SPEED', CYAN], [632, -915, 'TONIGHT ONLY  ·  ALWAYS', PINK]]) {
       const yawFace = x > 600 ? 'Left' : 'Back';
       const sz = x > 600 ? [0.3, 9, 30] : [30, 9, 0.3];
       box(x > 600 ? [0.8, 4, 0.8] : [0.8, 4, 0.8], [x, FL, z], INK, 'Metal');
       sign(sz, [x + (x > 600 ? -0.5 : 0), FL + 10, z + (x > 600 ? 0 : 0.5)], 0x0a0a14, yawFace, [[t, 0, 0, 1, 1, c]], { glow: true });
     }
-    for (const [x, z, c] of [[530, -905, PINK], [590, -905, CYAN], [545, -960, VIOLET]]) {
+    for (const [x, z, c] of [[530, -905, PINK], [590, -905, CYAN], [612, -932, VIOLET]]) {
       box([6, 3, 3], [x, FL, z], 0x2a2a30, 'Metal');
       add([7, 0.4, 4], [x, FL + 4.2, z], c, 'Neon', { collide: 0 });
       box([0.2, 1.2, 0.2], [x - 3, FL + 3, z + 1.4], STEEL, 'Metal', { collide: 0 });
@@ -335,10 +335,10 @@ export function buildLowerLot(data) {
     box([4.4, 1.6, 2.2], [520, FL + 0.6, AVE + 3.4], 0xf2c418, 'Metal', { collide: 0 });
     box([2.6, 1, 2], [520, FL + 2.2, AVE + 3.4], 0xf2c418, 'Metal', { collide: 0 });
     for (const x of [442, 446, 450]) { box([1.6, 3.2, 1], [x, FL, -782], [PINK, CYAN, 0xf2c418][(x - 442) / 4], 'SmoothPlastic'); neon([1.2, 1.6, 0.1], [x, FL + 1.9, -781.45], WHITE); }
-    for (const [x, z] of [[470, AVE + 6], [560, AVE - 7], [530, -850], [580, -960]]) data.tags.SteamVent.push([x, FL + 0.3, z, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
+    for (const [x, z] of [[470, AVE + 6], [560, AVE - 7], [530, -850], [585, -928]]) data.tags.SteamVent.push([x, FL + 0.3, z, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
     path([[520, AVE], [520, -990]], 8, FL, 0x34343c);
     line([[520, AVE], [520, -935], [542, -935], [520, -935], [520, -985]], FLOOR);
-    for (const [x, z, c] of [[470, -780, PINK], [560, -800, CYAN], [520, -900, VIOLET], [560, -950, PINK], [430, -870, CYAN]]) data.hauntLights.push([x, FL + 6, z, c]);
+    for (const [x, z, c] of [[470, -780, PINK], [560, -800, CYAN], [520, -900, VIOLET], [560, -925, PINK], [430, -870, CYAN]]) data.hauntLights.push([x, FL + 6, z, c]);
     for (let z = -790; z > -990; z -= 30) lamp(526, FL, z, 0xff9ad8);
   }
 

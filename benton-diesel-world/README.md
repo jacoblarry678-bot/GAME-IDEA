@@ -49,6 +49,41 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Neon Gliders, an indoor suspended family coaster in Neon
+  District, down in the Lower Lot (browser only).**
+  - **The ride:** you hang beneath a glider edged in neon, two riders side
+    by side, feet dangling. The track runs inside a black building on the
+    south side of Neon Square:
+    - up the lift along the north wall, under a ceiling of stars;
+    - a hairpin turn up by the roof;
+    - a swoop through the middle and through a spinning ring of light;
+    - a U-turn, then back east through a second ring;
+    - home along the south wall through a tunnel of neon arches, past a
+      neon skyline.
+  - **The numbers:** 283 studs of track and about 50 seconds a ride. There
+    are 8 gliders with 2 riders each, and the top speed is 49 km/h.
+  - **Getting on:** steps go up from the Neon District walkway to the
+    entrance and a switchback queue hall. You board from a raised platform
+    and leave by the steps down to Neon Square. Inside it's dark, lit only
+    by the neon.
+  - **To make room:** a food cart, a steam vent and the TONIGHT ONLY
+    billboard moved a little north, and the cliff-foot rocks behind the
+    building are gone.
+- **New: road work on the Benton Parkway by the Grand Hotel (browser
+  only).** A new water main is going in along the north verge, east of the
+  hotel's car park, between the park's wall and the road. It has:
+  - a trench behind jersey barriers;
+  - an excavator digging in it, a dump truck loaded with spoil, and a road
+    roller by fresh asphalt on the shoulder;
+  - a light tower, a site office and an arrow board, with amber beacons
+    turning;
+  - cones and drums down the shoulder;
+  - a crew in hard hats;
+  - ROAD WORK AHEAD and END ROAD WORK signs for both directions, and a
+    GRAND HOTEL ACCESS OPEN sign.
+
+  Everything stays off the driving lanes, so the traffic and the hotel
+  shuttle still get through.
 - **Fix: the game runs smoother, and the camera stays level in the Lower Lot
   (browser only).**
   - **Camera:** it never went below ground level (y 0.6). Down in the Lower
