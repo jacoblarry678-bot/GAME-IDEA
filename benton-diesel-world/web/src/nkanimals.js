@@ -31,7 +31,7 @@ export function animalKit(data) {
       const P = make(x, y, z, yaw, s, out), Y = 0xe8b040, B = 0x8a5020;
       legs(P, 0.5, 5.4, 0.7, 1.6, Y);
       P([0, 6.3, 0], [2.2, 2, 4.4], Y);
-      P([0, 9.4, -2.4], [1, 6.4, 1], Y, 'SmoothPlastic', { rot: RX(0.38) });
+      P([0, 9.4, -2.4], [1, 6.4, 1], Y, 'SmoothPlastic', { rot: RX(-0.38) });
       P([0, 12.6, -3.8], [1, 1, 2.2], Y);
       for (const sx of [-0.3, 0.3]) P([sx, 13.4, -3.4], [0.2, 0.7, 0.2], B);
       for (const [px, py, pz] of [[0.9, 6.6, 1], [-1, 6.2, -0.8], [0.8, 5.8, -1.4], [-0.9, 6.9, 1.3], [0.4, 8.6, -2], [-0.4, 10.4, -2.9]]) P([px * 1.15, py, pz], [0.2, 0.7, 0.8], B);
@@ -51,7 +51,7 @@ export function animalKit(data) {
       const P = make(x, y, z, yaw, s, out), W = 0xf4f4f0, K = 0x1a1a1a;
       legs(P, 0.4, 2.6, 0.5, 1.2, W);
       P([0, 3.2, 0], [1.3, 1.4, 3.2], W);
-      P([0, 4.2, -1.8], [0.6, 1.8, 0.7], W, 'SmoothPlastic', { rot: RX(0.5) });
+      P([0, 4.2, -1.8], [0.6, 1.8, 0.7], W, 'SmoothPlastic', { rot: RX(-0.5) });
       P([0, 4.6, -2.5], [0.6, 0.6, 1.4], W);
       for (let k = -3; k <= 3; k++) P([0, 3.2, k * 0.45], [1.34, 1.44, 0.16], K);
       P([0, 5, -2.1], [0.18, 0.6, 0.9], K);
@@ -93,7 +93,7 @@ export function animalKit(data) {
       const P = make(x, y, z, yaw, s, out), Pk = 0xf08aa0;
       P([0, 1.1, 0], [0.12, 2.2, 0.12], Pk);
       P([0, 2.6, 0], [0.9, 0.8, 1.4], Pk, 'SmoothPlastic', { shape: 3 });
-      P([0, 3.5, -0.5], [0.15, 1.6, 0.15], Pk, 'SmoothPlastic', { rot: RX(0.25) });
+      P([0, 3.5, -0.5], [0.15, 1.6, 0.15], Pk, 'SmoothPlastic', { rot: RX(-0.25) });
       P([0, 4.2, -0.8], [0.3, 0.3, 0.6], Pk);
       P([0, 4.1, -1.1], [0.15, 0.15, 0.3], 0x1a1a1a);
     },
@@ -109,7 +109,7 @@ export function animalKit(data) {
       const P = make(x, y, z, yaw, s, out), Bw = 0x4a4038;
       legs(P, 0.45, 2.4, 0.55, 1.3, Bw);
       P([0, 3.2, 0], [1.4, 1.6, 3.2], Bw);
-      P([0, 3.4, -1.9], [0.8, 1.2, 1.2], Bw, 'SmoothPlastic', { rot: RX(0.4) });
+      P([0, 3.4, -1.9], [0.8, 1.2, 1.2], Bw, 'SmoothPlastic', { rot: RX(-0.4) });
       for (const sx of [-1, 1]) P([sx * 0.55, 4.1, -2.1], [0.9, 0.18, 0.18], 0xd8d0c0, 'SmoothPlastic', { rot: RZ(sx * 0.4) });
       P([0, 3.6, -1.1], [0.2, 1, 1.2], 0x1a1a1a);
     },
@@ -152,7 +152,7 @@ export function animalKit(data) {
       const P = make(x, y, z, yaw, s, out), Gn = 0x4a8a3a, St = 0x2a5a2a;
       for (const sx of [-0.4, 0.4]) P([sx, 1.2, 0.3], [0.4, 2.4, 0.5], Gn, 'SmoothPlastic', { rot: RX(-0.25) });
       P([0, 2.8, 0], [1, 1.1, 2.4], Gn, 'SmoothPlastic', { rot: RX(0.25) });
-      P([0, 3.6, -1.3], [0.5, 1.2, 0.5], Gn, 'SmoothPlastic', { rot: RX(0.5) });
+      P([0, 3.6, -1.3], [0.5, 1.2, 0.5], Gn, 'SmoothPlastic', { rot: RX(-0.5) });
       P([0, 4.2, -1.9], [0.6, 0.6, 1.5], Gn);
       P([0, 3.9, -2.4], [0.5, 0.2, 0.9], 0xf4f0e0);
       P([0, 2.7, 2.4], [0.35, 0.35, 3], Gn, 'SmoothPlastic', { rot: RX(-0.15) });
@@ -163,7 +163,7 @@ export function animalKit(data) {
       const P = make(x, y, z, yaw, s, out), Gr = 0x7a8a6a;
       legs(P, 1.8, 6, 1.6, 3, Gr);
       P([0, 8, 0], [4.4, 4.6, 9], Gr);
-      P([0, 14, -7.5], [1.5, 13, 1.6], Gr, 'SmoothPlastic', { rot: RX(0.6) });
+      P([0, 14, -7.5], [1.5, 13, 1.6], Gr, 'SmoothPlastic', { rot: RX(-0.6) });
       P([0, 19.4, -11.4], [1.6, 1.4, 2.6], Gr);
       P([0, 6.5, 8.5], [1.2, 1.2, 9], Gr, 'SmoothPlastic', { rot: RX(-0.28) });
     },
@@ -171,7 +171,7 @@ export function animalKit(data) {
       const P = make(x, y, z, yaw, s, out), Bt = 0x6a5a3a, D = 0x4a3a2a;
       for (const sx of [-1.2, 1.2]) { P([sx, 3, 0.8], [1.4, 6, 1.8], Bt, 'SmoothPlastic', { rot: RX(-0.2) }); P([sx, 0.4, -0.2], [1.6, 0.8, 2.6], D); }
       P([0, 8.6, 0], [3.4, 4, 6.4], Bt, 'SmoothPlastic', { rot: RX(0.3) });
-      P([0, 11.4, -3.8], [2, 2.6, 2], Bt, 'SmoothPlastic', { rot: RX(0.5) });
+      P([0, 11.4, -3.8], [2, 2.6, 2], Bt, 'SmoothPlastic', { rot: RX(-0.5) });
       P([0, 12.8, -5.6], [2.4, 2.2, 4], Bt);
       P([0, 11.6, -6], [2.2, 0.8, 3.4], D);
       for (let k = 0; k < 5; k++) P([(k - 2) * 0.4, 12, -7.4], [0.18, 0.5, 0.18], 0xf4f0e0);
@@ -184,7 +184,7 @@ export function animalKit(data) {
       legs(P, 1.2, 2.6, 1.2, 2, Tc);
       P([0, 3.8, 0], [3, 2.8, 6], Tc);
       P([0, 3.8, -3.8], [2.2, 2, 2.2], Tc);
-      P([0, 5.2, -3.3], [4, 3.2, 0.4], Fr, 'SmoothPlastic', { rot: RX(-0.3) });
+      P([0, 5.2, -3.3], [4, 3.2, 0.4], Fr, 'SmoothPlastic', { rot: RX(0.3) });
       for (const sx of [-0.7, 0.7]) P([sx, 5, -5], [0.3, 0.3, 2.2], 0xf0e8d0, 'SmoothPlastic', { rot: RX(0.3) });
       P([0, 3.6, -5.2], [0.3, 0.3, 1.2], 0xf0e8d0, 'SmoothPlastic', { rot: RX(0.6) });
       P([0, 3.4, 3.6], [0.9, 0.9, 3], Tc, 'SmoothPlastic', { rot: RX(-0.2) });
