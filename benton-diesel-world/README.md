@@ -49,6 +49,14 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Change: longer days (browser only).** A park minute now lasts 4 real
+  seconds instead of 1, from 7:00 AM to 11:00 PM, so a day takes about an
+  hour.
+  - The cast's setup and early entry get about 4 minutes each.
+  - The park is open for about 52 minutes.
+  - Closing to the security walk-out takes about a minute and a half.
+  - The night runs 12× faster, about 2½ minutes, or use ⏩ Skip to morning.
+  - Show countdowns now say how many park minutes until the show.
 - **New: a full park day, with guests who walk to places (browser only).**
   - **The schedule:**
     - **7:00 AM, setup.** Cast members come in through a CAST MEMBERS ONLY

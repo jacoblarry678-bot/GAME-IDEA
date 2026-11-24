@@ -572,7 +572,7 @@ export class StaffSystem {
         let len = 0;
         for (let k = 1; k < seq.length; k++) {
           const d = seq[k].distanceTo(seq[k - 1]);
-          if (len + d > 90) { keep.push(seq[k - 1].clone().lerp(seq[k], (90 - len) / Math.max(0.01, d))); break; }
+          if (len + d > 200) { keep.push(seq[k - 1].clone().lerp(seq[k], (200 - len) / Math.max(0.01, d))); break; }
           len += d;
           keep.push(seq[k]);
         }

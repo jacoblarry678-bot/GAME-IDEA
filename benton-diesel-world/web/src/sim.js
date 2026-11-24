@@ -516,7 +516,7 @@ export class Sim {
       const s = Clock.secondsUntil(t);
       if (s < best) { best = s; bestTime = t; }
     }
-    return { now: false, text: `Next show ${Clock.format(bestTime)} (in ${Math.ceil(best)} min)`, seconds: best };
+    return { now: false, text: `Next show ${Clock.format(bestTime)} (in ${Math.ceil(Clock.minutesUntil(bestTime))} min)`, seconds: best };
   }
 
   startShow(show) {

@@ -241,9 +241,11 @@ async function main() {
   console.log(`extended queues: ${extended}`);
   // bins, benches, hydrants, planters, fountains and manholes along the paths
   console.log(`street details: ${buildStreetDetails(data)}`);
-  // (daytime runs from 7:00 now, so the cast setting up isn't rushed by the
-  // faster night; the day starts at 7:45 AM, as they finish getting ready)
-  Clock.configure({ ...cfg.Clock, DAY_START: 420 });
+  // (a longer day: a park minute is 4 real seconds from 7:00 AM to 11:00 PM -
+  // the cast's setup and early entry get 4 minutes each, the park's open for
+  // 52 - and the night goes by 12 times faster; the day starts at 7:45 AM,
+  // as the cast finish getting ready)
+  Clock.configure({ ...cfg.Clock, DAY_START: 420, MINUTE: 4, NIGHT_SPEED: 12 });
   Clock.start(465);
 
   const canvas = document.getElementById('view');
