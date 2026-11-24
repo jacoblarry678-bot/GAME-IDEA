@@ -1,0 +1,410 @@
+// Runs the real server and client scripts headlessly against the mock
+// engine and plays through a guest's day: build the park, join, queue for a
+// ride, ride it, buy a souvenir and a meal, watch a show.
+//   npm test            (or: node tools/runtime-test.mjs [--dump])
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRuntime, ROOT } from './harness.mjs';
+
+const dump = process.argv.includes('--dump');
+const rt = await createRuntime({ quiet: true });
+let failed = false;
+
+function lua(code, name = '=test') {
+  return rt.exec(code, name);
+}
+function step(seconds, frame = 1 / 10) {
+  // advance virtual time, rendering frames for client code
+  lua(`
+    local M = _G.__mock
+    local remaining = ${seconds}
+    while remaining > 0 do
+      local dt = math.min(${frame}, remaining)
+      M.advance(dt)
+      M.frame(dt)
+      remaining -= dt
+    end
+  `);
+}
+function check(label, code) {
+  const [pok, ok, detail] = lua(`return pcall(function() ${code} end)`);
+  if (!pok) {
+    console.log(`FAIL  ${label}  (error: ${String(ok).split('\n')[0]})`);
+    failed = true;
+    return;
+  }
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '  (' + detail + ')' : ''}`);
+  if (!ok) failed = true;
+}
+
+console.log('== booting server');
+let t = Date.now();
+lua(`
+  local M = _G.__mock
+  local server = game:GetService("ServerScriptService"):FindFirstChild("BentonServer")
+  M.runScript(server)
+`);
+step(3);
+console.log(`   server boot took ${Date.now() - t} ms real time`);
+
+check('park built', `
+  local root = workspace:FindFirstChild("BentonDieselWorld")
+  if not root then return false, "no BentonDieselWorld" end
+  local parts = 0
+  for _, d in root:GetDescendants() do if d:IsA("BasePart") then parts += 1 end end
+  return parts > 5000, parts .. " parts"
+`);
+check('all rides built with cars', `
+  local Config = require(game.ReplicatedStorage.BentonShared.Config)
+  local rides = workspace.BentonDieselWorld.Rides
+  for _, ride in Config.Rides do
+    local m = rides:FindFirstChild(ride.id)
+    if not m then return false, "missing " .. ride.id end
+    if #m.Cars:GetChildren() == 0 then return false, "no cars " .. ride.id end
+  end
+  return true, #Config.Rides .. " rides"
+`);
+check('themed props built in every land', `
+  local f = workspace.BentonDieselWorld:FindFirstChild("Theming", true)
+  local Theming = require(game.ServerScriptService.BentonServer.Build.Theming)
+  local lands = {}
+  for _, p in Theming.PROPS do lands[p[1]] = true end
+  local n = 0
+  for _ in lands do n += 1 end
+  return f ~= nil and #f:GetChildren() >= #Theming.PROPS and n == 7, #Theming.PROPS .. " props in " .. n .. " lands"
+`);
+check('ride crews: consoles, operators and staff in shops, carts and the gate', `
+  local CS = game:GetService("CollectionService")
+  local roles = {}
+  for _, m in CS:GetTagged("StaffSpot") do
+    local r = m:GetAttribute("Role")
+    roles[r] = (roles[r] or 0) + 1
+  end
+  local consoles = 0
+  for _, rm in workspace.BentonDieselWorld.Rides:GetChildren() do
+    if rm:FindFirstChild("Crew") then consoles += 1 end
+  end
+  local bars = 0
+  for _, d in workspace.BentonDieselWorld.Rides.DieselThunder.Cars:GetDescendants() do
+    if d.Name == "Restraint" then bars += 1 end
+  end
+  return roles.operator == 13 and consoles == 13 and (roles.cashier or 0) >= 13 and (roles.vendor or 0) > 0 and (roles.greeter or 0) > 0 and bars == 12,
+    string.format("%d operators, %d consoles, %d cashiers, %d vendors, %d greeters, %d lap bars", roles.operator or 0, consoles, roles.cashier or 0, roles.vendor or 0, roles.greeter or 0, bars)
+`);
+check('ride state published', `
+  local f = game.ReplicatedStorage.BentonState.Rides.DieselThunder
+  return f:GetAttribute("Wait") ~= nil and f:GetAttribute("Duration") > 0, "wait " .. tostring(f:GetAttribute("Wait"))
+`);
+
+const hasClient = fs.existsSync(path.join(ROOT, 'src', 'client'));
+console.log('== player joins');
+lua(`
+  local M = _G.__mock
+  local p = M.addPlayer("TestGuest", 1234)
+`);
+if (hasClient) {
+  lua(`
+    local M = _G.__mock
+    local p = M.localPlayer
+    local client = game.StarterPlayer.StarterPlayerScripts:FindFirstChild("BentonClient"):Clone()
+    client.Parent = p.PlayerScripts
+    M.runScript(client)
+  `);
+}
+step(8);
+check('profile loaded', `
+  local p = game.Players.TestGuest
+  return p:GetAttribute("DataReady") == true and p:GetAttribute("Bucks") ~= nil, "bucks " .. tostring(p:GetAttribute("Bucks"))
+`);
+
+if (hasClient) {
+  console.log('== client UI');
+  check('sound player started', `return workspace:FindFirstChild("BentonSounds") ~= nil, nil`);
+  const spinBefore = lua(`
+    local m = workspace.BentonDieselWorld:FindFirstChild("Windmill", true)
+    return m and tostring(m:GetPivot().RightVector) or "missing"
+  `)[0];
+  step(1);
+  check('windmill and other spinners turn', `
+    local m = workspace.BentonDieselWorld:FindFirstChild("Windmill", true)
+    return m ~= nil and tostring(m:GetPivot().RightVector) ~= "${spinBefore}", "${spinBefore}"
+  `);
+  check('app UI created', `
+    local gui = game.Players.TestGuest.PlayerGui:FindFirstChild("BentonApp")
+    return gui ~= nil and gui:FindFirstChild("Dock") ~= nil, nil
+  `);
+  for (const tab of ['Waits', 'Map', 'Shows', 'Dining', 'Shops', 'Passport', 'Bag']) {
+    lua(`
+      local b = game.Players.TestGuest.PlayerGui.BentonApp.Dock:FindFirstChild("${tab}")
+      _G.__mock.getSignal(b, "Activated"):Fire()
+    `);
+    step(1);
+    check(`tab ${tab} renders`, `
+      local panel = game.Players.TestGuest.PlayerGui.BentonApp.Panel
+      local n = 0
+      for _, d in panel:GetDescendants() do n += 1 end
+      return panel.Visible and n > 10, n .. " ui objects"
+    `);
+  }
+  lua(`
+    -- press the first "Guide me" button on the Bag/Shops tab
+    local b = game.Players.TestGuest.PlayerGui.BentonApp.Dock:FindFirstChild("Waits")
+    _G.__mock.getSignal(b, "Activated"):Fire()
+  `);
+  step(1);
+  lua(`
+    for _, d in game.Players.TestGuest.PlayerGui.BentonApp.Panel:GetDescendants() do
+      if d:IsA("TextButton") and d.Text == "Guide me" then
+        _G.__mock.getSignal(d, "Activated"):Fire()
+        break
+      end
+    end
+  `);
+  step(1);
+  check('guide marker placed', `return workspace:FindFirstChild("BentonGuideMarker") ~= nil, nil`);
+  lua(`
+    local p = game.Players.TestGuest
+    local prompt = workspace.BentonDieselWorld.Venues.Emporium:FindFirstChild("VenuePrompt", true)
+    _G.__mock.getSignal(prompt, "Triggered"):Fire(p)
+  `);
+  step(1);
+  check('shop counter opens', `
+    local modal = game.Players.TestGuest.PlayerGui.BentonApp:FindFirstChild("VenueModal")
+    local vps = 0
+    if modal then for _, d in modal:GetDescendants() do if d:IsA("ViewportFrame") then vps += 1 end end end
+    return modal ~= nil and vps > 0, vps .. " item previews"
+  `);
+}
+
+console.log('== queue for Little Haulers Truck Trek');
+lua(`
+  local p = game.Players.TestGuest
+  local prompt = workspace.BentonDieselWorld.Rides.TruckTrek.Queue.QueuePoint.JoinPrompt
+  _G.__mock.getSignal(prompt, "Triggered"):Fire(p)
+`);
+step(1);
+check('player is in line', `
+  local p = game.Players.TestGuest
+  return p:GetAttribute("QueueRide") == "TruckTrek", "pos " .. tostring(p:GetAttribute("QueuePos")) .. " eta " .. tostring(p:GetAttribute("QueueEta"))
+`);
+check('queue line published', `
+  local line = game.ReplicatedStorage.BentonState.Rides.TruckTrek:GetAttribute("Line")
+  return type(line) == "string" and string.find(line, "p1234", 1, true) ~= nil, tostring(line)
+`);
+// walk into the queue maze (the mock humanoid doesn't walk by itself)
+lua(`
+  local QueueLine = require(game.ReplicatedStorage.BentonShared.QueueLine)
+  local gate = QueueLine.get("TruckTrek").gate
+  game.Players.TestGuest.Character:PivotTo(CFrame.new(gate + Vector3.new(0, 3.5, 0)))
+`);
+if (hasClient) {
+  step(1);
+  check('guests standing in the queue mazes', `
+    local f = workspace:FindFirstChild("BentonQueueGuests")
+    return f ~= nil and #f:GetChildren() > 0, (f and #f:GetChildren() or 0) .. " guests in line nearby"
+  `);
+}
+const before = lua('return game.Players.TestGuest:GetAttribute("Bucks")')[0];
+let boarded = false;
+for (let i = 0; i < 200 && !boarded; i++) {
+  step(1);
+  boarded = lua('return game.Players.TestGuest:GetAttribute("Riding") == "TruckTrek"')[0];
+}
+check('player boarded', `return ${boarded}, nil`);
+if (hasClient) {
+  step(6);
+  check('attendants walk the platform checking the cars', `
+    local Staff = require(game.ReplicatedStorage.BentonShared.Staff)
+    local crew = Staff.crew("TruckTrek")
+    local f = workspace:FindFirstChild("RideStaff")
+    if not f then return false, "no staff folder" end
+    local best = math.huge
+    for _, m in f:GetChildren() do
+      if m.Name == "Attendant" and m:GetPivot().Y > -100 then
+        for _, stop in crew.stops do
+          best = math.min(best, (m:GetPivot().Position - stop.Position).Magnitude)
+        end
+      end
+    end
+    return best < 8, string.format("closest attendant %.1f studs from a stop", best)
+  `);
+  step(8);
+  check('ride animates on the client', `
+    local car = workspace.BentonDieselWorld.Rides.TruckTrek.Cars.Car1
+    local rest = require(game.ReplicatedStorage.BentonShared.RideMotion).get("TruckTrek").pose(0)[1]
+    local d = (car:GetPivot().Position - rest.Position).Magnitude
+    return d > 1, string.format("moved %.1f studs", d)
+  `);
+}
+check('rider anchored in seat', `
+  local root = game.Players.TestGuest.Character.HumanoidRootPart
+  return root.Anchored == true, tostring(root.Position)
+`);
+let off = false;
+for (let i = 0; i < 120 && !off; i++) {
+  step(1);
+  off = lua('return game.Players.TestGuest:GetAttribute("Riding") == ""')[0];
+}
+step(1);
+check('rider released and rewarded', `
+  local p = game.Players.TestGuest
+  local root = p.Character.HumanoidRootPart
+  return root.Anchored == false and p:GetAttribute("Bucks") > ${before}, "bucks ${before} -> " .. p:GetAttribute("Bucks")
+`);
+
+console.log('== stepping out of a queue line');
+lua(`game.ServerScriptService.BentonServer:SetAttribute("CloseRide", "DieselThunder")`);
+let closed = false;
+for (let i = 0; i < 60 && !closed; i++) {
+  step(1);
+  closed = lua('return game.ReplicatedStorage.BentonState.Rides.DieselThunder:GetAttribute("Status") == "Closed"')[0];
+}
+check('ride can be closed for testing', `return ${closed}, nil`);
+if (hasClient) {
+  step(2);
+  check('lap bars lift while the ride waits', `
+    local car = workspace.BentonDieselWorld.Rides.DieselThunder.Cars.Car1
+    local seat = require(game.ReplicatedStorage.BentonShared.RideMotion).get("DieselThunder").seats[1][1]
+    local bar
+    for _, d in car:GetDescendants() do if d.Name == "Restraint" then bar = d break end end
+    local closed = car:GetPivot() * seat * CFrame.new(0, -0.6, -0.85)
+    local d = (bar.Position - closed.Position).Magnitude
+    return d > 0.5, string.format("bar %.2f studs from closed", d)
+  `);
+}
+lua(`
+  local p = game.Players.TestGuest
+  local QueueLine = require(game.ReplicatedStorage.BentonShared.QueueLine)
+  p.Character:PivotTo(CFrame.new(QueueLine.get("DieselThunder").entrance + Vector3.new(0, 3.5, 0)))
+  _G.__mock.getSignal(workspace.BentonDieselWorld.Rides.DieselThunder.Queue.QueuePoint.JoinPrompt, "Triggered"):Fire(p)
+`);
+step(7);
+check('still in line while standing in the maze', `
+  local p = game.Players.TestGuest
+  return p:GetAttribute("QueueRide") == "DieselThunder", "pos " .. tostring(p:GetAttribute("QueuePos"))
+`);
+lua(`game.Players.TestGuest.Character:PivotTo(CFrame.new(0, 4, 300))`);
+step(2);
+check('walking out of the maze leaves the line', `
+  local p = game.Players.TestGuest
+  local line = game.ReplicatedStorage.BentonState.Rides.DieselThunder:GetAttribute("Line")
+  return p:GetAttribute("QueueRide") == "" and not string.find(line, "p1234", 1, true), "queue " .. tostring(p:GetAttribute("QueueRide"))
+`);
+
+console.log('== shopping and dining');
+lua(`
+  local p = game.Players.TestGuest
+  p.Character:PivotTo(CFrame.new(-30, 4, 170))
+  local action = game.ReplicatedStorage.BentonRemotes.Action
+  action:FireServer({ type = "Buy", venue = "Emporium", item = "GearEars" })
+`);
+step(1);
+lua(`
+  local p = game.Players.TestGuest
+  p.Character:PivotTo(CFrame.new(30, 4, 170))
+  game.ReplicatedStorage.BentonRemotes.Action:FireServer({ type = "Buy", venue = "Bakery", item = "Coffee" })
+`);
+step(1);
+check('hat bought and worn', `
+  local p = game.Players.TestGuest
+  local acc = p.Character:FindFirstChild("GearEars")
+  return acc ~= nil, if acc then "wearing" else "not wearing"
+`);
+check('food in backpack', `
+  local p = game.Players.TestGuest
+  for _, t in p.Backpack:GetChildren() do if t:GetAttribute("ItemId") == "Coffee" then return true, t.Name end end
+  return false, "no coffee"
+`);
+lua(`
+  local p = game.Players.TestGuest
+  local tool
+  for _, t in p.Backpack:GetChildren() do if t:GetAttribute("ItemId") == "Coffee" then tool = t end end
+  p:SetAttribute("Hunger", 50)
+  tool.Parent = p.Character
+  _G.__mock.getSignal(tool, "Activated"):Fire()
+`);
+step(2);
+check('eating restores hunger and boosts speed', `
+  local p = game.Players.TestGuest
+  local hum = p.Character.Humanoid
+  return p:GetAttribute("Hunger") > 50 and hum.WalkSpeed > 18, "hunger " .. p:GetAttribute("Hunger") .. " speed " .. hum.WalkSpeed
+`);
+
+console.log('== shows');
+lua(`
+  local p = game.Players.TestGuest
+  p.Character:PivotTo(CFrame.new(225, 4, 222))
+  game.ServerScriptService.BentonServer:SetAttribute("StartShow", "BigDreams")
+`);
+step(2);
+check('show running', `return game.ReplicatedStorage.BentonState.Shows.BigDreams:GetAttribute("Running") == true, nil`);
+const bucksBeforeShow = lua('return game.Players.TestGuest:GetAttribute("Bucks")')[0];
+step(75);
+// a scheduled performance may follow straight on; wait for the stage to clear
+for (let i = 0; i < 90 && lua('return game.ReplicatedStorage.BentonState.Shows.BigDreams:GetAttribute("Running")')[0]; i++) step(1);
+check('show finished and rewarded', `
+  local p = game.Players.TestGuest
+  local f = game.ReplicatedStorage.BentonState.Shows.BigDreams
+  return f:GetAttribute("Running") == false and p:GetAttribute("Bucks") > ${bucksBeforeShow}, "bucks ${bucksBeforeShow} -> " .. p:GetAttribute("Bucks")
+`);
+for (const id of ['StuntSpectacular', 'BigRigParade', 'BentonNights']) {
+  lua(`game.ServerScriptService.BentonServer:SetAttribute("StartShow", "${id}")`);
+  step(4);
+}
+step(110);
+
+console.log('== a full park day (simulated)');
+t = Date.now();
+step(240, 0.25);
+console.log(`   4 park hours simulated in ${Date.now() - t} ms`);
+check('rides have been running', `
+  local total = 0
+  for _, f in game.ReplicatedStorage.BentonState.Rides:GetChildren() do total += f:GetAttribute("CycleId") end
+  return total > 10, total .. " dispatches"
+`);
+
+if (dump) {
+  // export parts for the 3D preview renderer
+  const json = lua(`
+    local M = _G.__mock
+    local out = {}
+    local S = M.state
+    for _, d in workspace:GetDescendants() do
+      if d:IsA("BasePart") and d.Transparency < 0.95 then
+        local cf = d.CFrame
+        local shape = "block"
+        if d:IsA("WedgePart") then shape = "wedge"
+        elseif d:IsA("Part") then
+          local sh = d.Shape
+          if sh == Enum.PartType.Ball then shape = "ball" elseif sh == Enum.PartType.Cylinder then shape = "cyl" end
+          if d:FindFirstChildOfClass("SpecialMesh") then shape = "ellipsoid" end
+        end
+        local c = d.Color
+        table.insert(out, { shape, d.Size.X, d.Size.Y, d.Size.Z, cf:GetComponents() })
+        local t = out[#out]
+        t[17] = math.floor(c.R * 255) t[18] = math.floor(c.G * 255) t[19] = math.floor(c.B * 255)
+        t[20] = d.Transparency
+        t[21] = d.Material.Name
+      end
+    end
+    return game:GetService("HttpService"):JSONEncode({ parts = out, terrain = #M.terrainOps })
+  `)[0];
+  fs.mkdirSync(path.join(ROOT, 'tools', 'out'), { recursive: true });
+  fs.writeFileSync(path.join(ROOT, 'tools', 'out', 'parts.json'), json);
+  console.log('   wrote tools/out/parts.json');
+}
+
+const errors = rt.logs.filter((l) => l.kind === 'error');
+const warns = rt.logs.filter((l) => l.kind === 'warn');
+const uniq = (arr) => [...new Map(arr.map((l) => [l.msg.split('\n')[0], l])).values()];
+if (warns.length) {
+  console.log(`\n${warns.length} warnings (unique):`);
+  for (const w of uniq(warns).slice(0, 30)) console.log('  ' + w.msg.split('\n')[0]);
+}
+if (errors.length) {
+  console.log(`\n${errors.length} runtime errors (unique):`);
+  for (const e of uniq(errors).slice(0, 20)) console.log('  ' + e.msg.split('\n').slice(0, 6).join('\n    '));
+  failed = true;
+}
+console.log(failed ? '\nRUNTIME TEST FAILED' : '\nRUNTIME TEST PASSED');
+process.exitCode = failed ? 1 : 0;

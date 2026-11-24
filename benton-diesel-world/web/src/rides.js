@@ -1,0 +1,747 @@
+// Ride motion (ported from RideMotion.luau / Track.luau) and the ride
+// visuals: vehicles, moving platforms, and guests riding along.
+import * as THREE from 'three';
+import { buildModel, cfMatrix } from './geom.js';
+import { material } from './render/materials.js';
+
+const TAU = Math.PI * 2;
+
+function smoothstep(x) {
+  x = Math.min(1, Math.max(0, x));
+  return x * x * (3 - 2 * x);
+}
+
+export function rampAngle(t, T, ramp, omega) {
+  if (t <= 0) return 0;
+  const total = omega * (T - ramp);
+  if (t >= T) return total;
+  if (t < ramp) return 0.5 * omega / ramp * t * t;
+  if (t < T - ramp) return 0.5 * omega * ramp + omega * (t - ramp);
+  const r = T - t;
+  return total - 0.5 * omega / ramp * r * r;
+}
+
+const tmpV = new THREE.Vector3();
+const RY = (a) => new THREE.Matrix4().makeRotationY(a);
+const RZ = (a) => new THREE.Matrix4().makeRotationZ(a);
+const TR = (x, y, z) => new THREE.Matrix4().makeTranslation(x, y, z);
+const mul = (...ms) => ms.reduce((acc, m) => acc.multiply(m), new THREE.Matrix4());
+
+export class Sampler {
+  constructor(tr) {
+    this.length = tr.length;
+    this.cum = tr.cum;
+    this.pos = tr.pos;
+    this.tan = tr.tan;
+    this.up = tr.up;
+    this.times = tr.times;
+    this.n = tr.cum.length;
+  }
+  locate(s) {
+    const L = this.length;
+    s = ((s % L) + L) % L;
+    const cum = this.cum;
+    let lo = 0, hi = this.n - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (cum[mid] <= s) lo = mid; else hi = mid;
+    }
+    const seg = cum[hi] - cum[lo];
+    return [lo, seg > 0 ? (s - cum[lo]) / seg : 0];
+  }
+  matrixAt(s, out = new THREE.Matrix4()) {
+    const [i, a] = this.locate(s);
+    const j = i + 1;
+    const p = this.pos, t = this.tan, u = this.up;
+    const pos = new THREE.Vector3(
+      p[i * 3] + (p[j * 3] - p[i * 3]) * a,
+      p[i * 3 + 1] + (p[j * 3 + 1] - p[i * 3 + 1]) * a,
+      p[i * 3 + 2] + (p[j * 3 + 2] - p[i * 3 + 2]) * a,
+    );
+    const tan = new THREE.Vector3(
+      t[i * 3] + (t[j * 3] - t[i * 3]) * a,
+      t[i * 3 + 1] + (t[j * 3 + 1] - t[i * 3 + 1]) * a,
+      t[i * 3 + 2] + (t[j * 3 + 2] - t[i * 3 + 2]) * a,
+    ).normalize();
+    const hint = new THREE.Vector3(
+      u[i * 3] + (u[j * 3] - u[i * 3]) * a,
+      u[i * 3 + 1] + (u[j * 3 + 1] - u[i * 3 + 1]) * a,
+      u[i * 3 + 2] + (u[j * 3 + 2] - u[i * 3 + 2]) * a,
+    );
+    const up = hint.sub(tmpV.copy(tan).multiplyScalar(hint.dot(tan)));
+    if (up.lengthSq() < 1e-6) up.set(0, 1, 0);
+    up.normalize();
+    const right = new THREE.Vector3().crossVectors(tan, up);
+    const back = new THREE.Vector3().crossVectors(right, up);
+    out.makeBasis(right, up, back);
+    out.setPosition(pos);
+    return out;
+  }
+  distanceAt(t) {
+    const times = this.times;
+    if (t <= 0) return 0;
+    if (t >= times[this.n - 1]) return this.length;
+    let lo = 0, hi = this.n - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid] <= t) lo = mid; else hi = mid;
+    }
+    const dt = times[hi] - times[lo];
+    const a = dt > 0 ? (t - times[lo]) / dt : 0;
+    return this.cum[lo] + (this.cum[hi] - this.cum[lo]) * a;
+  }
+}
+
+// A two-link robot arm from the shoulder on a vehicle's chassis to the
+// wrist on the back of its seat: the elbow found by simple two-bone IK,
+// bending up and back. Each link is posed with its +Y along the link.
+const _S = new THREE.Vector3(), _W = new THREE.Vector3(), _E = new THREE.Vector3(), _u = new THREE.Vector3(), _p = new THREE.Vector3();
+const _x = new THREE.Vector3(), _y = new THREE.Vector3(), _z = new THREE.Vector3(), _bx = new THREE.Vector3();
+function linkMatrix(from, to, side) {
+  _y.subVectors(to, from).normalize();
+  _x.copy(side).addScaledVector(_y, -side.dot(_y)).normalize();
+  _z.crossVectors(_x, _y);
+  return new THREE.Matrix4().makeBasis(_x, _y, _z).setPosition(from);
+}
+function armPose(A, base, cab, extras, k) {
+  _S.set(...A.shoulder).applyMatrix4(base);
+  _W.set(...A.wrist).applyMatrix4(cab);
+  const d = Math.min(_S.distanceTo(_W), A.l1 + A.l2 - 0.01);
+  _u.subVectors(_W, _S).normalize();
+  const a = (A.l1 * A.l1 - A.l2 * A.l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, A.l1 * A.l1 - a * a));
+  _p.setFromMatrixColumn(base, 2).multiplyScalar(0.6).add(_bx.set(0, 1, 0));
+  _p.addScaledVector(_u, -_p.dot(_u)).normalize();
+  _E.copy(_S).addScaledVector(_u, a).addScaledVector(_p, h);
+  _bx.setFromMatrixColumn(base, 0);
+  extras[`ArmA${k}`] = linkMatrix(_S, _E, _bx);
+  extras[`ArmB${k}`] = linkMatrix(_E, _W, _bx);
+}
+
+// animated scenery on a ride: pistons, spinners, falling things, lunging
+// creatures, swinging and turning things
+function poseProps(props, t, extras) {
+  for (const p of props || []) {
+    const [x, y, z] = p.at;
+    if (p.kind === 'piston') extras[p.name] = TR(x, y + p.amp * Math.sin(p.freq * t + p.phase), z);
+    else if (p.kind === 'spin') extras[p.name] = TR(x, y, z).multiply(p.axis === 'z' ? RZ(p.speed * t) : new THREE.Matrix4().makeRotationX(p.speed * t));
+    else if (p.kind === 'show') {
+      // there only during its windows of ride time (or only outside them),
+      // rushing in a little way when it appears
+      const w = p.windows.find(([a, b]) => t >= a && t < b);
+      if (p.invert ? w : !w) { extras[p.name] = TR(x, y - 500, z); continue; }
+      const k = w && p.reach ? Math.min(1, (t - w[0]) / (p.rush || 0.5)) : 0;
+      const m = TR(x + (p.dir ? p.dir[0] * p.reach * k : 0), y, z + (p.dir ? p.dir[1] * p.reach * k : 0));
+      extras[p.name] = p.dir ? m.multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))) : m;
+    } else if (p.kind === 'roll') {
+      // a ball rolling along `dir` (spinning as it goes) once the ride time
+      // reaches t0, speeding up until t1, where it stops `reach` along;
+      // back at its start when the ride is resting
+      const k = t < p.t0 ? 0 : t >= p.t1 ? 1 : ((t - p.t0) / (p.t1 - p.t0)) ** 2;
+      const d = p.reach * k;
+      const axis = new THREE.Vector3(p.dir[1], 0, -p.dir[0]).normalize();
+      extras[p.name] = TR(x + p.dir[0] * d, y, z + p.dir[1] * d).multiply(new THREE.Matrix4().makeRotationAxis(axis, -d / p.radius));
+    } else if (p.kind === 'blink') {
+      // on for part of every period (flickering, or chasing in turn), and
+      // only during its windows of ride time when it has some
+      const u = ((t / p.period + p.phase) % 1 + 1) % 1;
+      const on = u < p.duty && (!p.only || p.only.some(([a, b]) => t >= a && t < b));
+      extras[p.name] = TR(x, on ? y : y - 500, z);
+    }
+    else if (p.kind === 'fall') { const u = ((t / p.period + p.phase) % 1 + 1) % 1; extras[p.name] = TR(x, y - p.drop * u * u, z).multiply(RY(u * 3)); }
+    else if (p.kind === 'lunge') { const u = ((t / p.period) % 1 + 1) % 1, k = u < 0.15 ? u / 0.15 : u < 0.4 ? 1 : Math.max(0, 1 - (u - 0.4) / 0.4); extras[p.name] = TR(x + p.dir[0] * p.reach * k, y, z + p.dir[1] * p.reach * k).multiply(RY(Math.atan2(-p.dir[0], -p.dir[1]))); }
+    else if (p.kind === 'swing') extras[p.name] = TR(x, y, z).multiply(p.axis === 'x' ? new THREE.Matrix4().makeRotationX(p.amp * Math.sin(p.freq * t)) : RZ(p.amp * Math.sin(p.freq * t)));
+    else if (p.kind === 'turn') extras[p.name] = TR(x, y, z).multiply(RY(p.speed * t + (p.phase || 0)));
+  }
+}
+
+// A tilt coaster's tilting track: the piece (track from s0 to s1, an extra
+// pivoted at its front end) tips forward on its hinge once the train has
+// stopped on it, holds, and the train drops; it tips back once the train
+// is clear. Returns t -> the piece's world matrix (about the hinge).
+function tiltPiece(T) {
+  const P = new THREE.Vector3(...T.pivot), axis = new THREE.Vector3(...T.axis).normalize();
+  const ease = (u) => smoothstep(u);
+  const angle = (t) => {
+    if (t <= T.t0 || t >= T.t3) return 0;
+    if (t < T.t1) return T.angle * ease((t - T.t0) / (T.t1 - T.t0));
+    if (t < T.t2) return T.angle;
+    return T.angle * (1 - ease((t - T.t2) / (T.t3 - T.t2)));
+  };
+  return (t) => TR(P.x, P.y, P.z).multiply(new THREE.Matrix4().makeRotationAxis(axis, angle(t)));
+}
+
+// Returns pose(t) -> { cars: Matrix4[], extras: {name: Matrix4} }
+// Spin angles for a spinning coaster's cars, integrated once over the ride
+// (so any moment can be looked up): the lateral push in each turn spins a
+// car up, friction slows it, and outside the free section it eases back to
+// facing forward.
+function spinTable(r, sampler) {
+  const DT = 1 / 30, T = r.duration, N = Math.ceil(T / DT) + 2;
+  const { from, to, gain = 0.06, drag = 0.35 } = r.spin;
+  const L = sampler.length;
+  const fwd = new THREE.Vector3(), m4 = new THREE.Matrix4();
+  const heading = (s) => { sampler.matrixAt(s, m4); fwd.setFromMatrixColumn(m4, 2); return Math.atan2(-fwd.x, -fwd.z); };
+  const tables = [];
+  for (let i = 0; i < r.carCount; i++) {
+    const a = new Float32Array(N);
+    const g = gain * (i % 2 ? -1 : 1) * (0.75 + 0.18 * i);
+    let w = 0, ang = 0, free = false;
+    for (let k = 1; k < N; k++) {
+      const t = k * DT;
+      const s = ((sampler.distanceAt(t) - i * r.carSpacing) % L + L) % L;
+      const v = (sampler.distanceAt(t + DT) - sampler.distanceAt(t)) / DT;
+      if (s > from && s < to) {
+        if (!free) { free = true; w += 0.6 * Math.sign(g); }
+        let dh = heading(s + 0.6) - heading(s - 0.6);
+        while (dh > Math.PI) dh -= Math.PI * 2;
+        while (dh < -Math.PI) dh += Math.PI * 2;
+        w += (g * v * v * (dh / 1.2) - drag * w) * DT;
+        w = Math.max(-4, Math.min(4, w));
+        ang += w * DT;
+      } else {
+        free = false;
+        w = 0;
+        const target = Math.round(ang / (Math.PI * 2)) * Math.PI * 2;
+        ang += (target - ang) * Math.min(1, DT * 2.5);
+      }
+      a[k] = ang;
+    }
+    tables.push(a);
+  }
+  return (i, t) => {
+    if (t <= 0 || t >= T) return 0;
+    const f = t / DT, k = Math.floor(f), u = f - k;
+    const a = tables[i];
+    return a[k] + ((a[k + 1] ?? a[k]) - a[k]) * u;
+  };
+}
+
+// The seat angle along the track for a 4th-dimension coaster: anchors of
+// [distance, angle], eased (smootherstep) from one to the next.
+function flipCurve(anchors, L) {
+  const A = [...anchors].sort((a, b) => a[0] - b[0]);
+  return (s) => {
+    s = ((s % L) + L) % L;
+    if (s <= A[0][0]) return A[0][1];
+    for (let k = 0; k < A.length - 1; k++) {
+      const [s0, a0] = A[k], [s1, a1] = A[k + 1];
+      if (s <= s1) { const u = (s - s0) / (s1 - s0 || 1), e = u * u * u * (u * (u * 6 - 15) + 10); return a0 + (a1 - a0) * e; }
+    }
+    return A[A.length - 1][1];
+  };
+}
+
+export function makeMotion(r, cfg) {
+  const origin = cfMatrix(r.origin);
+  const n = r.carCount;
+  // walk-through houses have no vehicles: guests walk them
+  if (r.kind === 'walkthrough') return { duration: r.duration, pose: () => ({ cars: [], extras: {} }) };
+  // a motion-simulator dark ride: each vehicle's chassis follows the floor
+  // track (an extra), and its cabin (the car, with the riders) sits up on
+  // the motion base, turning to face each scene and pitching, rolling and
+  // heaving with the action
+  if (r.kind === 'motionsim') {
+    const sampler = new Sampler(r.track);
+    const M = r.motionsim, L = sampler.length;
+    const inv = new THREE.Matrix4(), v = new THREE.Vector3();
+    const sm = (x) => smoothstep(x);
+    return {
+      duration: r.duration,
+      sampler,
+      pose(t) {
+        const s0 = sampler.distanceAt(t);
+        const cars = [], extras = {};
+        for (let i = 0; i < n; i++) {
+          const base = sampler.matrixAt(s0 - i * r.carSpacing);
+          // a level chassis (it rides elevators upright), facing along the track
+          if (M.level) {
+            v.setFromMatrixColumn(base, 2).setY(0);
+            if (v.lengthSq() > 1e-8) {
+              v.normalize();
+              const [px, py, pz] = [base.elements[12], base.elements[13], base.elements[14]];
+              base.makeBasis(new THREE.Vector3(v.z, 0, -v.x), new THREE.Vector3(0, 1, 0), v.clone()).setPosition(px, py, pz);
+            }
+          }
+          extras[`Base${i + 1}`] = base;
+          const ss = (((s0 - i * r.carSpacing) % L) + L) % L;
+          let yaw = 0, pitch = 0, roll = 0, heave = 0, lift = 0, reach = 0, pitchAbs = 0, rollAbs = 0;
+          if (t > 0) {
+            for (const sc of M.scenes) {
+              const w = sm((ss - sc.s0) / 8) * (1 - sm((ss - sc.s1) / 8));
+              if (w <= 0) continue;
+              const ph = Math.min(1, Math.max(0, (ss - sc.s0) / (sc.s1 - sc.s0)));
+              // a robot arm also lifts the riders up and pushes them in
+              // toward each scene's screen
+              if (M.arm && sc.style !== 'warp' && sc.style !== 'lift') {
+                const bump = sm(ph * 4) * (1 - sm((ph - 0.75) * 4));
+                lift += w * M.arm.lift * bump;
+                if (sc.target) reach += w * M.arm.reach * bump;
+              }
+              if (sc.target) {
+                inv.copy(base).invert();
+                v.set(sc.target[0], base.elements[13], sc.target[1]).applyMatrix4(inv);
+                yaw += w * Math.atan2(-v.x, -v.z);
+              }
+              const k = i * 1.7;
+              switch (sc.style) {
+                case 'launch': pitch += w * (0.16 * sm(ph * 3) * (1 - sm((ph - 0.6) * 4)) + 0.015 * Math.sin(40 * t)); heave += w * 0.05 * Math.sin(30 * t); break;
+                case 'engine': heave += w * 0.09 * Math.sin(18 * t + k); roll += w * 0.035 * Math.sin(23 * t + k); pitch += w * 0.03 * Math.sin(15 * t); break;
+                case 'highway': roll += w * 0.1 * Math.sin(1.6 * t + k); pitch += w * 0.04 * Math.sin(0.9 * t); heave += w * 0.05 * Math.sin(7 * t); break;
+                case 'canyon': pitch += w * 0.08 * Math.sin(3 * t + k); roll += w * 0.11 * Math.sin(2.2 * t + 1 + k); heave -= w * 0.45 * Math.max(0, Math.sin(4.5 * t + k)) ** 4; break;
+                case 'storm': roll += w * 0.15 * Math.sin(1.1 * t + k); pitch += w * 0.06 * Math.sin(2.7 * t); heave += w * 0.1 * Math.sin(9 * t); break;
+                case 'bridge':
+                  pitch += w * (ph < 0.5 ? 0.22 * sm(ph * 2) : 0.22 - 0.48 * sm((ph - 0.5) * 4));
+                  heave += w * (ph > 0.55 ? -0.9 * Math.sin(Math.min(1, (ph - 0.55) * 2.5) * Math.PI) : 0);
+                  break;
+                case 'fire': heave += w * 0.07 * Math.sin(13 * t + k); roll += w * 0.05 * Math.sin(5 * t + k); break;
+                case 'warp': roll += w * 0.22 * Math.sin(ph * Math.PI * 4) * (M.arm ? 0.5 / M.arm.gain : 1); pitch -= w * 0.08; heave += w * 0.04 * Math.sin(25 * t); break;
+                case 'finish': pitch += w * 0.03 * Math.sin(2 * t); break;
+                // the robot arm's big moves: tipped halfway upside down onto
+                // your back, or rolled right over onto your side
+                case 'flip': { const k2 = sm((ph - 0.12) * 4) * (1 - sm((ph - 0.78) * 5)); pitchAbs += w * 1.45 * k2; lift += w * 1.6 * k2; break; }
+                case 'sideways': { const k2 = sm((ph - 0.12) * 4) * (1 - sm((ph - 0.78) * 5)); rollAbs += w * 1.3 * k2 * (i % 2 ? 1 : -1); lift += w * 1.6 * k2; pitch += w * 0.04 * Math.sin(9 * t); break; }
+                case 'lift': heave += w * 0.04 * Math.sin(28 * t + k); break;
+                default: break;
+              }
+            }
+          }
+          const g = M.arm ? M.arm.gain : 1;
+          const cab = base.clone().multiply(TR(0, M.H + heave * g + lift, 0)).multiply(RY(yaw)).multiply(TR(0, 0, -reach)).multiply(new THREE.Matrix4().makeRotationX(pitch * g + pitchAbs)).multiply(RZ(roll * g + rollAbs));
+          cars.push(cab);
+          if (M.arm) armPose(M.arm, base, cab, extras, i + 1);
+        }
+        // animated scenery
+        poseProps(M.props, t, extras);
+        return { cars, extras };
+      },
+    };
+  }
+  if (r.track) {
+    const sampler = new Sampler(r.track);
+    if (r.kind === 'karts') {
+      const T = cfg.duration ?? 34;
+      const L = sampler.length;
+      const amp = [], freq = [], phase = [];
+      let seed = 42;
+      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < n; i++) {
+        amp.push(5 + rnd() * 10);
+        freq.push(1 + Math.floor(rnd() * 3));
+        phase.push(rnd() * TAU);
+      }
+      return {
+        duration: T,
+        sampler,
+        pose(t) {
+          const u = Math.min(1, Math.max(0, t / T));
+          const base = 2 * L * (u - Math.sin(TAU * u) / TAU);
+          const env = Math.sin(Math.PI * u) ** 2;
+          const cars = [];
+          for (let i = 0; i < n; i++) {
+            const s = -i * r.carSpacing + base + amp[i] * env * Math.sin(TAU * freq[i] * u + phase[i]) - amp[i] * env * Math.sin(phase[i]);
+            const lane = ((i + 1) % 2 === 0 ? 3 : -3) + 1.2 * env * Math.sin(TAU * 3 * u + i + 1);
+            cars.push(sampler.matrixAt(s).multiply(TR(lane, 0, 0)));
+          }
+          return { cars, extras: {} };
+        },
+      };
+    }
+    // a spinning coaster: each car turns freely on its chassis, pushed round
+    // by the turns (each car a little differently) and slowing on its own;
+    // locked facing forward in the station and up the lift
+    const spin = r.spin ? spinTable(r, sampler) : null;
+    // a 4th-dimension coaster: the seats turn head over heels about the
+    // car's axle, set by where the car is on the track (like the real
+    // ones' second pair of rails)
+    const flip = r.flip ? flipCurve(r.flip, sampler.length) : null;
+    // a tilt coaster: the cars on the tilting piece tip with it
+    const tilt = r.tilt ? tiltPiece(r.tilt) : null;
+    // distance along the track at time t, sampled every dt (it can go back)
+    const prof = r.profile ? (t) => {
+      const P = r.profile, n = P.s.length;
+      const x = Math.max(0, Math.min(n - 1, t / P.dt)), i = Math.min(n - 2, Math.floor(x)), a = x - i;
+      return P.s[i] + (P.s[i + 1] - P.s[i]) * a;
+    } : null;
+    const Pt = r.tilt ? new THREE.Matrix4().makeTranslation(-r.tilt.pivot[0], -r.tilt.pivot[1], -r.tilt.pivot[2]) : null;
+    return {
+      duration: r.duration,
+      sampler,
+      pose(t) {
+        // (a ride that rolls backward and forward has its own distance-time profile)
+        const s = prof ? prof(t) : sampler.distanceAt(t);
+        const cars = [], extras = {};
+        let Mt = null;
+        if (tilt) {
+          const piece = tilt(t);
+          extras[r.tilt.name] = piece;
+          Mt = piece.clone().multiply(Pt);
+        }
+        for (let i = 0; i < n; i++) {
+          const si = s - i * r.carSpacing;
+          const m = sampler.matrixAt(si);
+          if (spin) m.multiply(RY(spin(i, t)));
+          else if (flip) m.multiply(new THREE.Matrix4().makeRotationX(flip(si)));
+          // a raft on the water: bobbing, rocking a little
+          if (r.bob) m.multiply(TR(0, r.bob * Math.sin(1.7 * t + i * 1.3), 0)).multiply(RZ(r.bob * 0.12 * Math.sin(1.1 * t + i))).multiply(new THREE.Matrix4().makeRotationX(r.bob * 0.1 * Math.sin(1.4 * t + i * 2)));
+          if (Mt && si >= r.tilt.s0 && si <= r.tilt.s1) m.premultiply(Mt);
+          cars.push(m);
+        }
+        poseProps(r.props, t, extras);
+        return { cars, extras };
+      },
+    };
+  }
+  if (r.kind === 'droptower') {
+    const T = r.duration, H = 150, g = 45, fallTo = 60;
+    const tFall = Math.sqrt(2 * (H - fallTo) / g);
+    const vFall = g * tFall;
+    const decel = vFall * vFall / (2 * (fallTo - 3));
+    const tBrake = vFall / decel;
+    const tTop = 30, tHold = 34, tLand = tHold + tFall + tBrake;
+    const height = (t) => {
+      if (t < 3) return 0;
+      if (t < tTop) return H * smoothstep((t - 3) / (tTop - 3));
+      if (t < tHold) return H;
+      if (t < tHold + tFall) { const k = t - tHold; return H - 0.5 * g * k * k; }
+      if (t < tLand) { const k = t - tHold - tFall; return fallTo - (vFall * k - 0.5 * decel * k * k); }
+      if (t < tLand + 3) return 3 * (1 - smoothstep((t - tLand) / 3));
+      return 0;
+    };
+    return {
+      duration: T,
+      pose(t) {
+        const rot = TAU * smoothstep((t - 3) / (tTop - 3));
+        return { cars: [mul(origin.clone(), TR(0, 4 + height(t), 0), RY(rot))], extras: {} };
+      },
+    };
+  }
+  // a wave swinger: chairs hung on chains from a canopy that spins up,
+  // rises up the tower and tilts like a wave; the chairs swing out with
+  // the speed
+  if (r.kind === 'swinger') {
+    const T = r.duration, ramp = 9, w = TAU * 10 / (T - ramp);
+    const S = r.swing || {}, R = S.radius ?? 9, Lc = S.chain ?? 6, H0 = S.low ?? 7, H1 = S.high ?? 15;
+    const sm = (x) => smoothstep(x);
+    return {
+      duration: T,
+      pose(t) {
+        const th = rampAngle(t, T, ramp, w);
+        const spd = (rampAngle(t + 0.05, T, ramp, w) - rampAngle(t - 0.05, T, ramp, w)) / 0.1;
+        const up = t <= 0 ? 0 : sm((t - 4) / 10) * (1 - sm((t - (T - 14)) / 10));
+        const canopy = mul(origin.clone(), TR(0, H0 + (H1 - H0) * up, 0), RY(0.5 * t), new THREE.Matrix4().makeRotationX(0.2 * up), RY(-0.5 * t), RY(th));
+        const swing = Math.min(0.95, Math.atan((spd * spd * R) / 9.8));
+        const cars = [];
+        for (let i = 0; i < n; i++) cars.push(mul(canopy.clone(), RY((TAU * i) / n), TR(R, 0, 0), RZ(swing), TR(0, -Lc, 0)));
+        return { cars, extras: { Canopy: canopy } };
+      },
+    };
+  }
+  if (r.kind === 'carousel') {
+    const T = r.duration, ramp = 6, omega = TAU * 3 / (T - ramp);
+    return {
+      duration: T,
+      pose(t) {
+        const th = rampAngle(t, T, ramp, omega);
+        const cars = [];
+        for (let i = 1; i <= n; i++) {
+          const phi = TAU * (i - 1) / n;
+          const bob = 1.1 * Math.sin(3 * th + i * 1.7);
+          const rad = i % 2 === 0 ? 10 : 14;
+          cars.push(mul(origin.clone(), RY(th + phi), TR(rad, 4.6 + bob, 0)));
+        }
+        return { cars, extras: { Platform: mul(origin.clone(), RY(th)) } };
+      },
+    };
+  }
+  if (r.kind === 'spinner') {
+    const T = r.duration, ramp = 5, wP = TAU * 2 / (T - ramp), wC = TAU * 9 / (T - ramp);
+    return {
+      duration: T,
+      pose(t) {
+        const th = rampAngle(t, T, ramp, wP);
+        const spin = rampAngle(t, T, ramp, wC);
+        const cars = [];
+        for (let i = 1; i <= n; i++) {
+          const phi = TAU * (i - 1) / n;
+          const dir = i % 2 === 0 ? 1 : -1;
+          cars.push(mul(origin.clone(), RY(th + phi), TR(11, 2, 0), RY(spin * dir)));
+        }
+        return { cars, extras: { Platform: mul(origin.clone(), RY(th)) } };
+      },
+    };
+  }
+  // pendulum
+  const T = r.duration, period = 6.4, maxA = 115 * Math.PI / 180;
+  const pivot = mul(origin.clone(), TR(0, 34, 0));
+  const spinOmega = TAU * 3 / (T - 2 - 6);
+  return {
+    duration: T,
+    pose(t) {
+      let env;
+      if (t < 2) env = 0;
+      else if (t < 20) env = (t - 2) / 18;
+      else if (t < 34) env = 1;
+      else if (t < 44) env = 1 - (t - 34) / 10;
+      else env = 0;
+      const phi = maxA * env * Math.sin(TAU * Math.max(t - 2, 0) / period);
+      const spin = rampAngle(t - 2, T - 2, 6, spinOmega);
+      const arm = mul(pivot.clone(), RZ(phi));
+      return { cars: [mul(arm.clone(), TR(0, -28, 0), RY(spin))], extras: { Arm: arm } };
+    },
+  };
+}
+
+// ------------------------------------------------------------ restraints
+// Lap bars hinge at the floor in front of the seat; shoulder harnesses
+// hinge above the seat back. Angle 0 = closed over the rider.
+export const RESTRAINT = {
+  lapbar: { hinge: [0, -2.1, -1.5], open: -0.95 },
+  harness: { hinge: [0, 1.25, 0.6], open: 1.9 },
+};
+
+function colored(g, rgb) {
+  const n = g.getAttribute('position').count;
+  const c = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) c.set(rgb, i * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g.index ? g.toNonIndexed() : g;
+}
+
+function joinGeos(list) {
+  const out = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'uv', 'color']) {
+    const arrays = list.map((g) => g.getAttribute(name).array);
+    const total = arrays.reduce((n, a) => n + a.length, 0);
+    const buf = new Float32Array(total);
+    let o = 0;
+    for (const a of arrays) { buf.set(a, o); o += a.length; }
+    out.setAttribute(name, new THREE.BufferAttribute(buf, name === 'uv' ? 2 : 3));
+  }
+  out.computeBoundingSphere();
+  return out;
+}
+
+// a tube from a to b (hinge-local)
+function rod(a, b, r, rgb) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const len = A.distanceTo(B);
+  const g = new THREE.CylinderGeometry(r, r, len, 8);
+  g.translate(0, len / 2, 0);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()));
+  g.translate(A.x, A.y, A.z);
+  return colored(g, rgb);
+}
+
+const restraintGeos = {};
+export function restraintGeometry(kind) {
+  if (restraintGeos[kind]) return restraintGeos[kind];
+  const steel = [0.72, 0.74, 0.78], pad = [0.05, 0.05, 0.06], yellow = [0.95, 0.72, 0.1];
+  let parts;
+  if (kind === 'lapbar') {
+    // two arms up from the floor hinge to a padded bar across the lap
+    const top = [0, 1.48, 0.88];
+    const padG = new THREE.CylinderGeometry(0.17, 0.17, 1.55, 12);
+    padG.rotateZ(Math.PI / 2);
+    padG.translate(...top);
+    parts = [
+      rod([-0.72, 0, 0], [-0.72, top[1], top[2]], 0.075, steel),
+      rod([0.72, 0, 0], [0.72, top[1], top[2]], 0.075, steel),
+      rod([-0.72, 0, 0], [0.72, 0, 0], 0.09, steel),
+      colored(padG, pad),
+    ];
+  } else {
+    // two padded shoulder bars down to a chest plate, on a yellow yoke
+    const mid = [0, -0.5, -0.5], low = [0, -1.6, -0.97];
+    parts = [];
+    for (const x of [-0.32, 0.32]) {
+      parts.push(rod([x, 0, 0], [x, mid[1], mid[2]], 0.13, pad));
+      parts.push(rod([x, mid[1], mid[2]], [x, low[1], low[2]], 0.13, pad));
+    }
+    parts.push(rod([-0.55, 0.05, 0.05], [0.55, 0.05, 0.05], 0.12, yellow));
+    const plate = new THREE.BoxGeometry(0.95, 0.55, 0.26);
+    plate.rotateX(0.35);
+    plate.translate(0, low[1] + 0.05, low[2] - 0.02);
+    parts.push(colored(plate, pad));
+  }
+  restraintGeos[kind] = joinGeos(parts);
+  return restraintGeos[kind];
+}
+
+// --------------------------------------------------------------- visuals
+export class RideVisuals {
+  constructor(scene, data, guestFactory) {
+    this.scene = scene;
+    this.data = data;
+    this.guestFactory = guestFactory;
+    this.rides = new Map();
+    for (const r of data.rides) {
+      const cfg = data.config.Rides.find((c) => c.id === r.id);
+      const motion = makeMotion(r, cfg);
+      const cars = r.cars.map((car) => {
+        const g = new THREE.Group();
+        g.matrixAutoUpdate = false;
+        g.add(buildModel(car.parts, data.materials, { detail: false }));
+        g.matrix.copy(cfMatrix(car.pivot));
+        scene.add(g);
+        return g;
+      });
+      const extras = {};
+      for (const [name, ex] of Object.entries(r.extras)) {
+        const g = new THREE.Group();
+        g.matrixAutoUpdate = false;
+        g.add(buildModel(ex.parts, data.materials, { detail: false }));
+        g.matrix.copy(cfMatrix(ex.pivot));
+        scene.add(g);
+        extras[name] = g;
+      }
+      const seats = r.seats.map((list) => list.map((c) => cfMatrix(c)));
+      // lap bars / harnesses on every seat, starting open
+      const kind = r.crew?.restraint;
+      const restraints = [];
+      if (RESTRAINT[kind]) {
+        const spec = RESTRAINT[kind];
+        const geo = restraintGeometry(kind);
+        const mat = material('metal');
+        seats.forEach((list, ci) => {
+          restraints[ci] = list.map((seat) => {
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.matrixAutoUpdate = false;
+            mesh.castShadow = true;
+            const base = seat.clone().multiply(new THREE.Matrix4().makeTranslation(...spec.hinge));
+            cars[ci].add(mesh);
+            const b = { mesh, base, angle: spec.open, target: spec.open, open: spec.open, closed: false };
+            this.poseRestraint(b);
+            return b;
+          });
+        });
+      }
+      this.rides.set(r.id, { r, cfg, motion, cars, extras, seats, restraints, restraint: kind || 'none', guests: [], ridersKey: '', lastT: -1, poses: null });
+    }
+  }
+
+  get(id) {
+    return this.rides.get(id);
+  }
+
+  // riders: [{ car, seat, npc: seed } | { car, seat, player: true }]
+  setRiders(id, riders) {
+    const v = this.rides.get(id);
+    const key = riders.map((x) => `${x.car}:${x.seat}:${x.npc ?? 'p'}`).join(',');
+    if (key === v.ridersKey) return;
+    v.ridersKey = key;
+    for (const g of v.guests) g.parent?.remove(g);
+    v.guests = [];
+    const thrill = v.cfg.thrill >= 4;
+    for (const x of riders) {
+      if (x.player) continue;
+      const seat = v.seats[x.car - 1]?.[x.seat - 1];
+      const car = v.cars[x.car - 1];
+      if (!seat || !car) continue;
+      // (a stand-up coaster's riders stand, hips at the seat point)
+      const g = v.r.standing ? this.guestFactory(x.npc, thrill && x.npc % 2 === 0 ? 'cheer' : 'stand') : this.guestFactory(x.npc, thrill && x.npc % 2 === 0 ? 'sitcheer' : 'sit');
+      g.matrixAutoUpdate = false;
+      g.matrix.copy(seat);
+      car.add(g);
+      v.guests.push(g);
+    }
+  }
+
+  // Riders far from the camera are too small to see: hide them (each is its
+  // own draw), and only those near enough cast shadows. Cars far across the
+  // park (specks in the haze) are hidden too.
+  cullRiders(cam, hide = 320, shadow = 140, carHide = 700) {
+    for (const v of this.rides.values()) {
+      for (const car of v.cars) {
+        const e = car.matrix.elements;
+        car.visible = (e[12] - cam.x) ** 2 + (e[14] - cam.z) ** 2 < carHide * carHide;
+      }
+      for (const g of v.guests) {
+        const e = g.parent?.matrix.elements;
+        if (!e) continue;
+        const d2 = (e[12] - cam.x) ** 2 + (e[13] - cam.y) ** 2 + (e[14] - cam.z) ** 2;
+        g.visible = d2 < hide * hide;
+        const m = g.children[0];
+        if (m) m.castShadow = d2 < shadow * shadow;
+      }
+    }
+  }
+
+  // Pose a ride at time t (0 = resting in the station).
+  pose(id, t, far) {
+    const v = this.rides.get(id);
+    if (t === 0 && v.lastT === 0) return v.poses;
+    if (far && t !== 0 && (this.frame % 3) !== 0 && v.poses) return v.poses;
+    const p = v.motion.pose(t);
+    p.cars.forEach((m, i) => {
+      const car = v.cars[i];
+      if (car) {
+        car.matrix.copy(m);
+        car.matrixWorldNeedsUpdate = true;
+      }
+    });
+    for (const [name, m] of Object.entries(p.extras)) {
+      const g = v.extras[name];
+      if (g) {
+        g.matrix.copy(m);
+        g.matrixWorldNeedsUpdate = true;
+      }
+    }
+    v.lastT = t;
+    v.poses = p;
+    return p;
+  }
+
+  poseRestraint(b) {
+    b.mesh.matrix.copy(b.base).multiply(new THREE.Matrix4().makeRotationX(b.angle));
+    b.mesh.matrixWorldNeedsUpdate = true;
+  }
+
+  // close (true) or open (false) one seat's restraint; returns whether it changed
+  setRestraint(id, car, seat, closed) {
+    const b = this.rides.get(id)?.restraints[car - 1]?.[seat - 1];
+    if (!b || b.closed === closed) return false;
+    b.closed = closed;
+    b.target = closed ? 0 : b.open;
+    return true;
+  }
+
+  restraintClosed(id, car, seat) {
+    const b = this.rides.get(id)?.restraints[car - 1]?.[seat - 1];
+    return b ? b.closed : true;
+  }
+
+  // set every restraint on a ride at once (snap: no animation)
+  setAllRestraints(id, closed, snap = false) {
+    const v = this.rides.get(id);
+    for (const list of v.restraints) {
+      for (const b of list || []) {
+        b.closed = closed;
+        b.target = closed ? 0 : b.open;
+        if (snap) { b.angle = b.target; this.poseRestraint(b); }
+      }
+    }
+  }
+
+  // swing restraints toward their targets
+  animateRestraints(dt) {
+    for (const v of this.rides.values()) {
+      for (const list of v.restraints) {
+        for (const b of list || []) {
+          if (b.angle === b.target) continue;
+          const step = dt * 3.2;
+          const d = b.target - b.angle;
+          b.angle = Math.abs(d) <= step ? b.target : b.angle + Math.sign(d) * step;
+          this.poseRestraint(b);
+        }
+      }
+    }
+  }
+
+  seatMatrix(id, car, seat) {
+    const v = this.rides.get(id);
+    const carM = v.cars[car - 1]?.matrix;
+    const s = v.seats[car - 1]?.[seat - 1];
+    if (!carM || !s) return null;
+    return carM.clone().multiply(s);
+  }
+}
