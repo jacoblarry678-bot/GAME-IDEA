@@ -465,7 +465,7 @@ export class GameAudio {
 
   setLand(id) {
     // (the Lower Lot's lands borrow the music of lands upstairs)
-    id = { NeonDistrict: 'Velocity', LostLagoon: 'Family', FrostbiteBase: 'Backwoods' }[id] || id;
+    id = { NeonDistrict: 'Velocity', LostLagoon: 'Family', FrostbiteBase: 'Backwoods', KingdomGate: 'Plaza', SavannaReach: 'Backwoods', RainforestHollow: 'Family', PrimevalValley: 'Studios' }[id] || id;
     if (!this.started || id === this.land || !this.themes.has(id)) return;
     const t = this.E.now;
     const old = this.themes.get(this.land);

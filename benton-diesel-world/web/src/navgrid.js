@@ -14,7 +14,7 @@ const PATH_MATS = new Set(['Pavement', 'Concrete', 'Asphalt', 'Cobblestone', 'Br
 const COST = { path: 1, lawn: 3, queue: 7 };
 
 export class NavGrid {
-  constructor(data, terrain, { x0 = -840, x1 = 1275, z0 = -1012, z1 = 850, extra = [] } = {}) {
+  constructor(data, terrain, { x0 = -840, x1 = 1275, z0 = -1012, z1 = 1345, extra = [] } = {}) {
     this.x0 = x0; this.z0 = z0;
     this.nx = Math.ceil((x1 - x0) / CELL);
     this.nz = Math.ceil((z1 - z0) / CELL);
@@ -46,7 +46,7 @@ export class NavGrid {
       const h = [0, 1, 2].filter((a) => a !== up);
       const u = [axes[h[0]][0], axes[h[0]][2]], v = [axes[h[1]][0], axes[h[1]][2]];
       const hu = half[h[0]], hv = half[h[1]];
-      parts.push({ n, p, top: p[5] + half[up], bottom: p[5] - half[up], u, v, hu, hv, area: hu * hv * 4, collide: p[19] === 1 && !hidden.has(n) ? 1 : p[19] === 1 ? 2 : 0, path: PATH_MATS.has(mats[p[17]]) });
+      parts.push({ n, p, top: p[5] + half[up], bottom: p[5] - half[up], u, v, hu, hv, area: hu * hv * 4, collide: p[19] === 1 ? 1 : 0, path: PATH_MATS.has(mats[p[17]]) });
     }
     const cells = (q, pad, fn) => {
       const p = q.p;
@@ -322,8 +322,7 @@ export class NavGrid {
 
   // the way from one point to another, as points to walk through (cached)
   // (with compute false, only a way already found: undefined means "ask again later")
-  route(from, to, compute = true) {
-    const group = this.gateGroup ?? -1;
+  route(from, to, compute = true, group = this.gateGroup ?? -1) {
     const a = this.nearest(from.x, from.y, from.z, 15, group), b = this.nearest(to.x, to.y, to.z, 15, group);
     if (a < 0 || b < 0) return null;
     const key = a * this.N + b;

@@ -148,7 +148,7 @@ export class Terrain {
   buildMesh(quality) {
     const step = quality.name === 'low' ? 8 : quality.name === 'ultra' ? 4 : 5;
     const xs = Terrain.axis(-830, 1260, 0, step); // (the park runs further west now: the Blitz canyon; east to the far Velocity rides)
-    const zs = Terrain.axis(-1020, 640, 0, step); // (and south: the Lower Lot)
+    const zs = Terrain.axis(-1020, 1340, 0, step); // (and south: the Lower Lot; north over the parkway to Natural Kingdom)
     const nx = xs.length, nz = zs.length;
     const pos = new Float32Array(nx * nz * 3);
     const uv = new Float32Array(nx * nz * 2);

@@ -483,9 +483,9 @@ export function buildLowerLot(data) {
 }
 
 // the new venues' items: recolored copies of items the park already has
-function addItems(data) {
+export function addItems(data, list = NEW_ITEMS) {
   const cfgItems = data.config.Items;
-  for (const m of NEW_ITEMS) {
+  for (const m of list) {
     const base = cfgItems.find((i) => i.id === m.base);
     const model = data.items.find((i) => i.id === m.base);
     if (!base || !model || cfgItems.some((i) => i.id === m.id)) continue;

@@ -10,9 +10,8 @@ import * as THREE from 'three';
 import * as Clock from './clock.js';
 import { HOURS, phaseAt } from './parkhours.js';
 
-export const GATE = { x0: -26, x1: 26, z: 281.5 }; // the front gate, between the ticket towers
+export const GATE = { id: 'main', x0: -26, x1: 26, z: 281.5, outside: 1, out: [0, 3, 300], forecourt: [-160, 281, 160, 380] }; // the front gate, between the ticket towers
 export const CAST_DOOR = { x: -62, y: 0.42, z: 275 }; // the cast members' door, in the front wall west of the gate
-const OUTSIDE = new THREE.Vector3(0, 3, 300); // where security leaves you
 const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) / 4294967296; };
 
 function labelTexture(lines, bg, fg, w = 256, h = 128) {
@@ -51,7 +50,10 @@ export function buildCastDoor(data, helpers) {
 }
 
 export class ParkDay {
-  constructor({ scene, data, sim, nav, player, hooks }) {
+  // gates: each park's ({ x0, x1, z, outside: +1/-1 the side that's out, out: where security leaves you, forecourt, area })
+  constructor({ scene, data, sim, nav, player, hooks, gates = [GATE] }) {
+    this.gates = gates.map((g) => ({ ...g, closed: false }));
+    player.gates = this.gates;
     this.scene = scene;
     this.data = data;
     this.sim = sim;
@@ -104,19 +106,25 @@ export class ParkDay {
         x: v.position[0] + f[0] * ((Math.abs(f[0]) ? w : d) / 2 + 0.35), z: v.position[2] + f[1] * ((Math.abs(f[0]) ? w : d) / 2 + 0.35), y: (v.position[1] || 0) + 0.3,
       };
     });
-    // the front gate, rolled shut: four panels between the ticket towers, a sign
-    this.gate = new THREE.Group();
+    // each gate, rolled shut: panels across the way in, a sign
     const panelMat = new THREE.MeshStandardMaterial({ map: stripesTexture(), metalness: 0.5, roughness: 0.5 });
-    for (let k = 0; k < 4; k++) {
-      const p = new THREE.Mesh(new THREE.BoxGeometry(12.8, 9, 0.3), panelMat);
-      p.position.set(GATE.x0 + 6.5 + k * 13, 4.9, GATE.z + 1.2);
-      p.material.map.repeat.set(1, 6);
-      this.gate.add(p);
+    panelMat.map.repeat.set(1, 6);
+    const gateSignMat = new THREE.MeshBasicMaterial({ map: labelTexture([['PARK CLOSED', 58], ['EARLY ENTRY 8:00 AM  ·  OPEN 9 AM - 10 PM', 24]], '#16223a', '#f0c440', 512, 128), side: THREE.DoubleSide });
+    for (const g of this.gates) {
+      g.group = new THREE.Group();
+      const n = Math.max(1, Math.round((g.x1 - g.x0) / 13)), w = (g.x1 - g.x0) / n;
+      for (let k = 0; k < n; k++) {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(w - 0.2, 9, 0.3), panelMat);
+        p.position.set(g.x0 + w * (k + 0.5), 4.9, g.z + g.outside * 1.2);
+        g.group.add(p);
+      }
+      const gs = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), gateSignMat);
+      gs.position.set((g.x0 + g.x1) / 2, 7.5, g.z + g.outside * 1.5);
+      if (g.outside < 0) gs.rotation.y = Math.PI;
+      g.group.add(gs);
+      this.scene.add(g.group);
     }
-    const gs = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), new THREE.MeshBasicMaterial({ map: labelTexture([['PARK CLOSED', 58], ['EARLY ENTRY 8:00 AM  ·  OPEN 9 AM - 10 PM', 24]], '#16223a', '#f0c440', 512, 128) }));
-    gs.position.set(0, 7.5, GATE.z + 1.5);
-    this.gate.add(gs);
-    this.scene.add(this.gate);
+    this.gate = this.gates[0].group;
   }
 
   setChain(i, on) {
@@ -197,7 +205,7 @@ export class ParkDay {
   // ------------------------------------------------------------- the player
   // inside the park: past the front gate, or anywhere in its lands
   inPark(p) {
-    if (Math.abs(p.x) < 160 && p.z > GATE.z - 0.5 && p.z < 380) return false; // (the forecourt, security and the lot)
+    for (const g of this.gates) { const [a, b, c, d] = g.forecourt; if (p.x > a && p.x < c && p.z > b && p.z < d) return false; } // (each gate's forecourt, and the main lot)
     const k = this.nav?.idx(p.x, p.z) ?? -1;
     return k >= 0 && this.nav.inside[k] === 1;
   }
@@ -206,9 +214,12 @@ export class ParkDay {
     this.fade.style.opacity = '1';
     setTimeout(() => {
       this.sim.leave(true);
-      this.player.pos.copy(OUTSIDE);
+      // (out through the gate of the park you're in)
+      const p = this.player.pos;
+      const g = this.gates.find((x) => x.area && p.x > x.area[0] && p.x < x.area[2] && p.z > x.area[1] && p.z < x.area[3]) || this.gates[0];
+      this.player.pos.set(...g.out);
       this.player.vel?.set(0, 0, 0);
-      this.player.camYaw = 0;
+      this.player.camYaw = g.outside > 0 ? 0 : Math.PI;
       this.player.snapCamera();
       this.fade.style.opacity = '0';
       this.hooks.toast('Security walked you out to the front gate. The park is closed - early entry opens at 8:00 AM. See you then!', 'info');
@@ -249,11 +260,11 @@ export class ParkDay {
     }
     // the gate: shut overnight (and before early entry), open from 8:00 until security clears the park
     const gateShut = ph === 'night' || ph === 'setup' || (ph === 'closing' && m >= HOURS.ESCORT);
-    this.gate.visible = gateShut;
-    this.player.gateClosed = gateShut;
-    // (walk up to it while it's shut and you're told when it opens)
+    for (const g of this.gates) { g.group.visible = gateShut; g.closed = gateShut; }
+    // (walk up to one while it's shut and you're told when it opens)
     const pp = this.player.pos;
-    if (started && gateShut && Math.abs(pp.x) < 27 && pp.z > GATE.z - 0.5 && pp.z < GATE.z + 5 && now >= (this.gateToast ?? 0)) {
+    const atGate = this.gates.some((g) => pp.x > g.x0 - 1 && pp.x < g.x1 + 1 && (pp.z - g.z) * g.outside > -0.5 && (pp.z - g.z) * g.outside < 5);
+    if (started && gateShut && atGate && now >= (this.gateToast ?? 0)) {
       this.gateToast = now + 30;
       this.hooks.toast(ph === 'setup' ? 'The front gate opens for early entry at 8:00 AM - the cast are getting the park ready.' : ph === 'closing' ? 'The park is closed for the night. See you tomorrow - early entry opens at 8:00 AM!' : 'The park is closed. Early entry opens at 8:00 AM (or use ⏩ Skip to morning by the clock).', 'info');
     }

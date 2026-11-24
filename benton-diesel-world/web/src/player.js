@@ -302,11 +302,14 @@ export class Player {
       }
       // on an escalator: carried along it, held on its steps
       this.onEscalator(dt);
-      // the front gate, rolled shut while the park's closed: no walking in
-      if (this.gateClosed && Math.abs(this.pos.x) < 27 && zBefore >= 281.5 && this.pos.z < 281.5) { this.pos.z = 281.5; this.vel.z = Math.max(0, this.vel.z); }
+      // the parks' gates, rolled shut while they're closed: no walking in
+      for (const g of this.gates || []) {
+        if (!g.closed || this.pos.x < g.x0 - 1 || this.pos.x > g.x1 + 1) continue;
+        if (Math.sign(zBefore - g.z) === g.outside && Math.sign(this.pos.z - g.z) !== g.outside) { this.pos.z = g.z + g.outside * 0.01; this.vel.z = 0; }
+      }
       // keep inside the world (which runs further south over the Lower Lot)
       this.pos.x = THREE.MathUtils.clamp(this.pos.x, -800, 1250);
-      this.pos.z = THREE.MathUtils.clamp(this.pos.z, this.pos.x > 378 && this.pos.x < 1228 ? -998 : -720, 830);
+      this.pos.z = THREE.MathUtils.clamp(this.pos.z, this.pos.x > 378 && this.pos.x < 1228 ? -998 : -720, this.pos.x > -130 && this.pos.x < 830 ? 1320 : 830); // (Natural Kingdom, over the parkway)
       this.holder.position.copy(this.pos);
       this.holder.rotation.set(0, this.yaw, 0);
       this.figure.update(dt, { speed: Math.hypot(this.vel.x, this.vel.z), onGround: this.onGround, vy: this.vel.y, holding: !!this.wear.held });
@@ -348,7 +351,7 @@ export class Player {
     if (v.lengthSq() > 1) v.normalize();
     fc.pos.addScaledVector(v, fc.speed * fast * dt);
     fc.pos.x = THREE.MathUtils.clamp(fc.pos.x, -1000, 1450);
-    fc.pos.z = THREE.MathUtils.clamp(fc.pos.z, -1020, 1000); // (south to the Lower Lot's cliffs)
+    fc.pos.z = THREE.MathUtils.clamp(fc.pos.z, -1020, 1400); // (south to the Lower Lot's cliffs, north past Natural Kingdom)
     const ground = this.collision.groundHeight(fc.pos.x, fc.pos.z);
     fc.pos.y = THREE.MathUtils.clamp(fc.pos.y, (Number.isFinite(ground) ? ground : 0) + 0.8, 600);
     this.figure.root.visible = true;

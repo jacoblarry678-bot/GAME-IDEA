@@ -522,10 +522,20 @@ export class StaffSystem {
   // ---------------------------------------------------------- shifts
   // a cast member on their way in (from the cast door to their post) or out
   // - walked only where you might see it; elsewhere they're simply there
+  // the cast door nearest a post (each park has its own), and its part of the walking map
+  doorFor(pos) {
+    const doors = this.day.doors;
+    let best = doors[0];
+    for (const d of doors) if (d.distanceToSquared(pos) < best.distanceToSquared(pos)) best = d;
+    return best;
+  }
+
   commute(seed, from, to, done, delay = 0) {
     const far = (v) => v.distanceToSquared(this.cam) > 300 * 300;
     if (!this.day?.nav || (far(from) && far(to))) { done?.(); return; }
-    this.commuters.push({ seed, from: from.clone(), to: to.clone(), done, delay, person: null });
+    const nav = this.day.nav, door = this.day.doors.includes(to) ? to : from; // (walking out to it, or in from it)
+    const group = nav.comp[nav.nearest(door.x, door.y, door.z, 15)] ?? -1;
+    this.commuters.push({ seed, from: from.clone(), to: to.clone(), done, delay, person: null, group });
   }
 
   spotShift(p, on) {
@@ -533,8 +543,9 @@ export class StaffSystem {
     p.duty = on;
     if (first) { p.here = on; return; }
     p.here = false;
-    if (on) this.commute(p.seed, this.day.door, p.home.pos, () => { p.here = true; p.pos.copy(p.home.pos); p.yaw = p.home.yaw; p.setupFor = 6 + Math.random() * 8; });
-    else this.commute(p.seed, p.home.pos, this.day.door, null);
+    const door = this.doorFor(p.home.pos);
+    if (on) this.commute(p.seed, door, p.home.pos, () => { p.here = true; p.pos.copy(p.home.pos); p.yaw = p.home.yaw; p.setupFor = 6 + Math.random() * 8; });
+    else this.commute(p.seed, p.home.pos, door, null);
   }
 
   crewShift(crew, on) {
@@ -546,8 +557,9 @@ export class StaffSystem {
     let left = members.length;
     members.forEach((a, k) => {
       const post = a === crew.operator ? a.pos : a.home.pos;
-      if (on) this.commute(a.seed, this.day.door, post, () => { if (--left === 0) crew.here = true; }, k * 1.4);
-      else this.commute(a.seed, post, this.day.door, null, k * 1.4);
+      const door = this.doorFor(post);
+      if (on) this.commute(a.seed, door, post, () => { if (--left === 0) crew.here = true; }, k * 1.4);
+      else this.commute(a.seed, post, door, null, k * 1.4);
     });
   }
 
@@ -556,11 +568,11 @@ export class StaffSystem {
       const c = this.commuters[i];
       if (c.delay > 0) { c.delay -= dt; continue; }
       if (!c.person) {
-        let path = this.day.nav.route(c.from, c.to, false);
+        let path = this.day.nav.route(c.from, c.to, false, c.group);
         if (path === undefined) {
           if (this.routeBudget <= 0) continue;
           this.routeBudget--;
-          path = this.day.nav.route(c.from, c.to);
+          path = this.day.nav.route(c.from, c.to, true, c.group);
         }
         if (!path) { c.done?.(); this.commuters.splice(i, 1); continue; }
         // (a park day passes in minutes: you see the last stretch of the walk

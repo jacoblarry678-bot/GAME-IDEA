@@ -13,7 +13,9 @@ import { Effects } from './fx.js';
 import { GuestFactory, Crowd } from './guests.js';
 import { NavGrid } from './navgrid.js';
 import { GuestFlow } from './guestflow.js';
-import { ParkDay, buildCastDoor, CAST_DOOR } from './parkday.js';
+import { ParkDay, buildCastDoor, CAST_DOOR, GATE as MAIN_GATE } from './parkday.js';
+import { buildNaturalKingdom, NK_GATE, NK_DOOR, NK_INSIDE, NK_LANDS } from './naturalkingdom.js';
+import { buildNKRides } from './nkrides.js';
 import { QueueCrowd } from './queue.js';
 import { CrowdRenderer } from './people/crowd.js';
 import { StaffSystem } from './staff.js';
@@ -227,6 +229,10 @@ async function main() {
   buildRoadWork(data);
   // the cast members' door, in the front wall beside the gate
   buildCastDoor(data, partHelpers);
+  // NATURAL KINGDOM: the second park, over the parkway (its ground, lands, gate and bridge, then its rides)
+  const nkSite = buildNaturalKingdom(data);
+  nkSite.addItems();
+  buildNKRides(data, nkSite);
   // Benton Haunt's houses inside ride buildings (once the rides are in)
   if (!HAUNT_OVER && RIDE_HOUSES_OPEN) houses.push(...buildHouses(data, null, 'rides'));
   // summer overlays: six rides get summer makeovers (after every ride is in)
@@ -354,8 +360,11 @@ async function main() {
   const houseWalks = new HouseWalks(houses, people);
   let queueSnap = true; // place guests already in line without walking them in
   // guests with somewhere to be (or, without a walking map, the old strollers)
-  let crowd = nav ? new GuestFlow(people, nav, data, sim, PRESETS[qualityName].guests) : new Crowd(people, PRESETS[qualityName].crowd);
+  let crowd = nav ? new GuestFlow(people, nav, data, sim, PRESETS[qualityName].guests, { exclude: NK_LANDS }) : new Crowd(people, PRESETS[qualityName].crowd);
+  // (and Natural Kingdom's own, in through its gate)
+  const nkCrowd = nav ? new GuestFlow(people, nav, data, sim, Math.round(PRESETS[qualityName].guests * 0.6), { gate: { x: NK_INSIDE[0], y: NK_INSIDE[1], z: NK_INSIDE[2] }, lands: NK_LANDS }) : null;
   game.guests = crowd;
+  game.nkGuests = nkCrowd;
   const staff = new StaffSystem({
     data, people, rideVis, sim, bubbles,
     hooks: { toast: (text, kind) => game.ui?.toast(text, kind), sound: (k) => audio.ui(k), latch: () => audio.ui('latch') },
@@ -375,7 +384,7 @@ async function main() {
   game.entrance = entrance;
   // the park day: hours, announcements, the gate, chains and shutters, closing time
   const parkDay = new ParkDay({
-    scene, data, sim, nav, player,
+    scene, data, sim, nav, player, gates: [MAIN_GATE, NK_GATE],
     hooks: {
       toast: (text, kind) => game.ui?.toast(text, kind), say: (text) => audio.voice.say(text, { interrupt: true }), entrance,
       fireworks: () => { for (let k = 0; k < 3; k++) setTimeout(() => fx.tramCue('fireworks', new THREE.Vector3(-30 + k * 30, 40, 240)), k * 700); },
@@ -383,7 +392,7 @@ async function main() {
   });
   game.parkDay = parkDay;
   game.clock = Clock; // (handy for debugging from the console)
-  if (nav) staff.day = { nav, door: new THREE.Vector3(CAST_DOOR.x, CAST_DOOR.y, CAST_DOOR.z) };
+  if (nav) staff.day = { nav, doors: [new THREE.Vector3(CAST_DOOR.x, CAST_DOOR.y, CAST_DOOR.z), new THREE.Vector3(NK_DOOR.x, NK_DOOR.y, NK_DOOR.z)] };
   game.scareZones = scareZones;
   game.houses = houses;
   const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
@@ -507,7 +516,7 @@ async function main() {
     qualityName = q;
     game.qualityName = q;
     try { localStorage.setItem(QUALITY_KEY, q); } catch (e) { /* ignore */ }
-    if (crowd instanceof GuestFlow) crowd.setMax(PRESETS[q].guests); else crowd = new Crowd(people, PRESETS[q].crowd);
+    if (crowd instanceof GuestFlow) { crowd.setMax(PRESETS[q].guests); nkCrowd?.setMax(Math.round(PRESETS[q].guests * 0.6)); } else crowd = new Crowd(people, PRESETS[q].crowd);
     people.setShadows(PRESETS[q].shadows);
     applyQuality();
   };
@@ -674,7 +683,7 @@ async function main() {
       signTimer = 1;
       world.updateSigns(signRides, (id) => sim.rideState(id));
     }
-    if (crowd instanceof GuestFlow) crowd.update(dt, camera.position); else crowd.update(dt, time);
+    if (crowd instanceof GuestFlow) { crowd.update(dt, camera.position); nkCrowd?.update(dt, camera.position); } else crowd.update(dt, time);
     parkDay.update(dt, started);
     staff.update(dt, now, time, camera.position, player.pos);
     if (started) scares.update(dt, camera.position, player.pos);

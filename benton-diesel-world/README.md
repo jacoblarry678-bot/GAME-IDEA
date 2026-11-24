@@ -49,6 +49,49 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New park: NATURAL KINGDOM (browser only).** A second park across the
+  Benton Parkway, in a valley levelled out of the hills south of the road.
+  - **Getting there:** walk over the **Kingdom Bridge**, which climbs from
+    the main lot's south end, over the parkway, and down to the gate. Or
+    use ✨ Teleport from any of its rides.
+  - **Kingdom Gate:** two carved stone towers under a timber beam,
+    Kingdom Outfitters (shop) and Sunstone Sweets.
+  - **The Sunstone:** at the end of Kingdom Walk, a great sandstone arch
+    over a pool, with a waterfall from its crown, animals carved into its
+    legs and a gold sun on top. Paths lead out from it to three lands.
+  - **Savanna Reach:**
+    - **Savanna Trek Safari.** A convoy of two open-air safari trucks takes
+      a 1,483-stud dirt road through the savanna, about 2¾ minutes. It
+      passes ostriches and giraffes on the plains, zebras, elephants at
+      the watering hole (one swings its trunk), a pride of lions on their
+      rock, wildebeest, rhinos, and a hippo pool with flamingos, among
+      acacias, a baobab and termite mounds.
+    - **Cheetah Chase.** A fast family coaster along the savanna's edge, up
+      to 59 km/h.
+    - **Watering Hole Grill.**
+  - **Rainforest Hollow:**
+    - **River Safari.** Launches go up a jungle river past crocodiles on
+      the bank, monkeys in the trees, a waterfall, temple ruins, a tiger
+      on its rock and a family of gorillas.
+    - **Canopy Kitchen.**
+  - **Primeval Valley:**
+    - **Raptor Run.** A coaster with a 31-stud lift, up to 79 km/h, round
+      a glowing, smoking volcano, past long-necks, triceratops and raptors.
+      At the bottom of the valley a tyrant lunges at the train.
+    - **Dig Site Snacks** and the **Amber Trading Post.**
+  - **New items:** a Safari Hat, Lion Mane Ears, Raptor and Giraffe
+    balloons, Jungle Juice, Savanna Skewers, Dino Nuggets and a Sunstone
+    Smoothie.
+  - **The park day:** Natural Kingdom keeps the same hours as the main
+    park.
+    - It has its own guests, coming in through its gate and walking its
+      paths, and its own cast door for the crews.
+    - Its gate rolls shut overnight, and security walks you out through
+      it.
+    - Its rides can be in early entry.
+  - **Under the hood:** the terrain's detail, the walking map and how far
+    you (and the free cam) can go all now reach the new valley. Unseen
+    walls now count as walls on the walking map.
 - **Change: longer days (browser only).** A park minute now lasts 4 real
   seconds instead of 1, from 7:00 AM to 11:00 PM, so a day takes about an
   hour.

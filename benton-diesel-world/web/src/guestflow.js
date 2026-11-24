@@ -26,7 +26,9 @@ function mulberry(seed) {
 }
 
 export class GuestFlow {
-  constructor(people, nav, data, sim, max) {
+  // (each park has its own: its gate, and its lands - or every land but another park's)
+  constructor(people, nav, data, sim, max, { gate = GATE, lands = null, exclude = null } = {}) {
+    this.gate = gate;
     this.people = people;
     this.nav = nav;
     this.sim = sim;
@@ -35,18 +37,21 @@ export class GuestFlow {
     const cfg = data.config;
     const P = (p) => ({ x: p[0], y: p[1] || 0, z: p[2] });
     this.places = [];
+    const ours = (land) => (lands ? lands.includes(land) : !(exclude || []).includes(land));
     for (const r of cfg.Rides) {
-      if (!r.entrance || r.refurb || r.shutdown) continue;
+      if (!r.entrance || r.refurb || r.shutdown || !ours(r.land)) continue;
       this.places.push({ kind: 'ride', id: r.id, name: r.name, in: P(r.entrance), out: P(r.exit || r.entrance), weight: 0.6 + (r.baseWait ?? 20) / 20, stay: [40, 110] });
     }
     for (const v of cfg.Venues) {
+      if (!ours(v.land)) continue;
       const f = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] }[v.facing] || [0, 1];
       const d = v.size[2] / 2 + 4;
       const front = { x: v.position[0] + f[0] * d, y: v.position[1] || 0, z: v.position[2] + f[1] * d };
       this.places.push({ kind: v.kind, id: v.id, name: v.name, in: front, out: front, weight: v.kind === 'restaurant' ? 1.3 : 0.7, stay: v.kind === 'restaurant' ? [35, 80] : [20, 50] });
     }
     // only places the walking map reaches from the gate
-    const g = nav.gateGroup;
+    const g = nav.comp[nav.nearest(gate.x, gate.y, gate.z, 15)] ?? nav.gateGroup;
+    this.group = g;
     this.places = this.places.filter((p) => nav.nearest(p.in.x, p.in.y, p.in.z, 15, g) >= 0 && nav.nearest(p.out.x, p.out.y, p.out.z, 15, g) >= 0);
     this.guests = [];
     this.nextSpawn = 0;
@@ -93,7 +98,7 @@ export class GuestFlow {
     let dest = null, place = null;
     if (home) {
       g.leaving = true;
-      dest = GATE;
+      dest = this.gate;
     } else {
       const open = this.places.filter((p) => p !== g.last && this.open(p, ph));
       if (!open.length) { g.leaving = true; return; }
@@ -104,11 +109,11 @@ export class GuestFlow {
       place = open[i];
       dest = place.in;
     }
-    let path = this.nav.route(g.pos, dest, false);
+    let path = this.nav.route(g.pos, dest, false, this.group);
     if (path === undefined) {
       if (this.routes >= ROUTES_PER_FRAME) return; // (asked again next frame)
       this.routes++;
-      path = this.nav.route(g.pos, dest);
+      path = this.nav.route(g.pos, dest, true, this.group);
     }
     if (!path || path.length < 1) {
       g.fails = (g.fails || 0) + 1;
@@ -139,7 +144,7 @@ export class GuestFlow {
       if (unseen && this.open(p, ph) && this.rng() < 0.7) {
         const g = this.newGuest(p.out);
         Object.assign(g, { state: 'inside', place: p, until: now + this.rng() * 25, visits: 1 });
-      } else this.newGuest(GATE);
+      } else this.newGuest(this.gate);
       this.nextSpawn = now + (want - here > 20 ? 0.15 : 0.45) + this.rng() * 0.5;
     } else if (here > want + 6 && this.rng() < dt * 0.5) {
       // the evening thins out: someone decides it's time to go
