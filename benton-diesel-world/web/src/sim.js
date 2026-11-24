@@ -3,6 +3,7 @@
 // and the saved profile. Mirrors the Roblox server's rules.
 import * as Clock from './clock.js';
 import { QueuePath, slotAt, EXPRESS_SIDE, FOTL_SIDE, FOTL } from './queue.js';
+import { HOURS, phaseAt, testable, earlyEntryRides } from './parkhours.js';
 
 const SAVE_KEY = 'bentonDieselWorld.v1';
 // You have unlimited Express Passes: they never run out.
@@ -77,6 +78,10 @@ export class Sim {
       this.rides.set(r.id, st);
       this.order.push(st);
     }
+    // early entry rides (open from 8:00, the rest at 9:00)
+    this.early = new Set(earlyEntryRides(this.cfg.Rides));
+    this.cfg.EarlyEntry = [...this.early];
+    for (const st of this.order) this.applyHours(st, Clock.now(), true);
     this.shows = this.cfg.Shows.map((s) => ({ ...s, start: 0, running: false, watched: false, checks: 0 }));
     this.played = new Set();
     this.queueRide = null;
@@ -153,6 +158,7 @@ export class Sim {
       status: st.status, wait: this.postedWait(st), queue: st.queue.length, refurb: !!st.refurb, shutdown: !!st.shutdown, closedFor: st.cfg.closedFor ?? null, late: !!st.late, opensAt: st.cfg.opensAt ?? null, lastWait: st.lastWait ?? null,
       express: this.expressWait(st), fotl: this.fotlWait(st), extended: this.extendedOpen(st),
       preshow: st.preshow ?? null, // a pre-show room's count (see QueueCrowd)
+      hours: st.hours ?? null, test: !!st.test, opensHour: this.early.has(st.id) ? HOURS.EARLY : Math.max(HOURS.OPEN, st.cfg.opensAt ?? 0), early: this.early.has(st.id),
     };
   }
 
@@ -202,6 +208,10 @@ export class Sim {
     }
     if (this.ridingRide) {
       this.hooks.toast('Finish your current ride first!', 'warn');
+      return;
+    }
+    if (st.hours && this.queueRide !== id) {
+      this.hooks.toast(this.hoursMessage(st), 'warn');
       return;
     }
     const here = this.playerEntry();
@@ -367,6 +377,18 @@ export class Sim {
     const t = Clock.now();
     this.order.forEach((st, i) => {
       if (st.refurb) return;
+      if (st.hours) {
+        // the line's closed: nobody new joins, and at last call the back of
+        // the line gives up a party or two at a time (never you)
+        if (st.hours === 'lastcall' && !warmup) {
+          for (let k = 0; k < 2; k++) if (st.queue.length && !st.queue[st.queue.length - 1].player) st.queue.pop();
+          if (st.express.length && !st.express[st.express.length - 1].player) st.express.pop();
+        } else if (st.hours !== 'lastcall') {
+          st.queue = st.queue.filter((e) => e.player);
+          st.express = st.express.filter((e) => e.player);
+        }
+        return;
+      }
       const wobble = 0.8 + 0.4 * (0.5 + 0.5 * Math.sin(t / 90 + i * 7.31) * Math.cos(t / 57 + i));
       // the line it takes for the wait to be about baseWait real minutes
       // (scaled by the crowd), as long as the maze can hold it
@@ -403,8 +425,61 @@ export class Sim {
     if (m >= 300 && m < at) Object.assign(st, { status: 'Closed', late: true, downUntil: Clock.now() + Clock.secondsUntil(at) });
   }
 
+  // The park's hours: closed overnight and while the cast set up (with empty
+  // test trains), only the early entry rides from 8:00, everything from 9:00,
+  // and at 10:00 PM last call - the line closes, the guests in it still ride,
+  // and the ride shuts for the night once it's empty.
+  applyHours(st, now, quiet) {
+    if (st.refurb) { st.hours = null; return; }
+    const m = Clock.minutes(), ph = phaseAt(m);
+    let h = null;
+    if (ph === 'night' || ph === 'setup') h = ph;
+    else if (ph === 'early' && !this.early.has(st.id)) h = 'opens';
+    else if (ph === 'closing') {
+      const busy = st.queue.length || st.express.length || st.fotl || st.status === 'Boarding' || st.status === 'Running' || st.status === 'Unloading';
+      h = busy && st.hours !== 'night' && st.hours !== 'setup' && st.hours !== 'opens' ? 'lastcall' : 'night';
+    }
+    const was = st.hours;
+    st.hours = h;
+    if (h === 'lastcall') return; // (still running for the guests already in line)
+    if (h) {
+      // close once any train out comes home
+      if (st.status === 'Open' || (st.status === 'Closed' && !st.hoursClosed)) Object.assign(st, { status: 'Closed', hoursClosed: true, downUntil: Infinity, late: false });
+      // test runs while the cast set up: an empty train now and then
+      if (h === 'setup' && st.hoursClosed && st.status === 'Closed' && testable(st.cfg) && m >= HOURS.STAFF + 12 && now >= (st.nextTest ?? 0)) {
+        if (st.nextTest === undefined) { st.nextTest = now + 4 + Math.random() * 30; return; }
+        st.nextTest = now + this.cycleTotal(st) + 15 + Math.random() * 25;
+        Object.assign(st, { status: 'Boarding', hoursClosed: false, test: true, riders: [], cycleStart: now + this.cfg.BoardingTime * 0.5 });
+        st.cycleId += 1;
+        st.cycleEnds = st.cycleStart + st.duration + this.cfg.UnloadTime;
+      }
+      return;
+    }
+    if (st.hoursClosed) {
+      Object.assign(st, { status: 'Open', hoursClosed: false, downUntil: 0, test: false });
+      st.nextTest = undefined;
+      if (!quiet && was && this.queueRide === st.id) this.hooks.toast(`${st.cfg.name} is open!`, 'info');
+    }
+  }
+
+  hoursMessage(st) {
+    const at = Clock.format(this.early.has(st.id) ? HOURS.EARLY : HOURS.OPEN);
+    if (st.hours === 'lastcall' || (st.hours === 'night' && phaseAt(Clock.minutes()) === 'closing')) return `The line for ${st.cfg.name} closed at ${Clock.format(HOURS.CLOSE)} - the park is closed for the night. See you tomorrow!`;
+    if (st.hours === 'setup') return `Cast members are getting ${st.cfg.name} ready for the day. It opens at ${at}${this.early.has(st.id) ? ' for early entry' : ''}.`;
+    if (st.hours === 'opens') return `${st.cfg.name} opens at ${Clock.format(HOURS.OPEN)}. During early entry these are open: ${[...this.early].slice(0, 5).map((id) => this.rides.get(id)?.cfg.name).filter(Boolean).join(', ')}...`;
+    return `${st.cfg.name} is closed for the night. It opens at ${at}${this.early.has(st.id) ? ' for early entry' : ''}.`;
+  }
+
   updateRides(now) {
     for (const st of this.order) {
+      this.applyHours(st, now);
+      if (st.hours && st.hours !== 'lastcall') {
+        // closed by the hours: only a train already out (or a test run) moves
+        if (st.status === 'Boarding' && now >= st.cycleStart) st.status = 'Running';
+        else if (st.status === 'Running' && now >= st.cycleStart + st.duration) { st.status = 'Unloading'; this.finishRide(st); }
+        else if (st.status === 'Unloading' && now >= st.cycleEnds) { Object.assign(st, { status: 'Closed', hoursClosed: true, downUntil: Infinity, riders: [], test: false }); }
+        continue;
+      }
       this.lateCheck(st);
       if (st.status === 'Closed') {
         if (now >= st.downUntil) {

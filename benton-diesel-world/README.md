@@ -49,6 +49,53 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New: a full park day, with guests who walk to places (browser only).**
+  - **The schedule:**
+    - **7:00 AM, setup.** Cast members come in through a CAST MEMBERS ONLY
+      door beside the front gate and walk to their posts: ride crews, shop
+      and restaurant cashiers, cart vendors, greeters, sweepers. Each
+      spends a moment setting up. The shops' roll-down shutters go up one
+      by one, and the rides run empty test trains.
+    - **8:00 AM, early entry.** The front gate rolls open and ten of the
+      most popular rides open, a couple from each corner of the park.
+      Every other ride has a red CLOSED chain across its entrance and says
+      OPENS 9:00 AM. Restaurants are open; shops wait.
+    - **9:00 AM, everything opens,** with fireworks over the gate.
+    - **9:45 PM:** a 15-minute warning.
+    - **10:00 PM, closing.** Every line closes. Guests already in a line,
+      you included, still ride, while the back of each line gives up. Each
+      ride shuts for the night once it's empty, the chains go back up and
+      the shutters come down.
+    - **10:22 PM:** security walks anyone still inside out to the front
+      gate (not while you're riding or in a line). The gate rolls shut
+      until morning, and anyone who slips in overnight gets walked out too.
+    - **By 11:00 PM** the cast have walked out through their door.
+  - **Guests walk to places.** The old strollers walked back and forth on
+    a few walkway lines. Now each guest comes in through the gate, picks a
+    ride, restaurant or shop, walks there and goes in. They come back out
+    of the ride's exit and pick the next place, then go home after a few.
+    - Popular rides draw more guests, and nearby places more than ones
+      across the park.
+    - The park fills through the morning and thins in the evening, and at
+      closing every guest heads for the gate.
+    - Out of sight, guests walk faster and simply leave at closing, because
+      a park day passes in minutes.
+  - **The walking map:** the park is cut into 3-stud cells.
+    - It records where you can walk: the terrain, plus paths, plazas, decks
+      and steps.
+    - It records where you can't: buildings, walls, fences, water, trees,
+      coaster track at walking height.
+    - Paths are cheaper than lawns, and other rides' queues cost more.
+    - The railway is crossed like a level crossing, and the Lower Lot's
+      escalators are links of their own.
+    - Routes are found with A*, pulled straight where they can be, and
+      cached.
+  - **By the clock** there's a park status (setup, early entry, open,
+    closing, closed). While the park's shut there's a **⏩ Skip to
+    morning** button. Ride signs and prompts say when each ride opens. Shops
+    and restaurants won't serve you while they're closed.
+  - The day now starts at **7:45 AM**, as the cast finish setting up, and
+    daytime speed starts at 7:00.
 - **Fix: the free cam reaches all of the Lower Lot (browser only).** It
   stopped at z −900, the world's old south edge, so it couldn't fly over
   Neon Gliders, Snowball or Frostbite's south side. Now it reaches the

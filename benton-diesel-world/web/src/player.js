@@ -285,6 +285,7 @@ export class Player {
       }
       this.vel.y -= GRAVITY * dt;
       // sub-step for fast movement
+      const zBefore = this.pos.z;
       const steps = Math.max(1, Math.ceil(this.vel.length() * dt / 0.8));
       for (let i = 0; i < steps; i++) {
         this.pos.x += this.vel.x * dt / steps;
@@ -301,6 +302,8 @@ export class Player {
       }
       // on an escalator: carried along it, held on its steps
       this.onEscalator(dt);
+      // the front gate, rolled shut while the park's closed: no walking in
+      if (this.gateClosed && Math.abs(this.pos.x) < 27 && zBefore >= 281.5 && this.pos.z < 281.5) { this.pos.z = 281.5; this.vel.z = Math.max(0, this.vel.z); }
       // keep inside the world (which runs further south over the Lower Lot)
       this.pos.x = THREE.MathUtils.clamp(this.pos.x, -800, 1250);
       this.pos.z = THREE.MathUtils.clamp(this.pos.z, this.pos.x > 378 && this.pos.x < 1228 ? -998 : -720, 830);

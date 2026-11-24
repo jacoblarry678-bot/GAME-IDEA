@@ -11,6 +11,9 @@ import { RideVisuals } from './rides.js';
 import { Sim } from './sim.js';
 import { Effects } from './fx.js';
 import { GuestFactory, Crowd } from './guests.js';
+import { NavGrid } from './navgrid.js';
+import { GuestFlow } from './guestflow.js';
+import { ParkDay, buildCastDoor, CAST_DOOR } from './parkday.js';
 import { QueueCrowd } from './queue.js';
 import { CrowdRenderer } from './people/crowd.js';
 import { StaffSystem } from './staff.js';
@@ -18,7 +21,7 @@ import { Bubbles } from './bubbles.js';
 import { buildEntrance, Entrance } from './entrance.js';
 import { buildOverdrive } from './overdrive.js';
 import { buildTramTour } from './refurb.js';
-import { buildBackstage, Backstage } from './backstage.js';
+import { buildBackstage, Backstage, BS } from './backstage.js';
 import { buildFamilyBackstage, buildScareZones, buildHauntFood, FB } from './haunt.js';
 import { buildHouses, HouseWalks } from './houses.js';
 import { ScareActors, HauntLights } from './scare.js';
@@ -65,7 +68,7 @@ import { buildLowerLot, LowerLotSite } from './lowerlot.js';
 import { buildSnowball, SnowballSite } from './snowball.js';
 import { buildNeonGliders, NeonGlidersSite } from './neongliders.js';
 import { buildRoadWork } from './roadwork.js';
-import { buildWolverine, WolverineSite, addWolverineWalkway } from './wolverine.js';
+import { buildWolverine, WolverineSite, addWolverineWalkway, helpers as partHelpers } from './wolverine.js';
 import { Transit } from './transit.js';
 import { GameAudio } from './audio/director.js';
 import { ShowRunner } from './shows.js';
@@ -85,9 +88,9 @@ const touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 // graphics presets: shadows, post-processing (bloom, ambient occlusion),
 // resolution and texture detail
 const PRESETS = {
-  low: { name: 'low', shadows: false, shadowSize: 1024, shadowRange: 90, post: false, ao: false, samples: 0, pixelRatio: 1.25, crowd: 30, grass: 0 },
-  high: { name: 'high', shadows: true, shadowSize: 2048, shadowRange: 110, post: true, ao: false, samples: 4, pixelRatio: 1.5, crowd: 54, grass: 60000 },
-  ultra: { name: 'ultra', shadows: true, shadowSize: 4096, shadowRange: 140, post: true, ao: true, samples: 4, pixelRatio: 2, crowd: 72, grass: 120000 },
+  low: { name: 'low', shadows: false, shadowSize: 1024, shadowRange: 90, post: false, ao: false, samples: 0, pixelRatio: 1.25, crowd: 30, guests: 80, grass: 0 },
+  high: { name: 'high', shadows: true, shadowSize: 2048, shadowRange: 110, post: true, ao: false, samples: 4, pixelRatio: 1.5, crowd: 54, guests: 140, grass: 60000 },
+  ultra: { name: 'ultra', shadows: true, shadowSize: 4096, shadowRange: 140, post: true, ao: true, samples: 4, pixelRatio: 2, crowd: 72, guests: 190, grass: 120000 },
 };
 
 function loadQuality() {
@@ -222,6 +225,8 @@ async function main() {
   const glLayout = buildNeonGliders(data);
   // road work on the parkway by the Grand Hotel
   buildRoadWork(data);
+  // the cast members' door, in the front wall beside the gate
+  buildCastDoor(data, partHelpers);
   // Benton Haunt's houses inside ride buildings (once the rides are in)
   if (!HAUNT_OVER && RIDE_HOUSES_OPEN) houses.push(...buildHouses(data, null, 'rides'));
   // summer overlays: six rides get summer makeovers (after every ride is in)
@@ -236,8 +241,10 @@ async function main() {
   console.log(`extended queues: ${extended}`);
   // bins, benches, hydrants, planters, fountains and manholes along the paths
   console.log(`street details: ${buildStreetDetails(data)}`);
-  Clock.configure(cfg.Clock);
-  Clock.start(540);
+  // (daytime runs from 7:00 now, so the cast setting up isn't rushed by the
+  // faster night; the day starts at 7:45 AM, as they finish getting ready)
+  Clock.configure({ ...cfg.Clock, DAY_START: 420 });
+  Clock.start(465);
 
   const canvas = document.getElementById('view');
   installAtmosphere(); // height fog and sunlit haze, before anything compiles
@@ -260,6 +267,15 @@ async function main() {
   const post = new Post(renderer, scene, camera);
   const life = new Life(scene, PRESETS[qualityName]); // the horizon, birds, planes, flags
   const collision = new Collision(data.static, world.terrain);
+  // the walking map guests and cast members find their way with
+  let nav = null;
+  try {
+    nav = new NavGrid(data, world.terrain, { extra: HAUNT_OVER ? [] : [[BS.x0, BS.z0, BS.x1, BS.z1]] });
+    nav.gateGroup = nav.comp[nav.nearest(0, 0.42, 279, 15)];
+  } catch (e) {
+    console.warn('walking map failed, guests stroll the old walkways', e);
+    nav = null;
+  }
   const guests = new GuestFactory();
   const rideVis = new RideVisuals(scene, data, (seed, pose) => guests.make(seed, pose));
   rideVis.frame = 0;
@@ -335,7 +351,9 @@ async function main() {
   const queueCrowd = new QueueCrowd(people, data, sim.paths);
   const houseWalks = new HouseWalks(houses, people);
   let queueSnap = true; // place guests already in line without walking them in
-  let crowd = new Crowd(people, PRESETS[qualityName].crowd);
+  // guests with somewhere to be (or, without a walking map, the old strollers)
+  let crowd = nav ? new GuestFlow(people, nav, data, sim, PRESETS[qualityName].guests) : new Crowd(people, PRESETS[qualityName].crowd);
+  game.guests = crowd;
   const staff = new StaffSystem({
     data, people, rideVis, sim, bubbles,
     hooks: { toast: (text, kind) => game.ui?.toast(text, kind), sound: (k) => audio.ui(k), latch: () => audio.ui('latch') },
@@ -353,6 +371,17 @@ async function main() {
   const christmas = xmasLayout ? new Christmas({ scene, data, layout: xmasLayout, people, bubbles, player, sim, hooks: { sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) } }) : null;
   game.christmas = christmas;
   game.entrance = entrance;
+  // the park day: hours, announcements, the gate, chains and shutters, closing time
+  const parkDay = new ParkDay({
+    scene, data, sim, nav, player,
+    hooks: {
+      toast: (text, kind) => game.ui?.toast(text, kind), say: (text) => audio.voice.say(text, { interrupt: true }), entrance,
+      fireworks: () => { for (let k = 0; k < 3; k++) setTimeout(() => fx.tramCue('fireworks', new THREE.Vector3(-30 + k * 30, 40, 240)), k * 700); },
+    },
+  });
+  game.parkDay = parkDay;
+  game.clock = Clock; // (handy for debugging from the console)
+  if (nav) staff.day = { nav, door: new THREE.Vector3(CAST_DOOR.x, CAST_DOOR.y, CAST_DOOR.z) };
   game.scareZones = scareZones;
   game.houses = houses;
   const xsSite = xmasSetup ? new XmasSetupSite({ sound: (k) => audio.ui(k), toast: (text, kind) => game.ui?.toast(text, kind) }, xmasSetup) : null;
@@ -476,7 +505,7 @@ async function main() {
     qualityName = q;
     game.qualityName = q;
     try { localStorage.setItem(QUALITY_KEY, q); } catch (e) { /* ignore */ }
-    crowd = new Crowd(people, PRESETS[q].crowd);
+    if (crowd instanceof GuestFlow) crowd.setMax(PRESETS[q].guests); else crowd = new Crowd(people, PRESETS[q].crowd);
     people.setShadows(PRESETS[q].shadows);
     applyQuality();
   };
@@ -643,7 +672,8 @@ async function main() {
       signTimer = 1;
       world.updateSigns(signRides, (id) => sim.rideState(id));
     }
-    crowd.update(dt, time);
+    if (crowd instanceof GuestFlow) crowd.update(dt, camera.position); else crowd.update(dt, time);
+    parkDay.update(dt, started);
     staff.update(dt, now, time, camera.position, player.pos);
     if (started) scares.update(dt, camera.position, player.pos);
     entrance.update(dt, camera.position, player.pos);

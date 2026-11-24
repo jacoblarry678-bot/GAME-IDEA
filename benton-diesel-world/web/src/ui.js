@@ -4,6 +4,7 @@
 // windows and the settings sheet.
 import { UNLIMITED_EXPRESS } from './sim.js';
 import * as Clock from './clock.js';
+import { phaseAt } from './parkhours.js';
 import { waitColor } from './world.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -222,6 +223,8 @@ export class UI {
         const s = sim.rideState(ride.id);
         last.textContent = s.refurb || s.status === 'Closed' ? '' : [`⚡ ${s.express <= 0 ? 'no wait' : `${s.express} min`}`, s.lastWait !== null ? `last ${s.lastWait}` : '', s.extended ? 'extended queue open' : ''].filter(Boolean).join(' · ');
         if (s.refurb) { wait.textContent = s.shutdown ? 'CLOSED' : s.closedFor ? 'TEMP CLOSED' : 'REFURB'; wait.style.color = s.shutdown ? '#f04636' : '#f0a040'; }
+        else if (s.hours === 'lastcall') { wait.textContent = 'LINE CLOSED'; wait.style.color = '#f0a040'; }
+        else if (s.hours) { wait.textContent = phaseAt(Clock.minutes()) === 'closing' ? 'CLOSED' : `OPENS ${Clock.format(s.opensHour)}`; wait.style.color = '#8a5aff'; }
         else if (s.late) { wait.textContent = `OPENS ${Clock.format(s.opensAt)}`; wait.style.color = '#8a5aff'; }
         else if (s.status === 'Closed') { wait.textContent = 'CLOSED'; wait.style.color = '#f04636'; }
         else { wait.textContent = s.wait <= 0 ? 'No wait' : `${s.wait} min`; wait.style.color = waitColor(s.wait); }
@@ -474,6 +477,7 @@ export class UI {
 
   // -------------------------------------------------------- venue window
   openVenue(id) {
+    if (this.g.parkDay && !this.g.parkDay.venueOpen(id)) { this.toast(this.g.parkDay.venueMessage(id), 'warn'); return; }
     this.venueOpen = id;
     this.renderVenueModal();
     $('#modal').hidden = false;
@@ -649,14 +653,14 @@ export class UI {
       const s = sim.rideState(p.ride.id);
       const inLine = sim.queueRide === p.ride.id;
       const lane = inLine ? sim.playerEntry()?.lane : null;
-      this.promptSub.textContent = s.shutdown ? 'Permanently closed - thanks for every ride!' : s.closedFor ? s.closedFor : s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.late ? `Opens after dark, at ${Clock.format(s.opensAt)} - you can wait in line` : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}  ·  ⚡ Express ${s.express <= 0 ? 'no wait' : `${s.express} min`}${s.extended ? '  ·  extended queue open' : ''}`;
+      this.promptSub.textContent = s.shutdown ? 'Permanently closed - thanks for every ride!' : s.closedFor ? s.closedFor : s.refurb ? 'Closed for a small refurbishment - back very soon!' : s.hours === 'lastcall' ? (inLine ? "Last call - you're in line, you'll still ride!" : 'Last call: the line is closed for the night') : s.hours ? `${sim.hoursMessage(sim.rides.get(p.ride.id))}${s.test ? '  ·  Test run' : ''}` : s.late ? `Opens after dark, at ${Clock.format(s.opensAt)} - you can wait in line` : s.status === 'Closed' ? 'Temporarily closed - you can still wait in line' : `${p.ride.category}  ${stars(p.ride.thrill)}  ·  ${s.wait <= 0 ? 'No wait' : `Wait ${s.wait} min`}  ·  ⚡ Express ${s.express <= 0 ? 'no wait' : `${s.express} min`}${s.extended ? '  ·  extended queue open' : ''}`;
       this.promptJoin.replaceChildren(h('kbd', {}, 'E'), lane === 'standby' ? ' In line ✓' : ' Join Line');
-      this.promptJoin.disabled = lane === 'standby' || s.refurb;
+      this.promptJoin.disabled = lane === 'standby' || s.refurb || (!!s.hours && !inLine);
       this.promptExpress.replaceChildren(h('kbd', {}, 'F'), lane === 'express' ? ' Express ✓' : ` Express (${UNLIMITED_EXPRESS ? '∞' : sim.profile.passes})`);
-      this.promptExpress.disabled = lane === 'express' || (!UNLIMITED_EXPRESS && sim.profile.passes <= 0) || s.refurb;
+      this.promptExpress.disabled = lane === 'express' || (!UNLIMITED_EXPRESS && sim.profile.passes <= 0) || s.refurb || (!!s.hours && !inLine);
       const has = sim.hasFotl(p.ride.id);
       this.promptFotl.replaceChildren(h('kbd', {}, 'G'), lane === 'fotl' ? ' Front of the Line ✓' : has ? ' Front of the Line' : ' Front of the Line 🔒');
-      this.promptFotl.disabled = lane === 'fotl' || !has || s.refurb;
+      this.promptFotl.disabled = lane === 'fotl' || !has || s.refurb || (!!s.hours && !inLine);
     }
   }
 

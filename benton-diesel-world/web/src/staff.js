@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { STAFF, SWEEP_FRAMES, registerLook } from './people/crowd.js';
 import { outfit } from './people/human.js';
 import { LINES as WALKWAYS } from './guests.js';
+import * as Clock from './clock.js';
+import { HOURS } from './parkhours.js';
 
 const HEAD = 6.0; // speech bubble height above the feet
 const NEAR = 260; // crews further than this from the camera are not drawn
@@ -22,6 +24,11 @@ const turn = (from, to, k) => {
 };
 
 let nextSeed = 910000;
+
+// shifts: in from 7:00 (the cast door), out after closing
+const COMMUTE = new Set(['cashier', 'greeter', 'vendor']);
+const shiftFor = (seed, late = 0) => ({ on: HOURS.STAFF + (seed % 23), off: HOURS.CLOSE + 8 + late + (seed % 25) });
+const onDuty = (sh, m) => m >= sh.on && m < sh.off;
 
 // a uniformed staff member's look
 // security officers wear white shirts and black trousers, parking crews
@@ -362,6 +369,11 @@ export class StaffSystem {
       p.chat = 0;
       return p;
     });
+    for (const p of this.spots) { p.commute = COMMUTE.has(p.role); p.shift = shiftFor(p.seed); }
+    for (const c of this.crews) c.shift = shiftFor(c.operator.seed, 6);
+    for (const p of this.sweepers) p.shift = { on: HOURS.STAFF, off: HOURS.STAFF_OUT };
+    this.day = null; // { nav, door }: set by the park day, for shifts
+    this.commuters = [];
     this.cam = new THREE.Vector3();
     this.player = new THREE.Vector3();
     this.lastLatch = 0;
@@ -430,13 +442,26 @@ export class StaffSystem {
     this.time = time;
     this.cam.copy(cam);
     this.player.copy(playerPos);
+    const m = Clock.minutes();
+    this.routeBudget = 1;
     for (const crew of this.crews) {
       if (this.sim.rides.get(crew.id)?.refurb) continue; // no crew while the ride is being refurbished
+      if (this.day) {
+        const duty = onDuty(crew.shift, m);
+        if (duty !== crew.duty) this.crewShift(crew, duty);
+        if (!crew.here) continue;
+      }
       const near = crew.center.distanceToSquared(cam) < NEAR * NEAR || this.sim.ridingRide === crew.id;
       crew.update(clockDt, now, time, near);
     }
     // shop, gate and cart staff: wave and say hello when you come by
     for (const p of this.spots) {
+      if (this.day && p.commute) {
+        const duty = onDuty(p.shift, m);
+        if (duty !== p.duty) this.spotShift(p, duty);
+        if (!p.here) continue;
+      }
+      if (p.setupFor > 0) p.setupFor -= dt;
       if (p.pos.distanceToSquared(cam) > 220 * 220) continue;
       const close = this.playerNear(p.pos, p.role === 'greeter' ? 22 : p.role === 'scare' ? 9 : 15);
       if (close && !p.greeted) {
@@ -459,6 +484,8 @@ export class StaffSystem {
       if (p.role === 'security' && p.busy) p.pose = STAFF.CHECK;
       // construction crews work in spells
       if ((p.role === 'construction' || p.role === 'haunt') && p.kind === 'work') p.pose = Math.floor((time + p.seed) / 2.5) % 3 ? STAFF.CHECK : null;
+      // just in: getting the shop, the cart, the gate ready
+      if (p.setupFor > 0) p.pose = STAFF.CHECK;
       // face the player while greeting, otherwise their post
       const want = close && !p.busy && p.role !== 'parking' ? Math.atan2(-(this.player.x - p.pos.x), -(this.player.z - p.pos.z)) : p.home.yaw;
       p.yaw = turn(p.yaw, want, dt * 4);
@@ -467,6 +494,7 @@ export class StaffSystem {
     }
     // sweepers work their way along the walkways
     for (const p of this.sweepers) {
+      if (this.day && !onDuty(p.shift, m)) continue;
       const [a, b] = p.line;
       const len = a.distanceTo(b);
       if (p.pause > 0) p.pause -= dt;
@@ -487,6 +515,74 @@ export class StaffSystem {
       const frame = p.pause > 0 ? 0 : Math.floor(time * 2.4 + p.seed) % SWEEP_FRAMES;
       this.people.add('staff', STAFF.SWEEP + frame, p.pos.x, p.pos.y, p.pos.z, p.yaw, p.seed);
       this.bubbles.follow(p, p.headPos());
+    }
+    if (this.day) this.updateCommuters(dt, time);
+  }
+
+  // ---------------------------------------------------------- shifts
+  // a cast member on their way in (from the cast door to their post) or out
+  // - walked only where you might see it; elsewhere they're simply there
+  commute(seed, from, to, done, delay = 0) {
+    const far = (v) => v.distanceToSquared(this.cam) > 300 * 300;
+    if (!this.day?.nav || (far(from) && far(to))) { done?.(); return; }
+    this.commuters.push({ seed, from: from.clone(), to: to.clone(), done, delay, person: null });
+  }
+
+  spotShift(p, on) {
+    const first = p.duty === undefined;
+    p.duty = on;
+    if (first) { p.here = on; return; }
+    p.here = false;
+    if (on) this.commute(p.seed, this.day.door, p.home.pos, () => { p.here = true; p.pos.copy(p.home.pos); p.yaw = p.home.yaw; p.setupFor = 6 + Math.random() * 8; });
+    else this.commute(p.seed, p.home.pos, this.day.door, null);
+  }
+
+  crewShift(crew, on) {
+    const first = crew.duty === undefined;
+    crew.duty = on;
+    if (first) { crew.here = on; return; }
+    crew.here = false;
+    const members = [crew.operator, ...crew.attendants];
+    let left = members.length;
+    members.forEach((a, k) => {
+      const post = a === crew.operator ? a.pos : a.home.pos;
+      if (on) this.commute(a.seed, this.day.door, post, () => { if (--left === 0) crew.here = true; }, k * 1.4);
+      else this.commute(a.seed, post, this.day.door, null, k * 1.4);
+    });
+  }
+
+  updateCommuters(dt, time) {
+    for (let i = this.commuters.length - 1; i >= 0; i--) {
+      const c = this.commuters[i];
+      if (c.delay > 0) { c.delay -= dt; continue; }
+      if (!c.person) {
+        let path = this.day.nav.route(c.from, c.to, false);
+        if (path === undefined) {
+          if (this.routeBudget <= 0) continue;
+          this.routeBudget--;
+          path = this.day.nav.route(c.from, c.to);
+        }
+        if (!path) { c.done?.(); this.commuters.splice(i, 1); continue; }
+        // (a park day passes in minutes: you see the last stretch of the walk
+        // in, already on the way, and the first stretch of the walk out)
+        const pts = [...path.map((pt) => new THREE.Vector3(pt.x, pt.y + 0.02, pt.z)), c.to.clone()];
+        const arriving = typeof c.done === 'function';
+        const seq = arriving ? [...pts].reverse() : pts;
+        const keep = [seq[0]];
+        let len = 0;
+        for (let k = 1; k < seq.length; k++) {
+          const d = seq[k].distanceTo(seq[k - 1]);
+          if (len + d > 90) { keep.push(seq[k - 1].clone().lerp(seq[k], (90 - len) / Math.max(0.01, d))); break; }
+          len += d;
+          keep.push(seq[k]);
+        }
+        const walk = arriving ? keep.reverse() : keep;
+        c.person = new Person(c.seed, walk[0], 0);
+        c.person.tasks = walk.slice(1).map((to) => ({ type: 'walk', to, speed: 5.2 }));
+      }
+      c.person.step(dt, () => {});
+      if (!c.person.tasks.length) { c.done?.(); this.commuters.splice(i, 1); continue; }
+      if (c.person.pos.distanceToSquared(this.cam) < 260 * 260) c.person.draw(this.people, time);
     }
   }
 }

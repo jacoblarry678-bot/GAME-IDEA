@@ -489,7 +489,7 @@ export class Entrance {
   update(dt, cam, playerPos) {
     // cars arrive through the morning and early afternoon
     const minute = Clock.minutes();
-    const every = minute < 690 ? 3.5 : minute < 900 ? 9 : minute < 1080 ? 18 : Infinity;
+    const every = this.arriving === false ? Infinity : minute < 690 ? 3.5 : minute < 900 ? 9 : minute < 1080 ? 18 : Infinity;
     this.nextCar -= dt;
     const driving = this.cars.filter((c) => c.state === 'drive').length;
     if (this.nextCar <= 0 && every < Infinity) {
