@@ -22,7 +22,7 @@ export function trackRide(data, spec) {
   data.dynamicSigns = data.dynamicSigns || [];
   data.staffSpots = data.staffSpots || [];
   const pp = (shape, size, pos, color, mat, rot = [1, 0, 0, 0, 1, 0, 0, 0, 1]) => [shape, ...size, ...pos, ...rot, color, mi(mat), 0, 0];
-  const track = makeTrack(spec.circuit);
+  const track = makeTrack(spec.circuit, spec.trackOpts || {});
   const sampler = new Sampler(track);
   const m4 = new THREE.Matrix4(), P = new THREE.Vector3(), R = new THREE.Vector3(), F = new THREE.Vector3();
   const L = track.length;
@@ -65,6 +65,7 @@ export function trackRide(data, spec) {
     for (let s = 3; s < L - 3; s += 5) {
       sampler.matrixAt(s, m4);
       P.setFromMatrixPosition(m4);
+      if (m4.elements[5] < 0.9) continue; // (not under a banked or upside-down stretch)
       R.setFromMatrixColumn(m4, 0); R.y = 0; R.normalize();
       const top = P.y - 1.9;
       if (top - G < 2.2) continue;
@@ -360,9 +361,9 @@ export function buildNKRides(data, site) {
       add([8, 2, 8], [x, G + 10, z], 0x6a7a50, 'Slate', { collide: 0 });
       add([3, 3, 0.4], [x, G + 4, z + 3.6], 0x2a2a20, 'Slate', { collide: 0 });
     }
-    if (placeIf(r, [12, 8, 10], [66, 4, 1178])) {
-      add([12, 6, 10], [66, G + 3, 1178], 0x7a7a6a, 'Slate', { shape: 3 });
-      A.tiger(66, G + 5.2, 1176, Math.PI * 1.1);
+    if (placeIf(r, [12, 8, 10], [-12, 4, 1030])) {
+      add([12, 6, 10], [-12, G + 3, 1030], 0x7a7a6a, 'Slate', { shape: 3 });
+      A.tiger(-12, G + 5.2, 1028, Math.PI * 0.6);
     }
     for (const [x, z, yw] of [[60, 1080, -1.6], [56, 1066, -1.2], [64, 1094, -2]]) if (placeIf(r, [4, 6, 4], [x, 3, z])) A.gorilla(x, G, z, yw, x === 56 ? 0.7 : 1);
     // the jungle's trees, wherever the boats don't pass

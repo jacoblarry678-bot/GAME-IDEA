@@ -49,6 +49,25 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: Under the Seas, an indoor launched coaster in Natural
+  Kingdom's new Coral Coast land (browser only).** It's the same kind of
+  ride as Benton Roll: a great dark hall, and inside it the ocean.
+  - **The ride:** board a gold submarine car in the sub pen. The launch
+    fires you down a tube of light at up to 94 km/h, then:
+    - a barrel roll through a ring of golden fish;
+    - a dive over the coral reef past a sunken galleon and its glowing
+      treasure;
+    - a helix round a giant turning octopus;
+    - a corkscrew through the kelp, and home.
+  - **On the way:** a whale glides overhead, schools of fish circle,
+    jellyfish pulse and glow in the dark, and an anglerfish's lure shines
+    in the trench. That's 693 studs and about a minute.
+  - **Outside:** a deep-blue hall with a wave breaking over its front,
+    glowing portholes, an anchor by the door and a gold submarine on the
+    roof. The line winds along the front and in at the door.
+  - **Getting there:** follow the path from Primeval Valley's plaza, west
+    and then south between the River Safari and Raptor Run. (The River
+    Safari's tiger moved onto the river's island to make room.)
 - **New park: NATURAL KINGDOM (browser only).** A second park across the
   Benton Parkway, in a valley levelled out of the hills south of the road.
   - **Getting there:** walk over the **Kingdom Bridge**, which climbs from

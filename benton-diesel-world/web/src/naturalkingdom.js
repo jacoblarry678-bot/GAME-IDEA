@@ -15,7 +15,7 @@ export const NK_GATE = { id: 'nk', x0: 170, x1: 210, z: 718, outside: -1, out: [
 export const NK_DOOR = { x: 245, y: 0.42, z: 724 }; // the cast members' door, in the wall east of the gate
 export const NK_INSIDE = [190, 0.42, 732]; // just inside the gate
 export const HUB = [190, 880];
-export const NK_LANDS = ['KingdomGate', 'SavannaReach', 'RainforestHollow', 'PrimevalValley'];
+export const NK_LANDS = ['KingdomGate', 'SavannaReach', 'RainforestHollow', 'PrimevalValley', 'CoralCoast'];
 const G = 0.02;
 const SAND = 0xd8b880, STONE = 0xc89a60, DARKSTONE = 0x8a6440, PATH = 0xc8b08a, WOOD = 0x6a4a2a, THATCH = 0xc8a050, GOLD = 0xf0b030, LEAF = 0x5a8a2a, INK = 0x1a1410, WHITE = 0xf4f0e8, WATER = 0x3a8aa8;
 
@@ -65,7 +65,8 @@ export function buildNaturalKingdom(data) {
   data.config.Lands.push(
     { id: 'KingdomGate', name: 'Kingdom Gate', center: [HUB[0], 0, 790], color: 0xd89a3a, tagline: 'Natural Kingdom: where every path leads to the wild.', regions: [[120, 718, 262, 960]] },
     { id: 'SavannaReach', name: 'Savanna Reach', center: [520, 0, 980], color: 0xe0b040, tagline: 'Golden grass, wide skies and the herds on the move.', regions: [[262, 700, 800, 980], [340, 980, 800, 1300]] },
-    { id: 'RainforestHollow', name: 'Rainforest Hollow', center: [20, 0, 1000], color: 0x2a9a5a, tagline: 'Deep green, warm rain and eyes in the leaves.', regions: [[-90, 760, 120, 1300]] },
+    { id: 'RainforestHollow', name: 'Rainforest Hollow', center: [20, 0, 1000], color: 0x2a9a5a, tagline: 'Deep green, warm rain and eyes in the leaves.', regions: [[-90, 760, 120, 1162]] },
+    { id: 'CoralCoast', name: 'Coral Coast', center: [10, 0, 1230], color: 0x1aa8c8, tagline: 'The reef runs deep - and something big lives down there.', regions: [[-90, 1162, 128, 1300]] },
     { id: 'PrimevalValley', name: 'Primeval Valley', center: [230, 0, 1120], color: 0xc8501e, tagline: 'The volcano is rumbling. The dinosaurs are back.', regions: [[120, 960, 340, 1300]] },
   );
 
