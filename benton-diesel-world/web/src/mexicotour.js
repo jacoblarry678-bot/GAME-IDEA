@@ -228,20 +228,25 @@ export function buildMexicoTour(data) {
   light(-520, 9, 842, ORANGE);
 
   // ======== scene 2, the mariachi band in the square
-  const mariachi = (x, z, yaw, inst) => {
+  const mariachi = (x, z, yaw, inst, k) => {
     const c = Math.cos(yaw), s = Math.sin(yaw);
     const at = (lx, ly, lz) => [x + lx * c + lz * s, G + ly, z - lx * s + lz * c];
-    S([1.2, 2.6, 0.8], at(0, 1.3, 0), INK, 'Fabric', { collide: 0, rot: RY(yaw) });
-    S([1.4, 1.8, 0.9], at(0, 3.5, 0), INK, 'Fabric', { collide: 0, rot: RY(yaw) });
+    const suit = k % 2 ? 0x8a1a2a : WHITE;
+    S([1.2, 2.6, 0.8], at(0, 1.3, 0), suit, 'Fabric', { collide: 0, rot: RY(yaw) });
+    S([1.4, 1.8, 0.9], at(0, 3.5, 0), suit, 'Fabric', { collide: 0, rot: RY(yaw) });
+    S([0.8, 0.35, 0.2], at(0, 4.3, -0.5), [RED, TEAL, MAGENTA][k % 3], 'Neon', { collide: 0, rot: RY(yaw) });
+    for (let j = 0; j < 4; j++) S([0.14, 0.14, 0.14], at(0.66, 0.6 + j * 0.55, -0.42), 0xe8e8f0, 'Metal', { collide: 0, shape: 3 });
     S([0.8, 0.8, 0.8], at(0, 4.9, 0), 0xc89060, 'SmoothPlastic', { collide: 0, shape: 3 });
     S([3.4, 0.25, 3.4], at(0, 5.5, 0), GOLD, 'Fabric', { collide: 0, shape: 5 });
     S([1, 0.8, 1], at(0, 5.9, 0), GOLD, 'Fabric', { collide: 0, shape: 5 });
-    for (let j = -2; j <= 2; j++) S([0.12, 0.12, 0.12], at(0.72, 3.3 + j * 0.35, -0.46), 0xf0d060, 'Metal', { collide: 0, shape: 3 });
+    for (let j = -2; j <= 2; j++) S([0.14, 0.14, 0.14], at(0.72, 3.3 + j * 0.35, -0.46), 0xf0d060, 'Metal', { collide: 0, shape: 3 });
     if (inst === 'guitar') { S([1.4, 1.6, 0.4], at(0.2, 3.2, -0.7), 0xc87a3a, 'WoodPlanks', { collide: 0, rot: RY(yaw) }); S([0.3, 0.3, 2.4], at(-0.4, 3.9, -1.2), 0x6a3a1a, 'Wood', { collide: 0, rot: RY(yaw + 0.9) }); }
     else if (inst === 'trumpet') S([0.3, 0.3, 1.8], at(0, 4.7, -1.1), GOLD, 'Metal', { collide: 0, rot: RY(yaw) });
     else S([0.4, 2.2, 0.4], at(0.6, 3.6, -0.5), 0x6a3a1a, 'Wood', { collide: 0, rot: RZ(0.5) });
   };
-  for (const [x, z, inst] of [[-494, 834, 'guitar'], [-489, 836, 'trumpet'], [-484, 834, 'violin'], [-479, 836, 'guitar'], [-474, 834, 'trumpet']]) mariachi(x, z, Math.PI, inst);
+  [[-494, 834, 'guitar'], [-489, 836, 'trumpet'], [-484, 834, 'violin'], [-479, 836, 'guitar'], [-474, 834, 'trumpet']].forEach(([x, z, inst], k) => mariachi(x, z, Math.PI, inst, k));
+  for (let j = 0; j < 9; j++) SN([0.9, 0.9, 0.9], [-496 + j * 3, G + 8.6, 829.4], [GOLD, ORANGE, 0xfff0c0][j % 3], { shape: 3 });
+  light(-484, 7, 832, 0xffe0a0);
   SB([30, 0.6, 12], [-484, G, 834], 0x9a6a40, 'WoodPlanks', { collide: 0 });
   for (const x of [-497, -471]) { SB([0.4, 9, 0.4], [x, G, 829], 0x5a3a2a, 'Wood', { collide: 0 }); }
   S([27, 1.6, 0.3], [-484, G + 9.4, 829], INK, 'SmoothPlastic', { collide: 0 });
@@ -284,7 +289,9 @@ export function buildMexicoTour(data) {
   if (SB([18, 3, 14], [-414, G, 812], STONE2, 'Slate', { collide: 0 }) >= 0) {
     SB([13, 3, 10], [-414, G + 3, 812], STONE, 'Slate', { collide: 0 });
     SB([8, 4, 6], [-414, G + 6, 812], STONE2, 'Slate', { collide: 0 });
-    S([3, 3, 0.3], [-409.8, G + 8, 812], 0x2a1a0a, 'Slate', { collide: 0, rot: RY(Math.PI / 2) });
+    S([0.3, 3, 3], [-409.9, G + 8, 812], 0xff8a2a, 'Neon', { collide: 0 });
+    for (const [w, d, y] of [[18, 14, 2.6], [13, 10, 5.6], [8, 6, 9.6]]) { S([0.2, 0.4, d + 0.2], [-414 + w / 2 + 0.05, G + y, 812], 0x3ad8c0, 'Neon', { collide: 0 }); S([w + 0.2, 0.4, 0.2], [-414, G + y, 812 - d / 2 - 0.05], 0x3ad8c0, 'Neon', { collide: 0 }); S([w + 0.2, 0.4, 0.2], [-414, G + y, 812 + d / 2 + 0.05], 0x3ad8c0, 'Neon', { collide: 0 }); }
+    light(-404, 5, 799, 0x3ad8a8);
     for (let j = 0; j < 10; j++) S([1.4, 1.4, 1.4], [-404.6, G + 1 + j * 0.2, 800 + j * 2.4], j === 0 ? 0x3aa86a : (j % 2 ? 0x2a8a5a : 0x3aa86a), 'Slate', { collide: 0, shape: 3 });
     S([2.4, 2, 2.6], [-404.6, G + 1.6, 797.6], 0x3aa86a, 'Slate', { collide: 0 });
     for (const dz of [-0.6, 0.6]) SN([0.4, 0.4, 0.3], [-403.4, G + 2.2, 797.6 + dz], GOLD, { shape: 3 });
