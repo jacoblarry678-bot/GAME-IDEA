@@ -524,9 +524,14 @@ export class StaffSystem {
   // - walked only where you might see it; elsewhere they're simply there
   // the cast door nearest a post (each park has its own), and its part of the walking map
   doorFor(pos) {
-    const doors = this.day.doors;
-    let best = doors[0];
-    for (const d of doors) if (d.distanceToSquared(pos) < best.distanceToSquared(pos)) best = d;
+    const doors = this.day.doors, nav = this.day.nav;
+    // (one on the same part of the walking map as the post, if there is one)
+    const grp = (v) => nav?.comp?.[nav.nearest(v.x, v.y, v.z, 15)] ?? -1;
+    const g = grp(pos);
+    const same = g >= 0 ? doors.filter((d) => grp(d) === g) : [];
+    const list = same.length ? same : doors;
+    let best = list[0];
+    for (const d of list) if (d.distanceToSquared(pos) < best.distanceToSquared(pos)) best = d;
     return best;
   }
 

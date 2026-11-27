@@ -49,6 +49,18 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **New ride: The Mexico Tour, an indoor boat ride in the new Fiesta
+  Plaza (browser only).** Fiesta Plaza is across the Benton Parkway from the
+  Haulers Roadside Inn and free to walk into. It has a fountain, papel picado
+  strung overhead, Cantina del Sol (tacos al pastor, churros, horchata) and
+  Mercado Benton (sombreros, pinata balloons). The ride is inside a great
+  stepped pyramid. You walk in through a tunnel under its stair, and inside
+  it is always twilight, with stars, a moon and a smoking volcano. Painted
+  boats leave the dock and drift past a market town, a mariachi band, a Day
+  of the Dead night of marigolds, candles and dancing skeletons, the cliff
+  divers, an ancient temple with its feathered serpent, and a fireworks
+  finale. The plaza has its own guests and cast door, and the ride keeps
+  park hours.
 - **New ride: Under the Seas, an indoor launched coaster in Natural
   Kingdom's new Coral Coast land (browser only).** It's the same kind of
   ride as Benton Roll: a great dark hall, and inside it the ocean.
