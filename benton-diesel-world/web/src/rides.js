@@ -391,6 +391,30 @@ export function makeMotion(r, cfg) {
       },
     };
   }
+  // a lift-cab tower (The Lion's Breath): the cab follows its keyframes -
+  // [t, x, y, z, shape] in the ride's frame - gliding ('ease') between them
+  // or dropping and pulling ('drop': speeding up all the way, then braked)
+  if (r.kind === 'droptower' && r.keys) {
+    const K = r.keys;
+    const shape = { ease: smoothstep, drop: (u) => (u < 0.8 ? 0.9 * (u / 0.8) ** 2 : 0.9 + 0.1 * (1 - (1 - (u - 0.8) / 0.2) ** 2)) };
+    const at = (t) => {
+      if (t <= K[0][0]) return K[0];
+      for (let i = 1; i < K.length; i++) {
+        if (t >= K[i][0]) continue;
+        const a = K[i - 1], b = K[i], k = (shape[b[4]] || shape.ease)((t - a[0]) / (b[0] - a[0]));
+        return [t, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k];
+      }
+      return K[K.length - 1];
+    };
+    return {
+      duration: r.duration,
+      pose(t) {
+        const p = at(t), extras = {};
+        poseProps(r.props, t, extras);
+        return { cars: [mul(origin.clone(), TR(p[1], p[2], p[3]))], extras };
+      },
+    };
+  }
   if (r.kind === 'droptower') {
     const T = r.duration, H = 150, g = 45, fallTo = 60;
     const tFall = Math.sqrt(2 * (H - fallTo) / g);

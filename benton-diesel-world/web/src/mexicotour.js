@@ -69,12 +69,12 @@ export function buildMexicoTour(data) {
   add([FIESTA.x1 - FIESTA.x0 - 20, 0.2, B.z0 - FIESTA.z0 - 4], [(FIESTA.x0 + FIESTA.x1) / 2, G + 0.1, (FIESTA.z0 + B.z0) / 2 - 2], 0xd8a878, 'Pavement', { collide: 0 });
   for (let x = FIESTA.x0 + 16; x < FIESTA.x1 - 12; x += 8) for (let z = FIESTA.z0 + 12; z < B.z0 - 26; z += 8) if (((x + z) / 8) % 2 === 0) add([7.6, 0.06, 7.6], [x, G + 0.22, z], 0xc87850, 'Pavement', { collide: 0 });
   // the fountain
-  add([16, 1.4, 16], [-465, G + 0.7, 716], 0x2a8ab8, 'Slate', { shape: 5 });
-  add([14, 0.2, 14], [-465, G + 1.45, 716], 0x6ad0f0, 'Glass', { shape: 5, collide: 0, trans: 0.3 });
-  add([2, 5, 2], [-465, G + 2.5, 716], 0xe8d8b8, 'Slate', { shape: 5 });
-  add([5, 0.8, 5], [-465, G + 5.2, 716], 0xe8d8b8, 'Slate', { shape: 5, collide: 0 });
-  add([4, 2.4, 4], [-465, G + 6.4, 716], 0x9ae8ff, 'Glass', { shape: 5, collide: 0, trans: 0.45 });
-  light(-465, 6, 716, 0x9ae8ff);
+  add([16, 1.4, 16], [-465, G + 0.7, 705], 0x2a8ab8, 'Slate', { shape: 5 });
+  add([14, 0.2, 14], [-465, G + 1.45, 705], 0x6ad0f0, 'Glass', { shape: 5, collide: 0, trans: 0.3 });
+  add([2, 5, 2], [-465, G + 2.5, 705], 0xe8d8b8, 'Slate', { shape: 5 });
+  add([5, 0.8, 5], [-465, G + 5.2, 705], 0xe8d8b8, 'Slate', { shape: 5, collide: 0 });
+  add([4, 2.4, 4], [-465, G + 6.4, 705], 0x9ae8ff, 'Glass', { shape: 5, collide: 0, trans: 0.45 });
+  light(-465, 6, 705, 0x9ae8ff);
   // papel picado: strings of little cut-paper flags across the plaza
   const picado = (x0, z0, x1, z1, y) => {
     const n = Math.round(Math.hypot(x1 - x0, z1 - z0) / 2.2);

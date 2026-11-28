@@ -49,6 +49,19 @@ It is drawn as its own realistic game rather than a copy of the Roblox look:
   check table (some with x-ray scanners) and a walk-through metal detector
   that beeps and flashes green as you pass. Officers in white shirts check
   bags and wave you in. ⚙ Settings has **Back to my car**.
+- **Benton Haunt has closed for the year, and The Lion's Breath opens in
+  Savanna Reach (browser only).** The haunt houses are shut and their
+  facades are coming down. The scare zones and the haunt food are gone,
+  and the billboards say thanks for screaming. The Lion's Breath is a
+  drop-tower thrill ride: an old stone tower by Kingdom Walk with a great
+  carved lion's head near the top, and they say the stone lion still
+  breathes. You queue in the forecourt and board a brass-and-timber lift
+  cab in the torchlit antechamber. It glides into the shaft and climbs
+  past a pair of eyes in the dark to stop behind the lion's mouth. The
+  doors open on the whole park, the lion breathes out, and you drop. You
+  are hauled back up and drop again, peek out once more, then fall all the
+  way down. (The Mexico Tour's fountain has also moved forward so its
+  queue entrance isn't squeezed.)
 - **New ride: The Mexico Tour, an indoor boat ride in Fiesta Plaza,
   Natural Kingdom's sixth land (browser only).** Go in through the Natural
   Kingdom gate and take the Fiesta Trail west from Rainforest Hollow. It

@@ -1,8 +1,8 @@
-// The park calendar. Summer is over and Benton Haunt is back: the houses
-// in the backstage soundstages and the Family Landing tent, the seven scare
-// zones, the haunt food - and three new houses built inside ride buildings
-// (see RIDE_HOUSES_OPEN below)...
-export const HAUNT_OVER = false;
+// The park calendar. Benton Haunt has closed for the year: the houses in
+// the backstage soundstages, the Family Landing tent and the ride buildings
+// are shut and their facades coming down, the scare zones are gone and the
+// haunt food has packed up. See you next fall...
+export const HAUNT_OVER = true;
 // (the setup is done...)
 export const XMAS_SETUP = false;
 // (Benton Holidays, with its Christmas trails, has closed for the year,

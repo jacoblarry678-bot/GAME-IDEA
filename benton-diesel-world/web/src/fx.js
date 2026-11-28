@@ -333,6 +333,13 @@ export class Effects {
         tmpColor.setRGB(0.4 + Math.random() * 0.2, 0.65, 0.9);
         this.soft.spawn(at.x + rand(-3, 3), at.y + 16 + rand(0, 3), at.z + rand(-15, 15), rand(-2, 2), rand(-4, 0), 0, tmpColor, rand(1.2, 2), rand(1, 1.6), 30, 0, 1.6);
       }
+    } else if (kind === 'breath') {
+      // a great warm breath out of the stone lion's mouth (out to +z)
+      this.emit('mist', new THREE.Vector3(at.x, at.y, at.z + 2), { duration: 3 });
+      for (let i = 0; i < 260; i++) {
+        tmpColor.setRGB(0.95, 0.85 + Math.random() * 0.1, 0.7);
+        this.soft.spawn(at.x + rand(-4, 4), at.y + rand(-2, 2), at.z + rand(0, 2), rand(-3, 3), rand(-1, 3), rand(10, 22), tmpColor, rand(1.4, 2.4), rand(1, 1.8), 30, 0, 0.2);
+      }
     } else if (kind === 'explosion') {
       this.explosion(new THREE.Vector3(at.x, at.y + 6, at.z), 1);
     } else if (kind === 'splash') {
