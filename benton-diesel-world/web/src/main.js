@@ -17,7 +17,7 @@ import { ParkDay, buildCastDoor, CAST_DOOR, GATE as MAIN_GATE } from './parkday.
 import { buildNaturalKingdom, NK_GATE, NK_DOOR, NK_INSIDE, NK_LANDS } from './naturalkingdom.js';
 import { buildNKRides } from './nkrides.js';
 import { buildUnderTheSeas, UnderTheSeasSite } from './underseas.js';
-import { buildMexicoTour, MexicoTourSite, FIESTA_GATE, FIESTA_LANDS, FIESTA_DOOR } from './mexicotour.js';
+import { buildMexicoTour, MexicoTourSite, FIESTA_DOOR } from './mexicotour.js';
 import { QueueCrowd } from './queue.js';
 import { CrowdRenderer } from './people/crowd.js';
 import { StaffSystem } from './staff.js';
@@ -370,9 +370,6 @@ async function main() {
   const nkCrowd = nav ? new GuestFlow(people, nav, data, sim, Math.round(PRESETS[qualityName].guests * 0.6), { gate: { x: NK_INSIDE[0], y: NK_INSIDE[1], z: NK_INSIDE[2] }, lands: NK_LANDS }) : null;
   game.guests = crowd;
   game.nkGuests = nkCrowd;
-  // (and Fiesta Plaza's, across the parkway: its own little crowd)
-  const fxCrowd = nav ? new GuestFlow(people, nav, data, sim, Math.round(PRESETS[qualityName].guests * 0.2), { gate: { x: FIESTA_GATE[0], y: FIESTA_GATE[1], z: FIESTA_GATE[2] }, lands: FIESTA_LANDS }) : null;
-  game.fiestaGuests = fxCrowd;
   const staff = new StaffSystem({
     data, people, rideVis, sim, bubbles,
     hooks: { toast: (text, kind) => game.ui?.toast(text, kind), sound: (k) => audio.ui(k), latch: () => audio.ui('latch') },
@@ -526,7 +523,7 @@ async function main() {
     qualityName = q;
     game.qualityName = q;
     try { localStorage.setItem(QUALITY_KEY, q); } catch (e) { /* ignore */ }
-    if (crowd instanceof GuestFlow) { crowd.setMax(PRESETS[q].guests); nkCrowd?.setMax(Math.round(PRESETS[q].guests * 0.6)); fxCrowd?.setMax(Math.round(PRESETS[q].guests * 0.2)); } else crowd = new Crowd(people, PRESETS[q].crowd);
+    if (crowd instanceof GuestFlow) { crowd.setMax(PRESETS[q].guests); nkCrowd?.setMax(Math.round(PRESETS[q].guests * 0.6)); } else crowd = new Crowd(people, PRESETS[q].crowd);
     people.setShadows(PRESETS[q].shadows);
     applyQuality();
   };
@@ -693,7 +690,7 @@ async function main() {
       signTimer = 1;
       world.updateSigns(signRides, (id) => sim.rideState(id));
     }
-    if (crowd instanceof GuestFlow) { crowd.update(dt, camera.position); nkCrowd?.update(dt, camera.position); fxCrowd?.update(dt, camera.position); } else crowd.update(dt, time);
+    if (crowd instanceof GuestFlow) { crowd.update(dt, camera.position); nkCrowd?.update(dt, camera.position); } else crowd.update(dt, time);
     parkDay.update(dt, started);
     staff.update(dt, now, time, camera.position, player.pos);
     if (started) scares.update(dt, camera.position, player.pos);

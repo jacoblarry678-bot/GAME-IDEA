@@ -4,18 +4,19 @@
 // Sunstone - a great sandstone arch with a waterfall, carved with the
 // animals of the park - and out to its lands: Savanna Reach (the Savanna
 // Trek Safari and Cheetah Chase), Rainforest Hollow (the River Safari) and
-// Primeval Valley (Raptor Run). This file is the ground, the lands, the
+// Primeval Valley (Raptor Run) - and, out west down the Fiesta Trail,
+// Fiesta Plaza (The Mexico Tour, in mexicotour.js). This file is the ground, the lands, the
 // gate and the bridge, the paths, the Sunstone, the shops and restaurants
 // and the trees; the rides are in nkrides.js and the animals in nkanimals.js.
 import { helpers } from './wolverine.js';
 import { addItems } from './lowerlot.js';
 
 export const NK = { x0: -90, x1: 800, z0: 690, z1: 1300 }; // the levelled valley
-export const NK_GATE = { id: 'nk', x0: 170, x1: 210, z: 718, outside: -1, out: [190, 3, 704], forecourt: [120, 686, 262, 717.5], area: [-130, 690, 830, 1340] };
+export const NK_GATE = { id: 'nk', x0: 170, x1: 210, z: 718, outside: -1, out: [190, 3, 704], forecourt: [120, 686, 262, 717.5], area: [-580, 690, 830, 1340] }; // (Fiesta Plaza too, out west)
 export const NK_DOOR = { x: 245, y: 0.42, z: 724 }; // the cast members' door, in the wall east of the gate
 export const NK_INSIDE = [190, 0.42, 732]; // just inside the gate
 export const HUB = [190, 880];
-export const NK_LANDS = ['KingdomGate', 'SavannaReach', 'RainforestHollow', 'PrimevalValley', 'CoralCoast'];
+export const NK_LANDS = ['KingdomGate', 'SavannaReach', 'RainforestHollow', 'PrimevalValley', 'CoralCoast', 'FiestaPlaza']; // (Fiesta Plaza is in mexicotour.js)
 const G = 0.02;
 const SAND = 0xd8b880, STONE = 0xc89a60, DARKSTONE = 0x8a6440, PATH = 0xc8b08a, WOOD = 0x6a4a2a, THATCH = 0xc8a050, GOLD = 0xf0b030, LEAF = 0x5a8a2a, INK = 0x1a1410, WHITE = 0xf4f0e8, WATER = 0x3a8aa8;
 

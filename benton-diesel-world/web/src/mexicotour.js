@@ -1,6 +1,8 @@
-// THE MEXICO TOUR: an indoor boat ride in Fiesta Plaza, a little resort
-// plaza of its own across the parkway (west of the Backwoods Lodge), open to
-// all - no gate. Its building is a great stepped pyramid; walk in through
+// THE MEXICO TOUR: an indoor boat ride in Fiesta Plaza, Natural Kingdom's
+// sixth land. The plaza sits west of the valley, beyond the Backwoods Lodge,
+// walled off from the parkway: guests come in through the park's gate and
+// out along the Fiesta Trail, a path cut through the hills from Rainforest
+// Hollow. Its building is a great stepped pyramid; walk in through
 // the tunnel at its foot and it's always twilight inside: stars, a moon, a
 // smoking volcano over a market plaza where painted boats wait on the
 // river. The boats drift out past a market town strung with papel picado
@@ -14,9 +16,9 @@ import { trackRide } from './nkrides.js';
 
 export const RIDE_ID = 'MexicoTour';
 export const FIESTA = { x0: -560, x1: -360, z0: 690, z1: 870 }; // the plaza's site
-export const FIESTA_GATE = [-465, 0.42, 700]; // where its guests come in, off the parkway's verge
 export const FIESTA_LANDS = ['FiestaPlaza'];
 export const FIESTA_DOOR = [-546, 0.42, 745]; // the cast members' door, in a shed west of the pyramid
+const TRAIL = { z: 880, x0: -372, x1: 8 }; // the Fiesta Trail, from Rainforest Hollow's plaza west and down into Fiesta Plaza
 const B = { x0: -545, x1: -385, z0: 760, z1: 860, H: 20 }; // the ride hall, behind the pyramid
 const T = 1.6;
 const G = 0.02;
@@ -59,9 +61,9 @@ export function buildMexicoTour(data) {
   const pp = (shape, size, pos, color, mat, rot = [1, 0, 0, 0, 1, 0, 0, 0, 1]) => [shape, ...size, ...pos, ...rot, color, mi(mat), 0, 0];
 
   // ======== the ground and the land
-  data.flatZones = [...(data.flatZones || []), { ...FIESTA, margin: 30 }];
-  data.trees = (data.trees || []).filter((t) => !(t.pos[0] > FIESTA.x0 - 10 && t.pos[0] < FIESTA.x1 + 10 && t.pos[2] > FIESTA.z0 - 10 && t.pos[2] < FIESTA.z1 + 10));
-  data.config.Lands.push({ id: 'FiestaPlaza', name: 'Fiesta Plaza', center: [-465, 0, 720], color: 0xe04a2a, tagline: 'Music, marigolds and the river at twilight - free and open to all.', regions: [[FIESTA.x0, FIESTA.z0, FIESTA.x1, FIESTA.z1]] });
+  data.flatZones = [...(data.flatZones || []), { ...FIESTA, margin: 30 }, { x0: -392, x1: -90, z0: TRAIL.z - 12, z1: TRAIL.z + 12, margin: 20 }];
+  data.trees = (data.trees || []).filter((t) => !(t.pos[0] > FIESTA.x0 - 10 && t.pos[0] < FIESTA.x1 + 10 && t.pos[2] > FIESTA.z0 - 10 && t.pos[2] < FIESTA.z1 + 10) && !(t.pos[0] > -392 && t.pos[0] < -80 && Math.abs(t.pos[2] - TRAIL.z) < 14));
+  data.config.Lands.push({ id: 'FiestaPlaza', name: 'Fiesta Plaza', center: [-465, 0, 720], color: 0xe04a2a, tagline: 'Music, marigolds and the river at twilight - down the Fiesta Trail.', regions: [[FIESTA.x0, FIESTA.z0, FIESTA.x1, FIESTA.z1], [-386, FIESTA.z1, -90, TRAIL.z + 12]] });
 
   // ======== Fiesta Plaza: tiles, a fountain, papel picado, the cantina and the market
   add([FIESTA.x1 - FIESTA.x0 - 20, 0.2, B.z0 - FIESTA.z0 - 4], [(FIESTA.x0 + FIESTA.x1) / 2, G + 0.1, (FIESTA.z0 + B.z0) / 2 - 2], 0xd8a878, 'Pavement', { collide: 0 });
@@ -108,9 +110,41 @@ export function buildMexicoTour(data) {
   box([8, 9, 12], [-552, G, 745], 0xb08a60, 'Slate');
   add([0.15, 7, 4], [-547.9, 3.5, 745], 0x3a4048, 'Metal', { collide: 0 });
   sign([0.1, 1.1, 4.4], [-547.8, 8.2, 745], 0x16223a, 'Right', [['CAST MEMBERS ONLY', 0, 0, 1, 1, 0xf0c440, 'GothamBold']]);
-  // a path from the parkway's verge (and the Lodge) into the plaza
-  add([12, 0.2, 14], [-465, G + 0.1, 694], 0xc8a878, 'Pavement', { collide: 0 });
-  add([170, 0.2, 8], [-345, G + 0.1, 692], 0xb8a888, 'Pavement', { collide: 0 });
+  // ======== an adobe wall round the plaza, closing it off from the parkway (in through the park's gate only)
+  const ADOBE = 0xd8805a;
+  const adobe = (x0, z0, x1, z1) => {
+    const len = Math.hypot(x1 - x0, z1 - z0), yaw = Math.atan2(x1 - x0, z1 - z0);
+    box([1.4, 6, len], [(x0 + x1) / 2, G, (z0 + z1) / 2], ADOBE, 'Slate', { yaw });
+    add([2, 0.5, len + 0.6], [(x0 + x1) / 2, G + 6.25, (z0 + z1) / 2], 0xb8482a, 'Slate', { collide: 0, yaw });
+    for (let t = 6; t < len - 3; t += 12) for (const sd of [-1, 1]) {
+      const u = t / len, x = x0 + (x1 - x0) * u + Math.cos(yaw) * sd * 0.72, z = z0 + (z1 - z0) * u - Math.sin(yaw) * sd * 0.72;
+      add([0.06, 1.6, 1.6], [x, G + 3.6, z], PICADO[Math.round(t / 12) % 7], 'SmoothPlastic', { collide: 0, yaw });
+    }
+  };
+  adobe(FIESTA.x0, FIESTA.z0 - 1, FIESTA.x1, FIESTA.z0 - 1);
+  adobe(FIESTA.x0, FIESTA.z0 - 1, FIESTA.x0, B.z0);
+  adobe(FIESTA.x0, B.z0 + 0.8, B.x0, B.z0 + 0.8);
+  adobe(FIESTA.x1, FIESTA.z0 - 1, FIESTA.x1, FIESTA.z1 - 12);
+
+  // ======== the Fiesta Trail: from Rainforest Hollow west through a cut in the hills, and down into the plaza
+  const trail = (pts, w) => { for (let k = 0; k < pts.length - 1; k++) { const [a, b] = [pts[k], pts[k + 1]]; const len = Math.hypot(b[0] - a[0], b[1] - a[1]); add([w, 0.2, len + w], [(a[0] + b[0]) / 2, G + 0.1, (a[1] + b[1]) / 2], 0xd8a878, 'Pavement', { collide: 0, yaw: Math.atan2(b[0] - a[0], b[1] - a[1]) }); } };
+  trail([[TRAIL.x1, TRAIL.z], [TRAIL.x0, TRAIL.z], [TRAIL.x0, 752]], 10);
+  // lamps, cacti and agaves along it, boulders at the foot of the cut
+  for (let x = TRAIL.x1 - 30; x > TRAIL.x0 + 10; x -= 32) for (const sd of [-1, 1]) {
+    const z = TRAIL.z + sd * 7.5;
+    if (sd < 0) { box([0.35, 8, 0.35], [x, G, z], 0x3a2a1a, 'Wood', { collide: 0 }); add([1.2, 1, 1.2], [x, G + 8.4, z], 0xffb060, 'Neon', { collide: 0, shape: 3 }); data.tags.ParkLamp.push([x, G + 8.4, z, 1, 0, 0, 0, 1, 0, 0, 0, 1]); }
+    else { add([1.4, 6, 1.4], [x + 6, G + 3, z + 1], 0x3a8a4a, 'Grass', { shape: 5 }); add([3, 0.9, 0.9], [x + 6, G + 4, z + 1], 0x3a8a4a, 'Grass', { collide: 0, shape: 2 }); add([0.9, 2.4, 0.9], [x + 7.1, G + 5, z + 1], 0x3a8a4a, 'Grass', { collide: 0, shape: 5 }); }
+    for (let j = 0; j < 5; j++) add([0.5, 2.6, 0.2], [x - 12 + sd * 0.4, G + 1.2, z + sd * 2 + (j - 2) * 0.4], 0x6a9a6a, 'Grass', { collide: 0, rot: RX((j - 2) * 0.35) });
+    add([4 + (x % 3), 3, 3.6], [x + 14, G + 1.2, TRAIL.z + sd * 12], 0x9a7a5a, 'Slate', { collide: 0, rot: RY(x * 0.7) });
+  }
+  for (let z = 860; z > 770; z -= 18) for (let j = 0; j < 9; j++) add([1.4, 1.2, 0.05], [-382.5 + j * 2.6, G + 9.5 - Math.sin((j + 0.5) / 9 * Math.PI) * 0.8, z], PICADO[(j + z) % 7], 'Fabric', { collide: 0 });
+  for (const z of [860, 812]) for (const x of [-383.5, -361.5]) box([0.4, 10, 0.4], [x, G, z], 0x5a3a2a, 'Wood', { collide: 0 });
+  // the welcome arch where it leaves Rainforest Hollow
+  for (const sd of [-1, 1]) { box([3, 13, 3], [-96, G, TRAIL.z + sd * 7], ADOBE, 'Slate'); add([3.6, 0.6, 3.6], [-96, G + 13.3, TRAIL.z + sd * 7], 0xb8482a, 'Slate', { collide: 0 }); }
+  add([3, 3, 17], [-96, G + 14.5, TRAIL.z], ADOBE, 'Slate', { collide: 0 });
+  sign([0.3, 2.4, 15], [-94.3, G + 14.5, TRAIL.z], INK, 'Right', [['FIESTA PLAZA', 0, 0, 1, 0.64, ORANGE], ['THE MEXICO TOUR', 0, 0.64, 1, 0.36, TEAL, 'GothamBold']], { glow: true });
+  sign([0.3, 2.4, 15], [-97.7, G + 14.5, TRAIL.z], INK, 'Left', [['RAINFOREST HOLLOW', 0, 0, 1, 1, LIME]], { glow: true });
+  for (let j = 0; j < 7; j++) add([1.6, 1.4, 0.05], [-96, G + 12 - Math.sin((j + 0.5) / 7 * Math.PI), TRAIL.z - 6 + j * 2], PICADO[j], 'Fabric', { collide: 0, rot: RY(Math.PI / 2) });
 
   // ======== the pyramid: five stepped tiers over the hall's front, a stair, a temple on top
   const PY = { x0: -525, x1: -405, z0: 728, z1: 762 }; // its footprint at the bottom
@@ -186,7 +220,7 @@ export function buildMexicoTour(data) {
     env: { half: 3.4, below: 1.6, above: 6.6 }, restraint: 'none', rideExtra: { bob: 0.1 },
     station: { side: 1, carHalf: 3.7, width: 4, y: 0.6, roof: 9 }, origin: [-465, 0, 815], extras, extrasNames, props, roofColor: 0xc85a2a,
     queue: [[-465, 726], [-465, 764], [-480, 766], [-536, 766], [-536, 770], [-480, 770], [-480, 774], [-536, 774], [-536, 778], [-480, 778], [-480, 782], [-536, 782], [-536, 786], [-506, 786], [-503, 794]],
-    exit: [-420, 0, 735], colors: [0x2a8ad8, ORANGE, MAGENTA], signColor: ORANGE, line: 'The Mexico Tour is boarding - fiesta inside the pyramid!',
+    exit: [-398, 0, 742], colors: [0x2a8ad8, ORANGE, MAGENTA], signColor: ORANGE, line: 'The Mexico Tour is boarding - fiesta inside the pyramid!',
     cues: (at) => [[at(-430, 772), 'fireworks', [0, 8, 0]]],
   });
   const { clearOf } = r;
@@ -323,7 +357,7 @@ export class MexicoTourSite {
     const [x, z] = this.layout.entrance;
     if (Math.hypot(pos.x - x, pos.z - z) < 60) {
       this.told = true;
-      this.hooks.toast('NEW: The Mexico Tour - a boat ride through a night of fiesta, inside the pyramid in Fiesta Plaza!', 'reward');
+      this.hooks.toast('NEW in Natural Kingdom: The Mexico Tour - a boat ride through a night of fiesta, inside the pyramid in Fiesta Plaza!', 'reward');
     }
   }
 }

@@ -309,7 +309,7 @@ export class Player {
       }
       // keep inside the world (which runs further south over the Lower Lot)
       this.pos.x = THREE.MathUtils.clamp(this.pos.x, -800, 1250);
-      this.pos.z = THREE.MathUtils.clamp(this.pos.z, this.pos.x > 378 && this.pos.x < 1228 ? -998 : -720, this.pos.x > -130 && this.pos.x < 830 ? 1320 : this.pos.x > -575 && this.pos.x < -345 ? 875 : 830); // (Natural Kingdom, over the parkway; Fiesta Plaza)
+      this.pos.z = THREE.MathUtils.clamp(this.pos.z, this.pos.x > 378 && this.pos.x < 1228 ? -998 : -720, this.pos.x > -130 && this.pos.x < 830 ? 1320 : this.pos.x > -575 && this.pos.x <= -130 ? 900 : 830); // (Natural Kingdom, over the parkway; Fiesta Plaza and its trail)
       this.holder.position.copy(this.pos);
       this.holder.rotation.set(0, this.yaw, 0);
       this.figure.update(dt, { speed: Math.hypot(this.vel.x, this.vel.z), onGround: this.onGround, vy: this.vel.y, holding: !!this.wear.held });
