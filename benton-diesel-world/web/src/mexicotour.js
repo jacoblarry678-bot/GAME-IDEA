@@ -190,6 +190,7 @@ export function buildMexicoTour(data) {
   wall(tunnel[1], B.x1, B.z0, B.z0 + T);
   wall(tunnel[0], tunnel[1], B.z0, B.z0 + T, TH, B.H);
   add([B.x1 - B.x0, 1, B.z1 - B.z0], [(B.x0 + B.x1) / 2, G + B.H + 0.5, (B.z0 + B.z1) / 2], DUSK, 'Concrete');
+  add([B.x1 - B.x0 + 0.6, 0.2, B.z1 - B.z0 + 0.6], [(B.x0 + B.x1) / 2, G + B.H + 1.1, (B.z0 + B.z1) / 2], STONE2, 'Slate', { collide: 0 }); // (stone on top, the twilight sky under it)
   // the tunnel's floor and walls, lit
   add([12, 0.2, PY.z1 - PY.z0 + 4], [-465, G + 0.1, (PY.z0 + PY.z1) / 2 + 2], 0xb89a70, 'Pavement', { collide: 0 });
   for (let z = PY.z0 + 3; z < B.z0; z += 8) for (const x of tunnel) neon([0.3, 0.6, 0.6], [x + (x < -465 ? 0.4 : -0.4), G + 4, z], ORANGE);
