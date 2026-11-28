@@ -104,6 +104,8 @@ export function buildLionsBreath(data) {
   data.tags.SteamVent.push([300, G + MOUTH.y0 + 0.5, F + 4, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
   // ======== the antechamber: torches, lion statues, the legend
+  add([TW.x1 - TW.x0 - 2 * T, 0.2, TW.z1 - TW.z0 - 2 * T], [(TW.x0 + TW.x1) / 2, G + 0.1, (TW.z0 + TW.z1) / 2], 0x9a7a58, 'Pavement', { collide: 0 }); // (a stone floor)
+  for (const z of [DOOR[0] + 4]) for (const x of [TW.x0 + 1, TW.x1 - 1]) add([T + 0.4, 0.2, DOOR[1] - DOOR[0]], [x, G + 0.1, z], 0x9a7a58, 'Pavement', { collide: 0 });
   for (const [x, z] of [[285, 771], [285, 791], [315, 771], [315, 791]]) { box([0.6, 5, 0.6], [x, G, z], WOOD, 'Wood', { collide: 0 }); data.tags.Campfire.push([x, G + 5.4, z, 1, 0, 0, 0, 1, 0, 0, 0, 1]); }
   for (const x of [289, 311]) {
     box([3, 2, 4], [x, G, 771], STONE2, 'Slate');
